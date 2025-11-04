@@ -1,0 +1,132 @@
+id = "dplyr"
+display_name = "dplyr"
+kind = "r-package"
+description = "A fast, consistent tool for working with data frame like objects."
+version = "1.1.0"
+homepage = "https://dplyr.tidyverse.org/"
+tags = ["data-manipulation", "tidyverse"]
+
+[runtime]
+r_library = "dplyr"
+imports = ["dplyr"]
+cli_binary = ""
+args = []
+
+[validation]
+requires_packages = ["dplyr"]
+requires_cli = []
+preflight_r = "if (!requireNamespace('dplyr', quietly = TRUE)) stop('dplyr package is not installed')"
+preflight_cli = ""
+
+[[capabilities]]
+id = "dplyr::filter"
+display_name = "Filter rows"
+kind = "r-snippet"
+entrypoint = "dplyr::filter"
+description = "Filter rows based on a condition."
+input_spec = [
+  { name = "data", type = "string", format = "r-object" },
+  { name = "condition", type = "string" }
+]
+output_spec = [
+  { type = "r-object", class = "data.frame", record_as = "artifact" }
+]
+template = """library(dplyr)
+{{data}} %>% filter({{condition}})"""
+
+[[capabilities]]
+id = "dplyr::select"
+display_name = "Select columns"
+kind = "r-snippet"
+entrypoint = "dplyr::select"
+description = "Select specific columns from a data frame."
+input_spec = [
+  { name = "data", type = "string", format = "r-object" },
+  { name = "columns", type = "string" }
+]
+output_spec = [
+  { type = "r-object", class = "data.frame", record_as = "artifact" }
+]
+template = """library(dplyr)
+{{data}} %>% select({{columns}})"""
+
+[[capabilities]]
+id = "dplyr::mutate"
+display_name = "Add or modify columns"
+kind = "r-snippet"
+entrypoint = "dplyr::mutate"
+description = "Create or modify columns in a data frame."
+input_spec = [
+  { name = "data", type = "string", format = "r-object" },
+  { name = "expression", type = "string" }
+]
+output_spec = [
+  { type = "r-object", class = "data.frame", record_as = "artifact" }
+]
+template = """library(dplyr)
+{{data}} %>% mutate({{expression}})"""
+
+[[capabilities]]
+id = "dplyr::summarize"
+display_name = "Summarize data"
+kind = "r-snippet"
+entrypoint = "dplyr::summarise"
+description = "Create summary statistics for data."
+input_spec = [
+  { name = "data", type = "string", format = "r-object" },
+  { name = "expression", type = "string" }
+]
+output_spec = [
+  { type = "r-object", class = "data.frame", record_as = "artifact" }
+]
+template = """library(dplyr)
+{{data}} %>% summarise({{expression}})"""
+
+[[capabilities]]
+id = "dplyr::group_by"
+display_name = "Group by variables"
+kind = "r-snippet"
+entrypoint = "dplyr::group_by"
+description = "Group data by one or more variables for aggregation."
+input_spec = [
+  { name = "data", type = "string", format = "r-object" },
+  { name = "variables", type = "string" }
+]
+output_spec = [
+  { type = "r-object", class = "grouped_df", record_as = "artifact" }
+]
+template = """library(dplyr)
+{{data}} %>% group_by({{variables}})"""
+
+[[capabilities]]
+id = "dplyr::arrange"
+display_name = "Sort rows"
+kind = "r-snippet"
+entrypoint = "dplyr::arrange"
+description = "Sort rows by one or more columns."
+input_spec = [
+  { name = "data", type = "string", format = "r-object" },
+  { name = "columns", type = "string" }
+]
+output_spec = [
+  { type = "r-object", class = "data.frame", record_as = "artifact" }
+]
+template = """library(dplyr)
+{{data}} %>% arrange({{columns}})"""
+
+[[capabilities]]
+id = "dplyr::join"
+display_name = "Join data frames"
+kind = "r-snippet"
+entrypoint = "dplyr::left_join"
+description = "Join two data frames by common columns."
+input_spec = [
+  { name = "data1", type = "string", format = "r-object" },
+  { name = "data2", type = "string", format = "r-object" },
+  { name = "by", type = "string" }
+]
+output_spec = [
+  { type = "r-object", class = "data.frame", record_as = "artifact" }
+]
+template = """library(dplyr)
+left_join({{data1}}, {{data2}}, by = {{by}})"""

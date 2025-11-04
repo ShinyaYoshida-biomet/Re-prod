@@ -1,0 +1,112 @@
+id = "ggplot2"
+display_name = "ggplot2"
+kind = "r-package"
+description = "Create elegant data visualizations using the Grammar of Graphics."
+version = "3.4.0"
+homepage = "https://ggplot2.tidyverse.org/"
+tags = ["visualization", "plotting", "tidyverse"]
+
+[runtime]
+r_library = "ggplot2"
+imports = ["ggplot2"]
+cli_binary = ""
+args = []
+
+[validation]
+requires_packages = ["ggplot2"]
+requires_cli = []
+preflight_r = "if (!requireNamespace('ggplot2', quietly = TRUE)) stop('ggplot2 package is not installed')"
+preflight_cli = ""
+
+[[capabilities]]
+id = "ggplot2::scatter_plot"
+display_name = "Scatter plot"
+kind = "r-snippet"
+entrypoint = "ggplot2::ggplot"
+description = "Create a scatter plot with customizable aesthetics."
+input_spec = [
+  { name = "data", type = "string", format = "r-object" },
+  { name = "x", type = "string" },
+  { name = "y", type = "string" },
+  { name = "color", type = "string", default = "NULL" },
+  { name = "title", type = "string", default = "" }
+]
+output_spec = [
+  { type = "r-object", class = "ggplot", record_as = "artifact" }
+]
+template = """library(ggplot2)
+ggplot({{data}}, aes(x = {{x}}, y = {{y}})) + geom_point() + labs(title = "{{title}}") + theme_minimal()"""
+
+[[capabilities]]
+id = "ggplot2::bar_chart"
+display_name = "Bar chart"
+kind = "r-snippet"
+entrypoint = "ggplot2::ggplot"
+description = "Create a bar chart with optional grouping."
+input_spec = [
+  { name = "data", type = "string", format = "r-object" },
+  { name = "x", type = "string" },
+  { name = "y", type = "string" },
+  { name = "fill", type = "string", default = "NULL" },
+  { name = "title", type = "string", default = "" }
+]
+output_spec = [
+  { type = "r-object", class = "ggplot", record_as = "artifact" }
+]
+template = """library(ggplot2)
+ggplot({{data}}, aes(x = {{x}}, y = {{y}})) + geom_bar(stat = "identity") + labs(title = "{{title}}") + theme_minimal()"""
+
+[[capabilities]]
+id = "ggplot2::line_plot"
+display_name = "Line plot"
+kind = "r-snippet"
+entrypoint = "ggplot2::ggplot"
+description = "Create a line plot for time series or sequential data."
+input_spec = [
+  { name = "data", type = "string", format = "r-object" },
+  { name = "x", type = "string" },
+  { name = "y", type = "string" },
+  { name = "group", type = "string", default = "NULL" },
+  { name = "title", type = "string", default = "" }
+]
+output_spec = [
+  { type = "r-object", class = "ggplot", record_as = "artifact" }
+]
+template = """library(ggplot2)
+ggplot({{data}}, aes(x = {{x}}, y = {{y}})) + geom_line() + labs(title = "{{title}}") + theme_minimal()"""
+
+[[capabilities]]
+id = "ggplot2::histogram"
+display_name = "Histogram"
+kind = "r-snippet"
+entrypoint = "ggplot2::ggplot"
+description = "Create a histogram to visualize distribution."
+input_spec = [
+  { name = "data", type = "string", format = "r-object" },
+  { name = "x", type = "string" },
+  { name = "bins", type = "integer", min = 5, max = 100, default = 30 },
+  { name = "title", type = "string", default = "" }
+]
+output_spec = [
+  { type = "r-object", class = "ggplot", record_as = "artifact" }
+]
+template = """library(ggplot2)
+ggplot({{data}}, aes(x = {{x}})) + geom_histogram(bins = {{bins}}) + labs(title = "{{title}}") + theme_minimal()"""
+
+[[capabilities]]
+id = "ggplot2::boxplot"
+display_name = "Boxplot"
+kind = "r-snippet"
+entrypoint = "ggplot2::ggplot"
+description = "Create a boxplot to show distribution and outliers."
+input_spec = [
+  { name = "data", type = "string", format = "r-object" },
+  { name = "x", type = "string" },
+  { name = "y", type = "string" },
+  { name = "title", type = "string", default = "" }
+]
+output_spec = [
+  { type = "r-object", class = "ggplot", record_as = "artifact" }
+]
+template = """library(ggplot2)
+ggplot({{data}}, aes(x = {{x}}, y = {{y}})) + geom_boxplot() + labs(title = "{{title}}") + theme_minimal()"""

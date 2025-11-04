@@ -1,0 +1,122 @@
+id = "tidyr"
+display_name = "tidyr"
+kind = "r-package"
+description = "Tidy messy data into a consistent form for analysis."
+version = "1.3.0"
+homepage = "https://tidyr.tidyverse.org/"
+tags = ["data-tidying", "tidyverse"]
+
+[runtime]
+r_library = "tidyr"
+imports = ["tidyr"]
+cli_binary = ""
+args = []
+
+[validation]
+requires_packages = ["tidyr"]
+requires_cli = []
+preflight_r = "if (!requireNamespace('tidyr', quietly = TRUE)) stop('tidyr package is not installed')"
+preflight_cli = ""
+
+[[capabilities]]
+id = "tidyr::pivot_longer"
+display_name = "Pivot to long format"
+kind = "r-snippet"
+entrypoint = "tidyr::pivot_longer"
+description = "Transform data from wide to long format."
+input_spec = [
+  { name = "data", type = "string", format = "r-object" },
+  { name = "cols", type = "string" },
+  { name = "names_to", type = "string", default = "name" },
+  { name = "values_to", type = "string", default = "value" }
+]
+output_spec = [
+  { type = "r-object", class = "data.frame", record_as = "artifact" }
+]
+template = """library(tidyr)
+{{data}} %>% pivot_longer(cols = {{cols}}, names_to = "{{names_to}}", values_to = "{{values_to}}")"""
+
+[[capabilities]]
+id = "tidyr::pivot_wider"
+display_name = "Pivot to wide format"
+kind = "r-snippet"
+entrypoint = "tidyr::pivot_wider"
+description = "Transform data from long to wide format."
+input_spec = [
+  { name = "data", type = "string", format = "r-object" },
+  { name = "names_from", type = "string" },
+  { name = "values_from", type = "string" }
+]
+output_spec = [
+  { type = "r-object", class = "data.frame", record_as = "artifact" }
+]
+template = """library(tidyr)
+{{data}} %>% pivot_wider(names_from = {{names_from}}, values_from = {{values_from}})"""
+
+[[capabilities]]
+id = "tidyr::separate"
+display_name = "Separate column"
+kind = "r-snippet"
+entrypoint = "tidyr::separate"
+description = "Split a column into multiple columns."
+input_spec = [
+  { name = "data", type = "string", format = "r-object" },
+  { name = "col", type = "string" },
+  { name = "into", type = "string" },
+  { name = "sep", type = "string", default = "_" }
+]
+output_spec = [
+  { type = "r-object", class = "data.frame", record_as = "artifact" }
+]
+template = """library(tidyr)
+{{data}} %>% separate({{col}}, into = {{into}}, sep = "{{sep}}")"""
+
+[[capabilities]]
+id = "tidyr::unite"
+display_name = "Unite columns"
+kind = "r-snippet"
+entrypoint = "tidyr::unite"
+description = "Combine multiple columns into one."
+input_spec = [
+  { name = "data", type = "string", format = "r-object" },
+  { name = "col", type = "string" },
+  { name = "columns", type = "string" },
+  { name = "sep", type = "string", default = "_" }
+]
+output_spec = [
+  { type = "r-object", class = "data.frame", record_as = "artifact" }
+]
+template = """library(tidyr)
+{{data}} %>% unite({{col}}, {{columns}}, sep = "{{sep}}")"""
+
+[[capabilities]]
+id = "tidyr::drop_na"
+display_name = "Remove missing values"
+kind = "r-snippet"
+entrypoint = "tidyr::drop_na"
+description = "Remove rows with missing values."
+input_spec = [
+  { name = "data", type = "string", format = "r-object" },
+  { name = "columns", type = "string", default = "" }
+]
+output_spec = [
+  { type = "r-object", class = "data.frame", record_as = "artifact" }
+]
+template = """library(tidyr)
+{{data}} %>% drop_na({{columns}})"""
+
+[[capabilities]]
+id = "tidyr::fill"
+display_name = "Fill missing values"
+kind = "r-snippet"
+entrypoint = "tidyr::fill"
+description = "Fill missing values with previous or next values."
+input_spec = [
+  { name = "data", type = "string", format = "r-object" },
+  { name = "columns", type = "string" }
+]
+output_spec = [
+  { type = "r-object", class = "data.frame", record_as = "artifact" }
+]
+template = """library(tidyr)
+{{data}} %>% fill({{columns}})"""
