@@ -37,11 +37,8 @@ git clone https://github.com/ShinyaYoshida-biomet/Re-prod.git
 cd Re-prod
 
 # Install dependencies
+# This also sets up Git hooks automatically via Husky
 pnpm install
-
-# Configure git hooks (optional but recommended)
-bash scripts/install-hooks.sh
-# This configures Git to use hooks/ directory via core.hooksPath
 ```
 
 ### 2. Create a Branch
@@ -148,17 +145,14 @@ Before your PR can be merged:
 
 ## Git Hooks
 
-We use git hooks to ensure code quality:
+We use [Husky](https://typicode.github.io/husky/) to manage git hooks. Hooks are automatically installed when you run `pnpm install`.
 
-```bash
-# Install hooks (runs on pre-push)
-bash scripts/install-hooks.sh
-```
-
-Hooks check:
+Pre-push hooks check:
 - Rust formatting (`cargo fmt --check`)
 - Rust linting (`cargo clippy`)
 - TypeScript linting (`pnpm run lint`)
+
+To bypass hooks (not recommended): `git push --no-verify`
 
 ## Getting Help
 

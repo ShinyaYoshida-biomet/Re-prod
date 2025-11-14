@@ -3,6 +3,7 @@
 # Pre-push hook for Re-prod project
 # This hook runs before git push to ensure code quality
 #
+# Managed by Husky - see package.json prepare script
 # To bypass this hook (not recommended), use: git push --no-verify
 #
 
