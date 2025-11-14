@@ -70,4 +70,27 @@ cat('hello world')
     expect(block.code).toContain('new_value <- 2');
     expect(block.originalCode).toContain('old_value <- 1');
   });
+
+  it('attaches simple changes to patch-based code blocks', () => {
+    const response = [
+      'numbers <- compute()',
+      '- result <- slow_run()',
+      '+ result <- fast_run()',
+      'return(result)',
+      '',
+      '*** Begin Patch',
+      '*** Update File: analysis.R',
+      '@@',
+      ' numbers <- compute()',
+      '-result <- slow_run()',
+      '+result <- fast_run()',
+      ' return(result)',
+      '*** End Patch',
+    ].join('\n');
+
+    const [block] = extractCodeBlocks(response);
+    expect(block.patchChunks).toHaveLength(1);
+    expect(block.simpleChanges).toHaveLength(1);
+    expect(block.simpleChanges?.[0].oldLines).toContain(' result <- slow_run()');
+  });
 });

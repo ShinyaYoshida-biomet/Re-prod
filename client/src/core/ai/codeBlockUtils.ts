@@ -1,6 +1,7 @@
-import type { CodeBlock, CodeChangeAction, CodeRange } from '@shared/types';
+import type { CodeBlock, CodeChangeAction, CodeRange, SimpleCodeChange } from '@shared/types';
 import { parsePatchFormat } from './patchParser';
 import type { PatchHunk } from './patchParser';
+import { parseSimpleChanges } from './simpleChangeParser';
 
 const R_CODE_BLOCK_REGEX = /```(?:r|R)\n([\s\S]*?)\n```/g;
 const JSON_BLOCK_REGEX = /```json\n([\s\S]*?)\n```/g;
@@ -205,12 +206,36 @@ const parseJsonBlocks = (text: string): { blocks: CodeBlock[]; ranges: Array<{ s
   return { blocks: parsedBlocks, ranges: jsonRanges };
 };
 
+const attachSimpleChanges = (blocks: CodeBlock[], simpleChanges: SimpleCodeChange[]): void => {
+  if (!simpleChanges.length || !blocks.length) {
+    return;
+  }
+
+  let cursor = 0;
+  for (const block of blocks) {
+    const budget = Math.max(block.patchChunks?.length ?? 1, 1);
+    const assigned: SimpleCodeChange[] = [];
+    for (let idx = 0; idx < budget && cursor < simpleChanges.length; idx += 1, cursor += 1) {
+      assigned.push(simpleChanges[cursor]);
+    }
+    if (assigned.length) {
+      block.simpleChanges = assigned;
+    }
+    if (cursor >= simpleChanges.length) {
+      break;
+    }
+  }
+};
+
 export function extractCodeBlocks(text: string): CodeBlock[] {
+  const simpleChanges = parseSimpleChanges(text);
   const patchHunks = parsePatchFormat(text);
   if (patchHunks.length > 0) {
-    return patchHunks
+    const patchBlocks = patchHunks
       .map(buildCodeBlockFromPatch)
       .filter((block): block is CodeBlock => block !== null);
+    attachSimpleChanges(patchBlocks, simpleChanges);
+    return patchBlocks;
   }
 
   if (text.includes('*** Begin Patch')) {
@@ -240,5 +265,6 @@ export function extractCodeBlocks(text: string): CodeBlock[] {
     });
   }
 
+  attachSimpleChanges(codeBlocks, simpleChanges);
   return codeBlocks;
 }

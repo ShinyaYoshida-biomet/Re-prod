@@ -14,7 +14,7 @@ import { useEditorCells } from "@/hooks/useEditorCells";
 import { useEditorDecorations } from "@/hooks/useEditorDecorations";
 import { useEditorExecution } from "@/hooks/useEditorExecution";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
-import { computeTargetRange, matchPatchChunk } from "@/core/ai/contextMatcher";
+import { computeTargetRange, matchPatchChunk, findCodeInEditor } from "@/core/ai/contextMatcher";
 import type { editor as MonacoEditor } from "monaco-editor";
 import type { CodeBlock, CodeRange } from "@shared/types";
 import type { EditorRef } from "./editorRef";
@@ -117,6 +117,9 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
       };
 
       const editorContent = monacoEditor.getValue();
+      const contextAlertMessage =
+        "Unable to locate the suggested context in the current editor. Try running the suggestion again after scrolling the intended section into view.";
+      let contextMatchingFailed = false;
 
       const resolveTargetRange = (): CodeRange | undefined => {
         if (codeBlock.targetRange) {
@@ -143,6 +146,46 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
           },
         ]);
         setEditorContent(monacoEditor.getValue());
+      };
+
+      const applySnapshotEdit = (snapshot: string, range: CodeRange, text: string): string => {
+        const lines = snapshot.split(/\r?\n/);
+        const startIndex = Math.max(range.startLine - 1, 0);
+        const endIndex = Math.min(range.endLine, lines.length);
+        const replacement = text.length ? text.split(/\r?\n/) : [];
+        return [...lines.slice(0, startIndex), ...replacement, ...lines.slice(endIndex)].join("\n");
+      };
+
+      const applySimpleChanges = (): boolean => {
+        if (!codeBlock.simpleChanges?.length) {
+          return false;
+        }
+
+        const plannedEdits: Array<{ range: CodeRange; text: string }> = [];
+        let snapshot = editorContent;
+
+        for (const change of codeBlock.simpleChanges) {
+          const range = findCodeInEditor(snapshot, change.oldLines, change.beforeContext, change.afterContext);
+          if (!range) {
+            contextMatchingFailed = true;
+            recordPatchMatchFailure('Unable to match contextual diff block', codeBlock.id);
+            if (typeof window !== "undefined") {
+              window.alert(contextAlertMessage);
+            }
+            return false;
+          }
+
+          const replacement = change.newLines.join("\n");
+          plannedEdits.push({ range, text: replacement });
+          snapshot = applySnapshotEdit(snapshot, range, replacement);
+        }
+
+        for (const edit of plannedEdits) {
+          applyRange(edit.range, edit.text);
+        }
+
+        recordPatchMatchSuccess();
+        return true;
       };
 
       const applyPatchChunks = (): boolean => {
@@ -195,6 +238,15 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 
       switch (codeBlock.action) {
         case "replace-all": {
+          if (applySimpleChanges()) {
+            break;
+          }
+
+          const patchApplied = applyPatchChunks();
+          if (patchApplied) {
+            break;
+          }
+
           const appliedRange = applyRangeChange(codeBlock.code, false);
           if (appliedRange) {
             break;
@@ -202,10 +254,10 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 
           // Show confirmation dialog asynchronously
           const target = codeBlock.filepath ? `file ${codeBlock.filepath}` : "current editor";
-          showConfirm(
-            "Confirm Replace All",
-            `This AI suggestion will replace the entire ${target}. Proceed only if you understand the change.`
-          ).then((confirmed) => {
+          const confirmationMessage = contextMatchingFailed
+            ? `Context matching failed, so this action will replace the entire ${target}. Proceed only if you understand the change.`
+            : `This AI suggestion will replace the entire ${target}. Proceed only if you understand the change.`;
+          showConfirm("Confirm Replace All", confirmationMessage).then((confirmed) => {
             if (confirmed) {
               monacoEditor.setValue(codeBlock.code);
               setEditorContent(codeBlock.code);
@@ -214,11 +266,17 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
           break;
         }
         case "replace-range":
+          if (applySimpleChanges()) {
+            break;
+          }
           if (!applyPatchChunks()) {
             applyRangeChange(codeBlock.code);
           }
           break;
         case "delete-range":
+          if (applySimpleChanges()) {
+            break;
+          }
           if (!applyPatchChunks()) {
             applyRangeChange("");
           }

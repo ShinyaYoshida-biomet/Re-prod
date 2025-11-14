@@ -32,6 +32,20 @@ Rules:
 6. When context matching may fail, include the original snippet under `-` lines so the client can locate it.
 "#;
 
+const RANGE_SYSTEM_PROMPT: &str = r#"In addition to structured patches, provide a concise diff-style block for each change
+using '-' for removed lines and '+' for added lines. Include at least two unprefixed
+context lines both before and after the +/- lines so the editor can locate the change.
+Example:
+
+context_before_line
+context_before_line
+- old_line
++ new_line
+context_after_line
+context_after_line
+
+Each diff block should match the actual code exactly and avoid re-sending entire files."#;
+
 pub async fn health() -> &'static str {
     "OK"
 }
@@ -52,10 +66,14 @@ pub async fn send_ai_message(
     let cfg = state.config.lock().await.clone();
     let provider = ai::from_config(&cfg);
 
-    let mut messages = Vec::with_capacity(payload.messages.len() + 1);
+    let mut messages = Vec::with_capacity(payload.messages.len() + 2);
     messages.push(ChatMessage {
         role: "system".to_string(),
         content: PATCH_SYSTEM_PROMPT.to_string(),
+    });
+    messages.push(ChatMessage {
+        role: "system".to_string(),
+        content: RANGE_SYSTEM_PROMPT.to_string(),
     });
     messages.extend(payload.messages.into_iter());
 

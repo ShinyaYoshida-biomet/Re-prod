@@ -63,6 +63,13 @@ export interface PatchChunk {
   newLines: string[];
 }
 
+export interface SimpleCodeChange {
+  beforeContext: string[];
+  afterContext: string[];
+  oldLines: string[];
+  newLines: string[];
+}
+
 export interface CodeRange {
   startLine: number;
   startColumn: number;
@@ -78,6 +85,7 @@ export interface CodeBlock {
   targetRange?: CodeRange;
   filepath?: string;
   patchChunks?: PatchChunk[];
+  simpleChanges?: SimpleCodeChange[];
   patchText?: string;
   checksum?: string;
   explanation?: string;
