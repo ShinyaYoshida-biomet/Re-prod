@@ -175,8 +175,9 @@ export function useAIConversation() {
               .join('\n\n');
           }
 
+          const codeBlocks = extractCodeBlocks(content ?? '');
           finalize(content ?? 'AI response received (no content)', {
-            codeBlocks: extractCodeBlocks(content ?? ''),
+            codeBlocks,
           });
         }),
       );

@@ -26,6 +26,44 @@ use std::sync::{
 };
 use tokio::sync::Mutex;
 
+const PATCH_SYSTEM_PROMPT: &str = r#"You are the Re-prod assistant. When suggesting code changes,
+always emit them in the structured patch format shown below, and include three lines of
+context both before and after the changed section.
+
+*** Begin Patch
+*** Update File: <filepath>
+@@
+ context_line
+ context_line
+-old_line
++new_line
+ context_line
+ context_line
+*** End Patch
+
+Instructions:
+1. Each `*** Begin Patch` / `*** End Patch` block should contain a single file's changes.
+2. The `*** Update File:` or `*** Add File:` or `*** Delete File:` marker specifies the operation.
+3. Use `@@` to denote the start of a diff segment.
+4. Prefix removed lines with `-` and added lines with `+`.
+5. Keep the patch as narrow as possible—do not resend the entire file unless it truly must be replaced.
+6. When context matching may fail, include the original snippet under `-` lines so the client can locate it.
+"#;
+
+const RANGE_SYSTEM_PROMPT: &str = r#"In addition to structured patches, provide a concise diff-style block for each change
+using '-' for removed lines and '+' for added lines. Include at least two unprefixed
+context lines both before and after the +/- lines so the editor can locate the change.
+Example:
+
+context_before_line
+context_before_line
+- old_line
++ new_line
+context_after_line
+context_after_line
+
+Each diff block should match the actual code exactly and avoid re-sending entire files."#;
+
 #[derive(Clone)]
 pub struct AppState {
     pub r_executor: Arc<Mutex<RExecutor>>,
@@ -217,12 +255,25 @@ async fn handle_ws_request(request: WSRequest, state: &AppState) -> Vec<WSRespon
             });
             let mut outbound = Vec::new();
 
+            // Prepend system prompts
+            let mut messages_with_prompts = vec![
+                ChatMessage {
+                    role: "system".to_string(),
+                    content: PATCH_SYSTEM_PROMPT.to_string(),
+                },
+                ChatMessage {
+                    role: "system".to_string(),
+                    content: RANGE_SYSTEM_PROMPT.to_string(),
+                },
+            ];
+            messages_with_prompts.extend(messages.clone());
+
             if enable_tools {
                 let mut tools = get_filesystem_tools();
                 tools.extend(get_r_context_tools());
 
                 match provider
-                    .send_message_with_tools(messages.clone(), tools.clone())
+                    .send_message_with_tools(messages_with_prompts.clone(), tools.clone())
                     .await
                 {
                     Ok(response) => {
@@ -306,7 +357,7 @@ async fn handle_ws_request(request: WSRequest, state: &AppState) -> Vec<WSRespon
                     }],
                 }
             } else {
-                match provider.send_message(messages).await {
+                match provider.send_message(messages_with_prompts).await {
                     Ok(response) => {
                         outbound.extend(build_streaming_payload(stream, &stream_id, response.clone()));
                         outbound
