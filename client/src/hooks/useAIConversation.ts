@@ -201,8 +201,19 @@ export function useAIConversation() {
 
   const handleApplyCode = useCallback(async (codeBlock: CodeBlock): Promise<void> => {
     const targetFile = codeBlock.filepath;
+
+    // Treat placeholders and temporary names as current editor
+    const isCurrentEditor = !targetFile ||
+                           targetFile === '<current editor buffer>' ||
+                           targetFile === 'current editor buffer' ||
+                           targetFile.includes('current_editor_buffer') ||
+                           targetFile.includes('current editor buffer') ||
+                           targetFile.startsWith('<') ||
+                           (!editorFilepath && targetFile); // If no file is open, treat any target as current editor
+
     const shouldUseRemote =
       Boolean(targetFile) &&
+      !isCurrentEditor &&
       targetFile !== editorFilepath &&
       REMOTE_FILE_ACTIONS.has(codeBlock.action);
 
