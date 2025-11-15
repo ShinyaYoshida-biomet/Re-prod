@@ -336,7 +336,7 @@ async fn handle_ws_request(request: WSRequest, state: &AppState) -> Vec<WSRespon
                                     outbound.extend(build_streaming_payload(
                                         stream,
                                         &stream_id,
-                                        final_response.clone(),
+                                        final_response,
                                     ));
                                     outbound
                                 }
@@ -364,11 +364,7 @@ async fn handle_ws_request(request: WSRequest, state: &AppState) -> Vec<WSRespon
             } else {
                 match provider.send_message(messages_with_prompts).await {
                     Ok(response) => {
-                        outbound.extend(build_streaming_payload(
-                            stream,
-                            &stream_id,
-                            response.clone(),
-                        ));
+                        outbound.extend(build_streaming_payload(stream, &stream_id, response));
                         outbound
                     }
                     Err(e) => vec![WSResponse::Error {
