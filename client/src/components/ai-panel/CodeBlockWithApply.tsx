@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { IconClipboard, IconCheck, IconLightbulb } from '@/components/shared';
 import { CodeBlockDiffPreview } from './CodeBlockDiffPreview';
+import { getCodeActionLabel } from '@/core/ai/codeBlockActions';
 import type { CodeBlock } from '@shared/types';
 
 interface Props {
@@ -30,34 +31,6 @@ export function CodeBlockWithApply({ codeBlock, onApply }: Props): JSX.Element {
     navigator.clipboard.writeText(codeBlock.code);
   };
 
-  const getActionLabel = (): string => {
-    const targetFile = codeBlock.filepath ? codeBlock.filepath : 'active editor';
-
-    if (codeBlock.action === 'replace-all') {
-      return `Replace entire ${targetFile}`;
-    }
-
-    if (codeBlock.action === 'replace-range' && codeBlock.targetRange) {
-      const { startLine, startColumn, endLine, endColumn } = codeBlock.targetRange;
-      return `Replace ${targetFile} ${startLine}:${startColumn}-${endLine}:${endColumn}`;
-    }
-
-    if (codeBlock.action === 'delete-range' && codeBlock.targetRange) {
-      const { startLine, endLine } = codeBlock.targetRange;
-      return `Delete ${targetFile} lines ${startLine}-${endLine}`;
-    }
-
-    if (codeBlock.action === 'create-file' && codeBlock.filepath) {
-      return `Create file ${codeBlock.filepath}`;
-    }
-
-    if (codeBlock.action === 'insert') {
-      return `Insert code in ${targetFile}`;
-    }
-
-    return 'Apply suggested change';
-  };
-
   const handleRetry = (): void => {
     setCurrentBlock((prev) => ({
       ...prev,
@@ -78,7 +51,7 @@ export function CodeBlockWithApply({ codeBlock, onApply }: Props): JSX.Element {
         <div className="code-header">
           <span className="code-language">R</span>
           <span className="code-target">
-            {codeBlock.filepath ? `${codeBlock.filepath}` : 'Current file'} • {getActionLabel()}
+            {codeBlock.filepath ? `${codeBlock.filepath}` : 'Current file'} • {getCodeActionLabel(codeBlock)}
           </span>
         </div>
 
