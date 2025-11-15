@@ -37,22 +37,6 @@ export function AIPanel(): JSX.Element {
         <div className="panel-title">AI Assistant</div>
       </div>
       <div className="panel-content">
-        <div className="ai-mode-selector" role="group" aria-label="AI interaction mode">
-          <button
-            type="button"
-            className={mode === 'agent' ? 'active' : ''}
-            onClick={() => setMode('agent')}
-          >
-            🤖 Agent
-          </button>
-          <button
-            type="button"
-            className={mode === 'chat' ? 'active' : ''}
-            onClick={() => setMode('chat')}
-          >
-            💬 Chat
-          </button>
-        </div>
         <div className="ai-messages">
           {messages.length === 0 ? (
             <div className="ai-welcome">
@@ -95,16 +79,34 @@ export function AIPanel(): JSX.Element {
               disabled={isLoading}
               rows={3}
             />
-            <button
-              type="button"
-              className="send-icon-button"
-              onClick={() => handleAsk(mode)}
-              disabled={!input.trim() || isLoading}
-              title="Send message (Enter)"
-              aria-label="Send message"
-            >
-              <IconSend width={16} height={16} aria-hidden />
-            </button>
+            <div className="prompt-actions">
+              <div className="ai-mode-selector" role="group" aria-label="AI interaction mode">
+                <button
+                  type="button"
+                  className={mode === 'agent' ? 'active' : ''}
+                  onClick={() => setMode('agent')}
+                >
+                  Agent
+                </button>
+                <button
+                  type="button"
+                  className={mode === 'chat' ? 'active' : ''}
+                  onClick={() => setMode('chat')}
+                >
+                  Chat
+                </button>
+              </div>
+              <button
+                type="button"
+                className="send-icon-button"
+                onClick={() => handleAsk(mode)}
+                disabled={!input.trim() || isLoading}
+                title="Send message (Enter)"
+                aria-label="Send message"
+              >
+                <IconSend width={16} height={16} aria-hidden />
+              </button>
+            </div>
           </div>
           {isLoading && (
             <button

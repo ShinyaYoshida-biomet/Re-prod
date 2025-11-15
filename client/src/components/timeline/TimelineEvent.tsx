@@ -11,8 +11,7 @@ export function TimelineEvent({ event, onNavigate }: TimelineEventProps): JSX.El
     second: '2-digit',
   });
 
-  // Get actor icon
-  const actorIcon = context.actor === 'user' ? '👤' : '🤖';
+  // Get actor label
   const actorLabel = context.actor === 'user' ? 'User' : 'AI';
 
   // Get source label
@@ -32,7 +31,6 @@ export function TimelineEvent({ event, onNavigate }: TimelineEventProps): JSX.El
   const hasMoreLines = codeLines.length > 3;
 
   // Get result status
-  const statusIcon = result.success ? '✅' : '❌';
   const statusLabel = result.success ? 'Success' : 'Error';
   const executionTime = result.execution_time_ms;
   const plotCount = result.plots.length;
@@ -46,9 +44,7 @@ export function TimelineEvent({ event, onNavigate }: TimelineEventProps): JSX.El
   return (
     <div className="timeline-event" onClick={handleClick}>
       <div className="timeline-event-header">
-        <span className="timeline-event-actor">
-          {actorIcon} {actorLabel}
-        </span>
+        <span className="timeline-event-actor">{actorLabel}</span>
         <span className="timeline-event-time">{timeStr}</span>
         <span className="timeline-event-source">{sourceLabel}</span>
       </div>
@@ -63,12 +59,12 @@ export function TimelineEvent({ event, onNavigate }: TimelineEventProps): JSX.El
       </div>
 
       <div className="timeline-event-footer">
-        <span className="timeline-event-status">
-          {statusIcon} {statusLabel}
-        </span>
+        <span className="timeline-event-status">{statusLabel}</span>
         <span className="timeline-event-duration">{executionTime}ms</span>
         {plotCount > 0 && (
-          <span className="timeline-event-plots">📊 {plotCount} plot{plotCount > 1 ? 's' : ''}</span>
+          <span className="timeline-event-plots">
+            {plotCount} plot{plotCount > 1 ? 's' : ''}
+          </span>
         )}
       </div>
 

@@ -51,7 +51,7 @@ export function buildMenuSections(snapshot: MenuStateSnapshot): MenuSection[] {
         { type: 'separator' },
         {
           id: 'edit:ai-assist',
-          label: '💡 Ask AI Assistant...',
+          label: 'Ask AI Assistant...',
           shortcut: '⌘K',
           action: () => menuActions.edit.aiAssist(),
           prominent: true,

@@ -49,8 +49,8 @@ export function TimelineFilters({
             onChange={handleActorChange}
           >
             <option value="all">All</option>
-            <option value="user">👤 User</option>
-            <option value="ai">🤖 AI</option>
+            <option value="user">User</option>
+            <option value="ai">AI</option>
           </select>
         </div>
 
@@ -70,7 +70,7 @@ export function TimelineFilters({
 
         <Checkbox
           className="timeline-filter timeline-filter-checkbox"
-          label="📊 With Plots"
+          label="With Plots"
           checked={filters.hasPlots || false}
           onChange={(checked) =>
             onChange({ ...filters, hasPlots: checked ? true : undefined })
@@ -79,7 +79,7 @@ export function TimelineFilters({
 
         <Checkbox
           className="timeline-filter timeline-filter-checkbox"
-          label="❌ With Errors"
+          label="With Errors"
           checked={filters.hasErrors || false}
           onChange={(checked) =>
             onChange({ ...filters, hasErrors: checked ? true : undefined })

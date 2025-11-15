@@ -127,8 +127,8 @@ async fn main() {
         .await
         .unwrap_or_else(|e| panic!("Failed to bind to {}: {}", addr, e));
 
-    tracing::info!("🚀 Re-prod server running on http://{}", addr);
-    tracing::info!("📡 WebSocket available at ws://{}/ws", addr);
+    tracing::info!("Re-prod server running on http://{}", addr);
+    tracing::info!("WebSocket available at ws://{}/ws", addr);
 
     axum::serve(listener, app)
         .await

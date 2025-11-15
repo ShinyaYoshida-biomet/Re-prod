@@ -36,22 +36,22 @@ export function TimelineStats({ stats, loading }: TimelineStatsProps): JSX.Eleme
 
         <div className="timeline-stat">
           <div className="timeline-stat-value">{stats.userActions}</div>
-          <div className="timeline-stat-label">👤 User</div>
+          <div className="timeline-stat-label">User</div>
         </div>
 
         <div className="timeline-stat">
           <div className="timeline-stat-value">{stats.aiActions}</div>
-          <div className="timeline-stat-label">🤖 AI</div>
+          <div className="timeline-stat-label">AI</div>
         </div>
 
         <div className="timeline-stat">
           <div className="timeline-stat-value">{stats.totalPlots}</div>
-          <div className="timeline-stat-label">📊 Plots</div>
+          <div className="timeline-stat-label">Plots</div>
         </div>
 
         <div className="timeline-stat">
           <div className="timeline-stat-value">{stats.totalErrors}</div>
-          <div className="timeline-stat-label">❌ Errors</div>
+          <div className="timeline-stat-label">Errors</div>
         </div>
 
         <div className="timeline-stat">

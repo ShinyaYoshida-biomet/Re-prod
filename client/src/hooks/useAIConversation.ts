@@ -282,12 +282,14 @@ export function useAIConversation() {
 
     const cleanup = registerStreamingHandlers(requestId);
 
+    const enableTools = mode === 'agent';
+
     const sent = socketService.send({
       type: 'ai_message',
       request_id: requestId,
       stream: true,
       messages: requestMessages,
-      enable_tools: true,
+      enable_tools: enableTools,
       mode,
     });
 
