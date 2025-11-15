@@ -53,7 +53,7 @@ export interface ExecutionLogEntry {
 export type CodeChangeAction =
   | 'replace-all'
   | 'replace-range'
-  | 'insert-at-cursor'
+  | 'insert'
   | 'create-file'
   | 'delete-range';
 

@@ -40,7 +40,7 @@ Here is the patch:
     });
   });
 
-  it('falls back to replace-all for plain R code fences', () => {
+  it('falls back to insert for plain R code fences', () => {
     const script = `
 \`\`\`r
 cat('hello world')
@@ -49,7 +49,7 @@ cat('hello world')
 
     const [block] = extractCodeBlocks(script);
 
-    expect(block.action).toBe('replace-all');
+    expect(block.action).toBe('insert');
     expect(block.code.trim()).toBe("cat('hello world')");
   });
  

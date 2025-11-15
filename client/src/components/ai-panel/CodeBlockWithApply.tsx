@@ -51,8 +51,8 @@ export function CodeBlockWithApply({ codeBlock, onApply }: Props): JSX.Element {
       return `Create file ${codeBlock.filepath}`;
     }
 
-    if (codeBlock.action === 'insert-at-cursor') {
-      return `Insert at cursor in ${targetFile}`;
+    if (codeBlock.action === 'insert') {
+      return `Insert code in ${targetFile}`;
     }
 
     return 'Apply suggested change';

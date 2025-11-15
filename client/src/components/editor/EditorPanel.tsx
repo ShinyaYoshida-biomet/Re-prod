@@ -281,7 +281,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
             applyRangeChange("");
           }
           break;
-        case "insert-at-cursor": {
+        case "insert": {
           const position = monacoEditor.getPosition();
           if (position) {
             applyRange(

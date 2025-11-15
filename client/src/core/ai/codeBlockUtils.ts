@@ -9,7 +9,7 @@ const JSON_BLOCK_REGEX = /```json\n([\s\S]*?)\n```/g;
 const codeChangeActions: CodeChangeAction[] = [
   'replace-all',
   'replace-range',
-  'insert-at-cursor',
+  'insert',
   'create-file',
   'delete-range',
 ];
@@ -261,7 +261,7 @@ export function extractCodeBlocks(text: string): CodeBlock[] {
       id: `code-${Date.now()}-${start}`,
       code: match[1],
       language: 'r',
-      action: 'replace-all',
+      action: 'insert', // Safer default fallback (primary fix is system prompts in PR #99)
     });
   }
 
