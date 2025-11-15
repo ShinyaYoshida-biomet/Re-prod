@@ -1,22 +1,55 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { useStore } from '@/core';
 import { IconClipboard, IconCheck, IconLightbulb } from '@/components/shared';
-import { CodeBlockDiffPreview } from './CodeBlockDiffPreview';
+import { GitHubStyleDiffView } from './GitHubStyleDiffView';
 import { getCodeActionLabel } from '@/core/ai/codeBlockActions';
-import type { CodeBlock } from '@shared/types';
+import type { CodeBlock, CodeRange } from '@shared/types';
 
 interface Props {
   codeBlock: CodeBlock;
   onApply: (codeBlock: CodeBlock) => Promise<void>;
 }
 
+function sliceContent(content: string, range: CodeRange): string {
+  const lines = content.split(/\r?\n/);
+  const startIdx = Math.max(range.startLine - 1, 0);
+  const endIdx = Math.min(range.endLine, lines.length);
+  const selected = lines.slice(startIdx, endIdx);
+
+  if (selected.length === 0) {
+    return '';
+  }
+
+  const first = selected[0];
+  const last = selected[selected.length - 1];
+
+  selected[0] = first.slice(Math.max(range.startColumn - 1, 0));
+  selected[selected.length - 1] = last.slice(0, Math.max(range.endColumn - 1, 0));
+
+  return selected.join('\n');
+}
+
 export function CodeBlockWithApply({ codeBlock, onApply }: Props): JSX.Element {
   const [applied, setApplied] = useState(false);
   const [currentBlock, setCurrentBlock] = useState<CodeBlock>(codeBlock);
+  const editorContent = useStore((state) => state.editor.content);
+  const editorFilepath = useStore((state) => state.editor.filepath);
 
   useEffect(() => {
     setCurrentBlock(codeBlock);
     setApplied(false);
   }, [codeBlock]);
+
+  // Check if we can show a diff (need a baseline)
+  const canShowDiff = useMemo(() => {
+    const localSlice =
+      currentBlock.targetRange && (!currentBlock.filepath || currentBlock.filepath === editorFilepath)
+        ? sliceContent(editorContent, currentBlock.targetRange)
+        : null;
+
+    const baseline = currentBlock.originalCode ?? localSlice;
+    return Boolean(baseline);
+  }, [currentBlock, editorContent, editorFilepath]);
 
   const handleApply = async (): Promise<void> => {
     try {
@@ -55,11 +88,13 @@ export function CodeBlockWithApply({ codeBlock, onApply }: Props): JSX.Element {
           </span>
         </div>
 
-          <CodeBlockDiffPreview codeBlock={currentBlock} onRetry={handleRetry} />
-
-        <pre className="code-content">
-          <code>{currentBlock.code}</code>
-        </pre>
+        {canShowDiff ? (
+          <GitHubStyleDiffView codeBlock={currentBlock} onRetry={handleRetry} />
+        ) : (
+          <pre className="code-content">
+            <code>{currentBlock.code}</code>
+          </pre>
+        )}
 
         <div className="code-actions">
           <button
