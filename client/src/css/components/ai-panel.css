@@ -10,6 +10,38 @@
   background: #ffffff;
 }
 
+.ai-mode-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.15);
+  margin: 0 18px 12px;
+}
+
+.ai-mode-selector button {
+  border: none;
+  background: transparent;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ai-mode-selector button.active {
+  background: #ffffff;
+  color: var(--text-primary);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+}
+
+.ai-mode-selector button:focus-visible {
+  outline: 2px solid var(--accent-blue);
+}
+
 .ai-messages {
   flex: 1;
   overflow-y: auto;
@@ -149,15 +181,21 @@
 
 .ai-input-container {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   padding: 14px 18px;
   border-top: 1px solid rgba(148, 163, 184, 0.22);
   background: linear-gradient(180deg, rgba(244, 246, 251, 0.95), rgba(236, 240, 250, 0.95));
+  align-items: flex-end;
+}
+
+.prompt-input-container {
+  position: relative;
+  flex: 1;
 }
 
 .ai-input {
-  flex: 1;
-  padding: 10px 12px;
+  width: 100%;
+  padding: 10px 44px 10px 12px;
   border: 1px solid rgba(148, 163, 184, 0.4);
   border-radius: 12px;
   background-color: var(--bg-primary);
@@ -179,6 +217,35 @@
 .ai-input::placeholder {
   color: var(--text-muted);
   opacity: 0.9;
+}
+
+.send-icon-button {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent-blue);
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 8px 16px rgba(47, 111, 237, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.send-icon-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(47, 111, 237, 0.35);
+}
+
+.send-icon-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .btn-stop {

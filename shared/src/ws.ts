@@ -1,5 +1,6 @@
 import type { ToolManifest } from './tools';
 import type {
+  AIMode,
   ChatMessagePayload,
   CodeBlock,
   ExecutionRequestPayload,
@@ -48,6 +49,7 @@ export type ClientMessage =
       enable_tools?: boolean;
       request_id?: string;
       stream?: boolean;
+      mode?: AIMode;
     }
   | { type: 'list_tools' }
   | ({ type: 'execute_tool' } & ToolExecutionRequestPayload)

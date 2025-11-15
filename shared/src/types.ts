@@ -33,6 +33,8 @@ export type ArtifactInfoPayload = ProtocolArtifactInfo;
 export type ToolExecutionRequestPayload = ProtocolToolExecutionRequest;
 export type ToolExecutionResultPayload = ProtocolToolExecutionResult;
 
+export type AIMode = 'agent' | 'chat';
+
 // UI-facing execution log structures
 export interface ExecutionLogPlot {
   id: string;
