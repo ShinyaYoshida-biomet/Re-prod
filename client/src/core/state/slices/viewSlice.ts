@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand';
 
-export type ViewPane = 'editor' | 'console' | 'plots' | 'timeline';
+export type ViewPane = 'editor' | 'assistant';
 
 interface ViewData {
   panes: Record<ViewPane, boolean>;
@@ -41,9 +41,7 @@ export const createViewSlice: StateCreator<ViewState> = (set, get) => ({
   view: {
     panes: {
       editor: true,
-      console: true,
-      plots: true,
-      timeline: true
+      assistant: true
     },
     zoom: 1
   },
