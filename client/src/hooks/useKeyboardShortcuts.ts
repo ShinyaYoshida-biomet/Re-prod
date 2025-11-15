@@ -76,9 +76,7 @@ export function useKeyboardShortcuts() {
 
       // View menu
       'Mod+1': () => menuActions.view.togglePane('editor'),
-      'Mod+2': () => menuActions.view.togglePane('console'),
-      'Mod+3': () => menuActions.view.togglePane('plots'),
-      'Mod+4': () => menuActions.view.togglePane('timeline'),
+      'Mod+2': () => menuActions.view.togglePane('assistant'),
       'Mod++': () => menuActions.view.zoomIn(),
       'Mod+=': () => menuActions.view.zoomIn(), // Also handle = key (no shift)
       'Mod+-': () => menuActions.view.zoomOut(),

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useStore, type StoreState } from '@/core';
+import { useStore } from '@/core';
 import type { PanelTabItem } from '@/components/shared';
 import type {
   BottomPanePlotTab,
@@ -10,7 +10,6 @@ import type {
 import type { ExecutionLogPlot } from '@shared/types';
 
 interface UseBottomPaneStateResult {
-  panes: StoreState['view']['panes'];
   tabs: PanelTabItem<BottomPaneTab>[];
   activeTab: BottomPaneTab;
   setActiveTab: (tab: BottomPaneTab) => void;
@@ -26,7 +25,6 @@ const DEFAULT_TAB: BottomPaneTab = 'console';
 
 export function useBottomPaneState(): UseBottomPaneStateResult {
   const execution = useStore((state) => state.execution);
-  const panes = useStore((state) => state.view.panes);
   const clearExecutionResults = useStore((state) => state.clearExecutionResults);
 
   const [activeTab, setActiveTab] = useState<BottomPaneTab>(DEFAULT_TAB);
@@ -38,27 +36,20 @@ export function useBottomPaneState(): UseBottomPaneStateResult {
     [execution.results]
   );
 
-  const plotsVisible = panes.plots;
   const currentPlot = allPlots[selectedPlotIndex] ?? null;
 
   const tabs = useMemo<PanelTabItem<BottomPaneTab>[]>(() => {
     const list: PanelTabItem<BottomPaneTab>[] = [
       { id: 'console', label: 'Console' },
       { id: 'history', label: 'History' },
+      { id: 'plots', label: 'Plots' },
     ];
-    if (plotsVisible) {
-      list.push({ id: 'plots', label: 'Plots' });
-    }
     list.push({ id: 'help', label: 'Help' });
     return list;
-  }, [plotsVisible]);
+  }, []);
 
   useEffect(() => {
     const handleFocusPlot = (event: Event) => {
-      if (!plotsVisible) {
-        return;
-      }
-
       const detail = (event as PlotFocusCustomEvent).detail;
       if (typeof detail?.plotIndex !== 'number') {
         return;
@@ -72,16 +63,16 @@ export function useBottomPaneState(): UseBottomPaneStateResult {
     return () => {
       window.removeEventListener('focusPlot', handleFocusPlot);
     };
-  }, [allPlots.length, plotsVisible]);
+  }, [allPlots.length]);
 
   useEffect(() => {
     const previousCount = previousPlotCount.current;
-    if (plotsVisible && allPlots.length > previousCount) {
+    if (allPlots.length > previousCount) {
       setActiveTab('plots');
       setSelectedPlotIndex(allPlots.length - 1);
     }
     previousPlotCount.current = allPlots.length;
-  }, [allPlots.length, plotsVisible]);
+  }, [allPlots.length]);
 
   useEffect(() => {
     if (selectedPlotIndex >= allPlots.length && allPlots.length > 0) {
@@ -90,13 +81,11 @@ export function useBottomPaneState(): UseBottomPaneStateResult {
   }, [allPlots.length, selectedPlotIndex]);
 
   useEffect(() => {
-    if (activeTab === 'plots' && !plotsVisible) {
-      setActiveTab('help');
-    } else if (activeTab === 'timeline') {
+    if (activeTab === 'timeline') {
       // Timeline is no longer a tab, default to help
       setActiveTab('help');
     }
-  }, [activeTab, plotsVisible]);
+  }, [activeTab]);
 
   const selectPreviousPlot = useCallback(() => {
     setSelectedPlotIndex((current) => Math.max(0, current - 1));
@@ -116,7 +105,6 @@ export function useBottomPaneState(): UseBottomPaneStateResult {
   };
 
   return {
-    panes,
     tabs,
     activeTab,
     setActiveTab,
