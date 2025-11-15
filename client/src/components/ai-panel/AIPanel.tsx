@@ -1,4 +1,5 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
+import type { AIMode } from '@shared/types';
 import { IconSend, IconSquare } from '@/components/shared';
 import { StreamingMessage } from './StreamingMessage';
 import { useAIConversation } from '@/hooks/useAIConversation';
@@ -20,10 +21,13 @@ export function AIPanel(): JSX.Element {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const [mode, setMode] = useState<AIMode>('agent');
+  const placeholder = mode === 'agent' ? 'Describe a task...' : 'Ask a question...';
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
     if (e.key === 'Enter' && !e.shiftKey && !e.altKey && !e.metaKey) {
       e.preventDefault();
-      handleAsk();
+      handleAsk(mode);
     }
   };
 
@@ -64,16 +68,47 @@ export function AIPanel(): JSX.Element {
           )}
         </div>
         <div className="ai-input-container">
-          <textarea
-            className="ai-input"
-            placeholder="Ask a question... (Enter to send, Shift/Alt+Enter for new line)"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isLoading}
-            rows={3}
-          />
-          {isLoading ? (
+          <div className="prompt-input-container">
+            <textarea
+              className="ai-input"
+              placeholder={placeholder}
+              aria-label={placeholder}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isLoading}
+              rows={3}
+            />
+            <div className="prompt-actions">
+              <div className="ai-mode-selector" role="group" aria-label="AI interaction mode">
+                <button
+                  type="button"
+                  className={mode === 'agent' ? 'active' : ''}
+                  onClick={() => setMode('agent')}
+                >
+                  Agent
+                </button>
+                <button
+                  type="button"
+                  className={mode === 'chat' ? 'active' : ''}
+                  onClick={() => setMode('chat')}
+                >
+                  Chat
+                </button>
+              </div>
+              <button
+                type="button"
+                className="send-icon-button"
+                onClick={() => handleAsk(mode)}
+                disabled={!input.trim() || isLoading}
+                title="Send message (Enter)"
+                aria-label="Send message"
+              >
+                <IconSend width={16} height={16} aria-hidden />
+              </button>
+            </div>
+          </div>
+          {isLoading && (
             <button
               className="btn btn-stop"
               onClick={handleStop}
@@ -82,18 +117,6 @@ export function AIPanel(): JSX.Element {
               <>
                 <IconSquare width={16} height={16} aria-hidden />
                 Stop
-              </>
-            </button>
-          ) : (
-            <button
-              className="btn btn-primary"
-              onClick={handleAsk}
-              disabled={!input.trim()}
-              title="Send message (Enter)"
-            >
-              <>
-                <IconSend width={16} height={16} aria-hidden />
-                Send
               </>
             </button>
           )}

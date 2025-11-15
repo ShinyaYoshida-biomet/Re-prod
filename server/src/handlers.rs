@@ -64,6 +64,24 @@ context_after_line
 
 Each diff block should match the actual code exactly and avoid re-sending entire files."#;
 
+const CHAT_SYSTEM_PROMPT: &str = r#"You are the Re-prod chat assistant. Focus on providing explanations, guidance, and high-level suggestions.
+- Keep responses conversational and concise
+- Avoid emitting structured patches or code diffs unless explicitly asked
+- When referencing code, quote only the relevant snippets"#;
+
+#[derive(Clone, Copy, Debug, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum AIMode {
+    Agent,
+    Chat,
+}
+
+impl Default for AIMode {
+    fn default() -> Self {
+        Self::Agent
+    }
+}
+
 #[derive(Clone)]
 pub struct AppState {
     pub r_executor: Arc<Mutex<RExecutor>>,
@@ -76,16 +94,26 @@ pub struct AppState {
     pub request_counter: Arc<AtomicU64>,
 }
 
-fn with_system_prompts(messages: &[ChatMessage]) -> Vec<ChatMessage> {
+fn with_system_prompts(messages: &[ChatMessage], mode: AIMode) -> Vec<ChatMessage> {
     let mut result = Vec::with_capacity(messages.len() + 2);
-    result.push(ChatMessage {
-        role: "system".to_string(),
-        content: PATCH_SYSTEM_PROMPT.to_string(),
-    });
-    result.push(ChatMessage {
-        role: "system".to_string(),
-        content: RANGE_SYSTEM_PROMPT.to_string(),
-    });
+    match mode {
+        AIMode::Agent => {
+            result.push(ChatMessage {
+                role: "system".to_string(),
+                content: PATCH_SYSTEM_PROMPT.to_string(),
+            });
+            result.push(ChatMessage {
+                role: "system".to_string(),
+                content: RANGE_SYSTEM_PROMPT.to_string(),
+            });
+        }
+        AIMode::Chat => {
+            result.push(ChatMessage {
+                role: "system".to_string(),
+                content: CHAT_SYSTEM_PROMPT.to_string(),
+            });
+        }
+    }
     result.extend(messages.iter().cloned());
     result
 }
@@ -133,6 +161,8 @@ enum WSRequest {
         request_id: Option<String>,
         #[serde(default)]
         stream: bool,
+        #[serde(default)]
+        mode: AIMode,
     },
     #[serde(rename = "list_tools")]
     ListTools,
@@ -271,6 +301,7 @@ async fn handle_ws_request(request: WSRequest, state: &AppState) -> Vec<WSRespon
             enable_tools,
             request_id,
             stream,
+            mode,
         } => {
             let cfg = state.config.lock().await.clone();
             let provider = ai::from_config(&cfg);
@@ -281,7 +312,7 @@ async fn handle_ws_request(request: WSRequest, state: &AppState) -> Vec<WSRespon
             let mut outbound = Vec::new();
 
             // Prepend system prompts
-            let messages_with_prompts = with_system_prompts(&messages);
+            let messages_with_prompts = with_system_prompts(&messages, mode);
 
             if enable_tools {
                 let mut tools = get_filesystem_tools();
@@ -338,7 +369,7 @@ async fn handle_ws_request(request: WSRequest, state: &AppState) -> Vec<WSRespon
                                 });
                             }
 
-                            let follow_up_with_prompts = with_system_prompts(&follow_up_messages);
+                            let follow_up_with_prompts = with_system_prompts(&follow_up_messages, mode);
                             match provider.send_message(follow_up_with_prompts).await {
                                 Ok(final_response) => {
                                     outbound.extend(build_streaming_payload(
@@ -370,7 +401,7 @@ async fn handle_ws_request(request: WSRequest, state: &AppState) -> Vec<WSRespon
                     }],
                 }
             } else {
-                match provider.send_message(messages_with_prompts).await {
+                        match provider.send_message(messages_with_prompts).await {
                     Ok(response) => {
                         outbound.extend(build_streaming_payload(
                             stream,
@@ -689,7 +720,7 @@ mod tests {
             content: "request".to_string(),
         }];
 
-        let prefixed = with_system_prompts(&messages);
+        let prefixed = with_system_prompts(&messages, AIMode::Agent);
 
         assert_eq!(prefixed.len(), messages.len() + 2);
         assert_eq!(prefixed[0].role, "system");
