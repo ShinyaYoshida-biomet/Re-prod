@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from '@/core';
 import { socketService } from '@/services/socket';
 import { buildPromptWithContext, createRequestId } from '@/core/ai/promptUtils';
-import type { AIMessage, AIMode } from '@shared/types';
+import type { AIMessage } from '@shared/types';
 import { useAIStreaming } from './useAIStreaming';
 import { useAICodeApplication } from './useAICodeApplication';
 import { useAITimeout } from './useAITimeout';
@@ -73,7 +73,7 @@ export function useAIConversation() {
   }, [clearActiveRequest, clearTimeoutRef, completeStreamingMessage, postAssistantMessage, setAILoading]);
 
   const handleAsk = useCallback(
-    (mode: AIMode = 'agent') => {
+    () => {
       if (!input.trim()) {
         return;
       }
@@ -112,15 +112,12 @@ export function useAIConversation() {
         onStreamingProgress: clearTimeoutRef,
       });
 
-      const enableTools = mode === 'agent';
-
       const sent = socketService.send({
         type: 'ai_message',
         request_id: requestId,
         stream: true,
         messages: requestMessages,
-        enable_tools: enableTools,
-        mode,
+        enable_tools: true,
       });
 
       if (!sent) {
