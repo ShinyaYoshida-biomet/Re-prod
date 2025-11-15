@@ -16,10 +16,26 @@ export function AIPanel(): JSX.Element {
   } = useAIConversation();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const adjustHeight = () => {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
+    };
+
+    adjustHeight();
+    textarea.addEventListener('input', adjustHeight);
+    return () => textarea.removeEventListener('input', adjustHeight);
+  }, [input]);
 
   const [mode, setMode] = useState<AIMode>('agent');
   const placeholder = mode === 'agent' ? 'Describe a task...' : 'Ask a question...';
@@ -67,9 +83,22 @@ export function AIPanel(): JSX.Element {
             </>
           )}
         </div>
-        <div className="ai-input-container">
-          <div className="prompt-input-container">
+        <div className="ai-input-container-wrapper">
+          <div className="ai-input-container vscode-style">
+            <div className="input-controls-left">
+              <select
+                className="mode-dropdown"
+                value={mode}
+                onChange={(e) => setMode(e.target.value as AIMode)}
+                disabled={isLoading}
+                aria-label="AI interaction mode"
+              >
+                <option value="agent">Agent</option>
+                <option value="chat">Chat</option>
+              </select>
+            </div>
             <textarea
+              ref={textareaRef}
               className="ai-input"
               placeholder={placeholder}
               aria-label={placeholder}
@@ -77,49 +106,33 @@ export function AIPanel(): JSX.Element {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isLoading}
-              rows={3}
+              rows={1}
             />
-            <div className="prompt-actions">
-              <div className="ai-mode-selector" role="group" aria-label="AI interaction mode">
+            <div className="input-controls-right">
+              {isLoading ? (
                 <button
                   type="button"
-                  className={mode === 'agent' ? 'active' : ''}
-                  onClick={() => setMode('agent')}
+                  className="icon-btn stop-btn"
+                  onClick={handleStop}
+                  title="Stop generation (Esc)"
+                  aria-label="Stop generation"
                 >
-                  Agent
+                  <IconSquare width={16} height={16} aria-hidden />
                 </button>
+              ) : (
                 <button
                   type="button"
-                  className={mode === 'chat' ? 'active' : ''}
-                  onClick={() => setMode('chat')}
+                  className="icon-btn send-btn"
+                  onClick={() => handleAsk(mode)}
+                  disabled={!input.trim()}
+                  title="Send message (Enter)"
+                  aria-label="Send message"
                 >
-                  Chat
+                  <IconSend width={16} height={16} aria-hidden />
                 </button>
-              </div>
-              <button
-                type="button"
-                className="send-icon-button"
-                onClick={() => handleAsk(mode)}
-                disabled={!input.trim() || isLoading}
-                title="Send message (Enter)"
-                aria-label="Send message"
-              >
-                <IconSend width={16} height={16} aria-hidden />
-              </button>
+              )}
             </div>
           </div>
-          {isLoading && (
-            <button
-              className="btn btn-stop"
-              onClick={handleStop}
-              title="Stop generation"
-            >
-              <>
-                <IconSquare width={16} height={16} aria-hidden />
-                Stop
-              </>
-            </button>
-          )}
         </div>
       </div>
     </div>
