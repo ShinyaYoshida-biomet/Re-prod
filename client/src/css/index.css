@@ -4,7 +4,7 @@
 
 /* Component styles */
 @import './components/editor.css';
-@import './components/ai-panel.css';
+@import './components/ai-panel/index.css';
 @import './components/right-pane.css';
 @import './components/console.css';
 @import './components/timeline.css';
