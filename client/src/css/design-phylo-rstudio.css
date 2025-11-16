@@ -314,6 +314,23 @@
   border-color: var(--phylo-cytosine);
 }
 
+[data-theme="phylo"] .send-btn {
+  background: var(--phylo-cytosine);
+  font-size: 11px;
+  height: 24px;
+  padding: 0 10px;
+}
+
+[data-theme="phylo"] .send-btn:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+[data-theme="phylo"] .send-btn:disabled {
+  background: var(--phylo-bg-secondary);
+  color: var(--phylo-text-muted);
+  border: var(--phylo-border);
+}
+
 /* ============================================
    CODE BLOCKS
    ============================================ */

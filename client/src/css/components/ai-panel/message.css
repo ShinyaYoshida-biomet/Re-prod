@@ -280,19 +280,38 @@
   outline-offset: 2px;
 }
 
-/* Send button - highlighted */
-.icon-btn.send-btn {
+/* Send button - wider with text label */
+.send-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
   background-color: var(--accent-blue);
   color: white;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 
-.icon-btn.send-btn:hover:not(:disabled) {
+.send-btn:hover:not(:disabled) {
   background-color: var(--accent-blue-hover);
 }
 
-.icon-btn.send-btn:disabled {
-  background-color: rgba(148, 163, 184, 0.2);
-  color: rgba(255, 255, 255, 0.5);
+.send-btn:disabled {
+  background-color: rgba(148, 163, 184, 0.3);
+  color: rgba(100, 116, 139, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  cursor: not-allowed;
+}
+
+.send-btn:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
 }
 
 /* Stop button - danger color */

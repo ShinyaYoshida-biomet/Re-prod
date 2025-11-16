@@ -122,13 +122,14 @@ export function AIPanel(): JSX.Element {
               ) : (
                 <button
                   type="button"
-                  className="icon-btn send-btn"
+                  className="send-btn"
                   onClick={() => handleAsk(mode)}
                   disabled={!input.trim()}
                   title="Send message (Enter)"
                   aria-label="Send message"
                 >
                   <IconSend width={16} height={16} aria-hidden />
+                  <span>Send</span>
                 </button>
               )}
             </div>
