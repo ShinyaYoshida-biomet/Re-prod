@@ -8,6 +8,11 @@ interface Props {
   onApplyCode: (codeBlock: CodeBlock) => Promise<void>;
 }
 
+// Remove patch blocks from content for display
+function stripPatchBlocks(content: string): string {
+  return content.replace(/\*\*\* Begin Patch[\s\S]*?\*\*\* End Patch/g, '').trim();
+}
+
 export function StreamingMessage({ message, onApplyCode }: Props): JSX.Element {
   const isAssistant = message.role === 'assistant';
   const isStreaming = Boolean(message.streamingId && !message.isComplete);
@@ -15,6 +20,9 @@ export function StreamingMessage({ message, onApplyCode }: Props): JSX.Element {
   const hasTools = Boolean(message.toolLogs && message.toolLogs.length > 0);
   const hasCodeBlocks = Boolean(message.codeBlocks && message.codeBlocks.length > 0);
   const shouldShowLegacyCode = Boolean(message.code && !hasCodeBlocks);
+
+  // Strip patch blocks from content to avoid duplicate display
+  const displayContent = message.content ? stripPatchBlocks(message.content) : '';
 
   return (
     <div className={`message message-${message.role}`} data-streaming={isStreaming ? 'true' : 'false'}>
@@ -28,8 +36,8 @@ export function StreamingMessage({ message, onApplyCode }: Props): JSX.Element {
             <span>Streaming response…</span>
           </div>
         )}
-        {message.content && (
-          <pre className="message-streaming-text">{message.content}</pre>
+        {displayContent && (
+          <pre className="message-streaming-text">{displayContent}</pre>
         )}
       </div>
 
