@@ -257,7 +257,7 @@
 }
 
 [data-theme="phylo"] .message-assistant {
-  background: var(--phylo-bg-primary);
+  background: transparent;
   padding: 10px 12px;
   border-radius: var(--phylo-panel-radius);
   border: var(--phylo-border);
@@ -287,11 +287,15 @@
   font-size: 10px;
 }
 
-[data-theme="phylo"] .ai-input-container {
-  gap: 8px;
+[data-theme="phylo"] .ai-input-container-wrapper {
   padding: 12px;
   border-top: var(--phylo-border);
   background: var(--phylo-bg-toolbar);
+}
+
+[data-theme="phylo"] .ai-input-container {
+  gap: 8px;
+  background: transparent;
 }
 
 [data-theme="phylo"] .ai-input {
