@@ -80,13 +80,6 @@ export function useBottomPaneState(): UseBottomPaneStateResult {
     }
   }, [allPlots.length, selectedPlotIndex]);
 
-  useEffect(() => {
-    if (activeTab === 'timeline') {
-      // Timeline is no longer a tab, default to help
-      setActiveTab('help');
-    }
-  }, [activeTab]);
-
   const selectPreviousPlot = useCallback(() => {
     setSelectedPlotIndex((current) => Math.max(0, current - 1));
   }, []);
@@ -97,7 +90,7 @@ export function useBottomPaneState(): UseBottomPaneStateResult {
 
   const navigation: PlotNavigationState = {
     activeTab:
-      activeTab === 'plots' || activeTab === 'timeline' || activeTab === 'help'
+      activeTab === 'plots' || activeTab === 'help'
         ? (activeTab as BottomPanePlotTab)
         : 'help',
     selectedPlotIndex,

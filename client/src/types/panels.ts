@@ -10,7 +10,7 @@
 export type ConsoleTabId = 'console' | 'history';
 
 /** Tabs rendered in the consolidated bottom pane (excluding the console) */
-export type BottomPanePlotTab = 'plots' | 'timeline' | 'help';
+export type BottomPanePlotTab = 'plots' | 'help';
 
 /** Tabs rendered in the consolidated bottom pane */
 export type BottomPaneTab = 'console' | 'history' | BottomPanePlotTab;
