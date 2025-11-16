@@ -29,7 +29,7 @@ export function AIPanel(): JSX.Element {
 
     const adjustHeight = () => {
       textarea.style.height = 'auto';
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 300)}px`;
     };
 
     adjustHeight();
@@ -106,7 +106,7 @@ export function AIPanel(): JSX.Element {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isLoading}
-              rows={1}
+              rows={3}
             />
             <div className="input-controls-right">
               {isLoading ? (

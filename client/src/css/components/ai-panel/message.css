@@ -230,8 +230,8 @@
   font-size: 13px;
   font-family: inherit;
   resize: none;
-  min-height: 24px;
-  max-height: 200px;
+  min-height: 60px;
+  max-height: 300px;
   line-height: 1.5;
   overflow-y: auto;
 }

@@ -304,8 +304,8 @@
   border-radius: var(--phylo-panel-radius);
   background-color: var(--phylo-bg-primary);
   font-size: 11px;
-  min-height: 50px;
-  max-height: 180px;
+  min-height: 60px;
+  max-height: 240px;
   box-shadow: none;
 }
 
