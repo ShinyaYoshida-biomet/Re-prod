@@ -170,15 +170,6 @@ Add to `.github/workflows/ci.yml`:
     cargo test --test viral_phylogenomics_workflow_test -- --nocapture
 ```
 
-### Pre-commit Hook
-
-Add to `scripts/install-hooks.sh`:
-
-```bash
-# Run workflow integration tests before commit
-cargo test --test viral_phylogenomics_workflow_test --quiet
-```
-
 ## Troubleshooting
 
 ### Test Failures

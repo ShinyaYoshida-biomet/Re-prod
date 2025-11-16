@@ -39,8 +39,7 @@ cd Re-prod
 # 依存関係をインストール
 pnpm install
 
-# Git フックのインストール（推奨）
-bash scripts/install-hooks.sh
+# Husky による Git フックは `pnpm install` 時に自動設定されます
 ```
 
 ### 2. ブランチを作成
@@ -146,14 +145,7 @@ git push origin feat/your-feature-name
 
 ## Git フック
 
-コード品質の担保のために Git フックを利用しています。
-
-```bash
-# フックをインストール（pre-push で実行）
-bash scripts/install-hooks.sh
-```
-
-フックでは以下をチェックします:
+コード品質の担保のために Husky 管理の Git フックを利用しています。`pnpm install` 実行時に自動設定され、pre-push で以下をチェックします:
 - Rust フォーマット (`cargo fmt --check`)
 - Rust lint (`cargo clippy`)
 - TypeScript lint (`pnpm run lint`)
