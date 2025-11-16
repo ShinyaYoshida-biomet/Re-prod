@@ -167,9 +167,9 @@
 }
 
 .ai-input-container.vscode-style:focus-within {
-  outline: 2px solid rgba(47, 111, 237, 0.25);
-  border-color: var(--accent-blue);
-  box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.1);
+  outline: none;
+  border-color: rgba(148, 163, 184, 0.5);
+  box-shadow: none;
 }
 
 .input-controls-left {
