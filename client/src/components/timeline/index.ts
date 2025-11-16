@@ -1,4 +1,3 @@
-export { TimelinePanel } from './TimelinePanel';
 export { TimelineDialog } from './TimelineDialog';
 export { Timeline } from './Timeline';
 export { TimelineEvent } from './TimelineEvent';
