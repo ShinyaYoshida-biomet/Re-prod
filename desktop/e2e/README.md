@@ -1,10 +1,28 @@
 # Desktop E2E Tests
 
-End-to-end test suite for the Re-prod desktop application using WebDriverIO and tauri-driver.
+End-to-end test suite for the Re-prod application using **Playwright** (primary) and **WebDriverIO** (desktop validation).
 
-## Overview
+## 🎯 Hybrid Testing Strategy
 
-This test suite provides comprehensive E2E coverage for core user workflows:
+This test suite uses a **hybrid approach** to maximize coverage and developer productivity:
+
+### Playwright Tests (Primary - All Platforms ✅)
+- **Location**: `tests/` directory
+- **Target**: Web browser (Chromium)
+- **Platforms**: macOS, Linux, Windows
+- **Use Case**: Daily development, fast feedback, CI on all PRs
+- **Benefits**: Works everywhere, fast, great debugging tools
+
+### WebDriverIO Tests (Desktop Validation - Linux/Windows only)
+- **Location**: `webdriver-specs/` directory
+- **Target**: Tauri desktop application
+- **Platforms**: Linux, Windows only (macOS NOT supported)
+- **Use Case**: Final integration testing on develop→main PRs
+- **Benefits**: Tests actual desktop app behavior
+
+## Test Coverage
+
+Both test suites cover the same core workflows:
 
 - ✅ **R Code Execution** - Basic R code execution and output verification
 - ✅ **Timeline Feature** - Execution history, filtering, and statistics
@@ -67,9 +85,31 @@ See the [Running on macOS (Docker)](#running-on-macos-docker) section below for 
 
 ## Running Tests Locally
 
-### Quick Start (Linux/Windows Only)
+### Quick Start - Playwright (Recommended for All Platforms)
+
+**Works on macOS, Linux, and Windows!**
 
 From the repository root:
+
+```bash
+# 1. Install all dependencies (if not already done)
+pnpm install
+
+# 2. Run Playwright E2E tests
+pnpm --filter @reprod/e2e test
+
+# OR with UI mode (great for debugging)
+pnpm --filter @reprod/e2e test:playwright:ui
+
+# OR in headed mode (see the browser)
+pnpm --filter @reprod/e2e test:playwright:headed
+```
+
+The Playwright tests automatically start the development server for you!
+
+### WebDriverIO Tests (Linux/Windows Only)
+
+For desktop app testing (NOT supported on macOS):
 
 ```bash
 # 1. Install all dependencies
@@ -78,53 +118,95 @@ pnpm install
 # 2. Build the Tauri app in debug mode
 pnpm tauri build --debug
 
-# 3. Run all E2E tests
-pnpm --filter @reprod/e2e test
+# 3. Run WebDriverIO E2E tests
+pnpm --filter @reprod/e2e test:webdriver
 ```
 
 ### Running Specific Tests
 
+**Playwright:**
+
 ```bash
 # Run only R execution tests
-pnpm --filter @reprod/e2e test -- --spec ./specs/r-execution.e2e.ts
+pnpm --filter @reprod/e2e test r-execution
 
 # Run only Timeline tests
-pnpm --filter @reprod/e2e test -- --spec ./specs/timeline.e2e.ts
+pnpm --filter @reprod/e2e test timeline
 
 # Run only Export tests
-pnpm --filter @reprod/e2e test -- --spec ./specs/export.e2e.ts
+pnpm --filter @reprod/e2e test export
 
 # Run only Error handling tests
-pnpm --filter @reprod/e2e test -- --spec ./specs/error-handling.e2e.ts
+pnpm --filter @reprod/e2e test error-handling
 
 # Run only Full workflow tests
-pnpm --filter @reprod/e2e test -- --spec ./specs/full-workflow.e2e.ts
+pnpm --filter @reprod/e2e test full-workflow
+
+# Run specific test file
+pnpm --filter @reprod/e2e test tests/r-execution.spec.ts
+```
+
+**WebDriverIO (Linux/Windows):**
+
+```bash
+# Run only R execution tests
+pnpm --filter @reprod/e2e test:webdriver -- --spec ./webdriver-specs/r-execution.e2e.ts
+
+# Run only Timeline tests
+pnpm --filter @reprod/e2e test:webdriver -- --spec ./webdriver-specs/timeline.e2e.ts
+
+# Other WebDriverIO tests follow same pattern...
 ```
 
 ### Debug Mode
 
+**Playwright:**
+
+```bash
+# Interactive debug mode with Playwright Inspector
+pnpm --filter @reprod/e2e test:playwright:debug
+
+# UI mode (best for debugging)
+pnpm --filter @reprod/e2e test:playwright:ui
+
+# Headed mode (see browser actions)
+pnpm --filter @reprod/e2e test:playwright:headed
+```
+
+**WebDriverIO:**
+
 ```bash
 # Run with verbose logging
-LOG_LEVEL=debug pnpm --filter @reprod/e2e test
+LOG_LEVEL=debug pnpm --filter @reprod/e2e test:webdriver
 
 # Run with debugging enabled
-pnpm --filter @reprod/e2e test:debug
+pnpm --filter @reprod/e2e test:webdriver:debug
 ```
 
 ## Test Structure
 
 ```
 desktop/e2e/
-├── specs/
-│   ├── r-execution.e2e.ts      # Basic R code execution
-│   ├── timeline.e2e.ts         # Timeline feature tests
-│   ├── export.e2e.ts           # Export dialog and functionality
-│   ├── error-handling.e2e.ts  # Error scenarios and recovery
-│   └── full-workflow.e2e.ts   # Complete user workflows
-├── wdio.conf.ts                # WebDriverIO configuration
-├── package.json                # Test dependencies
-├── tsconfig.json               # TypeScript config
-└── README.md                   # This file
+├── tests/                      # Playwright tests (All platforms)
+│   ├── r-execution.spec.ts    # Basic R code execution
+│   ├── timeline.spec.ts       # Timeline feature tests
+│   ├── export.spec.ts         # Export dialog and functionality
+│   ├── error-handling.spec.ts # Error scenarios and recovery
+│   └── full-workflow.spec.ts  # Complete user workflows
+├── webdriver-specs/           # WebDriverIO tests (Linux/Windows)
+│   ├── r-execution.e2e.ts    # Basic R code execution
+│   ├── timeline.e2e.ts       # Timeline feature tests
+│   ├── export.e2e.ts         # Export dialog and functionality
+│   ├── error-handling.e2e.ts # Error scenarios and recovery
+│   └── full-workflow.e2e.ts  # Complete user workflows
+├── shared/                    # Shared helpers and selectors
+│   ├── selectors.ts          # Common DOM selectors
+│   └── helpers.ts            # Common test actions
+├── playwright.config.ts       # Playwright configuration
+├── wdio.conf.ts              # WebDriverIO configuration
+├── package.json              # Test dependencies
+├── tsconfig.json             # TypeScript config
+└── README.md                 # This file
 ```
 
 ## Test Coverage
@@ -283,33 +365,44 @@ e2e-tests:
 
 **Rationale**: Feature development needs fast feedback. Full E2E validation happens at the final quality gate (production branch).
 
+### CI Strategy
+
+**Feature → Develop PRs:**
+- ✅ Playwright tests (fast, all platforms)
+- ❌ WebDriverIO tests skipped (saves CI time)
+
+**Develop → Main PRs:**
+- ✅ Playwright tests (web browser validation)
+- ✅ WebDriverIO tests (desktop app validation on Linux)
+
 ### Before Creating develop → main PR
 
 ⚠️ **IMPORTANT**: Always run E2E tests before creating a PR from develop to main:
 
-**Linux/Windows developers** - Run tests locally:
+**All developers** - Run Playwright tests locally:
+
+```bash
+# 1. Run Playwright E2E suite (works on all platforms!)
+pnpm --filter @reprod/e2e test
+
+# 2. Verify all tests pass, then create PR
+gh pr create --base main --head develop
+```
+
+**Linux/Windows developers** (Optional - can also run desktop tests):
 
 ```bash
 # 1. Ensure R is installed
 R --version
 
-# 2. Build the app
+# 2. Build the Tauri app
 pnpm tauri build --debug
 
-# 3. Run full E2E suite
-pnpm --filter @reprod/e2e test
+# 3. Run WebDriverIO tests
+pnpm --filter @reprod/e2e test:webdriver
 
-# 4. Verify all tests pass, then create PR
+# 4. Create PR
 gh pr create --base main --head develop
-```
-
-**macOS developers** - Verify via CI or Docker:
-```bash
-# Option 1: Push to a test branch and check CI
-git push origin develop:test/e2e-validation
-# Wait for CI to run E2E tests, then create PR
-
-# Option 2: Use Docker (see Running on macOS section)
 ```
 
 ## Troubleshooting
