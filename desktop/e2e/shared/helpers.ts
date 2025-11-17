@@ -20,19 +20,24 @@ export async function waitForElement(
  * Execute R code in the editor
  */
 export async function executeRCode(page: Page, code: string) {
-  const editor = page.locator('.monaco-editor textarea').first();
-  await editor.waitFor({ timeout: 30000 });
+  // Wait for Monaco Editor to be ready
+  await page.waitForSelector('.monaco-editor', { timeout: 30000 });
 
-  // Focus the editor instead of clicking (avoids Monaco overlay issues)
-  await editor.focus();
+  // Set editor content using Monaco Editor API (more reliable than keyboard input)
+  await page.evaluate((newCode) => {
+    const monaco = (window as any).monaco;
+    if (monaco && monaco.editor) {
+      const editors = monaco.editor.getEditors();
+      if (editors && editors.length > 0) {
+        const editor = editors[0];
+        editor.setValue(newCode);
+        editor.focus();
+      }
+    }
+  }, code);
 
-  // Select all existing content (use Meta/Command key on macOS, Control on others)
-  const isMac = process.platform === 'darwin';
-  const modifier = isMac ? 'Meta' : 'Control';
-  await page.keyboard.press(`${modifier}+a`);
-
-  // Type new code
-  await page.keyboard.type(code);
+  // Wait a bit for the change to take effect
+  await page.waitForTimeout(500);
 
   // Click run button
   const runButton = page.locator('button[title="Run All (Cmd/Ctrl+Shift+Enter)"]');
