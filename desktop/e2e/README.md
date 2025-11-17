@@ -12,6 +12,21 @@ This test suite provides comprehensive E2E coverage for core user workflows:
 - ✅ **Error Handling** - Syntax errors, runtime errors, and error recovery
 - ✅ **Full Workflows** - Complete user journeys from code to export
 
+## ⚠️ Platform Support
+
+**IMPORTANT**: `tauri-driver` (the WebDriver tool for Tauri apps) **only supports Windows and Linux**. macOS is NOT supported because there is no WKWebView driver available.
+
+- ✅ **Linux**: Full support (recommended for CI/CD)
+- ✅ **Windows**: Full support
+- ❌ **macOS**: NOT supported (neither Intel nor Apple Silicon)
+
+**For macOS developers**:
+- **Option 1 (Recommended)**: Push changes and let CI run E2E tests on Linux
+- **Option 2**: Run tests in a Linux Docker container or VM
+- **Option 3**: Use a Linux cloud development environment
+
+See the [Running on macOS (Docker)](#running-on-macos-docker) section below for Docker instructions.
+
 ## Prerequisites
 
 ### Required Software
@@ -23,21 +38,17 @@ This test suite provides comprehensive E2E coverage for core user workflows:
 2. **Rust & Cargo**
    - Install from [rustup.rs](https://rustup.rs/)
 
-3. **tauri-driver**
+3. **tauri-driver** (Linux/Windows only)
    ```bash
    cargo install tauri-driver
    ```
 
 4. **R Environment**
-   - **macOS**: `brew install r`
-   - **Ubuntu**: `sudo apt-get install r-base`
+   - **Linux (Ubuntu/Debian)**: `sudo apt-get install r-base`
    - **Windows**: Download from [CRAN](https://cran.r-project.org/bin/windows/base/)
    - Verify: `R --version` (should be >=4.3)
 
 5. **Platform-specific dependencies**
-
-   **macOS**:
-   - Xcode Command Line Tools: `xcode-select --install`
 
    **Linux (Ubuntu/Debian)**:
    ```bash
@@ -56,7 +67,7 @@ This test suite provides comprehensive E2E coverage for core user workflows:
 
 ## Running Tests Locally
 
-### Quick Start
+### Quick Start (Linux/Windows Only)
 
 From the repository root:
 
@@ -274,7 +285,9 @@ e2e-tests:
 
 ### Before Creating develop → main PR
 
-⚠️ **IMPORTANT**: Always run E2E tests locally before creating a PR from develop to main:
+⚠️ **IMPORTANT**: Always run E2E tests before creating a PR from develop to main:
+
+**Linux/Windows developers** - Run tests locally:
 
 ```bash
 # 1. Ensure R is installed
@@ -290,11 +303,33 @@ pnpm --filter @reprod/e2e test
 gh pr create --base main --head develop
 ```
 
+**macOS developers** - Verify via CI or Docker:
+```bash
+# Option 1: Push to a test branch and check CI
+git push origin develop:test/e2e-validation
+# Wait for CI to run E2E tests, then create PR
+
+# Option 2: Use Docker (see Running on macOS section)
+```
+
 ## Troubleshooting
 
 ### Common Issues
 
-**1. "tauri-driver not found"**
+**1. "tauri-driver is not supported on this platform" (macOS)**
+
+```
+Error: tauri-driver is not supported on this platform
+```
+
+**Cause**: tauri-driver does NOT support macOS (no WKWebView driver available).
+
+**Solution**: Use one of these alternatives:
+- Run tests via CI (GitHub Actions uses Linux)
+- Use Docker to run tests in a Linux container (see [Running on macOS](#running-on-macos-docker))
+- Use a Linux VM or cloud development environment
+
+**2. "tauri-driver not found"** (Linux/Windows)
 
 ```bash
 # Install tauri-driver
@@ -304,7 +339,7 @@ cargo install tauri-driver
 tauri-driver --version
 ```
 
-**2. "App binary not found"**
+**3. "App binary not found"**
 
 ```bash
 # Rebuild the app
@@ -314,20 +349,20 @@ pnpm tauri build --debug
 TAURI_DRIVER_APP=/path/to/binary pnpm --filter @reprod/e2e test
 ```
 
-**3. "R not found" errors**
+**4. "R not found" errors**
 
 ```bash
 # Verify R installation
 R --version
 
-# macOS: Install R
-brew install r
-
-# Ubuntu: Install R
+# Linux (Ubuntu/Debian): Install R
 sudo apt-get install r-base
+
+# Windows: Download from CRAN
+# https://cran.r-project.org/bin/windows/base/
 ```
 
-**4. "Driver timeout" or "Driver not ready"**
+**5. "Driver timeout" or "Driver not ready"**
 
 ```bash
 # Increase timeout
@@ -339,7 +374,7 @@ lsof -i :9515
 kill -9 <PID>
 ```
 
-**5. Tests fail on Linux (missing display)**
+**6. Tests fail on Linux (missing display)**
 
 ```bash
 # Install Xvfb
@@ -349,7 +384,7 @@ sudo apt-get install xvfb
 xvfb-run --auto-servernum pnpm --filter @reprod/e2e test
 ```
 
-**6. GTK/WebKit errors on Linux**
+**7. GTK/WebKit errors on Linux**
 
 ```bash
 # Install required dependencies
@@ -385,6 +420,76 @@ sudo apt-get install -y \
    # While tests are running, check driver status
    curl http://localhost:9515/status
    ```
+
+## Running on macOS (Docker)
+
+Since tauri-driver doesn't support macOS, you can run E2E tests in a Linux Docker container:
+
+### Option 1: Using Docker (Manual)
+
+**1. Create a Dockerfile for E2E testing:**
+
+```dockerfile
+FROM ubuntu:22.04
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    libwebkit2gtk-4.1-dev \
+    libgtk-3-dev \
+    libayatana-appindicator3-dev \
+    librsvg2-dev \
+    patchelf \
+    xvfb \
+    r-base \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 18+
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs
+
+# Enable pnpm
+RUN corepack enable pnpm
+
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Install tauri-driver
+RUN cargo install tauri-driver
+
+WORKDIR /workspace
+
+# Entry point
+CMD ["/bin/bash"]
+```
+
+**2. Build and run:**
+
+```bash
+# Build Docker image
+docker build -t reprod-e2e .
+
+# Run container with project mounted
+docker run -it -v $(pwd):/workspace reprod-e2e
+
+# Inside container:
+pnpm install
+pnpm tauri build --debug
+xvfb-run --auto-servernum pnpm --filter @reprod/e2e test
+```
+
+### Option 2: Using GitHub CI (Recommended)
+
+The simplest approach for macOS developers is to rely on CI:
+
+1. Push your branch to GitHub
+2. Create a draft PR targeting `develop` or `main`
+3. Check the CI results to see if E2E tests pass
+4. Make fixes if needed and push again
+
+This is the recommended workflow for macOS developers since it requires no local Docker setup.
 
 ## Adding New Tests
 

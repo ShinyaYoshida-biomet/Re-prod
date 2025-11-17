@@ -1,5 +1,5 @@
-import type { Options } from '@wdio/cli';
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
+import type { Options } from '@wdio/types';
+import { spawn, type ChildProcess } from 'node:child_process';
 import http from 'node:http';
 import path from 'node:path';
 
@@ -23,7 +23,7 @@ if (process.env.TAURI_DRIVER_TAURI_OPTIONS) {
   }
 }
 
-let driverProcess: ChildProcessWithoutNullStreams | null = null;
+let driverProcess: ChildProcess | null = null;
 
 function startDriver(): void {
   if (driverProcess) {
@@ -34,13 +34,17 @@ function startDriver(): void {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
-  driverProcess.stdout?.on('data', (chunk) => {
-    process.stdout.write(`[tauri-driver] ${chunk}`);
-  });
+  if (driverProcess.stdout) {
+    driverProcess.stdout.on('data', (chunk) => {
+      process.stdout.write(`[tauri-driver] ${chunk}`);
+    });
+  }
 
-  driverProcess.stderr?.on('data', (chunk) => {
-    process.stderr.write(`[tauri-driver] ${chunk}`);
-  });
+  if (driverProcess.stderr) {
+    driverProcess.stderr.on('data', (chunk) => {
+      process.stderr.write(`[tauri-driver] ${chunk}`);
+    });
+  }
 }
 
 function stopDriver(): void {
@@ -92,18 +96,18 @@ async function waitForDriverReady(): Promise<void> {
   throw new Error('tauri-driver did not become ready in time');
 }
 
-const config: Options.Testrunner = {
+export const config: Options.Testrunner = {
   runner: 'local',
   specs: ['./specs/**/*.ts'],
   maxInstances: 1,
   capabilities: [
     {
-      browserName: 'tauri',
+      browserName: 'tauri' as any,
       'tauri:options': {
         binaryPath,
         ...tauriOptions,
       },
-    },
+    } as any,
   ],
   logLevel: 'info',
   bail: 0,
@@ -112,7 +116,7 @@ const config: Options.Testrunner = {
   connectionRetryCount: 2,
   services: [],
   framework: 'mocha',
-  reporters: [['spec']],
+  reporters: ['spec' as any],
   mochaOpts: {
     ui: 'bdd',
     timeout: 300000,
@@ -120,7 +124,7 @@ const config: Options.Testrunner = {
   hostname: driverHost,
   port: driverPort,
   path: driverPath,
-  protocol: 'http',
+  protocol: 'http' as any,
   onPrepare: async () => {
     startDriver();
     await waitForDriverReady();
@@ -129,5 +133,3 @@ const config: Options.Testrunner = {
     stopDriver();
   },
 };
-
-export default config;
