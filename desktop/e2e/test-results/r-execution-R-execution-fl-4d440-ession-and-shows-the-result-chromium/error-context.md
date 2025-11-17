@@ -1,0 +1,113 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]: Re-prod
+        - generic [ref=e7]:
+          - button "File" [ref=e9] [cursor=pointer]
+          - button "Edit" [ref=e11] [cursor=pointer]
+          - button "Code" [ref=e13] [cursor=pointer]
+          - button "Session" [ref=e15] [cursor=pointer]
+          - button "View" [ref=e17] [cursor=pointer]
+          - button "Help" [ref=e19] [cursor=pointer]
+      - generic [ref=e23]: Connected
+    - generic [ref=e27]:
+      - generic [ref=e31]:
+        - generic [ref=e33]:
+          - generic [ref=e34]:
+            - generic [ref=e35]: Untitled.R
+            - generic [ref=e36]:
+              - button "Run Selection" [ref=e37] [cursor=pointer]:
+                - img [ref=e38]
+                - text: Run Selection
+              - button "Run All" [ref=e40] [cursor=pointer]:
+                - img [ref=e41]
+                - text: Run All
+          - code [ref=e47]:
+            - generic [ref=e48]:
+              - textbox "Editor content" [ref=e49]
+              - textbox [ref=e50]
+              - generic [ref=e52]:
+                - generic [ref=e55]: "1"
+                - generic [ref=e57]: "2"
+                - generic [ref=e59]: "3"
+                - generic [ref=e61]: "4"
+                - generic [ref=e63]: "5"
+                - generic [ref=e65]: "6"
+                - generic [ref=e67]: "7"
+                - generic [ref=e69]: "8"
+                - generic [ref=e71]: "9"
+                - generic [ref=e73]: "10"
+                - generic [ref=e75]: "11"
+                - generic [ref=e77]: "12"
+                - generic [ref=e79]: "13"
+                - generic [ref=e81]: "14"
+                - generic [ref=e82]:
+                  - generic [ref=e83] [cursor=pointer]: 
+                  - generic [ref=e84]: "15"
+                - generic [ref=e86]: "16"
+                - generic [ref=e88]: "17"
+                - generic [ref=e90]: "18"
+                - generic [ref=e92]: "19"
+                - generic [ref=e94]: "20"
+                - generic [ref=e96]: "21"
+                - generic [ref=e98]: "22"
+              - generic [ref=e128]:
+                - generic [ref=e130]: "# Welcome to Re-prod ----"
+                - generic [ref=e132]: "# AI-Powered R Analysis IDE"
+                - generic [ref=e134]: "# Try Cmd/Ctrl+Enter to run current section"
+                - generic [ref=e136]: "# Try Shift+Enter to run and move to next section"
+                - generic [ref=e139]: "# Load Data ----"
+                - generic [ref=e141]: data(mtcars)
+                - generic [ref=e143]: head(mtcars)
+                - generic [ref=e146]: "# Summary Statistics ----"
+                - generic [ref=e148]: summary(mtcars)
+                - generic [ref=e150]: str(mtcars)
+                - generic [ref=e153]: "# Scatter Plot ----"
+                - generic [ref=e155]: plot(mtcars$mpg, mtcars$hp,
+                - generic [ref=e157]: xlab = "Miles per Gallon",
+                - generic [ref=e159]: ylab = "Horsepower",
+                - generic [ref=e161]: main = "MPG vs Horsepower",
+                - generic [ref=e163]: col = "steelblue",
+                - generic [ref=e165]: pch = 19)
+                - generic [ref=e167]: abline(lm(hp ~ mpg, data = mtcars), col = "red", lwd = 2)
+        - generic [ref=e171]:
+          - generic [ref=e172]:
+            - generic [ref=e173]:
+              - button "Console" [ref=e174] [cursor=pointer]
+              - button "History" [ref=e175] [cursor=pointer]
+              - button "Plots" [ref=e176] [cursor=pointer]
+              - button "Help" [ref=e177] [cursor=pointer]
+            - generic [ref=e178]:
+              - button "Previous plot" [disabled] [ref=e179]:
+                - img [ref=e180]
+              - generic [ref=e182]: 1 / 1
+              - button "Next plot" [disabled] [ref=e183]:
+                - img [ref=e184]
+          - img "Plot 1" [ref=e189]
+      - generic [ref=e192]:
+        - generic [ref=e194]: AI Assistant
+        - generic [ref=e195]:
+          - generic [ref=e197]:
+            - heading "AI Assistant" [level=3] [ref=e198]
+            - paragraph [ref=e199]: Ask me anything about R programming, data analysis, or visualization.
+          - generic [ref=e201]:
+            - combobox "AI interaction mode" [ref=e203] [cursor=pointer]:
+              - option "Agent" [selected]
+              - option "Chat"
+            - textbox "Describe a task..." [ref=e204]
+            - button "Send message" [disabled] [ref=e206]:
+              - img [ref=e207]
+              - generic [ref=e209]: Send
+    - generic [ref=e210]:
+      - generic [ref=e211]:
+        - generic [ref=e212]: Untitled
+        - generic [ref=e213]: Ln 1, Col 1
+      - generic [ref=e215]: "R: Rscript"
+  - generic [ref=e216]:
+    - alert
+    - alert
+```

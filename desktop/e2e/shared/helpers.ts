@@ -26,8 +26,10 @@ export async function executeRCode(page: Page, code: string) {
   // Focus the editor instead of clicking (avoids Monaco overlay issues)
   await editor.focus();
 
-  // Select all existing content
-  await page.keyboard.press('Control+A');
+  // Select all existing content (use Meta/Command key on macOS, Control on others)
+  const isMac = process.platform === 'darwin';
+  const modifier = isMac ? 'Meta' : 'Control';
+  await page.keyboard.press(`${modifier}+a`);
 
   // Type new code
   await page.keyboard.type(code);
