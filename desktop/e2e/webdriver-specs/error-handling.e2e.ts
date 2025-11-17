@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 
 const editorSelector = '.monaco-editor textarea';
-const runAllSelector = 'button[title="Run All (Cmd/Ctrl+Enter)"]';
+const runAllSelector = 'button[title="Run All (Cmd/Ctrl+Shift+Enter)"]';
 const consoleOutputSelector = '.console-output, .console-entry';
 const consoleStderrSelector = '.console-stderr';
 const errorBadgeSelector = '.console-error-badge, .error-badge';
