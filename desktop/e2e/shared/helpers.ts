@@ -20,15 +20,17 @@ export async function waitForElement(
  * Execute R code in the editor
  */
 export async function executeRCode(page: Page, code: string) {
-  const editor = page.locator('.monaco-editor textarea');
+  const editor = page.locator('.monaco-editor textarea').first();
   await editor.waitFor({ timeout: 30000 });
-  await editor.click();
+
+  // Focus the editor instead of clicking (avoids Monaco overlay issues)
+  await editor.focus();
 
   // Select all existing content
   await page.keyboard.press('Control+A');
 
   // Type new code
-  await editor.fill(code);
+  await page.keyboard.type(code);
 
   // Click run button
   const runButton = page.locator('button[title="Run All (Cmd/Ctrl+Shift+Enter)"]');
