@@ -27,3 +27,20 @@ export interface TerminalErrorEvent {
 export interface TerminalKeepAliveEvent {
   session_id: string;
 }
+
+export interface TerminalEvent<T> {
+  payload: T;
+}
+
+export interface TauriTerminalAPI {
+  invoke: <T = unknown>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
+  event: {
+    listen: <T>(event: string, handler: (event: TerminalEvent<T>) => void) => Promise<() => void>;
+  };
+}
+
+declare global {
+  interface Window {
+    __TAURI__?: TauriTerminalAPI;
+  }
+}
