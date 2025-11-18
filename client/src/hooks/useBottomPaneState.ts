@@ -22,6 +22,7 @@ interface UseBottomPaneStateResult {
 }
 
 const DEFAULT_TAB: BottomPaneTab = 'console';
+const TERMINAL_FOCUS_EVENT = 'terminal:focus';
 
 export function useBottomPaneState(): UseBottomPaneStateResult {
   const execution = useStore((state) => state.execution);
@@ -42,6 +43,7 @@ export function useBottomPaneState(): UseBottomPaneStateResult {
     const list: PanelTabItem<BottomPaneTab>[] = [
       { id: 'console', label: 'Console' },
       { id: 'history', label: 'History' },
+      { id: 'terminal', label: 'Terminal' },
       { id: 'plots', label: 'Plots' },
     ];
     list.push({ id: 'help', label: 'Help' });
@@ -79,6 +81,21 @@ export function useBottomPaneState(): UseBottomPaneStateResult {
       setSelectedPlotIndex(allPlots.length - 1);
     }
   }, [allPlots.length, selectedPlotIndex]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const handleFocus = () => {
+      setActiveTab('terminal');
+    };
+
+    window.addEventListener(TERMINAL_FOCUS_EVENT, handleFocus);
+    return () => {
+      window.removeEventListener(TERMINAL_FOCUS_EVENT, handleFocus);
+    };
+  }, []);
 
   const selectPreviousPlot = useCallback(() => {
     setSelectedPlotIndex((current) => Math.max(0, current - 1));

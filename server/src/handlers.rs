@@ -369,7 +369,8 @@ async fn handle_ws_request(request: WSRequest, state: &AppState) -> Vec<WSRespon
                                 });
                             }
 
-                            let follow_up_with_prompts = with_system_prompts(&follow_up_messages, mode);
+                            let follow_up_with_prompts =
+                                with_system_prompts(&follow_up_messages, mode);
                             match provider.send_message(follow_up_with_prompts).await {
                                 Ok(final_response) => {
                                     outbound.extend(build_streaming_payload(
@@ -401,7 +402,7 @@ async fn handle_ws_request(request: WSRequest, state: &AppState) -> Vec<WSRespon
                     }],
                 }
             } else {
-                        match provider.send_message(messages_with_prompts).await {
+                match provider.send_message(messages_with_prompts).await {
                     Ok(response) => {
                         outbound.extend(build_streaming_payload(
                             stream,

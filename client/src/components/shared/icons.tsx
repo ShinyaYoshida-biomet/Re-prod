@@ -51,6 +51,7 @@ function createIcon(name: keyof typeof iconDefinitions) {
 
 export const IconPlay = createIcon('play');
 export const IconPlayCircle = createIcon('playCircle');
+export const IconPlus = createIcon('plus');
 export const IconRobot = createIcon('robot');
 export const IconSend = createIcon('send');
 export const IconSquare = createIcon('square');

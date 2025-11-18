@@ -3,7 +3,9 @@
 #![allow(clippy::expect_used)]
 
 mod commands;
+mod terminal;
 
+use crate::terminal::TerminalManager;
 use reprod_core::{Config, RExecutor};
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -23,17 +25,23 @@ async fn main() {
     }
 
     let r_executor = Arc::new(Mutex::new(RExecutor::new(temp_dir, config.r_path.clone())));
+    let terminal_manager = Arc::new(TerminalManager::new());
 
     let config_state = Arc::new(Mutex::new(config));
 
     tauri::Builder::default()
         .manage(r_executor)
+        .manage(terminal_manager)
         .manage(config_state)
         .invoke_handler(tauri::generate_handler![
             commands::execute_r_code,
             commands::send_ai_message,
             commands::get_api_key,
             commands::set_api_key,
+            commands::create_terminal_session,
+            commands::write_to_terminal,
+            commands::resize_terminal,
+            commands::close_terminal_session,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

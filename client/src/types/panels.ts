@@ -13,7 +13,7 @@ export type ConsoleTabId = 'console' | 'history';
 export type BottomPanePlotTab = 'plots' | 'help';
 
 /** Tabs rendered in the consolidated bottom pane */
-export type BottomPaneTab = 'console' | 'history' | BottomPanePlotTab;
+export type BottomPaneTab = 'console' | 'history' | 'terminal' | BottomPanePlotTab;
 
 /** Payload sent when other components want to focus a plot */
 export interface PlotFocusEventDetail {
