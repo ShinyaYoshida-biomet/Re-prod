@@ -96,16 +96,7 @@ export function useAIStreaming() {
         if (message.type !== 'ai_response_complete' || !shouldProcess(message.id)) {
           return;
         }
-        // DEBUG: Log AI response for diff investigation
-        console.log('[DEBUG] AI Response Complete - final text:', message.final);
-        console.log('[DEBUG] AI Response Complete - has patch markers:', message.final?.includes('*** Begin Patch'));
         const codeBlocks = message.codeBlocks ?? extractCodeBlocks(message.final);
-        console.log('[DEBUG] Extracted code blocks:', JSON.stringify(codeBlocks, null, 2));
-        if (codeBlocks.length > 0) {
-          codeBlocks.forEach((block, i) => {
-            console.log(`[DEBUG] Block ${i}: originalCode=${block.originalCode ? 'SET' : 'EMPTY'}, code length=${block.code?.length}, action=${block.action}`);
-          });
-        }
           finalize(message.final, { codeBlocks });
         }),
       );
