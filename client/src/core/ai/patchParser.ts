@@ -14,7 +14,8 @@ const fileHeaderRegex = /^\*\*\* (Update|Add|Delete) File:\s*(.+)$/;
 
 export function parsePatchFormat(text: string): PatchHunk[] {
   const patchHunks: PatchHunk[] = [];
-  const blockRegex = /\*\*\* Begin Patch([\s\S]*?)\*\*\* End Patch/g;
+  // Accept both "*** End Patch" and just "***" as end markers (AI sometimes outputs shortened version)
+  const blockRegex = /\*\*\* Begin Patch([\s\S]*?)(?:\*\*\* End Patch|\*\*\*(?:\s*$|\n))/g;
   let match: RegExpExecArray | null;
 
   while ((match = blockRegex.exec(text)) !== null) {
