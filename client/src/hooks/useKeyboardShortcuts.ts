@@ -24,6 +24,7 @@ function eventToShortcut(e: KeyboardEvent): string {
   let key = e.key;
   if (key === 'Enter') key = 'Enter';
   else if (key === 'Escape') key = 'Esc';
+  else if (key === '`' || key === '~') key = 'Backquote';
   else if (key === ' ') key = 'Space';
   else key = key.toUpperCase();
 
@@ -69,12 +70,16 @@ export function useKeyboardShortcuts() {
       'Mod+Shift+0': () => menuActions.code.restartSession(),
       'Mod+/': () => menuActions.code.comment(),
 
-      // Session menu
-      'Mod+T': () => menuActions.session.showTimeline(),
-      'Mod+Shift+N': () => menuActions.session.new(),
-      'Mod+,': () => menuActions.session.settings(),
+  // Session menu
+  'Mod+T': () => menuActions.session.showTimeline(),
+  'Mod+Shift+N': () => menuActions.session.new(),
+  'Mod+,': () => menuActions.session.settings(),
 
-      // View menu
+  // Terminal shortcuts
+  'Mod+Backquote': () => menuActions.view.focusTerminal(),
+  'Mod+Shift+T': () => menuActions.view.newTerminalSession(),
+
+  // View menu
       'Mod+1': () => menuActions.view.togglePane('editor'),
       'Mod+2': () => menuActions.view.togglePane('assistant'),
       'Mod++': () => menuActions.view.zoomIn(),

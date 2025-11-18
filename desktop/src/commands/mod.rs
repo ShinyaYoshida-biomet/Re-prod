@@ -1,7 +1,33 @@
 use reprod_core::{ai, ChatMessage, Config, ExecutionRequest, ExecutionResult, RExecutor};
+use serde::Serialize;
 use std::sync::Arc;
-use tauri::State;
-use tokio::sync::Mutex;
+use tauri::{AppHandle, Emitter, State};
+use tokio::sync::{mpsc, Mutex};
+
+use crate::terminal::{TerminalEvent, TerminalManager};
+
+#[derive(Serialize, Clone)]
+struct TerminalOutputPayload {
+    session_id: String,
+    data: String,
+}
+
+#[derive(Serialize, Clone)]
+struct TerminalExitPayload {
+    session_id: String,
+    exit_code: Option<i32>,
+}
+
+#[derive(Serialize, Clone)]
+struct TerminalErrorPayload {
+    session_id: String,
+    message: String,
+}
+
+#[derive(Serialize, Clone)]
+struct TerminalKeepAlivePayload {
+    session_id: String,
+}
 
 #[tauri::command]
 pub async fn execute_r_code(
@@ -60,4 +86,100 @@ pub async fn set_api_key(
     config.save().map_err(|e| e.to_string())?;
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn create_terminal_session(
+    shell: Option<String>,
+    manager: State<'_, Arc<TerminalManager>>,
+    app_handle: AppHandle,
+) -> Result<String, String> {
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    let session = manager
+        .create_session(shell, tx)
+        .await
+        .map_err(|err| err.to_string())?;
+    let session_id = session.id.clone();
+    let session_id_for_task = session_id.clone();
+    let emitter = app_handle.clone();
+
+    tokio::spawn(async move {
+        while let Some(event) = rx.recv().await {
+            match event {
+                TerminalEvent::Output(data) => {
+                    let _ = emitter.emit(
+                        "terminal-output",
+                        TerminalOutputPayload {
+                            session_id: session_id_for_task.clone(),
+                            data,
+                        },
+                    );
+                }
+                TerminalEvent::Exit(code) => {
+                    let _ = emitter.emit(
+                        "terminal-exited",
+                        TerminalExitPayload {
+                            session_id: session_id_for_task.clone(),
+                            exit_code: code,
+                        },
+                    );
+                }
+                TerminalEvent::Error(message) => {
+                    let _ = emitter.emit(
+                        "terminal-error",
+                        TerminalErrorPayload {
+                            session_id: session_id_for_task.clone(),
+                            message,
+                        },
+                    );
+                }
+                TerminalEvent::KeepAlive => {
+                    let _ = emitter.emit(
+                        "terminal-keepalive",
+                        TerminalKeepAlivePayload {
+                            session_id: session_id_for_task.clone(),
+                        },
+                    );
+                }
+            }
+        }
+    });
+
+    Ok(session_id)
+}
+
+#[tauri::command]
+pub async fn write_to_terminal(
+    session_id: String,
+    data: String,
+    manager: State<'_, Arc<TerminalManager>>,
+) -> Result<(), String> {
+    manager
+        .write(&session_id, &data)
+        .await
+        .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn resize_terminal(
+    session_id: String,
+    cols: u16,
+    rows: u16,
+    manager: State<'_, Arc<TerminalManager>>,
+) -> Result<(), String> {
+    manager
+        .resize(&session_id, cols, rows)
+        .await
+        .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn close_terminal_session(
+    session_id: String,
+    manager: State<'_, Arc<TerminalManager>>,
+) -> Result<(), String> {
+    manager
+        .close(&session_id)
+        .await
+        .map_err(|err| err.to_string())
 }

@@ -5,6 +5,7 @@ import {
   IconTrash,
   PanelTabs,
 } from '@/components/shared';
+import { TerminalPane } from '@/components/Terminal';
 import { ConsolePanel } from '@/components/console';
 import { useBottomPaneState } from '@/hooks/useBottomPaneState';
 
@@ -74,6 +75,8 @@ export function BottomPane(): JSX.Element {
       <div className="panel-content">
         {activeTab === 'console' && <ConsolePanel view="console" />}
         {activeTab === 'history' && <ConsolePanel view="history" />}
+        {activeTab === 'terminal' && <TerminalPane />}
+
         {activeTab === 'plots' && (
           <div className="plots-container">
             {allPlots.length === 0 ? (

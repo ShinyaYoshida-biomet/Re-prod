@@ -32,6 +32,13 @@ export const iconDefinitions = {
       { type: 'polyline', points: '4 4 20 12 4 20 7 12 4 4' }
     ]
   },
+  plus: {
+    viewBox: '0 0 24 24',
+    paths: [
+      { type: 'path', d: 'M12 5v14' },
+      { type: 'path', d: 'M5 12h14' }
+    ]
+  },
   square: {
     viewBox: '0 0 24 24',
     paths: [

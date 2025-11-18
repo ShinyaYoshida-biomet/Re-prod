@@ -26,6 +26,18 @@ importers:
       '@monaco-editor/react':
         specifier: ^4.6.0
         version: 4.7.0(monaco-editor@0.54.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@tauri-apps/api':
+        specifier: ^2
+        version: 2.9.0
+      '@xterm/addon-fit':
+        specifier: ^0.10.0
+        version: 0.10.0(@xterm/xterm@5.5.0)
+      '@xterm/addon-web-links':
+        specifier: ^0.11.0
+        version: 0.11.0(@xterm/xterm@5.5.0)
+      '@xterm/xterm':
+        specifier: ^5.3.0
+        version: 5.5.0
       allotment:
         specifier: ^1.20.0
         version: 1.20.4(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -741,6 +753,9 @@ packages:
     resolution: {integrity: sha512-+PmQX0PiAYPMeVYe237LJAYvOMYW1j2rH5YROyS3b4CTVJum34HfRvKvAzozHAQG0TnHNdUfY9nCeUyRAs//cw==}
     engines: {node: '>=14.16'}
 
+  '@tauri-apps/api@2.9.0':
+    resolution: {integrity: sha512-qD5tMjh7utwBk9/5PrTA/aGr3i5QaJ/Mlt7p8NilQ45WgbifUNPyKWsA63iQ8YfQq6R8ajMapU+/Q8nMcPRLNw==}
+
   '@tauri-apps/cli-darwin-arm64@2.9.3':
     resolution: {integrity: sha512-W8FQXZXQmQ0Fmj9UJXNrm2mLdIaLLriKVY7o/FzmizyIKTPIvHjfZALTNybbpTQRbJvKoGHLrW1DNzAWVDWJYg==}
     engines: {node: '>= 10'}
@@ -1029,6 +1044,19 @@ packages:
   '@wdio/utils@8.46.0':
     resolution: {integrity: sha512-C94kJjZhEfPUNbOA69BQr1SgziQYgjNXK8S1GJXQKuwxN/24PQkYCzeBqXstfxyTXyOwoQCcEZAQ/qJccboufQ==}
     engines: {node: ^16.13 || >=18}
+
+  '@xterm/addon-fit@0.10.0':
+    resolution: {integrity: sha512-UFYkDm4HUahf2lnEyHvio51TNGiLK66mqP2JoATy7hRZeXaGMRDr00JiSF7m63vR5WKATF605yEggJKsw0JpMQ==}
+    peerDependencies:
+      '@xterm/xterm': ^5.0.0
+
+  '@xterm/addon-web-links@0.11.0':
+    resolution: {integrity: sha512-nIHQ38pQI+a5kXnRaTgwqSHnX7KE6+4SVoceompgHL26unAxdfP6IPqUTSYPQgSwM56hsElfoNrrW5V7BUED/Q==}
+    peerDependencies:
+      '@xterm/xterm': ^5.0.0
+
+  '@xterm/xterm@5.5.0':
+    resolution: {integrity: sha512-hqJHYaQb5OptNunnyAnkHyM8aCjZ1MEIDTQu1iIbbTD/xops91NB5yq1ZK/dC2JDbVWtF23zUtl9JE2NqwT87A==}
 
   '@zip.js/zip.js@2.8.10':
     resolution: {integrity: sha512-WVywWK8HSttmFFYSih7lUjjaV4zGzMxy992y0tHrZY4Wf9x/uNBA/XJ50RvfGjuuJKti4yueEHA2ol2pOq6VDg==}
@@ -3654,6 +3682,8 @@ snapshots:
     dependencies:
       defer-to-connect: 2.0.1
 
+  '@tauri-apps/api@2.9.0': {}
+
   '@tauri-apps/cli-darwin-arm64@2.9.3':
     optional: true
 
@@ -4071,6 +4101,16 @@ snapshots:
       - bare-buffer
       - react-native-b4a
       - supports-color
+
+  '@xterm/addon-fit@0.10.0(@xterm/xterm@5.5.0)':
+    dependencies:
+      '@xterm/xterm': 5.5.0
+
+  '@xterm/addon-web-links@0.11.0(@xterm/xterm@5.5.0)':
+    dependencies:
+      '@xterm/xterm': 5.5.0
+
+  '@xterm/xterm@5.5.0': {}
 
   '@zip.js/zip.js@2.8.10': {}
 

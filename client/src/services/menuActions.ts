@@ -28,6 +28,14 @@ const callGlobalHandler = (name: string) => {
   }
 };
 
+const dispatchTerminalEvent = (name: string) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.dispatchEvent(new Event(name));
+};
+
 /**
  * Menu Actions
  *
@@ -390,6 +398,21 @@ export const menuActions = {
     zoomReset: () => {
       const { resetZoom } = useStore.getState();
       resetZoom();
+    },
+
+    /**
+     * Focus the terminal tab in the bottom pane
+     */
+    focusTerminal: () => {
+      dispatchTerminalEvent('terminal:focus');
+    },
+
+    /**
+     * Create a new terminal session and show the terminal tab
+     */
+    newTerminalSession: () => {
+      dispatchTerminalEvent('terminal:focus');
+      dispatchTerminalEvent('terminal:new');
     },
   },
 

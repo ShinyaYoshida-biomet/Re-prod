@@ -7,6 +7,7 @@
 @import './components/ai-panel/index.css';
 @import './components/right-pane.css';
 @import './components/console.css';
+@import './components/terminal.css';
 @import './components/timeline.css';
 @import './components/timeline-dialog.css';
 @import './components/menu.css';
