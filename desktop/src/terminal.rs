@@ -4,7 +4,7 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use reprod_core::terminal::{detect_shell, PtyError, PtyProcess, ShellInfo};
+use reprod_core::terminal::{detect_shell, PtyError, PtyProcess, ShellDetectionError};
 use thiserror::Error;
 use tokio::sync::{mpsc, Mutex as TokioMutex};
 use tokio::task::JoinHandle;
@@ -38,6 +38,8 @@ pub enum TerminalManagerError {
     LockPoisoned,
     #[error("PTY operation failed: {0}")]
     Pty(PtyError),
+    #[error("shell detection failed: {0}")]
+    ShellDetection(ShellDetectionError),
     #[error("async task failed")]
     TaskFailed,
 }
@@ -45,6 +47,12 @@ pub enum TerminalManagerError {
 impl From<PtyError> for TerminalManagerError {
     fn from(err: PtyError) -> Self {
         TerminalManagerError::Pty(err)
+    }
+}
+
+impl From<ShellDetectionError> for TerminalManagerError {
+    fn from(err: ShellDetectionError) -> Self {
+        TerminalManagerError::ShellDetection(err)
     }
 }
 
@@ -70,12 +78,7 @@ impl TerminalManager {
         shell: Option<String>,
         output_tx: mpsc::UnboundedSender<TerminalEvent>,
     ) -> Result<TerminalSessionMeta, TerminalManagerError> {
-        let shell_info = shell
-            .map(|program| ShellInfo {
-                program,
-                args: Vec::new(),
-            })
-            .unwrap_or_else(detect_shell);
+        let shell_info = detect_shell(shell)?;
 
         let (process, reader) = PtyProcess::spawn(shell_info.clone())?;
         let process_handle = Arc::new(Mutex::new(process));
