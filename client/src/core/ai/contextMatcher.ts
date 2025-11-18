@@ -67,6 +67,7 @@ export function matchPatchChunk(content: string, chunk: PatchChunk): CodeRange |
     return baseRange;
   }
 
+  // Try matching with context header if available
   if (chunk.context) {
     const contextLines = chunk.context.replace(/^@@.*@@/, '').trim();
     const contextRange = computeTargetRange(content, contextLines);
@@ -75,11 +76,15 @@ export function matchPatchChunk(content: string, chunk: PatchChunk): CodeRange |
     }
   }
 
-  const firstNonEmpty = chunk.oldLines.find((line) => line.trim().length > 0);
-  if (firstNonEmpty) {
-    const fallbackRange = computeTargetRange(content, firstNonEmpty);
-    if (fallbackRange) {
-      return fallbackRange;
+  // Only fallback to single-line match if oldLines has just one line
+  // This prevents matching wrong locations when multiple lines should match together
+  if (chunk.oldLines.length === 1) {
+    const singleLine = chunk.oldLines[0];
+    if (singleLine.trim().length > 0) {
+      const fallbackRange = computeTargetRange(content, singleLine);
+      if (fallbackRange) {
+        return fallbackRange;
+      }
     }
   }
 
