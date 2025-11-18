@@ -228,18 +228,36 @@ const attachSimpleChanges = (blocks: CodeBlock[], simpleChanges: SimpleCodeChang
 };
 
 export function extractCodeBlocks(text: string): CodeBlock[] {
+  // DEBUG: Log extraction process
+  console.log('[DEBUG] extractCodeBlocks called, text length:', text?.length);
+
   const simpleChanges = parseSimpleChanges(text);
+  console.log('[DEBUG] Simple changes found:', simpleChanges.length);
+
   const patchHunks = parsePatchFormat(text);
+  console.log('[DEBUG] Patch hunks found:', patchHunks.length);
   if (patchHunks.length > 0) {
+    console.log('[DEBUG] Patch hunks details:', JSON.stringify(patchHunks, null, 2));
     const patchBlocks = patchHunks
-      .map(buildCodeBlockFromPatch)
+      .map((hunk, i) => {
+        const block = buildCodeBlockFromPatch(hunk);
+        console.log(`[DEBUG] Built block ${i} from patch:`, block ? {
+          id: block.id,
+          action: block.action,
+          originalCodeLength: block.originalCode?.length,
+          codeLength: block.code?.length,
+          filepath: block.filepath,
+        } : 'null');
+        return block;
+      })
       .filter((block): block is CodeBlock => block !== null);
     attachSimpleChanges(patchBlocks, simpleChanges);
     return patchBlocks;
   }
 
   if (text.includes('*** Begin Patch')) {
-    console.warn('Patch detected but structured parser could not decode it.');
+    console.warn('[DEBUG] Patch detected but structured parser could not decode it.');
+    console.log('[DEBUG] Text containing patch:', text.substring(text.indexOf('*** Begin Patch'), text.indexOf('*** End Patch') + 20));
   }
 
   const codeBlocks: CodeBlock[] = [];
