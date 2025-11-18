@@ -85,18 +85,6 @@ export function AIPanel(): JSX.Element {
         </div>
         <div className="ai-input-container-wrapper">
           <div className="ai-input-container vscode-style">
-            <div className="input-controls-left">
-              <select
-                className="mode-dropdown"
-                value={mode}
-                onChange={(e) => setMode(e.target.value as AIMode)}
-                disabled={isLoading}
-                aria-label="AI interaction mode"
-              >
-                <option value="agent">Agent</option>
-                <option value="chat">Chat</option>
-              </select>
-            </div>
             <textarea
               ref={textareaRef}
               className="ai-input"
@@ -106,32 +94,46 @@ export function AIPanel(): JSX.Element {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isLoading}
-              rows={3}
+              rows={5}
             />
-            <div className="input-controls-right">
-              {isLoading ? (
-                <button
-                  type="button"
-                  className="icon-btn stop-btn"
-                  onClick={handleStop}
-                  title="Stop generation (Esc)"
-                  aria-label="Stop generation"
+            <div className="input-controls-bar">
+              <div className="input-controls-left">
+                <select
+                  className="mode-dropdown"
+                  value={mode}
+                  onChange={(e) => setMode(e.target.value as AIMode)}
+                  disabled={isLoading}
+                  aria-label="AI interaction mode"
                 >
-                  <IconSquare width={16} height={16} aria-hidden />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="send-btn"
-                  onClick={() => handleAsk(mode)}
-                  disabled={!input.trim()}
-                  title="Send message (Enter)"
-                  aria-label="Send message"
-                >
-                  <IconSend width={16} height={16} aria-hidden />
-                  <span>Send</span>
-                </button>
-              )}
+                  <option value="agent">Agent</option>
+                  <option value="chat">Chat</option>
+                </select>
+              </div>
+              <div className="input-controls-right">
+                {isLoading ? (
+                  <button
+                    type="button"
+                    className="icon-btn stop-btn"
+                    onClick={handleStop}
+                    title="Stop generation (Esc)"
+                    aria-label="Stop generation"
+                  >
+                    <IconSquare width={16} height={16} aria-hidden />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="send-btn"
+                    onClick={() => handleAsk(mode)}
+                    disabled={!input.trim()}
+                    title="Send message (Enter)"
+                    aria-label="Send message"
+                  >
+                    <IconSend width={16} height={16} aria-hidden />
+                    <span>Send</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

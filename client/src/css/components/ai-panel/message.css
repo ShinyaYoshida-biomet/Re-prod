@@ -156,9 +156,9 @@
 
 .ai-input-container.vscode-style {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
-  padding: 6px 8px 6px 6px;
+  padding: 10px;
   border: 1px solid rgba(148, 163, 184, 0.4);
   border-radius: 4px;
   background-color: var(--bg-primary);
@@ -170,6 +170,16 @@
   outline: none;
   border-color: rgba(148, 163, 184, 0.5);
   box-shadow: none;
+}
+
+/* Controls bar - horizontal layout for Agent and Send */
+.input-controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
 }
 
 .input-controls-left {
@@ -222,15 +232,15 @@
 
 /* Textarea inside unified container */
 .ai-input-container.vscode-style .ai-input {
-  flex: 1;
-  padding: 6px 8px;
+  width: 100%;
+  padding: 8px 10px;
   border: none;
   background: transparent;
   color: var(--text-primary);
   font-size: 13px;
   font-family: inherit;
   resize: none;
-  min-height: 60px;
+  min-height: 100px;
   max-height: 300px;
   line-height: 1.5;
   overflow-y: auto;
