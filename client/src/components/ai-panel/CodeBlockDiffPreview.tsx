@@ -63,7 +63,7 @@ export function CodeBlockDiffPreview({ codeBlock, onRetry }: Props): JSX.Element
     <div className="code-diff-preview" data-testid="code-diff-preview">
       {isStale && (
         <div className="code-diff-warning" data-testid="code-diff-warning" role="status">
-          ⚠️ Editor content changed since this suggestion was generated.
+          Editor content changed since this suggestion was generated.
           {onRetry && (
             <button
               type="button"
