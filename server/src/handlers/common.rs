@@ -1,0 +1,318 @@
+use std::sync::{atomic::AtomicU64, Arc};
+
+use reprod_core::{
+    ai::tools::{FileSystemTool, RContextTool},
+    api::timeline::{
+        ExportRMarkdownRequest, ExportRMarkdownResponse, TimelineQueryPayload,
+        TimelineResponsePayload, TimelineStatsPayload,
+    },
+    executor::timeline::JsonTimeline,
+    AIResponse, ChatMessage, Config, ExecutionEvent, ExecutionRequest, ExecutionResult, RExecutor,
+    ToolExecutor, ToolManifest, ToolRegistry,
+};
+use serde_json::Value;
+use tokio::sync::Mutex;
+
+const PATCH_SYSTEM_PROMPT: &str = r#"You are the Re-prod assistant. When suggesting code changes,
+always emit them in the structured patch format shown below, and include three lines of
+context both before and after the changed section.
+
+*** Begin Patch
+*** Update File: <filepath>
+@@
+ context_line
+ context_line
+-old_line
++new_line
+ context_line
+ context_line
+*** End Patch
+
+Instructions:
+1. Each `*** Begin Patch` / `*** End Patch` block should contain a single file's changes.
+2. The `*** Update File:` or `*** Add File:` or `*** Delete File:` marker specifies the operation.
+3. Use `@@` to denote the start of a diff segment.
+4. Prefix removed lines with `-` and added lines with `+`.
+5. Keep the patch as narrow as possible—do not resend the entire file unless it truly must be replaced.
+6. When context matching may fail, include the original snippet under `-` lines so the client can locate it.
+7. IMPORTANT: Always close the patch block with the exact marker `*** End Patch` (not just `***`)."#;
+
+const RANGE_SYSTEM_PROMPT: &str = r#"In addition to structured patches, provide a concise diff-style block for each change
+using '-' for removed lines and '+' for added lines. Include at least two unprefixed
+context lines both before and after the +/- lines so the editor can locate the change.
+Example:
+
+context_before_line
+context_before_line
+- old_line
++ new_line
+context_after_line
+context_after_line
+
+Each diff block should match the actual code exactly and avoid re-sending entire files."#;
+
+const CHAT_SYSTEM_PROMPT: &str = r#"You are the Re-prod chat assistant. Focus on providing explanations, guidance, and high-level suggestions.
+- Keep responses conversational and concise
+- Avoid emitting structured patches or code diffs unless explicitly asked
+- When referencing code, quote only the relevant snippets"#;
+
+#[derive(Clone, Copy, Debug, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub(super) enum AIMode {
+    Agent,
+    Chat,
+}
+
+impl Default for AIMode {
+    fn default() -> Self {
+        Self::Agent
+    }
+}
+
+#[derive(Clone)]
+pub struct AppState {
+    pub r_executor: Arc<Mutex<RExecutor>>,
+    pub config: Arc<Mutex<Config>>,
+    pub tool_registry: Arc<ToolRegistry>,
+    pub tool_executor: Arc<ToolExecutor>,
+    pub timeline: Arc<JsonTimeline>,
+    pub filesystem_tool: Arc<FileSystemTool>,
+    pub r_context_tool: Arc<RContextTool>,
+    pub request_counter: Arc<AtomicU64>,
+}
+
+pub(super) fn with_system_prompts(messages: &[ChatMessage], mode: AIMode) -> Vec<ChatMessage> {
+    let mut result = Vec::with_capacity(messages.len() + 2);
+    match mode {
+        AIMode::Agent => {
+            result.push(ChatMessage {
+                role: "system".to_string(),
+                content: PATCH_SYSTEM_PROMPT.to_string(),
+            });
+            result.push(ChatMessage {
+                role: "system".to_string(),
+                content: RANGE_SYSTEM_PROMPT.to_string(),
+            });
+        }
+        AIMode::Chat => {
+            result.push(ChatMessage {
+                role: "system".to_string(),
+                content: CHAT_SYSTEM_PROMPT.to_string(),
+            });
+        }
+    }
+    result.extend(messages.iter().cloned());
+    result
+}
+
+#[derive(serde::Deserialize)]
+#[serde(tag = "type")]
+pub(super) enum WSRequest {
+    #[serde(rename = "execute")]
+    Execute { request: ExecutionRequest },
+    #[serde(rename = "ai_message")]
+    AIMessage {
+        messages: Vec<ChatMessage>,
+        #[serde(default)]
+        enable_tools: bool,
+        #[serde(default)]
+        request_id: Option<String>,
+        #[serde(default)]
+        stream: bool,
+        #[serde(default)]
+        mode: AIMode,
+    },
+    #[serde(rename = "list_tools")]
+    ListTools,
+    #[serde(rename = "execute_tool")]
+    ExecuteTool {
+        tool_id: String,
+        capability_id: String,
+        parameters: std::collections::HashMap<String, serde_json::Value>,
+    },
+    #[serde(rename = "timeline_query")]
+    TimelineQuery { query: TimelineQueryPayload },
+    #[serde(rename = "timeline_stats_query")]
+    TimelineStatsQuery,
+    #[serde(rename = "export_rmarkdown")]
+    ExportRMarkdown { request: ExportRMarkdownRequest },
+    #[serde(rename = "interrupt_execution")]
+    InterruptExecution,
+    #[serde(rename = "restart_session")]
+    RestartSession,
+}
+
+#[derive(serde::Serialize)]
+#[serde(tag = "type")]
+pub(super) enum WSResponse {
+    #[serde(rename = "execution_result")]
+    ExecutionResult { result: ExecutionResult },
+    #[serde(rename = "ai_response")]
+    AIResponse { response: String },
+    #[serde(rename = "ai_response_with_tools")]
+    AIResponseWithTools { response: AIResponse },
+    #[serde(rename = "ai_response_chunk")]
+    AIResponseChunk { id: String, chunk: String },
+    #[serde(rename = "ai_response_complete")]
+    AIResponseComplete {
+        id: String,
+        #[serde(rename = "final")]
+        final_text: String,
+        #[serde(rename = "codeBlocks", skip_serializing_if = "Option::is_none")]
+        code_blocks: Option<Vec<Value>>,
+    },
+    #[allow(dead_code)] // Reserved for future AI planning feature
+    #[serde(rename = "ai_plan_updated")]
+    AIPlanUpdated {
+        id: String,
+        plan: Vec<PlanStepPayload>,
+    },
+    #[serde(rename = "ai_tool_started")]
+    AIToolStarted { id: String, tool: ToolLogPayload },
+    #[serde(rename = "ai_tool_finished")]
+    AIToolFinished { id: String, tool: ToolLogPayload },
+    #[serde(rename = "error")]
+    Error { message: String },
+    #[serde(rename = "tools")]
+    Tools { tools: Vec<ToolManifest> },
+    #[serde(rename = "tool_execution_result")]
+    ToolExecutionResult {
+        tool_id: String,
+        capability_id: String,
+        success: bool,
+        stdout: Option<String>,
+        stderr: Option<String>,
+        execution_time_ms: u64,
+        error: Option<String>,
+    },
+    #[serde(rename = "timeline_response")]
+    TimelineResponse { data: TimelineResponsePayload },
+    #[serde(rename = "timeline_stats_response")]
+    TimelineStatsResponse { stats: TimelineStatsPayload },
+    #[serde(rename = "timeline_event_added")]
+    TimelineEventAdded { event: ExecutionEvent },
+    #[serde(rename = "export_rmarkdown_response")]
+    ExportRMarkdownResponse { response: ExportRMarkdownResponse },
+    #[serde(rename = "execution_interrupted")]
+    ExecutionInterrupted { success: bool },
+    #[serde(rename = "session_restarted")]
+    SessionRestarted { cleared_events: u64 },
+}
+
+#[allow(dead_code)] // Reserved for future AI planning feature
+#[derive(serde::Serialize)]
+pub(super) struct PlanStepPayload {
+    id: String,
+    title: String,
+    status: PlanStepStatus,
+}
+
+#[allow(dead_code)] // Reserved for future AI planning feature
+#[derive(serde::Serialize)]
+#[serde(rename_all = "lowercase")]
+pub(super) enum PlanStepStatus {
+    Pending,
+    Running,
+    Done,
+    Error,
+}
+
+#[derive(serde::Serialize, Clone)]
+pub(super) struct ToolLogPayload {
+    pub id: String,
+    pub name: String,
+    pub status: ToolLogStatus,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    #[serde(rename = "startedAt", skip_serializing_if = "Option::is_none")]
+    pub started_at: Option<i64>,
+    #[serde(rename = "finishedAt", skip_serializing_if = "Option::is_none")]
+    pub finished_at: Option<i64>,
+}
+
+#[derive(serde::Serialize, Clone)]
+#[serde(rename_all = "lowercase")]
+pub(super) enum ToolLogStatus {
+    #[allow(dead_code)] // Reserved for future use
+    Pending,
+    Running,
+    Done,
+    Error,
+}
+
+pub(super) fn tool_log_from_call(tool_call: &reprod_core::ToolCall) -> ToolLogPayload {
+    ToolLogPayload {
+        id: tool_call.id.clone(),
+        name: tool_call.name.clone(),
+        status: ToolLogStatus::Running,
+        input: Some(tool_call.input.clone()),
+        output: None,
+        error: None,
+        started_at: Some(now_millis()),
+        finished_at: None,
+    }
+}
+
+pub(super) fn now_millis() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as i64
+}
+
+pub(super) fn build_streaming_payload(
+    stream: bool,
+    stream_id: &str,
+    content: String,
+) -> Vec<WSResponse> {
+    if stream {
+        vec![
+            WSResponse::AIResponseChunk {
+                id: stream_id.to_string(),
+                chunk: content.clone(),
+            },
+            WSResponse::AIResponseComplete {
+                id: stream_id.to_string(),
+                final_text: content,
+                code_blocks: None,
+            },
+        ]
+    } else {
+        vec![WSResponse::AIResponse { response: content }]
+    }
+}
+
+pub(super) fn error_response(message: impl Into<String>) -> Vec<WSResponse> {
+    vec![WSResponse::Error {
+        message: message.into(),
+    }]
+}
+
+pub(super) fn single_response(response: WSResponse) -> Vec<WSResponse> {
+    vec![response]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn with_system_prompts_preserves_existing_conversation() {
+        let messages = vec![ChatMessage {
+            role: "user".to_string(),
+            content: "request".to_string(),
+        }];
+
+        let prefixed = with_system_prompts(&messages, AIMode::Agent);
+
+        assert_eq!(prefixed.len(), messages.len() + 2);
+        assert_eq!(prefixed[0].role, "system");
+        assert_eq!(prefixed[0].content, PATCH_SYSTEM_PROMPT);
+        assert_eq!(prefixed[1].content, RANGE_SYSTEM_PROMPT);
+        assert_eq!(&prefixed[2..], messages.as_slice());
+    }
+}
