@@ -48,6 +48,7 @@ Instructions:
 4. Prefix removed lines with `-` and added lines with `+`.
 5. Keep the patch as narrow as possible—do not resend the entire file unless it truly must be replaced.
 6. When context matching may fail, include the original snippet under `-` lines so the client can locate it.
+7. IMPORTANT: Always close the patch block with the exact marker `*** End Patch` (not just `***`).
 "#;
 
 const RANGE_SYSTEM_PROMPT: &str = r#"In addition to structured patches, provide a concise diff-style block for each change
