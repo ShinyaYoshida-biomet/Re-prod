@@ -16,15 +16,22 @@ use reprod_core::{
     },
     executor::timeline::JsonTimeline,
     export::{BundleMetadata, RMarkdownGenerator, ReproductionBundle},
+    fs::{FileEntry, FileSystem, FileSystemEvent, FileWatcher},
     AIResponse, ChatMessage, Config, ExecutionEvent, ExecutionRequest, ExecutionResult, RExecutor,
     ToolExecutor, ToolManifest, ToolRegistry,
 };
 use serde_json::{json, Value};
-use std::sync::{
-    atomic::{AtomicU64, Ordering},
-    Arc,
+use std::{
+    path::PathBuf,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        mpsc::{self, RecvTimeoutError, TryRecvError},
+        Arc,
+    },
+    thread,
+    time::Duration,
 };
-use tokio::sync::Mutex;
+use tokio::sync::{mpsc as tokio_mpsc, Mutex};
 
 const PATCH_SYSTEM_PROMPT: &str = r#"You are the Re-prod assistant. When suggesting code changes,
 always emit them in the structured patch format shown below, and include three lines of
@@ -70,6 +77,8 @@ const CHAT_SYSTEM_PROMPT: &str = r#"You are the Re-prod chat assistant. Focus on
 - Avoid emitting structured patches or code diffs unless explicitly asked
 - When referencing code, quote only the relevant snippets"#;
 
+const FILE_WATCHER_POLL_INTERVAL_MS: u64 = 250;
+
 #[derive(Clone, Copy, Debug, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum AIMode {
@@ -93,6 +102,7 @@ pub struct AppState {
     pub filesystem_tool: Arc<FileSystemTool>,
     pub r_context_tool: Arc<RContextTool>,
     pub request_counter: Arc<AtomicU64>,
+    pub fs: Arc<FileSystem>,
 }
 
 fn with_system_prompts(messages: &[ChatMessage], mode: AIMode) -> Vec<ChatMessage> {
@@ -124,28 +134,108 @@ pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> 
 }
 
 async fn handle_socket(mut socket: WebSocket, state: AppState) {
-    while let Some(msg) = socket.recv().await {
-        match msg {
-            Ok(Message::Text(text)) => {
-                if let Ok(request) = serde_json::from_str::<WSRequest>(&text) {
-                    let responses = handle_ws_request(request, &state).await;
+    let (fs_event_tx, mut fs_event_rx) = tokio_mpsc::unbounded_channel::<FileSystemEvent>();
+    let workspace_root = state.fs.root_path().to_path_buf();
+    let mut fs_watcher = Some(spawn_fs_watcher(workspace_root, fs_event_tx));
+    let mut fs_events_closed = false;
 
-                    for response in responses {
-                        if let Ok(response_text) = serde_json::to_string(&response) {
-                            if socket.send(Message::Text(response_text)).await.is_err() {
-                                return;
+    'ws_loop: loop {
+        tokio::select! {
+            maybe_event = fs_event_rx.recv(), if !fs_events_closed => {
+                match maybe_event {
+                    Some(event) => {
+                        if let Ok(payload) = serde_json::to_string(&WSResponse::FileSystemEvent { event }) {
+                            if socket.send(Message::Text(payload)).await.is_err() {
+                                break 'ws_loop;
                             }
+                        } else {
+                            tracing::error!("Failed to serialize file system event");
                         }
                     }
-                } else {
-                    tracing::warn!("Failed to parse WebSocket request: {}", text);
+                    None => {
+                        fs_events_closed = true;
+                    }
                 }
             }
-            Ok(Message::Close(_)) => break,
-            Err(_) => break,
-            _ => {}
+            msg = socket.recv() => {
+                match msg {
+                    Some(Ok(Message::Text(text))) => {
+                        if let Ok(request) = serde_json::from_str::<WSRequest>(&text) {
+                            let responses = handle_ws_request(request, &state).await;
+
+                            for response in responses {
+                                if let Ok(response_text) = serde_json::to_string(&response) {
+                                    if socket.send(Message::Text(response_text)).await.is_err() {
+                                        break 'ws_loop;
+                                    }
+                                } else {
+                                    tracing::error!("Failed to serialize WebSocket response");
+                                }
+                            }
+                        } else {
+                            tracing::warn!("Failed to parse WebSocket request: {}", text);
+                        }
+                    }
+                    Some(Ok(Message::Close(_))) => break 'ws_loop,
+                    Some(Err(err)) => {
+                        tracing::warn!("WebSocket error: {}", err);
+                        break 'ws_loop;
+                    }
+                    Some(_) => {}
+                    None => break 'ws_loop,
+                }
+            }
         }
     }
+
+    if let Some(handle) = fs_watcher.take() {
+        handle.stop();
+    }
+}
+
+struct FsWatcherHandle {
+    stop_tx: mpsc::Sender<()>,
+    handle: thread::JoinHandle<()>,
+}
+
+impl FsWatcherHandle {
+    fn stop(self) {
+        let _ = self.stop_tx.send(());
+        let _ = self.handle.join();
+    }
+}
+
+fn spawn_fs_watcher(
+    root: PathBuf,
+    tx: tokio_mpsc::UnboundedSender<FileSystemEvent>,
+) -> FsWatcherHandle {
+    let (stop_tx, stop_rx) = mpsc::channel();
+    let handle = thread::spawn(move || match FileWatcher::new(root) {
+        Ok(watcher) => loop {
+            match stop_rx.try_recv() {
+                Ok(_) | Err(TryRecvError::Disconnected) => break,
+                Err(TryRecvError::Empty) => {}
+            }
+
+            match watcher.recv_timeout(Duration::from_millis(FILE_WATCHER_POLL_INTERVAL_MS)) {
+                Ok(Some(event)) => {
+                    if tx.send(event).is_err() {
+                        break;
+                    }
+                }
+                Ok(None) => {}
+                Err(RecvTimeoutError::Timeout) => {}
+                Err(RecvTimeoutError::Disconnected) => break,
+            }
+        },
+        Err(err) => {
+            let _ = tx.send(FileSystemEvent::Error {
+                message: err.to_string(),
+            });
+        }
+    });
+
+    FsWatcherHandle { stop_tx, handle }
 }
 
 #[derive(serde::Deserialize)]
@@ -183,6 +273,15 @@ enum WSRequest {
     InterruptExecution,
     #[serde(rename = "restart_session")]
     RestartSession,
+    #[serde(rename = "fs_action")]
+    FileSystemAction {
+        action: String, // list, read, write, delete, rename, create_dir
+        path: String,
+        #[serde(default)]
+        content: Option<String>,
+        #[serde(default)]
+        to: Option<String>,
+    },
 }
 
 #[derive(serde::Serialize)]
@@ -240,6 +339,20 @@ enum WSResponse {
     ExecutionInterrupted { success: bool },
     #[serde(rename = "session_restarted")]
     SessionRestarted { cleared_events: u64 },
+    #[serde(rename = "fs_event")]
+    FileSystemEvent { event: FileSystemEvent },
+    #[serde(rename = "fs_result")]
+    FileSystemResult {
+        action: String,
+        path: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        to: Option<String>,
+        success: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        data: Option<Value>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        error: Option<String>,
+    },
 }
 
 #[allow(dead_code)] // Reserved for future AI planning feature
@@ -514,6 +627,65 @@ async fn handle_ws_request(request: WSRequest, state: &AppState) -> Vec<WSRespon
                 Ok(cleared_events) => vec![WSResponse::SessionRestarted { cleared_events }],
                 Err(message) => vec![WSResponse::Error {
                     message: format!("Failed to restart session: {}", message),
+                }],
+            }
+        }
+        WSRequest::FileSystemAction {
+            action,
+            path,
+            content,
+            to,
+        } => {
+            let result = match action.as_str() {
+                "list" => state
+                    .fs
+                    .list_dir(&path)
+                    .map(|entries| json!(entries))
+                    .map_err(|e| e.to_string()),
+                "read" => state
+                    .fs
+                    .read_file(&path)
+                    .map(|content| json!(content))
+                    .map_err(|e| e.to_string()),
+                "write" => state
+                    .fs
+                    .write_file(&path, content.as_deref().unwrap_or(""))
+                    .map(|_| json!(null))
+                    .map_err(|e| e.to_string()),
+                "delete" => state
+                    .fs
+                    .delete_path(&path)
+                    .map(|_| json!(null))
+                    .map_err(|e| e.to_string()),
+                "rename" => state
+                    .fs
+                    .rename_path(&path, to.as_deref().unwrap_or(""))
+                    .map(|_| json!(null))
+                    .map_err(|e| e.to_string()),
+                "create_dir" => state
+                    .fs
+                    .create_dir(&path)
+                    .map(|_| json!(null))
+                    .map_err(|e| e.to_string()),
+                _ => Err(format!("Unknown FS action: {}", action)),
+            };
+
+            match result {
+                Ok(data) => vec![WSResponse::FileSystemResult {
+                    action,
+                    path,
+                    to,
+                    success: true,
+                    data: Some(data),
+                    error: None,
+                }],
+                Err(e) => vec![WSResponse::FileSystemResult {
+                    action,
+                    path,
+                    to,
+                    success: false,
+                    data: None,
+                    error: Some(e),
                 }],
             }
         }

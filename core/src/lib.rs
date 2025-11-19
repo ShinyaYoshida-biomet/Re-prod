@@ -8,6 +8,7 @@ pub mod config;
 pub mod error;
 pub mod executor;
 pub mod export;
+pub mod fs;
 pub mod protocol;
 pub mod terminal;
 pub mod timeline;

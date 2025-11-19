@@ -10,6 +10,7 @@ use axum::{routing::get, Router};
 use reprod_core::{
     ai::tools::{FileSystemTool, RContextTool},
     executor::timeline::{JsonTimeline, TimelineSink},
+    fs::FileSystem,
     Config, RExecutor, ToolExecutor, ToolRegistry,
 };
 use std::path::PathBuf;
@@ -75,6 +76,7 @@ async fn main() {
     let workspace_root = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
     let filesystem_tool = Arc::new(FileSystemTool::new(workspace_root.clone()));
     let r_context_tool = Arc::new(RContextTool::new());
+    let fs = Arc::new(FileSystem::new(workspace_root.clone()));
     tracing::info!(
         "AI tools initialized with workspace: {}",
         workspace_root.display()
@@ -120,6 +122,7 @@ async fn main() {
             filesystem_tool: filesystem_tool.clone(),
             r_context_tool: r_context_tool.clone(),
             request_counter: Arc::new(AtomicU64::new(0)),
+            fs: fs.clone(),
         });
 
     let addr = "127.0.0.1:3001";
