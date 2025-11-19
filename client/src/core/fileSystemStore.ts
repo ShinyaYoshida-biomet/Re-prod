@@ -4,24 +4,30 @@ import { fileSystem } from '@/services/fileSystem';
 
 const ROOT_PATH = '/';
 
-const normalizePath = (path: string): string => {
-  if (!path || path === '.' || path === ROOT_PATH) {
+const normalizeSeparators = (value: string): string => value.replace(/\\/g, '/');
+
+const normalizeStorePath = (path: string): string => {
+  if (!path || path === ROOT_PATH) {
     return ROOT_PATH;
   }
-  return path.replace(/^\/+/, '');
+  let normalized = normalizeSeparators(path).replace(/^\.\/+/, '');
+  normalized = normalized.replace(/\/\/+/g, '/');
+  normalized = normalized.replace(/^\/+/, '').replace(/\/+$/, '');
+  return normalized || ROOT_PATH;
 };
 
 const getParentPath = (path: string): string => {
-  const normalized = normalizePath(path);
+  const normalized = normalizeStorePath(path);
   if (normalized === ROOT_PATH) {
     return ROOT_PATH;
   }
-  const trimmed = normalized.replace(/\/+$/, '');
-  const index = trimmed.lastIndexOf('/');
-  if (index <= 0) {
+  const segments = normalized.split('/');
+  if (segments.length <= 1) {
     return ROOT_PATH;
   }
-  return trimmed.slice(0, index);
+  segments.pop();
+  const parent = segments.join('/');
+  return parent || ROOT_PATH;
 };
 
 const updateChildren = (nodes: FileEntry[], targetPath: string, children: FileEntry[]): FileEntry[] => {
@@ -34,6 +40,23 @@ const updateChildren = (nodes: FileEntry[], targetPath: string, children: FileEn
     }
     return node;
   });
+};
+
+const normalizeFsEvent = (event: FileSystemEvent): FileSystemEvent => {
+  switch (event.type) {
+    case 'created':
+    case 'deleted':
+    case 'modified':
+      return { ...event, path: normalizeStorePath(event.path) };
+    case 'renamed':
+      return {
+        ...event,
+        from: normalizeStorePath(event.from),
+        to: normalizeStorePath(event.to),
+      };
+    default:
+      return event;
+  }
 };
 
 const deriveRefreshTargets = (event: FileSystemEvent): string[] => {
@@ -57,6 +80,7 @@ interface FileSystemState {
   loading: boolean;
   error: string | null;
   activePath: string | null;
+  workspaceRoot: string;
   loadRoot: () => Promise<void>;
   toggleFolder: (path: string) => Promise<void>;
   selectPaths: (paths: string[]) => void;
@@ -75,15 +99,20 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
   loading: false,
   error: null,
   activePath: null,
+  workspaceRoot: '',
 
   loadRoot: async () => {
     set({ loading: true, error: null });
     try {
+      let workspaceRoot = get().workspaceRoot;
+      if (!workspaceRoot) {
+        workspaceRoot = await fileSystem.getWorkspaceRoot();
+      }
       const files = await fileSystem.listDir(ROOT_PATH);
       set((state) => {
         const expanded = new Set(state.expandedFolders);
         expanded.add(ROOT_PATH);
-        return { files, loading: false, expandedFolders: expanded };
+        return { files, loading: false, expandedFolders: expanded, workspaceRoot };
       });
     } catch (error) {
       set({ error: (error as Error).message, loading: false });
@@ -91,7 +120,7 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
   },
 
   toggleFolder: async (rawPath: string) => {
-    const path = rawPath === ROOT_PATH ? ROOT_PATH : normalizePath(rawPath);
+    const path = rawPath === ROOT_PATH ? ROOT_PATH : normalizeStorePath(rawPath);
     const expanded = new Set(get().expandedFolders);
 
     if (expanded.has(path)) {
@@ -126,7 +155,7 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
   setActivePath: (path: string | null) => set({ activePath: path }),
 
   refreshPath: async (rawPath: string) => {
-    const path = rawPath === ROOT_PATH ? ROOT_PATH : normalizePath(rawPath);
+    const path = rawPath === ROOT_PATH ? ROOT_PATH : normalizeStorePath(rawPath);
     if (path === ROOT_PATH) {
       try {
         const files = await fileSystem.listDir(ROOT_PATH);
@@ -171,7 +200,8 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
       set({ error: event.message });
       return;
     }
-    const targets = Array.from(new Set(deriveRefreshTargets(event).filter(Boolean)));
+    const normalizedEvent = normalizeFsEvent(event);
+    const targets = Array.from(new Set(deriveRefreshTargets(normalizedEvent).filter(Boolean)));
     for (const target of targets) {
       await get().refreshPath(target);
     }

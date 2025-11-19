@@ -57,7 +57,8 @@ export type FileSystemAction =
   | 'delete'
   | 'rename'
   | 'create_dir'
-  | 'copy';
+  | 'copy'
+  | 'root';
 
 // UI-facing execution log structures
 export interface ExecutionLogPlot {

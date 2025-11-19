@@ -52,34 +52,56 @@ const extensionColors: Record<string, string> = {
   yml: '#FFB347',
 };
 
-const joinPath = (parent: string, name: string): string => {
-  if (!parent || parent === ROOT_PATH || parent === '.') {
-    return name;
+const normalizeSeparators = (value: string): string => value.replace(/\\/g, '/');
+
+const normalizeRelativePath = (path: string): string => {
+  if (!path || path === ROOT_PATH) {
+    return ROOT_PATH;
   }
-  return `${parent.replace(/\/+$/, '')}/${name.replace(/^\/+/, '')}`;
+  let normalized = normalizeSeparators(path).replace(/^\.\/+/, '');
+  normalized = normalized.replace(/\/\/+/g, '/');
+  normalized = normalized.replace(/^\/+/, '').replace(/\/+$/, '');
+  return normalized || ROOT_PATH;
+};
+
+const joinPath = (parent: string, name: string): string => {
+  const parentPath = normalizeRelativePath(parent);
+  const childPath = normalizeRelativePath(name);
+  if (parentPath === ROOT_PATH) {
+    return childPath === ROOT_PATH ? ROOT_PATH : childPath;
+  }
+  if (childPath === ROOT_PATH) {
+    return parentPath;
+  }
+  return `${parentPath}/${childPath}`;
 };
 
 const getNameFromPath = (path: string): string => {
-  if (!path) return '';
-  const parts = path.split('/');
-  return parts[parts.length - 1];
+  const normalized = normalizeSeparators(path);
+  if (!normalized) return '';
+  const parts = normalized.split('/');
+  return parts[parts.length - 1] ?? '';
 };
 
 const getParentPath = (path: string): string => {
-  if (!path || path === ROOT_PATH) return ROOT_PATH;
-  const normalized = path.replace(/\/+$/, '');
-  const idx = normalized.lastIndexOf('/');
-  if (idx === -1) {
+  const normalized = normalizeRelativePath(path);
+  if (normalized === ROOT_PATH) return ROOT_PATH;
+  const segments = normalized.split('/');
+  if (segments.length <= 1) {
     return ROOT_PATH;
   }
-  return normalized.slice(0, idx) || ROOT_PATH;
+  segments.pop();
+  const parent = segments.join('/');
+  return parent || ROOT_PATH;
 };
 
 const isDescendantPath = (parent: string, child: string): boolean => {
-  if (!parent || parent === ROOT_PATH) {
-    return false;
+  const normalizedParent = normalizeRelativePath(parent);
+  const normalizedChild = normalizeRelativePath(child);
+  if (normalizedParent === ROOT_PATH) {
+    return normalizedChild !== ROOT_PATH;
   }
-  return child.startsWith(`${parent}/`);
+  return normalizedChild.startsWith(`${normalizedParent}/`);
 };
 
 const buildTree = (
@@ -90,8 +112,15 @@ const buildTree = (
 ): TreeNode[] => {
   const nodes: TreeNode[] = [];
   for (const entry of entries) {
-    nodes.push({ ...entry, depth, pending: pending.has(entry.path) });
-    if (entry.is_dir && expanded.has(entry.path) && entry.children?.length) {
+    const normalizedPath = entry.path === ROOT_PATH ? ROOT_PATH : normalizeRelativePath(entry.path);
+    const node: TreeNode = {
+      ...entry,
+      path: normalizedPath,
+      depth,
+      pending: pending.has(normalizedPath),
+    };
+    nodes.push(node);
+    if (entry.is_dir && expanded.has(normalizedPath) && entry.children?.length) {
       nodes.push(...buildTree(entry.children, expanded, pending, depth + 1));
     }
   }
@@ -105,6 +134,38 @@ const getExtension = (name: string): string | null => {
 };
 
 const ensureArrayUnique = (paths: string[]): string[] => Array.from(new Set(paths));
+
+const buildAbsolutePath = (workspaceRoot: string, path: string): string => {
+  const relative = normalizeRelativePath(path);
+  if (!workspaceRoot) {
+    if (relative === ROOT_PATH) {
+      return ROOT_PATH;
+    }
+    return `/${relative}`;
+  }
+  const separator = workspaceRoot.includes('\\') ? '\\' : '/';
+  const relativeSegment =
+    relative === ROOT_PATH
+      ? ''
+      : separator === '\\'
+        ? relative.split('/').join('\\')
+        : relative;
+
+  if (!relativeSegment) {
+    return workspaceRoot;
+  }
+
+  if (workspaceRoot === ROOT_PATH) {
+    return `${ROOT_PATH}${relativeSegment}`;
+  }
+
+  const hasTrailingSeparator =
+    workspaceRoot.endsWith('/') || workspaceRoot.endsWith('\\');
+
+  return hasTrailingSeparator
+    ? `${workspaceRoot}${relativeSegment}`
+    : `${workspaceRoot}${separator}${relativeSegment}`;
+};
 
 const useEditorActions = () => {
   const setEditorContent = useStore((state) => state.setEditorContent);
@@ -128,6 +189,7 @@ export function FileBrowserPane(): JSX.Element {
   const clearSelection = useFileSystemStore((state) => state.clearSelection);
   const refreshPath = useFileSystemStore((state) => state.refreshPath);
   const setActivePath = useFileSystemStore((state) => state.setActivePath);
+  const workspaceRoot = useFileSystemStore((state) => state.workspaceRoot);
 
   const [clipboard, setClipboard] = useState<ClipboardState>(null);
   const [anchorPath, setAnchorPath] = useState<string | null>(null);
@@ -371,9 +433,19 @@ export function FileBrowserPane(): JSX.Element {
     [clipboard, contextMenu, closeContextMenu, performTransfer]
   );
 
+  const resolveAbsolutePath = useCallback(
+    (path: string): string => buildAbsolutePath(workspaceRoot, path),
+    [workspaceRoot]
+  );
+
   const handleCopyPath = useCallback(
     async (path: string, absolute = false) => {
-      const value = absolute ? `/${path}` : path;
+      const normalized = normalizeRelativePath(path);
+      const value = absolute
+        ? resolveAbsolutePath(normalized)
+        : normalized === ROOT_PATH
+          ? ROOT_PATH
+          : normalized;
       try {
         await navigator.clipboard.writeText(value);
       } catch (error) {
@@ -381,12 +453,17 @@ export function FileBrowserPane(): JSX.Element {
       }
       closeContextMenu();
     },
-    [closeContextMenu]
+    [closeContextMenu, resolveAbsolutePath]
   );
 
   const handleRevealInFinder = useCallback(
     async (path: string) => {
-      const absolute = `/${path}`;
+      if (!workspaceRoot) {
+        closeContextMenu();
+        window.alert('Workspace root is not available yet. Please try again after the project loads.');
+        return;
+      }
+      const absolute = resolveAbsolutePath(path);
       const tauriWindow = window as TauriWindow;
       const shell = tauriWindow.__TAURI__?.shell;
       closeContextMenu();
@@ -405,7 +482,7 @@ export function FileBrowserPane(): JSX.Element {
         console.error('Failed to copy path', error);
       }
     },
-    [closeContextMenu]
+    [closeContextMenu, resolveAbsolutePath, workspaceRoot]
   );
 
   const handleNodeDragStart = useCallback(

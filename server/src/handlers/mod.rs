@@ -179,6 +179,7 @@ fn handle_fs_action(
             .create_dir(&path)
             .map(|_| json!(null))
             .map_err(|e| e.to_string()),
+        "root" => Ok(json!(state.fs.canonical_root().display().to_string())),
         "copy" => state
             .fs
             .copy_path(&path, to.as_deref().unwrap_or(""))

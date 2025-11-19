@@ -14,17 +14,36 @@ export type FileSystemEvent = FileSystemEventPayload;
 
 type FileSystemResultMessage = ExtractServerMessage<'fs_result'>;
 
-const normalizePath = (path: string): string => {
-  if (!path || path === '.') {
-    return '/';
+const ROOT_PATH = '/';
+
+const normalizeSeparators = (value: string): string => value.replace(/\\/g, '/');
+
+const normalizeRelativePath = (path: string): string => {
+  if (!path || path === ROOT_PATH) {
+    return '';
   }
-  return path;
+  let normalized = normalizeSeparators(path).replace(/^\.\/+/, '');
+  normalized = normalized.replace(/\/\/+/g, '/');
+  normalized = normalized.replace(/^\/+/, '').replace(/\/+$/, '');
+  return normalized;
 };
 
-const mapEntry = (entry: FileEntryPayload): FileEntry => ({
-  ...entry,
-  children: entry.children ? entry.children.map(mapEntry) : undefined,
-});
+const normalizePathInput = (path: string): string => {
+  if (!path || path === ROOT_PATH) {
+    return ROOT_PATH;
+  }
+  const normalized = normalizeRelativePath(path);
+  return normalized || ROOT_PATH;
+};
+
+const mapEntry = (entry: FileEntryPayload): FileEntry => {
+  const normalizedPath = normalizeRelativePath(entry.path);
+  return {
+    ...entry,
+    path: normalizedPath,
+    children: entry.children ? entry.children.map(mapEntry) : undefined,
+  };
+};
 
 const toFileEntries = (data: FileEntryPayload[] | string | null | undefined): FileEntry[] => {
   if (!Array.isArray(data)) {
@@ -42,8 +61,8 @@ const sendFsAction = async <TData>(
     transform?: (message: FileSystemResultMessage) => TData;
   }
 ): Promise<TData> => {
-  const normalizedPath = normalizePath(path);
-  const normalizedTo = options?.to ? normalizePath(options.to) : undefined;
+  const normalizedPath = normalizePathInput(path);
+  const normalizedTo = options?.to ? normalizePathInput(options.to) : undefined;
   const response = await socketService.request(
     {
       type: 'fs_action',
@@ -113,6 +132,12 @@ export const fileSystem = {
     await sendFsAction('copy', path, {
       to,
       transform: () => undefined,
+    });
+  },
+
+  getWorkspaceRoot: async (): Promise<string> => {
+    return sendFsAction<string>('root', ROOT_PATH, {
+      transform: (message) => (typeof message.data === 'string' ? message.data : ''),
     });
   },
 };
