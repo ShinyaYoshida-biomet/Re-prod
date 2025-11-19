@@ -5,6 +5,9 @@ import type {
   CodeBlock,
   ExecutionRequestPayload,
   ExecutionResultPayload,
+  FileEntryPayload,
+  FileSystemAction,
+  FileSystemEventPayload,
   PlanStep,
   ToolCallLog,
   ToolExecutionRequestPayload,
@@ -60,7 +63,14 @@ export type ClientMessage =
       request: ExportRMarkdownRequestPayload;
     }
   | { type: 'interrupt_execution' }
-  | { type: 'restart_session' };
+  | { type: 'restart_session' }
+  | {
+      type: 'fs_action';
+      action: FileSystemAction;
+      path: string;
+      content?: string;
+      to?: string;
+    };
 
 type TimelineEventPush = Extract<TimelineMessage, { type: 'timeline_event_added' }>;
 
@@ -81,6 +91,16 @@ export type ServerMessage =
   | { type: 'export_rmarkdown_response'; response: ExportRMarkdownResponsePayload }
   | { type: 'execution_interrupted'; success: boolean }
   | { type: 'session_restarted'; cleared_events: number }
+  | { type: 'fs_event'; event: FileSystemEventPayload }
+  | {
+      type: 'fs_result';
+      action: FileSystemAction;
+      path: string;
+      to?: string;
+      success: boolean;
+      data?: FileEntryPayload[] | string | null;
+      error?: string | null;
+    }
   | TimelineEventPush;
 
 export type ServerMessageType = ServerMessage['type'];

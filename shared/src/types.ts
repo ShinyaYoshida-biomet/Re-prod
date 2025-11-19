@@ -35,6 +35,29 @@ export type ToolExecutionResultPayload = ProtocolToolExecutionResult;
 
 export type AIMode = 'agent' | 'chat';
 
+export interface FileEntryPayload {
+  path: string;
+  name: string;
+  is_dir: boolean;
+  size?: number;
+  children?: FileEntryPayload[] | null;
+}
+
+export type FileSystemEventPayload =
+  | { type: 'created'; path: string }
+  | { type: 'deleted'; path: string }
+  | { type: 'modified'; path: string }
+  | { type: 'renamed'; from: string; to: string }
+  | { type: 'error'; message: string };
+
+export type FileSystemAction =
+  | 'list'
+  | 'read'
+  | 'write'
+  | 'delete'
+  | 'rename'
+  | 'create_dir';
+
 // UI-facing execution log structures
 export interface ExecutionLogPlot {
   id: string;
