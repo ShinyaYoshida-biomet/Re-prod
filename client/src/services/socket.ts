@@ -1,4 +1,4 @@
-import type { ClientMessage, ServerMessage, ServerMessageType } from 'shared';
+import type { ClientMessage, ExtractServerMessage, ServerMessage, ServerMessageType } from 'shared';
 
 export type WSRequest = ClientMessage;
 export type WSResponse = ServerMessage;
@@ -142,6 +142,59 @@ class SocketService {
     return () => {
       this.connectionListeners.delete(listener);
     };
+  }
+
+  request<TType extends ServerMessageType>(
+    payload: WSRequest,
+    responseType: TType,
+    matcher?: (message: ExtractServerMessage<TType>) => boolean,
+    timeoutMs = 10000
+  ): Promise<ExtractServerMessage<TType>> {
+    return new Promise((resolve, reject) => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        reject(new Error('WebSocket is not connected'));
+        return;
+      }
+
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      let unsubscribe: (() => void) | null = null;
+
+      const cleanup = (): void => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        if (unsubscribe) {
+          unsubscribe();
+          unsubscribe = null;
+        }
+      };
+
+      const handler = (message: ServerMessage): void => {
+        if (message.type !== responseType) {
+          return;
+        }
+        const typed = message as ExtractServerMessage<TType>;
+        if (matcher && !matcher(typed)) {
+          return;
+        }
+        cleanup();
+        resolve(typed);
+      };
+
+      unsubscribe = this.on(responseType, handler);
+      const didSend = this.send(payload);
+      if (!didSend) {
+        cleanup();
+        reject(new Error('Failed to send WebSocket request'));
+        return;
+      }
+
+      timeoutId = setTimeout(() => {
+        cleanup();
+        reject(new Error(`Timed out waiting for ${responseType}`));
+      }, timeoutMs);
+    });
   }
 
   private dispatch(type: string, message: ServerMessage): void {
