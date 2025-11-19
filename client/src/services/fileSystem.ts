@@ -108,4 +108,11 @@ export const fileSystem = {
       transform: () => undefined,
     });
   },
+
+  copyPath: async (path: string, to: string): Promise<void> => {
+    await sendFsAction('copy', path, {
+      to,
+      transform: () => undefined,
+    });
+  },
 };

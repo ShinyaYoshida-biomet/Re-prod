@@ -116,6 +116,22 @@ impl FileSystem {
         std::fs::create_dir_all(target_path).context("Failed to create directory")
     }
 
+    pub fn copy_path(&self, from: &str, to: &str) -> Result<()> {
+        let from_path = self.resolve_path(from)?;
+        let to_path = self.resolve_path(to)?;
+
+        if from_path.is_dir() {
+            copy_dir_recursive(&from_path, &to_path)
+        } else {
+            if let Some(parent) = to_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::copy(&from_path, &to_path)
+                .with_context(|| format!("Failed to copy file {}", from))?;
+            Ok(())
+        }
+    }
+
     pub fn root_path(&self) -> &Path {
         &self.root
     }
@@ -206,4 +222,31 @@ impl FileWatcher {
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_else(|| path.to_string_lossy().to_string())
     }
+}
+
+fn copy_dir_recursive(from: &Path, to: &Path) -> Result<()> {
+    std::fs::create_dir_all(to)?;
+
+    for entry in std::fs::read_dir(from)? {
+        let entry = entry?;
+        let source_path = entry.path();
+        let destination_path = to.join(entry.file_name());
+
+        if source_path.is_dir() {
+            copy_dir_recursive(&source_path, &destination_path)?;
+        } else {
+            if let Some(parent) = destination_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::copy(&source_path, &destination_path).with_context(|| {
+                format!(
+                    "Failed to copy file {} to {}",
+                    source_path.display(),
+                    destination_path.display()
+                )
+            })?;
+        }
+    }
+
+    Ok(())
 }

@@ -7,6 +7,7 @@ import { AIPanel } from "@/components/ai-panel";
 import { BottomPane } from "@/components/bottom-pane";
 import { ExportDialog } from "@/components/export";
 import { TimelineDialog } from "@/components/timeline";
+import { FileBrowserPane } from "@/components/file-browser/FileBrowserPane";
 import { AboutModal, KeyboardShortcutsModal, SessionInfoModal, SettingsModal } from "@/components/modals";
 import { useStore } from "@/core";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -58,6 +59,11 @@ function App(): JSX.Element {
       <MenuBar />
       <div className="workspace-shell">
         <Allotment>
+          {panes.files && (
+            <Allotment.Pane minSize={220} preferredSize={240}>
+              <FileBrowserPane />
+            </Allotment.Pane>
+          )}
           {/* Left side: Editor + Bottom Pane */}
           <Allotment.Pane minSize={400} preferredSize="60%">
             <Allotment vertical>

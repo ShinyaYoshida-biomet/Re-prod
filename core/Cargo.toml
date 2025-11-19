@@ -29,6 +29,5 @@ tar = "0.4"
 flate2 = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
 notify = "6.1"
-walkdir = "2.4"
 
 # NO Tauri dependencies - platform-agnostic!

@@ -667,6 +667,11 @@ async fn handle_ws_request(request: WSRequest, state: &AppState) -> Vec<WSRespon
                     .create_dir(&path)
                     .map(|_| json!(null))
                     .map_err(|e| e.to_string()),
+                "copy" => state
+                    .fs
+                    .copy_path(&path, to.as_deref().unwrap_or(""))
+                    .map(|_| json!(null))
+                    .map_err(|e| e.to_string()),
                 _ => Err(format!("Unknown FS action: {}", action)),
             };
 

@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand';
 
-export type ViewPane = 'editor' | 'assistant';
+export type ViewPane = 'files' | 'editor' | 'assistant';
 
 interface ViewData {
   panes: Record<ViewPane, boolean>;
@@ -40,6 +40,7 @@ const applyZoomToDom = (zoom: number): void => {
 export const createViewSlice: StateCreator<ViewState> = (set, get) => ({
   view: {
     panes: {
+      files: true,
       editor: true,
       assistant: true
     },

@@ -13,6 +13,7 @@
 @import './components/menu.css';
 @import './components/status-bar.css';
 @import './components/layout.css';
+@import './components/file-browser.css';
 @import './components/export-dialog.css';
 @import './components/confirm-dialog.css';
 @import './components/modal-dialog.css';

@@ -107,6 +107,12 @@ export const iconDefinitions = {
       { type: 'polyline', points: '9 18 15 12 9 6' }
     ]
   },
+  chevronDown: {
+    viewBox: '0 0 24 24',
+    paths: [
+      { type: 'polyline', points: '6 9 12 15 18 9' }
+    ]
+  },
   lightbulb: {
     viewBox: '0 0 24 24',
     paths: [
@@ -151,6 +157,12 @@ export const iconDefinitions = {
       { type: 'polyline', points: '1 20 1 14 7 14' },
       { type: 'path', d: 'M3.51 9a9 9 0 0 1 14.13-3.36L23 10' },
       { type: 'path', d: 'M20.49 15a9 9 0 0 1-14.13 3.36L1 14' }
+    ]
+  },
+  folder: {
+    viewBox: '0 0 24 24',
+    paths: [
+      { type: 'path', d: 'M3 7h5l2 2h11a1 1 0 0 1 1 1v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a1 1 0 0 1 1-1z' }
     ]
   }
 } as const;
