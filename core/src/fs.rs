@@ -1,10 +1,11 @@
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
+use dunce::canonicalize;
 use notify::{
     event::{ModifyKind, RenameMode},
     Config, EventKind, RecommendedWatcher, RecursiveMode, Watcher,
 };
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver, RecvTimeoutError};
 use std::time::Duration;
 
@@ -29,12 +30,16 @@ pub enum FileSystemEvent {
 
 pub struct FileSystem {
     root: PathBuf,
+    canonical_root: PathBuf,
 }
 
 impl FileSystem {
     pub fn new<P: AsRef<Path>>(root: P) -> Self {
+        let root_path = root.as_ref().to_path_buf();
+        let canonical_root = canonicalize(&root_path).unwrap_or(root_path.clone());
         Self {
-            root: root.as_ref().to_path_buf(),
+            root: root_path,
+            canonical_root,
         }
     }
 
@@ -137,16 +142,68 @@ impl FileSystem {
     }
 
     fn resolve_path(&self, path: &str) -> Result<PathBuf> {
-        // Prevent directory traversal attacks
-        let path = path.trim_start_matches('/');
-        let target = self.root.join(path);
+        let sanitized = self.sanitize_relative(path)?;
+        let full_path = if sanitized.as_os_str().is_empty() {
+            self.root.clone()
+        } else {
+            self.root.join(&sanitized)
+        };
 
-        // Canonicalize to check if it's within root
-        // Note: canonicalize requires file to exist, so we check parent for new files
-        // For simplicity in this MVP, we just check if it starts with root after join
-        // In production, use `dunce::canonicalize` or similar to handle symlinks safely
+        if full_path.exists() {
+            let canonical_target = canonicalize(&full_path)
+                .with_context(|| format!("Failed to resolve path {}", full_path.display()))?;
+            self.ensure_within_root(&canonical_target)?;
+            Ok(canonical_target)
+        } else {
+            if let Some(parent) = full_path.parent() {
+                if parent.exists() {
+                    let canonical_parent = canonicalize(parent).with_context(|| {
+                        format!("Failed to resolve parent directory {}", parent.display())
+                    })?;
+                    self.ensure_within_root(&canonical_parent)?;
+                } else {
+                    self.ensure_descendant(parent)?;
+                }
+            }
+            self.ensure_descendant(&full_path)?;
+            Ok(full_path)
+        }
+    }
 
-        Ok(target)
+    fn sanitize_relative(&self, path: &str) -> Result<PathBuf> {
+        let mut relative = PathBuf::new();
+        for component in Path::new(path).components() {
+            match component {
+                Component::Prefix(_) => {
+                    return Err(anyhow!("Absolute paths are not allowed"));
+                }
+                Component::RootDir => {
+                    relative.clear();
+                }
+                Component::CurDir => {}
+                Component::ParentDir => {
+                    if !relative.pop() {
+                        return Err(anyhow!("Access outside the workspace is not allowed"));
+                    }
+                }
+                Component::Normal(segment) => relative.push(segment),
+            }
+        }
+        Ok(relative)
+    }
+
+    fn ensure_descendant(&self, path: &Path) -> Result<()> {
+        if !path.starts_with(&self.root) {
+            return Err(anyhow!("Access outside the workspace is not allowed"));
+        }
+        Ok(())
+    }
+
+    fn ensure_within_root(&self, path: &Path) -> Result<()> {
+        if !path.starts_with(&self.canonical_root) {
+            return Err(anyhow!("Access outside the workspace is not allowed"));
+        }
+        Ok(())
     }
 }
 

@@ -745,7 +745,10 @@ export function FileBrowserPane(): JSX.Element {
         {!loading && !nodes.length && (
           <div className="file-browser-empty">
             <p>No files found</p>
-            <p className="description">Use the + buttons to create files or folders.</p>
+            <p className="description">
+              Use the + buttons to create files or folders, or toggle this pane from View → Show/Hide
+              Files Pane (Cmd/Ctrl+Shift+E).
+            </p>
           </div>
         )}
         {error && (
