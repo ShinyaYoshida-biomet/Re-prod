@@ -28,7 +28,7 @@ mod tool_handler;
 pub use common::AppState;
 
 use ai_handler::handle_ai_message;
-use common::{error_response, AppState, WSRequest, WSResponse};
+use common::{error_response, WSRequest, WSResponse};
 use export_handler::handle_export_request;
 use session_handler::{handle_interrupt, handle_restart};
 use timeline_handler::{handle_timeline_query, handle_timeline_stats_query};

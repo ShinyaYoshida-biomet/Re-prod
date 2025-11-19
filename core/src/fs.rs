@@ -281,7 +281,7 @@ impl FileWatcher {
     fn relative_path(&self, path: &Path) -> String {
         path.strip_prefix(&self.root)
             .map(|p| p.to_string_lossy().to_string())
-            .unwrap_or_else(|| path.to_string_lossy().to_string())
+            .unwrap_or_else(|_| path.to_string_lossy().to_string())
     }
 }
 
