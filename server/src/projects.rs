@@ -117,7 +117,15 @@ impl ProjectController {
         {
             let runtimes = self.runtimes.lock().await;
             if let Some(runtime) = runtimes.get(project_id) {
-                return Ok(runtime.clone());
+                let runtime = runtime.clone();
+                drop(runtimes);
+
+                let mut descriptor = runtime.descriptor.clone();
+                descriptor.config.touch_opened();
+                descriptor.update_config()?;
+                self.refresh_registry(&descriptor).await?;
+
+                return Ok(runtime);
             }
         }
 
