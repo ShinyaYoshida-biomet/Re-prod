@@ -162,8 +162,7 @@ impl AIProvider for OpenAIProvider {
                     call["function"]["name"].as_str(),
                     call["function"]["arguments"].as_str(),
                 ) {
-                    let input: Value =
-                        serde_json::from_str(args).unwrap_or_else(|_| json!({}));
+                    let input: Value = serde_json::from_str(args).unwrap_or_else(|_| json!({}));
                     tool_calls.push(ToolCall {
                         id: id.to_string(),
                         name: name.to_string(),

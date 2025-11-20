@@ -57,21 +57,23 @@ pub async fn handle_project_request(
             ),
             Err(error) => Some(send_responses(socket, error_response(error.to_string())).await),
         },
-        WSRequest::ProjectAddExisting { path } => match state.projects.add_existing_project(Path::new(path)).await {
-            Ok(descriptor) => Some(
-                switch_runtime(
-                    state,
-                    current_runtime,
-                    fs_watcher,
-                    fs_event_tx,
-                    fs_events_closed,
-                    socket,
-                    &descriptor.config.id,
-                )
-                .await,
-            ),
-            Err(error) => Some(send_responses(socket, error_response(error.to_string())).await),
-        },
+        WSRequest::ProjectAddExisting { path } => {
+            match state.projects.add_existing_project(Path::new(path)).await {
+                Ok(descriptor) => Some(
+                    switch_runtime(
+                        state,
+                        current_runtime,
+                        fs_watcher,
+                        fs_event_tx,
+                        fs_events_closed,
+                        socket,
+                        &descriptor.config.id,
+                    )
+                    .await,
+                ),
+                Err(error) => Some(send_responses(socket, error_response(error.to_string())).await),
+            }
+        }
         WSRequest::ProjectClone { remote, path, name } => match state
             .projects
             .clone_project(remote, Path::new(path), name.clone())
@@ -91,34 +93,38 @@ pub async fn handle_project_request(
             ),
             Err(error) => Some(send_responses(socket, error_response(error.to_string())).await),
         },
-        WSRequest::ProjectStateLoad { project_id } => Some(match state.projects.load_state(project_id).await {
-            Ok(state_payload) => {
-                send_responses(
-                    socket,
-                    vec![WSResponse::ProjectState {
-                        project_id: project_id.clone(),
-                        state: state_payload,
-                    }],
-                )
-                .await
-            }
-            Err(error) => send_responses(socket, error_response(error.to_string())).await,
-        }),
+        WSRequest::ProjectStateLoad { project_id } => {
+            Some(match state.projects.load_state(project_id).await {
+                Ok(state_payload) => {
+                    send_responses(
+                        socket,
+                        vec![WSResponse::ProjectState {
+                            project_id: project_id.clone(),
+                            state: state_payload,
+                        }],
+                    )
+                    .await
+                }
+                Err(error) => send_responses(socket, error_response(error.to_string())).await,
+            })
+        }
         WSRequest::ProjectStateSave {
             project_id,
             state: payload,
-        } => Some(match state.projects.save_state(project_id, payload.clone()).await {
-            Ok(()) => {
-                send_responses(
-                    socket,
-                    vec![WSResponse::ProjectStateSaved {
-                        project_id: project_id.to_string(),
-                    }],
-                )
-                .await
-            }
-            Err(error) => send_responses(socket, error_response(error.to_string())).await,
-        }),
+        } => Some(
+            match state.projects.save_state(project_id, payload.clone()).await {
+                Ok(()) => {
+                    send_responses(
+                        socket,
+                        vec![WSResponse::ProjectStateSaved {
+                            project_id: project_id.to_string(),
+                        }],
+                    )
+                    .await
+                }
+                Err(error) => send_responses(socket, error_response(error.to_string())).await,
+            },
+        ),
         _ => None,
     }
 }
@@ -135,12 +141,7 @@ async fn switch_runtime(
     match state.projects.runtime_for(project_id).await {
         Ok(runtime) => {
             *current_runtime = runtime;
-            restart_fs_watcher(
-                current_runtime,
-                fs_watcher,
-                fs_event_tx,
-                fs_events_closed,
-            );
+            restart_fs_watcher(current_runtime, fs_watcher, fs_event_tx, fs_events_closed);
 
             let responses = vec![build_project_opened_response(state, current_runtime).await];
             send_responses(socket, responses).await
