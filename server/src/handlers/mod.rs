@@ -6,26 +6,18 @@ use axum::{
     },
     response::Response,
 };
-use reprod_core::{
-    fs::{FileSystemEvent, FileWatcher},
-    project::ProjectRecord,
-    ExecutionRequest,
-};
+use project_requests::handle_project_request;
+use reprod_core::{fs::FileSystemEvent, project::ProjectRecord, ExecutionRequest};
+use runtime_fs::{handle_fs_event, spawn_fs_watcher, FsWatcherHandle};
 use serde_json::{self, json};
-use std::{
-    path::{Path, PathBuf},
-    sync::{
-        mpsc::{self, RecvTimeoutError, TryRecvError},
-        Arc,
-    },
-    thread,
-    time::Duration,
-};
+use std::sync::Arc;
 use tokio::sync::mpsc as tokio_mpsc;
 
 mod ai_handler;
 mod common;
 mod export_handler;
+mod project_requests;
+mod runtime_fs;
 mod session_handler;
 mod timeline_handler;
 mod tool_handler;
@@ -38,8 +30,6 @@ use export_handler::handle_export_request;
 use session_handler::{handle_interrupt, handle_restart};
 use timeline_handler::{handle_timeline_query, handle_timeline_stats_query};
 use tool_handler::{handle_execute_tool, handle_list_tools};
-
-const FILE_WATCHER_POLL_INTERVAL_MS: u64 = 250;
 
 pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> Response {
     ws.on_upgrade(|socket| handle_socket(socket, state))
@@ -140,187 +130,6 @@ async fn handle_ws_text(
         Some(_) => true,
         None => false,
     }
-}
-
-async fn handle_fs_event(
-    maybe_event: &Option<FileSystemEvent>,
-    socket: &mut WebSocket,
-) -> bool {
-    match maybe_event {
-        Some(event) => match serde_json::to_string(&WSResponse::FileSystemEvent { event: event.clone() }) {
-            Ok(payload) => socket.send(Message::Text(payload)).await.is_ok(),
-            Err(error) => {
-                tracing::error!("Failed to serialize file system event: {}", error);
-                true
-            }
-        },
-        None => false,
-    }
-}
-
-async fn handle_project_request(
-    request: &WSRequest,
-    state: &AppState,
-    current_runtime: &mut Arc<ProjectRuntime>,
-    fs_watcher: &mut Option<FsWatcherHandle>,
-    fs_event_tx: &tokio_mpsc::UnboundedSender<FileSystemEvent>,
-    fs_events_closed: &mut bool,
-    socket: &mut WebSocket,
-) -> Option<bool> {
-    match request {
-        WSRequest::ProjectList => {
-            let projects = state.projects.list_projects().await;
-            Some(send_responses(socket, vec![WSResponse::ProjectList { projects }]).await)
-        }
-        WSRequest::ProjectOpen { project_id } => Some(
-            switch_runtime(
-                state,
-                current_runtime,
-                fs_watcher,
-                fs_event_tx,
-                fs_events_closed,
-                socket,
-                project_id,
-            )
-            .await,
-        ),
-        WSRequest::ProjectCreate { name, path } => match state
-            .projects
-            .create_new_project(Path::new(&path), name)
-            .await
-        {
-            Ok(descriptor) => Some(
-                switch_runtime(
-                    state,
-                    current_runtime,
-                    fs_watcher,
-                    fs_event_tx,
-                    fs_events_closed,
-                    socket,
-                    &descriptor.config.id,
-                )
-                .await,
-            ),
-            Err(error) => Some(send_responses(socket, error_response(error.to_string())).await),
-        },
-        WSRequest::ProjectAddExisting { path } => match state
-            .projects
-            .add_existing_project(Path::new(&path))
-            .await
-        {
-            Ok(descriptor) => Some(
-                switch_runtime(
-                    state,
-                    current_runtime,
-                    fs_watcher,
-                    fs_event_tx,
-                    fs_events_closed,
-                    socket,
-                    &descriptor.config.id,
-                )
-                .await,
-            ),
-            Err(error) => Some(send_responses(socket, error_response(error.to_string())).await),
-        },
-        WSRequest::ProjectClone { remote, path, name } => match state
-            .projects
-            .clone_project(remote, Path::new(&path), name.clone())
-            .await
-        {
-            Ok(descriptor) => Some(
-                switch_runtime(
-                    state,
-                    current_runtime,
-                    fs_watcher,
-                    fs_event_tx,
-                    fs_events_closed,
-                    socket,
-                    &descriptor.config.id,
-                )
-                .await,
-            ),
-            Err(error) => Some(send_responses(socket, error_response(error.to_string())).await),
-        },
-        WSRequest::ProjectStateLoad { project_id } => Some(match state
-            .projects
-            .load_state(project_id)
-            .await
-        {
-            Ok(state_payload) => {
-                send_responses(
-                    socket,
-                    vec![WSResponse::ProjectState {
-                        project_id: project_id.clone(),
-                        state: state_payload,
-                    }],
-                )
-                .await
-            }
-            Err(error) => send_responses(socket, error_response(error.to_string())).await,
-        }),
-        WSRequest::ProjectStateSave {
-            project_id,
-            state: payload,
-        } => Some(match state
-            .projects
-            .save_state(project_id, payload.clone())
-            .await
-        {
-            Ok(()) => {
-                send_responses(
-                    socket,
-                    vec![WSResponse::ProjectStateSaved {
-                        project_id: project_id.to_string(),
-                    }],
-                )
-                .await
-            }
-            Err(error) => send_responses(socket, error_response(error.to_string())).await,
-        }),
-        _ => None,
-    }
-}
-
-async fn switch_runtime(
-    state: &AppState,
-    current_runtime: &mut Arc<ProjectRuntime>,
-    fs_watcher: &mut Option<FsWatcherHandle>,
-    fs_event_tx: &tokio_mpsc::UnboundedSender<FileSystemEvent>,
-    fs_events_closed: &mut bool,
-    socket: &mut WebSocket,
-    project_id: &str,
-) -> bool {
-    match state.projects.runtime_for(project_id).await {
-        Ok(runtime) => {
-            *current_runtime = runtime;
-            restart_fs_watcher(
-                current_runtime,
-                fs_watcher,
-                fs_event_tx,
-                fs_events_closed,
-            );
-
-            let responses = vec![build_project_opened_response(state, current_runtime).await];
-            send_responses(socket, responses).await
-        }
-        Err(error) => send_responses(socket, error_response(error.to_string())).await,
-    }
-}
-
-fn restart_fs_watcher(
-    current_runtime: &Arc<ProjectRuntime>,
-    fs_watcher: &mut Option<FsWatcherHandle>,
-    fs_event_tx: &tokio_mpsc::UnboundedSender<FileSystemEvent>,
-    fs_events_closed: &mut bool,
-) {
-    if let Some(handle) = fs_watcher.take() {
-        handle.stop();
-    }
-    *fs_watcher = Some(spawn_fs_watcher(
-        current_runtime.descriptor.root_path.clone(),
-        fs_event_tx.clone(),
-    ));
-    *fs_events_closed = false;
 }
 
 async fn handle_ws_request(
@@ -456,52 +265,10 @@ fn handle_fs_action(
     }
 }
 
-struct FsWatcherHandle {
-    stop_tx: mpsc::Sender<()>,
-    handle: thread::JoinHandle<()>,
-}
-
-impl FsWatcherHandle {
-    fn stop(self) {
-        let _ = self.stop_tx.send(());
-        let _ = self.handle.join();
-    }
-}
-
-fn spawn_fs_watcher(
-    root: PathBuf,
-    tx: tokio_mpsc::UnboundedSender<FileSystemEvent>,
-) -> FsWatcherHandle {
-    let (stop_tx, stop_rx) = mpsc::channel();
-    let handle = thread::spawn(move || match FileWatcher::new(root) {
-        Ok(watcher) => loop {
-            match stop_rx.try_recv() {
-                Ok(_) | Err(TryRecvError::Disconnected) => break,
-                Err(TryRecvError::Empty) => {}
-            }
-
-            match watcher.recv_timeout(Duration::from_millis(FILE_WATCHER_POLL_INTERVAL_MS)) {
-                Ok(Some(event)) => {
-                    if tx.send(event).is_err() {
-                        break;
-                    }
-                }
-                Ok(None) => {}
-                Err(RecvTimeoutError::Timeout) => {}
-                Err(RecvTimeoutError::Disconnected) => break,
-            }
-        },
-        Err(err) => {
-            let _ = tx.send(FileSystemEvent::Error {
-                message: err.to_string(),
-            });
-        }
-    });
-
-    FsWatcherHandle { stop_tx, handle }
-}
-
-async fn send_responses(socket: &mut WebSocket, responses: Vec<WSResponse>) -> bool {
+pub(in crate::handlers) async fn send_responses(
+    socket: &mut WebSocket,
+    responses: Vec<WSResponse>,
+) -> bool {
     for response in responses {
         match serde_json::to_string(&response) {
             Ok(response_text) => {
@@ -517,7 +284,7 @@ async fn send_responses(socket: &mut WebSocket, responses: Vec<WSResponse>) -> b
     true
 }
 
-async fn build_project_opened_response(
+pub(in crate::handlers) async fn build_project_opened_response(
     state: &AppState,
     runtime: &Arc<ProjectRuntime>,
 ) -> WSResponse {
