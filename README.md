@@ -127,6 +127,14 @@ Re-prod/
 └── package.json               # pnpm workspace config + scripts
 ```
 
+## Project Management
+
+Re-prod ships with a lightweight project system modelled after RStudio Projects. Each project is just a directory with a `.reprod/config.json` file (created automatically when you add or open the folder). The desktop/server layer keeps a registry at `~/.reprod/projects.json` so you can hop between analyses without reconfiguring paths.
+
+- **Switching projects** – Use `File → Projects…` to open the manager. Selecting a project persists the current workspace, resets the R session, and reloads the timeline scoped to that directory.
+- **Creating projects** – From the same dialog you can create a new directory, register an existing folder, or clone a Git repository. The `.reprod` metadata folder (config + timeline) is initialized for you.
+- **Per-project state** – Editor contents, execution history, AI transcript, settings, and pane layout are snapshotted on every switch. When you reopen a project, Re-prod restores exactly where you left off (including the working directory for R executions).
+
 ## Usage
 
 1. **Open Re-prod** in a browser (or the bundled Tauri window) so the workspace renders.
