@@ -7,8 +7,16 @@ import { createSettingsSlice, type SettingsState } from './slices/settingsSlice'
 import { createConnectionSlice, type ConnectionState } from './slices/connectionSlice';
 import { createTimelineSlice, type TimelineState } from './slices/timelineSlice';
 import { createViewSlice, type ViewState } from './slices/viewSlice';
+import { createProjectSlice, type ProjectState } from './slices/projectSlice';
 
-export type StoreState = EditorState & ExecutionState & AIState & SettingsState & ConnectionState & TimelineState & ViewState;
+export type StoreState = EditorState &
+  ExecutionState &
+  AIState &
+  SettingsState &
+  ConnectionState &
+  TimelineState &
+  ViewState &
+  ProjectState;
 
 export const useStore = create<StoreState>()(
   devtools(
@@ -19,7 +27,8 @@ export const useStore = create<StoreState>()(
       ...createSettingsSlice(...args),
       ...createConnectionSlice(...args),
       ...createTimelineSlice(...args),
-      ...createViewSlice(...args)
+      ...createViewSlice(...args),
+      ...createProjectSlice(...args),
     }),
     { name: 'Re-prod Store' }
   )
