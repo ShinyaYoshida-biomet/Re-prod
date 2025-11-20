@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useStore, useFileSystemStore } from '@/core';
+import { ROOT_PATH, normalizeRelativePath, normalizeSeparators } from '@/core/pathUtils';
 import { FileEntry, fileSystem } from '@/services/fileSystem';
 import { useFileSystemData } from '@/hooks/useFileSystemData';
 import { IconChevronDown, IconChevronRight, IconFolder, IconPlus } from '@/components/shared';
 
-const ROOT_PATH = '/';
 const ROOT_LABEL = 'Workspace';
 const DRAG_DATA_MIME = 'application/x-reprod-paths';
 
@@ -50,18 +50,6 @@ const extensionColors: Record<string, string> = {
   toml: '#FFA94D',
   yaml: '#FFB347',
   yml: '#FFB347',
-};
-
-const normalizeSeparators = (value: string): string => value.replace(/\\/g, '/');
-
-const normalizeRelativePath = (path: string): string => {
-  if (!path || path === ROOT_PATH) {
-    return ROOT_PATH;
-  }
-  let normalized = normalizeSeparators(path).replace(/^\.\/+/, '');
-  normalized = normalized.replace(/\/\/+/g, '/');
-  normalized = normalized.replace(/^\/+/, '').replace(/\/+$/, '');
-  return normalized || ROOT_PATH;
 };
 
 const joinPath = (parent: string, name: string): string => {

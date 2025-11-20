@@ -4,6 +4,7 @@ import type {
   FileSystemEventPayload,
 } from '@shared/types';
 import type { ExtractServerMessage } from 'shared';
+import { ROOT_PATH, normalizePathInput, normalizeRelativePath } from '@/core/pathUtils';
 import { socketService } from './socket';
 
 export type FileEntry = FileEntryPayload & {
@@ -14,30 +15,8 @@ export type FileSystemEvent = FileSystemEventPayload;
 
 type FileSystemResultMessage = ExtractServerMessage<'fs_result'>;
 
-const ROOT_PATH = '/';
-
-const normalizeSeparators = (value: string): string => value.replace(/\\/g, '/');
-
-const normalizeRelativePath = (path: string): string => {
-  if (!path || path === ROOT_PATH) {
-    return '';
-  }
-  let normalized = normalizeSeparators(path).replace(/^\.\/+/, '');
-  normalized = normalized.replace(/\/\/+/g, '/');
-  normalized = normalized.replace(/^\/+/, '').replace(/\/+$/, '');
-  return normalized;
-};
-
-const normalizePathInput = (path: string): string => {
-  if (!path || path === ROOT_PATH) {
-    return ROOT_PATH;
-  }
-  const normalized = normalizeRelativePath(path);
-  return normalized || ROOT_PATH;
-};
-
 const mapEntry = (entry: FileEntryPayload): FileEntry => {
-  const normalizedPath = normalizeRelativePath(entry.path);
+  const normalizedPath = normalizeRelativePath(entry.path, { keepRootEmpty: true });
   return {
     ...entry,
     path: normalizedPath,

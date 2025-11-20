@@ -1,20 +1,9 @@
 import { create } from 'zustand';
+import { ROOT_PATH, normalizeRelativePath } from '@/core/pathUtils';
 import type { FileEntry, FileSystemEvent } from '@/services/fileSystem';
 import { fileSystem } from '@/services/fileSystem';
 
-const ROOT_PATH = '/';
-
-const normalizeSeparators = (value: string): string => value.replace(/\\/g, '/');
-
-const normalizeStorePath = (path: string): string => {
-  if (!path || path === ROOT_PATH) {
-    return ROOT_PATH;
-  }
-  let normalized = normalizeSeparators(path).replace(/^\.\/+/, '');
-  normalized = normalized.replace(/\/\/+/g, '/');
-  normalized = normalized.replace(/^\/+/, '').replace(/\/+$/, '');
-  return normalized || ROOT_PATH;
-};
+const normalizeStorePath = (path: string): string => normalizeRelativePath(path);
 
 const getParentPath = (path: string): string => {
   const normalized = normalizeStorePath(path);
