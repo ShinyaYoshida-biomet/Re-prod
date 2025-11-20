@@ -1,14 +1,14 @@
 use anyhow::{anyhow, Context, Result};
 use reprod_core::{
+    ai::tools::{FileSystemTool, RContextTool},
+    executor::timeline::JsonTimeline,
+    fs::FileSystem,
+};
+use reprod_core::{
     project::{
         default_registry_path, locate_config, ProjectDescriptor, ProjectRecord, ProjectRegistry,
     },
     Config, RExecutor, RExecutorBuilder,
-};
-use reprod_core::{
-    ai::tools::{FileSystemTool, RContextTool},
-    executor::timeline::JsonTimeline,
-    fs::FileSystem,
 };
 use std::{
     collections::HashMap,
@@ -29,14 +29,15 @@ pub struct ProjectRuntime {
 }
 
 impl ProjectRuntime {
-    fn new(mut descriptor: ProjectDescriptor, config: &Config, base_temp_dir: &Path) -> Result<Self> {
+    fn new(
+        mut descriptor: ProjectDescriptor,
+        config: &Config,
+        base_temp_dir: &Path,
+    ) -> Result<Self> {
         ProjectDescriptor::ensure_layout(&descriptor.root_path)?;
         descriptor.config.touch_opened();
         descriptor.update_config()?;
-        let timeline_path = descriptor
-            .root_path
-            .join(".reprod")
-            .join("timeline.ndjson");
+        let timeline_path = descriptor.root_path.join(".reprod").join("timeline.ndjson");
         let timeline = JsonTimeline::new(timeline_path).unwrap_or_else(|error| {
             tracing::warn!(
                 "Failed to initialize timeline storage for {}: {}. Using in-memory timeline.",
@@ -129,17 +130,17 @@ impl ProjectController {
             return Ok(existing.clone());
         }
 
-        let runtime = Arc::new(ProjectRuntime::new(descriptor, &config, &self.base_temp_dir)?);
+        let runtime = Arc::new(ProjectRuntime::new(
+            descriptor,
+            &config,
+            &self.base_temp_dir,
+        )?);
         self.refresh_registry(&runtime.descriptor).await?;
         runtimes.insert(project_id.to_string(), runtime.clone());
         Ok(runtime)
     }
 
-    pub async fn create_new_project(
-        &self,
-        root: &Path,
-        name: &str,
-    ) -> Result<ProjectDescriptor> {
+    pub async fn create_new_project(&self, root: &Path, name: &str) -> Result<ProjectDescriptor> {
         if root.exists() {
             return Err(anyhow!(
                 "Project directory {} already exists",
@@ -235,11 +236,7 @@ impl ProjectController {
         Ok(Some(value))
     }
 
-    pub async fn save_state(
-        &self,
-        project_id: &str,
-        payload: serde_json::Value,
-    ) -> Result<()> {
+    pub async fn save_state(&self, project_id: &str, payload: serde_json::Value) -> Result<()> {
         let runtime = self.runtime_for(project_id).await?;
         let state_path = runtime
             .descriptor
@@ -282,7 +279,10 @@ impl ProjectController {
         Ok(())
     }
 
-    async fn register_project(&self, mut descriptor: ProjectDescriptor) -> Result<ProjectDescriptor> {
+    async fn register_project(
+        &self,
+        mut descriptor: ProjectDescriptor,
+    ) -> Result<ProjectDescriptor> {
         descriptor.config.touch_opened();
         descriptor.update_config()?;
         let mut registry = self.registry.lock().await;

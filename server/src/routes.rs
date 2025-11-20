@@ -54,11 +54,7 @@ pub async fn execute_r_code(
     State(state): State<AppState>,
     Json(payload): Json<ExecutionRequest>,
 ) -> Resp<ExecutionResult> {
-    let runtime = state
-        .projects
-        .default_runtime()
-        .await
-        .map_err(err_500)?;
+    let runtime = state.projects.default_runtime().await.map_err(err_500)?;
     let executor = runtime.r_executor.lock().await;
 
     executor.execute(payload).await.map(Json).map_err(err_500)
@@ -155,11 +151,7 @@ pub async fn execute_tool(
     State(state): State<AppState>,
     Json(request): Json<ToolExecutionRequest>,
 ) -> Resp<ToolExecutionResult> {
-    let runtime = state
-        .projects
-        .default_runtime()
-        .await
-        .map_err(err_500)?;
+    let runtime = state.projects.default_runtime().await.map_err(err_500)?;
     let mut r_executor = runtime.r_executor.lock().await;
 
     state

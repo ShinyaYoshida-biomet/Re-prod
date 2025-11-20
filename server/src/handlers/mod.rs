@@ -1,3 +1,4 @@
+use crate::projects::ProjectRuntime;
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
@@ -5,7 +6,6 @@ use axum::{
     },
     response::Response,
 };
-use crate::projects::ProjectRuntime;
 use reprod_core::{
     fs::{FileSystemEvent, FileWatcher},
     project::ProjectRecord,
@@ -262,7 +262,18 @@ async fn handle_ws_request(
             request_id,
             stream,
             mode,
-        } => handle_ai_message(state, runtime, messages, enable_tools, request_id, stream, mode).await,
+        } => {
+            handle_ai_message(
+                state,
+                runtime,
+                messages,
+                enable_tools,
+                request_id,
+                stream,
+                mode,
+            )
+            .await
+        }
         WSRequest::ListTools => handle_list_tools(state),
         WSRequest::ExecuteTool {
             tool_id,
@@ -271,7 +282,9 @@ async fn handle_ws_request(
         } => handle_execute_tool(state, runtime, tool_id, capability_id, parameters).await,
         WSRequest::TimelineQuery { query } => handle_timeline_query(runtime, query),
         WSRequest::TimelineStatsQuery => handle_timeline_stats_query(runtime),
-        WSRequest::ExportRMarkdown { request } => handle_export_request(state, runtime, request).await,
+        WSRequest::ExportRMarkdown { request } => {
+            handle_export_request(state, runtime, request).await
+        }
         WSRequest::InterruptExecution => handle_interrupt(runtime).await,
         WSRequest::RestartSession => handle_restart(runtime).await,
         WSRequest::FileSystemAction {
@@ -284,7 +297,10 @@ async fn handle_ws_request(
     }
 }
 
-async fn handle_execution_request(runtime: &Arc<ProjectRuntime>, request: ExecutionRequest) -> Vec<WSResponse> {
+async fn handle_execution_request(
+    runtime: &Arc<ProjectRuntime>,
+    request: ExecutionRequest,
+) -> Vec<WSResponse> {
     let executor = runtime.r_executor.lock().await;
     match executor.execute_with_event(request).await {
         Ok((result, event)) => vec![
@@ -333,7 +349,11 @@ fn handle_fs_action(
             .create_dir(&path)
             .map(|_| json!(null))
             .map_err(|e| e.to_string()),
-        "root" => Ok(json!(runtime.file_system.canonical_root().display().to_string())),
+        "root" => Ok(json!(runtime
+            .file_system
+            .canonical_root()
+            .display()
+            .to_string())),
         "copy" => runtime
             .file_system
             .copy_path(&path, to.as_deref().unwrap_or(""))
@@ -433,11 +453,7 @@ async fn build_project_opened_response(
         .load_state(&record.id)
         .await
         .unwrap_or_else(|error| {
-            tracing::warn!(
-                "Failed to load project state for {}: {}",
-                record.id,
-                error
-            );
+            tracing::warn!("Failed to load project state for {}: {}", record.id, error);
             None
         });
 

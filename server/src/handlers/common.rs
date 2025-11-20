@@ -165,10 +165,7 @@ pub(super) enum WSRequest {
     #[serde(rename = "project_state_load")]
     ProjectStateLoad { project_id: String },
     #[serde(rename = "project_state_save")]
-    ProjectStateSave {
-        project_id: String,
-        state: Value,
-    },
+    ProjectStateSave { project_id: String, state: Value },
 }
 
 #[derive(serde::Serialize)]

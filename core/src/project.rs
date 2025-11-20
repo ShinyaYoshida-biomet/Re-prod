@@ -53,11 +53,12 @@ impl ProjectConfig {
 
     pub fn save(&self, path: &Path) -> Result<()> {
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("Failed to create project config dir {}", parent.display()))?;
+            fs::create_dir_all(parent).with_context(|| {
+                format!("Failed to create project config dir {}", parent.display())
+            })?;
         }
-        let content = serde_json::to_string_pretty(self)
-            .context("Failed to serialize project config")?;
+        let content =
+            serde_json::to_string_pretty(self).context("Failed to serialize project config")?;
         fs::write(path, content)
             .with_context(|| format!("Failed to write project config {}", path.display()))
     }
@@ -102,8 +103,12 @@ impl ProjectDescriptor {
 
     pub fn ensure_layout(root: &Path) -> Result<()> {
         let meta_dir = root.join(".reprod");
-        fs::create_dir_all(&meta_dir)
-            .with_context(|| format!("Failed to create project metadata directory {}", meta_dir.display()))
+        fs::create_dir_all(&meta_dir).with_context(|| {
+            format!(
+                "Failed to create project metadata directory {}",
+                meta_dir.display()
+            )
+        })
     }
 }
 
@@ -157,7 +162,10 @@ impl ProjectRegistry {
         if !path.exists() {
             if let Some(parent) = path.parent() {
                 fs::create_dir_all(parent).with_context(|| {
-                    format!("Failed to create project registry directory {}", parent.display())
+                    format!(
+                        "Failed to create project registry directory {}",
+                        parent.display()
+                    )
                 })?;
             }
             return Ok(Self {
@@ -166,8 +174,8 @@ impl ProjectRegistry {
             });
         }
 
-        let content =
-            fs::read_to_string(&path).with_context(|| format!("Failed to read {}", path.display()))?;
+        let content = fs::read_to_string(&path)
+            .with_context(|| format!("Failed to read {}", path.display()))?;
         let doc: RegistryDocument =
             serde_json::from_str(&content).context("Failed to parse project registry")?;
         Ok(Self { path, doc })
@@ -203,8 +211,7 @@ impl ProjectRegistry {
 }
 
 pub fn default_registry_path() -> Result<PathBuf> {
-    let home =
-        dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Could not find home directory"))?;
+    let home = dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Could not find home directory"))?;
     Ok(home.join(".reprod").join("projects.json"))
 }
 
