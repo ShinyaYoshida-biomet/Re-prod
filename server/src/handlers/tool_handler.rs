@@ -1,5 +1,6 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
+use crate::projects::ProjectRuntime;
 use reprod_core::{ai::tools::*, ToolCall};
 use serde_json::Value;
 
@@ -12,11 +13,12 @@ pub(super) fn handle_list_tools(state: &AppState) -> Vec<WSResponse> {
 
 pub(super) async fn handle_execute_tool(
     state: &AppState,
+    runtime: &Arc<ProjectRuntime>,
     tool_id: String,
     capability_id: String,
     parameters: HashMap<String, Value>,
 ) -> Vec<WSResponse> {
-    let mut r_executor = state.r_executor.lock().await;
+    let mut r_executor = runtime.r_executor.lock().await;
     match state
         .tool_executor
         .execute(&tool_id, &capability_id, parameters, &mut r_executor)
@@ -37,14 +39,14 @@ pub(super) async fn handle_execute_tool(
 
 pub(super) async fn execute_ai_tool_call(
     tool_call: &ToolCall,
-    state: &AppState,
+    runtime: &Arc<ProjectRuntime>,
 ) -> Result<String, String> {
     match tool_call.name.as_str() {
         "read_file" => {
             let request: ReadFileRequest = serde_json::from_value(tool_call.input.clone())
                 .map_err(|e| format!("Invalid request: {}", e))?;
 
-            state
+            runtime
                 .filesystem_tool
                 .read_file(request)
                 .await
@@ -54,7 +56,7 @@ pub(super) async fn execute_ai_tool_call(
             let request: WriteFileRequest = serde_json::from_value(tool_call.input.clone())
                 .map_err(|e| format!("Invalid request: {}", e))?;
 
-            state
+            runtime
                 .filesystem_tool
                 .write_file(request)
                 .await
@@ -65,7 +67,7 @@ pub(super) async fn execute_ai_tool_call(
             let request: ListFilesRequest = serde_json::from_value(tool_call.input.clone())
                 .map_err(|e| format!("Invalid request: {}", e))?;
 
-            state
+            runtime
                 .filesystem_tool
                 .list_files(request)
                 .await
@@ -79,8 +81,8 @@ pub(super) async fn execute_ai_tool_call(
             let request: GetVariablesRequest = serde_json::from_value(tool_call.input.clone())
                 .map_err(|e| format!("Invalid request: {}", e))?;
 
-            let mut executor = state.r_executor.lock().await;
-            state
+            let mut executor = runtime.r_executor.lock().await;
+            runtime
                 .r_context_tool
                 .get_variables(request, &mut executor)
                 .await
@@ -94,8 +96,8 @@ pub(super) async fn execute_ai_tool_call(
             let request: GetWorkingDirRequest = serde_json::from_value(tool_call.input.clone())
                 .map_err(|e| format!("Invalid request: {}", e))?;
 
-            let mut executor = state.r_executor.lock().await;
-            state
+            let mut executor = runtime.r_executor.lock().await;
+            runtime
                 .r_context_tool
                 .get_working_dir(request, &mut executor)
                 .await
@@ -106,8 +108,8 @@ pub(super) async fn execute_ai_tool_call(
                 serde_json::from_value(tool_call.input.clone())
                     .map_err(|e| format!("Invalid request: {}", e))?;
 
-            let mut executor = state.r_executor.lock().await;
-            state
+            let mut executor = runtime.r_executor.lock().await;
+            runtime
                 .r_context_tool
                 .get_installed_packages(request, &mut executor)
                 .await

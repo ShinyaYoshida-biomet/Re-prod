@@ -1,14 +1,18 @@
-use super::common::{error_response, single_response, AppState, WSResponse};
+use std::sync::Arc;
+
+use crate::projects::ProjectRuntime;
+
+use super::common::{error_response, single_response, WSResponse};
 use reprod_core::api::timeline::{
     TimelineQueryPayload, TimelineResponsePayload, TimelineStatsPayload,
 };
 
 pub(super) fn handle_timeline_query(
-    state: &AppState,
+    runtime: &Arc<ProjectRuntime>,
     query: TimelineQueryPayload,
 ) -> Vec<WSResponse> {
     match query.into_domain() {
-        Ok(timeline_query) => match state.timeline.query(timeline_query) {
+        Ok(timeline_query) => match runtime.timeline.query(timeline_query) {
             Ok(response) => single_response(WSResponse::TimelineResponse {
                 data: TimelineResponsePayload::from(response),
             }),
@@ -18,8 +22,8 @@ pub(super) fn handle_timeline_query(
     }
 }
 
-pub(super) fn handle_timeline_stats_query(state: &AppState) -> Vec<WSResponse> {
-    match state.timeline.stats() {
+pub(super) fn handle_timeline_stats_query(runtime: &Arc<ProjectRuntime>) -> Vec<WSResponse> {
+    match runtime.timeline.stats() {
         Ok(stats) => single_response(WSResponse::TimelineStatsResponse {
             stats: TimelineStatsPayload::from(stats),
         }),

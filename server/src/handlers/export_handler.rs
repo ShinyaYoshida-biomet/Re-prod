@@ -1,3 +1,7 @@
+use std::sync::Arc;
+
+use crate::projects::ProjectRuntime;
+
 use super::common::{error_response, single_response, AppState, WSResponse};
 use reprod_core::{
     api::timeline::{ExportRMarkdownRequest, ExportRMarkdownResponse},
@@ -7,6 +11,7 @@ use reprod_core::{
 
 pub(super) async fn handle_export_request(
     state: &AppState,
+    runtime: &Arc<ProjectRuntime>,
     request: ExportRMarkdownRequest,
 ) -> Vec<WSResponse> {
     eprintln!(
@@ -14,7 +19,7 @@ pub(super) async fn handle_export_request(
         request.mode()
     );
 
-    match process_export_request(request, state).await {
+    match process_export_request(request, runtime).await {
         Ok(response) => {
             eprintln!("[handlers] Export successful: {}", response.output_path());
             single_response(WSResponse::ExportRMarkdownResponse { response })
@@ -28,7 +33,7 @@ pub(super) async fn handle_export_request(
 
 async fn process_export_request(
     request: ExportRMarkdownRequest,
-    state: &AppState,
+    runtime: &Arc<ProjectRuntime>,
 ) -> Result<ExportRMarkdownResponse, String> {
     let document_path = request.document_path();
 
@@ -47,7 +52,7 @@ async fn process_export_request(
                 offset: None,
             };
 
-            let response = state
+            let response = runtime
                 .timeline
                 .query(query)
                 .map_err(|e| format!("Failed to query timeline: {}", e))?;

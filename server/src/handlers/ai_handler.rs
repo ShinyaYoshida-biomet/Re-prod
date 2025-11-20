@@ -1,5 +1,6 @@
-use std::sync::atomic::Ordering;
+use std::sync::{atomic::Ordering, Arc};
 
+use crate::projects::ProjectRuntime;
 use reprod_core::{
     ai::{
         self,
@@ -19,6 +20,7 @@ use super::{
 
 pub(super) async fn handle_ai_message(
     state: &AppState,
+    runtime: &Arc<ProjectRuntime>,
     messages: Vec<ChatMessage>,
     enable_tools: bool,
     request_id: Option<String>,
@@ -53,7 +55,7 @@ pub(super) async fn handle_ai_message(
                             tool: log.clone(),
                         });
 
-                        let tool_result = execute_ai_tool_call(tool_call, state).await;
+                        let tool_result = execute_ai_tool_call(tool_call, runtime).await;
                         match tool_result {
                             Ok(content) => {
                                 log.status = ToolLogStatus::Done;

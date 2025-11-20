@@ -1,14 +1,14 @@
 use std::sync::{atomic::AtomicU64, Arc};
 
+use crate::projects::ProjectController;
 use reprod_core::{
-    ai::tools::{FileSystemTool, RContextTool},
     api::timeline::{
         ExportRMarkdownRequest, ExportRMarkdownResponse, TimelineQueryPayload,
         TimelineResponsePayload, TimelineStatsPayload,
     },
-    executor::timeline::JsonTimeline,
-    fs::{FileSystem, FileSystemEvent},
-    AIResponse, ChatMessage, Config, ExecutionEvent, ExecutionRequest, ExecutionResult, RExecutor,
+    fs::FileSystemEvent,
+    project::ProjectRecord,
+    AIResponse, ChatMessage, Config, ExecutionEvent, ExecutionRequest, ExecutionResult,
     ToolExecutor, ToolManifest, ToolRegistry,
 };
 use serde_json::Value;
@@ -72,15 +72,11 @@ impl Default for AIMode {
 
 #[derive(Clone)]
 pub struct AppState {
-    pub r_executor: Arc<Mutex<RExecutor>>,
     pub config: Arc<Mutex<Config>>,
     pub tool_registry: Arc<ToolRegistry>,
     pub tool_executor: Arc<ToolExecutor>,
-    pub timeline: Arc<JsonTimeline>,
-    pub filesystem_tool: Arc<FileSystemTool>,
-    pub r_context_tool: Arc<RContextTool>,
     pub request_counter: Arc<AtomicU64>,
-    pub fs: Arc<FileSystem>,
+    pub projects: Arc<ProjectController>,
 }
 
 pub(super) fn with_system_prompts(messages: &[ChatMessage], mode: AIMode) -> Vec<ChatMessage> {
@@ -150,6 +146,28 @@ pub(super) enum WSRequest {
         content: Option<String>,
         #[serde(default)]
         to: Option<String>,
+    },
+    #[serde(rename = "project_list")]
+    ProjectList,
+    #[serde(rename = "project_open")]
+    ProjectOpen { project_id: String },
+    #[serde(rename = "project_create")]
+    ProjectCreate { name: String, path: String },
+    #[serde(rename = "project_add_existing")]
+    ProjectAddExisting { path: String },
+    #[serde(rename = "project_clone")]
+    ProjectClone {
+        remote: String,
+        path: String,
+        #[serde(default)]
+        name: Option<String>,
+    },
+    #[serde(rename = "project_state_load")]
+    ProjectStateLoad { project_id: String },
+    #[serde(rename = "project_state_save")]
+    ProjectStateSave {
+        project_id: String,
+        state: Value,
     },
 }
 
@@ -222,6 +240,22 @@ pub(super) enum WSResponse {
         #[serde(skip_serializing_if = "Option::is_none")]
         error: Option<String>,
     },
+    #[serde(rename = "project_list")]
+    ProjectList { projects: Vec<ProjectRecord> },
+    #[serde(rename = "project_opened")]
+    ProjectOpened {
+        project: ProjectRecord,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        state: Option<Value>,
+    },
+    #[serde(rename = "project_state")]
+    ProjectState {
+        project_id: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        state: Option<Value>,
+    },
+    #[serde(rename = "project_state_saved")]
+    ProjectStateSaved { project_id: String },
 }
 
 #[allow(dead_code)] // Reserved for future AI planning feature

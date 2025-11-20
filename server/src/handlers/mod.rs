@@ -5,13 +5,15 @@ use axum::{
     },
     response::Response,
 };
+use crate::projects::ProjectRuntime;
 use reprod_core::{
     fs::{FileSystemEvent, FileWatcher},
+    project::ProjectRecord,
     ExecutionRequest,
 };
 use serde_json::{self, json};
 use std::{
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::mpsc::{self, RecvTimeoutError, TryRecvError},
     thread,
     time::Duration,
@@ -41,10 +43,27 @@ pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> 
 }
 
 async fn handle_socket(mut socket: WebSocket, state: AppState) {
+    let mut current_runtime = match state.projects.default_runtime().await {
+        Ok(runtime) => runtime,
+        Err(error) => {
+            let _ = send_responses(&mut socket, error_response(error.to_string())).await;
+            return;
+        }
+    };
+    let mut current_project_id = current_runtime.descriptor.config.id.clone();
+
     let (fs_event_tx, mut fs_event_rx) = tokio_mpsc::unbounded_channel::<FileSystemEvent>();
-    let workspace_root = state.fs.root_path().to_path_buf();
-    let mut fs_watcher = Some(spawn_fs_watcher(workspace_root, fs_event_tx));
+    let mut fs_watcher = Some(spawn_fs_watcher(
+        current_runtime.descriptor.root_path.clone(),
+        fs_event_tx.clone(),
+    ));
     let mut fs_events_closed = false;
+
+    let _ = send_responses(
+        &mut socket,
+        vec![build_project_opened_response(&state, &current_runtime).await],
+    )
+    .await;
 
     'ws_loop: loop {
         tokio::select! {
@@ -68,16 +87,143 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                 match msg {
                     Some(Ok(Message::Text(text))) => {
                         if let Ok(request) = serde_json::from_str::<WSRequest>(&text) {
-                            let responses = handle_ws_request(request, &state).await;
-
-                            for response in responses {
-                                if let Ok(response_text) = serde_json::to_string(&response) {
-                                    if socket.send(Message::Text(response_text)).await.is_err() {
-                                        break 'ws_loop;
-                                    }
-                                } else {
-                                    tracing::error!("Failed to serialize WebSocket response");
+                            let continue_loop = match request {
+                                WSRequest::ProjectList => {
+                                    let projects = state.projects.list_projects().await;
+                                    send_responses(&mut socket, vec![WSResponse::ProjectList { projects }]).await
                                 }
+                                WSRequest::ProjectOpen { project_id } => {
+                                    match state.projects.runtime_for(&project_id).await {
+                                        Ok(runtime) => {
+                                            current_project_id = project_id.clone();
+                                            current_runtime = runtime;
+                                            if let Some(handle) = fs_watcher.take() {
+                                                handle.stop();
+                                            }
+                                            fs_watcher = Some(spawn_fs_watcher(
+                                                current_runtime.descriptor.root_path.clone(),
+                                                fs_event_tx.clone(),
+                                            ));
+                                            fs_events_closed = false;
+                                            send_responses(
+                                                &mut socket,
+                                                vec![build_project_opened_response(&state, &current_runtime).await],
+                                            )
+                                            .await
+                                        }
+                                        Err(error) => send_responses(&mut socket, error_response(error.to_string())).await,
+                                    }
+                                }
+                                WSRequest::ProjectCreate { name, path } => {
+                                    match state.projects.create_new_project(Path::new(&path), &name).await {
+                                        Ok(descriptor) => {
+                                            current_project_id = descriptor.config.id.clone();
+                                            match state.projects.runtime_for(&current_project_id).await {
+                                                Ok(runtime) => {
+                                                    current_runtime = runtime;
+                                                    if let Some(handle) = fs_watcher.take() {
+                                                        handle.stop();
+                                                    }
+                                                    fs_watcher = Some(spawn_fs_watcher(
+                                                        current_runtime.descriptor.root_path.clone(),
+                                                        fs_event_tx.clone(),
+                                                    ));
+                                                    send_responses(
+                                                        &mut socket,
+                                                        vec![build_project_opened_response(&state, &current_runtime).await],
+                                                    ).await
+                                                }
+                                                Err(error) => send_responses(&mut socket, error_response(error.to_string())).await,
+                                            }
+                                        }
+                                        Err(error) => send_responses(&mut socket, error_response(error.to_string())).await,
+                                    }
+                                }
+                                WSRequest::ProjectAddExisting { path } => {
+                                    match state.projects.add_existing_project(Path::new(&path)).await {
+                                        Ok(descriptor) => {
+                                            current_project_id = descriptor.config.id.clone();
+                                            match state.projects.runtime_for(&current_project_id).await {
+                                                Ok(runtime) => {
+                                                    current_runtime = runtime;
+                                                    if let Some(handle) = fs_watcher.take() {
+                                                        handle.stop();
+                                                    }
+                                                    fs_watcher = Some(spawn_fs_watcher(
+                                                        current_runtime.descriptor.root_path.clone(),
+                                                        fs_event_tx.clone(),
+                                                    ));
+                                                    send_responses(
+                                                        &mut socket,
+                                                        vec![build_project_opened_response(&state, &current_runtime).await],
+                                                    ).await
+                                                }
+                                                Err(error) => send_responses(&mut socket, error_response(error.to_string())).await,
+                                            }
+                                        }
+                                        Err(error) => send_responses(&mut socket, error_response(error.to_string())).await,
+                                    }
+                                }
+                                WSRequest::ProjectClone { remote, path, name } => {
+                                    match state.projects.clone_project(&remote, Path::new(&path), name).await {
+                                        Ok(descriptor) => {
+                                            current_project_id = descriptor.config.id.clone();
+                                            match state.projects.runtime_for(&current_project_id).await {
+                                                Ok(runtime) => {
+                                                    current_runtime = runtime;
+                                                    if let Some(handle) = fs_watcher.take() {
+                                                        handle.stop();
+                                                    }
+                                                    fs_watcher = Some(spawn_fs_watcher(
+                                                        current_runtime.descriptor.root_path.clone(),
+                                                        fs_event_tx.clone(),
+                                                    ));
+                                                    send_responses(
+                                                        &mut socket,
+                                                        vec![build_project_opened_response(&state, &current_runtime).await],
+                                                    ).await
+                                                }
+                                                Err(error) => send_responses(&mut socket, error_response(error.to_string())).await,
+                                            }
+                                        }
+                                        Err(error) => send_responses(&mut socket, error_response(error.to_string())).await,
+                                    }
+                                }
+                                WSRequest::ProjectStateLoad { project_id } => {
+                                    match state.projects.load_state(&project_id).await {
+                                        Ok(state_payload) => {
+                                            send_responses(
+                                                &mut socket,
+                                                vec![WSResponse::ProjectState {
+                                                    project_id,
+                                                    state: state_payload,
+                                                }],
+                                            )
+                                            .await
+                                        }
+                                        Err(error) => send_responses(&mut socket, error_response(error.to_string())).await,
+                                    }
+                                }
+                                WSRequest::ProjectStateSave { project_id, state: payload } => {
+                                    match state.projects.save_state(&project_id, payload).await {
+                                        Ok(()) => {
+                                            send_responses(
+                                                &mut socket,
+                                                vec![WSResponse::ProjectStateSaved { project_id }],
+                                            )
+                                            .await
+                                        }
+                                        Err(error) => send_responses(&mut socket, error_response(error.to_string())).await,
+                                    }
+                                }
+                                other => {
+                                    let responses = handle_ws_request(other, &state, &current_runtime).await;
+                                    send_responses(&mut socket, responses).await
+                                }
+                            };
+
+                            if !continue_loop {
+                                break 'ws_loop;
                             }
                         } else {
                             tracing::warn!("Failed to parse WebSocket request: {}", text);
@@ -100,38 +246,43 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
     }
 }
 
-async fn handle_ws_request(request: WSRequest, state: &AppState) -> Vec<WSResponse> {
+async fn handle_ws_request(
+    request: WSRequest,
+    state: &AppState,
+    runtime: &Arc<ProjectRuntime>,
+) -> Vec<WSResponse> {
     match request {
-        WSRequest::Execute { request } => handle_execution_request(state, request).await,
+        WSRequest::Execute { request } => handle_execution_request(runtime, request).await,
         WSRequest::AIMessage {
             messages,
             enable_tools,
             request_id,
             stream,
             mode,
-        } => handle_ai_message(state, messages, enable_tools, request_id, stream, mode).await,
+        } => handle_ai_message(state, runtime, messages, enable_tools, request_id, stream, mode).await,
         WSRequest::ListTools => handle_list_tools(state),
         WSRequest::ExecuteTool {
             tool_id,
             capability_id,
             parameters,
-        } => handle_execute_tool(state, tool_id, capability_id, parameters).await,
-        WSRequest::TimelineQuery { query } => handle_timeline_query(state, query),
-        WSRequest::TimelineStatsQuery => handle_timeline_stats_query(state),
-        WSRequest::ExportRMarkdown { request } => handle_export_request(state, request).await,
-        WSRequest::InterruptExecution => handle_interrupt(state).await,
-        WSRequest::RestartSession => handle_restart(state).await,
+        } => handle_execute_tool(state, runtime, tool_id, capability_id, parameters).await,
+        WSRequest::TimelineQuery { query } => handle_timeline_query(runtime, query),
+        WSRequest::TimelineStatsQuery => handle_timeline_stats_query(runtime),
+        WSRequest::ExportRMarkdown { request } => handle_export_request(state, runtime, request).await,
+        WSRequest::InterruptExecution => handle_interrupt(runtime).await,
+        WSRequest::RestartSession => handle_restart(runtime).await,
         WSRequest::FileSystemAction {
             action,
             path,
             content,
             to,
-        } => handle_fs_action(state, action, path, content, to),
+        } => handle_fs_action(runtime, action, path, content, to),
+        _ => Vec::new(),
     }
 }
 
-async fn handle_execution_request(state: &AppState, request: ExecutionRequest) -> Vec<WSResponse> {
-    let executor = state.r_executor.lock().await;
+async fn handle_execution_request(runtime: &Arc<ProjectRuntime>, request: ExecutionRequest) -> Vec<WSResponse> {
+    let executor = runtime.r_executor.lock().await;
     match executor.execute_with_event(request).await {
         Ok((result, event)) => vec![
             WSResponse::ExecutionResult { result },
@@ -142,46 +293,46 @@ async fn handle_execution_request(state: &AppState, request: ExecutionRequest) -
 }
 
 fn handle_fs_action(
-    state: &AppState,
+    runtime: &Arc<ProjectRuntime>,
     action: String,
     path: String,
     content: Option<String>,
     to: Option<String>,
 ) -> Vec<WSResponse> {
     let result = match action.as_str() {
-        "list" => state
-            .fs
+        "list" => runtime
+            .file_system
             .list_dir(&path)
             .map(|entries| json!(entries))
             .map_err(|e| e.to_string()),
-        "read" => state
-            .fs
+        "read" => runtime
+            .file_system
             .read_file(&path)
             .map(|content| json!(content))
             .map_err(|e| e.to_string()),
-        "write" => state
-            .fs
+        "write" => runtime
+            .file_system
             .write_file(&path, content.as_deref().unwrap_or(""))
             .map(|_| json!(null))
             .map_err(|e| e.to_string()),
-        "delete" => state
-            .fs
+        "delete" => runtime
+            .file_system
             .delete_path(&path)
             .map(|_| json!(null))
             .map_err(|e| e.to_string()),
-        "rename" => state
-            .fs
+        "rename" => runtime
+            .file_system
             .rename_path(&path, to.as_deref().unwrap_or(""))
             .map(|_| json!(null))
             .map_err(|e| e.to_string()),
-        "create_dir" => state
-            .fs
+        "create_dir" => runtime
+            .file_system
             .create_dir(&path)
             .map(|_| json!(null))
             .map_err(|e| e.to_string()),
-        "root" => Ok(json!(state.fs.canonical_root().display().to_string())),
-        "copy" => state
-            .fs
+        "root" => Ok(json!(runtime.file_system.canonical_root().display().to_string())),
+        "copy" => runtime
+            .file_system
             .copy_path(&path, to.as_deref().unwrap_or(""))
             .map(|_| json!(null))
             .map_err(|e| e.to_string()),
@@ -251,4 +402,44 @@ fn spawn_fs_watcher(
     });
 
     FsWatcherHandle { stop_tx, handle }
+}
+
+async fn send_responses(socket: &mut WebSocket, responses: Vec<WSResponse>) -> bool {
+    for response in responses {
+        match serde_json::to_string(&response) {
+            Ok(response_text) => {
+                if socket.send(Message::Text(response_text)).await.is_err() {
+                    return false;
+                }
+            }
+            Err(error) => {
+                tracing::error!("Failed to serialize WebSocket response: {}", error);
+            }
+        }
+    }
+    true
+}
+
+async fn build_project_opened_response(
+    state: &AppState,
+    runtime: &Arc<ProjectRuntime>,
+) -> WSResponse {
+    let record = ProjectRecord::from(&runtime.descriptor);
+    let project_state = state
+        .projects
+        .load_state(&record.id)
+        .await
+        .unwrap_or_else(|error| {
+            tracing::warn!(
+                "Failed to load project state for {}: {}",
+                record.id,
+                error
+            );
+            None
+        });
+
+    WSResponse::ProjectOpened {
+        project: record,
+        state: project_state,
+    }
 }
