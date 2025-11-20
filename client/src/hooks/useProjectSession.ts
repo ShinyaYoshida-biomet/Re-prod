@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { ProjectRecord } from 'shared';
 
 import { useStore } from '@/core';
@@ -24,19 +24,24 @@ export function useProjectSession(): void {
   const setProject = useStore((state) => state.setProject);
   const setProjects = useStore((state) => state.setProjects);
   const setLastRestoredState = useStore((state) => state.setLastRestoredState);
+  const previousProjectId = useRef<string | null>(null);
 
   useEffect(() => {
     const handleProjectOpened = (message: { project: ProjectRecord; state?: unknown }) => {
+      const nextProjectId = message.project.id;
+      const hasState = Boolean(message.state);
+      const isSameProject = previousProjectId.current === nextProjectId;
+      previousProjectId.current = nextProjectId;
+
       setProject(message.project);
-      if (message.state) {
+      if (hasState) {
         applySessionSnapshot(message.state as any);
         setLastRestoredState(message.state as Record<string, unknown>);
-      } else {
+      } else if (!isSameProject) {
         resetWorkspace();
         void refreshTimelineData();
         setLastRestoredState(null);
       }
-      projectService.requestList();
     };
 
     const offOpened = socketService.on('project_opened', (message) => {
