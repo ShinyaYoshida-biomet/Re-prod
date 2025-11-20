@@ -32,6 +32,15 @@ export type FileChangeEventPayload = ProtocolFileChangeEvent;
 export type ArtifactInfoPayload = ProtocolArtifactInfo;
 export type ToolExecutionRequestPayload = ProtocolToolExecutionRequest;
 export type ToolExecutionResultPayload = ProtocolToolExecutionResult;
+// Project metadata shared between frontend and backend
+export interface ProjectRecord {
+  id: string;
+  name: string;
+  path: string;
+  created_at: number;
+  last_opened_at?: number | null;
+  git_remote?: string | null;
+}
 
 export type AIMode = 'agent' | 'chat';
 

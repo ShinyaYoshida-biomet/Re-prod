@@ -9,6 +9,7 @@ import type {
   FileSystemAction,
   FileSystemEventPayload,
   PlanStep,
+  ProjectRecord,
   ToolCallLog,
   ToolExecutionRequestPayload,
 } from './types';
@@ -70,7 +71,14 @@ export type ClientMessage =
       path: string;
       content?: string;
       to?: string;
-    };
+    }
+  | { type: 'project_list' }
+  | { type: 'project_open'; projectId: string }
+  | { type: 'project_create'; name: string; path: string }
+  | { type: 'project_add_existing'; path: string }
+  | { type: 'project_clone'; remote: string; path: string; name?: string }
+  | { type: 'project_state_load'; projectId: string }
+  | { type: 'project_state_save'; projectId: string; state: Record<string, unknown> };
 
 type TimelineEventPush = Extract<TimelineMessage, { type: 'timeline_event_added' }>;
 
@@ -101,6 +109,10 @@ export type ServerMessage =
       data?: FileEntryPayload[] | string | null;
       error?: string | null;
     }
+  | { type: 'project_list'; projects: ProjectRecord[] }
+  | { type: 'project_opened'; project: ProjectRecord; state?: Record<string, unknown> | null }
+  | { type: 'project_state'; project_id: string; state?: Record<string, unknown> | null }
+  | { type: 'project_state_saved'; project_id: string }
   | TimelineEventPush;
 
 export type ServerMessageType = ServerMessage['type'];
