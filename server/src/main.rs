@@ -4,6 +4,7 @@
 mod conversions;
 mod handlers;
 mod http;
+mod projects;
 mod routes;
 
 use axum::{routing::get, Router};
@@ -27,31 +28,6 @@ async fn main() {
     // Load config
     let config = Config::load().unwrap_or_default();
 
-    // Initialize services
-    let temp_dir = std::env::temp_dir().join("reprod");
-    if let Err(e) = std::fs::create_dir_all(&temp_dir) {
-        eprintln!("Failed to create temp directory: {}", e);
-    }
-
-    // Initialize timeline storage (shared between executor and websocket pushes)
-    let timeline_file_path = temp_dir.join("timeline.ndjson");
-    let timeline = JsonTimeline::new(timeline_file_path).unwrap_or_else(|error| {
-        tracing::warn!(
-            "Failed to initialize timeline storage: {}. Using in-memory timeline.",
-            error
-        );
-        JsonTimeline::new_in_memory().expect("Failed to create in-memory timeline")
-    });
-    let timeline = Arc::new(timeline);
-    let shared_timeline: Arc<dyn TimelineSink> = timeline.clone();
-    tracing::info!("Timeline storage initialized");
-
-    let r_executor = Arc::new(Mutex::new(
-        RExecutor::builder(temp_dir.clone(), config.r_path.clone())
-            .with_shared_timeline(shared_timeline.clone())
-            .build(),
-    ));
-
     let config_state = Arc::new(Mutex::new(config));
 
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../core/tools");
@@ -72,14 +48,10 @@ async fn main() {
 
     let tool_executor = Arc::new(ToolExecutor::new(tool_registry.clone()));
 
-    // Initialize AI tools
-    let workspace_root = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    let filesystem_tool = Arc::new(FileSystemTool::new(workspace_root.clone()));
-    let r_context_tool = Arc::new(RContextTool::new());
-    let fs = Arc::new(FileSystem::new(workspace_root.clone()));
-    tracing::info!(
-        "AI tools initialized with workspace: {}",
-        workspace_root.display()
+    let projects = Arc::new(
+        projects::ProjectController::new(config_state.clone())
+            .await
+            .expect("Failed to initialize project controller"),
     );
 
     // Build application
@@ -114,15 +86,11 @@ async fn main() {
         )
         .layer(TraceLayer::new_for_http())
         .with_state(handlers::AppState {
-            r_executor,
             config: config_state,
             tool_registry: tool_registry.clone(),
             tool_executor: tool_executor.clone(),
-            timeline: timeline.clone(),
-            filesystem_tool: filesystem_tool.clone(),
-            r_context_tool: r_context_tool.clone(),
             request_counter: Arc::new(AtomicU64::new(0)),
-            fs: fs.clone(),
+            projects: projects.clone(),
         });
 
     let addr = "127.0.0.1:3001";
