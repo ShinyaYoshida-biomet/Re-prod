@@ -71,6 +71,7 @@ impl ActiveChild {
 pub struct RExecutor {
     temp_dir: PathBuf,
     r_path: String,
+    working_dir: PathBuf,
     timeline: Arc<dyn TimelineSink>,
     command_runner: Arc<dyn CommandRunner>,
 }
@@ -80,6 +81,7 @@ impl RExecutor {
         Self {
             temp_dir,
             r_path,
+            working_dir: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
             timeline: Arc::new(NoopTimeline),
             command_runner: Arc::new(ProcessCommandRunner::default()),
         }
@@ -115,7 +117,10 @@ impl RExecutor {
         let wrapped_code = self.wrap_code_with_plot_capture(&request.code, &plot_prefix);
         fs::write(&script_path, wrapped_code).await?;
 
-        let command_output = self.command_runner.run(&self.r_path, &script_path).await?;
+        let command_output = self
+            .command_runner
+            .run(&self.r_path, &script_path, &self.working_dir)
+            .await?;
 
         let plots = self.collect_plots(&plot_prefix).await?;
         let _ = fs::remove_file(&script_path).await;
@@ -234,10 +239,7 @@ dev.off()
     fn environment_snapshot(&self) -> EnvironmentSnapshot {
         EnvironmentSnapshot {
             r_path: self.r_path.clone(),
-            working_dir: std::env::current_dir()
-                .unwrap_or_else(|_| PathBuf::from("."))
-                .to_string_lossy()
-                .into_owned(),
+            working_dir: self.working_dir.to_string_lossy().into_owned(),
             temp_dir: self.temp_dir.to_string_lossy().into_owned(),
         }
     }
@@ -253,6 +255,7 @@ dev.off()
 pub struct RExecutorBuilder {
     temp_dir: PathBuf,
     r_path: String,
+    working_dir: PathBuf,
     timeline: Arc<dyn TimelineSink>,
     command_runner: Arc<dyn CommandRunner>,
 }
@@ -262,6 +265,7 @@ impl RExecutorBuilder {
         Self {
             temp_dir,
             r_path,
+            working_dir: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
             timeline: Arc::new(NoopTimeline),
             command_runner: Arc::new(ProcessCommandRunner::default()),
         }
@@ -288,10 +292,19 @@ impl RExecutorBuilder {
         self
     }
 
+    pub fn with_working_dir<P>(mut self, working_dir: P) -> Self
+    where
+        P: Into<PathBuf>,
+    {
+        self.working_dir = working_dir.into();
+        self
+    }
+
     pub fn build(self) -> RExecutor {
         RExecutor {
             temp_dir: self.temp_dir,
             r_path: self.r_path,
+            working_dir: self.working_dir,
             timeline: self.timeline,
             command_runner: self.command_runner,
         }
@@ -300,7 +313,12 @@ impl RExecutorBuilder {
 
 #[async_trait]
 pub trait CommandRunner: Send + Sync {
-    async fn run(&self, r_path: &str, script_path: &Path) -> Result<CommandOutput>;
+    async fn run(
+        &self,
+        r_path: &str,
+        script_path: &Path,
+        working_dir: &Path,
+    ) -> Result<CommandOutput>;
     async fn interrupt(&self) -> Result<bool>;
 }
 
@@ -319,12 +337,18 @@ struct ProcessCommandRunner {
 
 #[async_trait]
 impl CommandRunner for ProcessCommandRunner {
-    async fn run(&self, r_path: &str, script_path: &Path) -> Result<CommandOutput> {
+    async fn run(
+        &self,
+        r_path: &str,
+        script_path: &Path,
+        working_dir: &Path,
+    ) -> Result<CommandOutput> {
         let script_str = script_path
             .to_str()
             .ok_or_else(|| anyhow!("Invalid path"))?;
         let mut child = Command::new(r_path)
             .args(["--vanilla", "--quiet", script_str])
+            .current_dir(working_dir)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()?;
@@ -476,7 +500,12 @@ mod tests {
 
     #[async_trait]
     impl CommandRunner for MockRunner {
-        async fn run(&self, _r_path: &str, _script_path: &Path) -> Result<CommandOutput> {
+        async fn run(
+            &self,
+            _r_path: &str,
+            _script_path: &Path,
+            _working_dir: &Path,
+        ) -> Result<CommandOutput> {
             let output = self.output.lock().await;
             Ok(CommandOutput {
                 success: output.success,
