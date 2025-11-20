@@ -27,6 +27,7 @@ export function buildMenuSections(snapshot: MenuStateSnapshot): MenuSection[] {
           enabled: () => isEditorDirty,
         },
         { id: 'file:save-as', label: 'Save As...', shortcut: '⌘⇧S', action: () => menuActions.file.saveAs() },
+        { id: 'file:projects', label: 'Projects...', action: () => menuActions.file.projects() },
         { type: 'separator' },
         {
           id: 'file:export-session',

@@ -6,7 +6,7 @@ const SNAPSHOT_VERSION = 1;
 const STORAGE_FILENAME = () =>
   `reprod-session-${new Date().toISOString().replace(/[:]/g, '-')}.json`;
 
-interface SessionSnapshot {
+export interface SessionSnapshot {
   version: number;
   savedAt: number;
   editor: {
@@ -18,9 +18,9 @@ interface SessionSnapshot {
   aiMessages: AIMessage[];
 }
 
-export function exportSessionSnapshot(): void {
+export function getSessionSnapshot(): SessionSnapshot {
   const state = useStore.getState();
-  const snapshot: SessionSnapshot = {
+  return {
     version: SNAPSHOT_VERSION,
     savedAt: Date.now(),
     editor: {
@@ -31,6 +31,10 @@ export function exportSessionSnapshot(): void {
     settings: state.settings,
     aiMessages: state.ai.messages,
   };
+}
+
+export function exportSessionSnapshot(): void {
+  const snapshot = getSessionSnapshot();
 
   const blob = new Blob([JSON.stringify(snapshot, null, 2)], {
     type: 'application/json',
@@ -54,7 +58,7 @@ export function importSessionSnapshot(): void {
     try {
       const text = await file.text();
       const data = JSON.parse(text) as SessionSnapshot;
-      applySnapshot(data);
+      applySessionSnapshot(data);
     } catch (error) {
       console.error('Failed to load session snapshot', error);
       window.alert('Unable to load session snapshot. Ensure the file is valid JSON.');
@@ -64,7 +68,7 @@ export function importSessionSnapshot(): void {
   input.click();
 }
 
-function applySnapshot(snapshot: SessionSnapshot): void {
+export function applySessionSnapshot(snapshot: SessionSnapshot): void {
   if (snapshot.version !== SNAPSHOT_VERSION) {
     window.alert('Session snapshot version is not compatible with this build.');
     return;

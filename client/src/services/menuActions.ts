@@ -63,6 +63,9 @@ export const menuActions = {
       store.setEditorFilepath('');
       store.setEditorIsDirty(false);
     },
+    projects: () => {
+      callGlobalHandler('openProjectsDialog');
+    },
 
     /**
      * Open file dialog

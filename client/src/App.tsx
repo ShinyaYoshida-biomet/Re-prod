@@ -8,12 +8,13 @@ import { BottomPane } from "@/components/bottom-pane";
 import { ExportDialog } from "@/components/export";
 import { TimelineDialog } from "@/components/timeline";
 import { FileBrowserPane } from "@/components/file-browser/FileBrowserPane";
-import { AboutModal, KeyboardShortcutsModal, SessionInfoModal, SettingsModal } from "@/components/modals";
+import { AboutModal, KeyboardShortcutsModal, ProjectManagerModal, SessionInfoModal, SettingsModal } from "@/components/modals";
 import { useStore } from "@/core";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { useSocketConnection } from "@/hooks/useSocketConnection";
-import { useSettingsPersistence } from "@/hooks/useSettingsPersistence";
+import { useProjectSession } from "@/hooks/useProjectSession";
 import { useSessionControlEvents } from "@/hooks/useSessionControlEvents";
+import { useSettingsPersistence } from "@/hooks/useSettingsPersistence";
+import { useSocketConnection } from "@/hooks/useSocketConnection";
 
 function App(): JSX.Element {
   const panes = useStore((state) => state.view.panes);
@@ -24,9 +25,11 @@ function App(): JSX.Element {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [sessionInfoOpen, setSessionInfoOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [projectManagerOpen, setProjectManagerOpen] = useState(false);
 
   // Enable global keyboard shortcuts
   useKeyboardShortcuts();
+  useProjectSession();
   useSocketConnection();
   useSettingsPersistence();
   useSessionControlEvents();
@@ -43,6 +46,7 @@ function App(): JSX.Element {
     globalScope.openAboutDialog = () => setAboutOpen(true);
     globalScope.openSessionInfoDialog = () => setSessionInfoOpen(true);
     globalScope.openSettingsDialog = () => setSettingsOpen(true);
+    globalScope.openProjectsDialog = () => setProjectManagerOpen(true);
 
     return () => {
       delete globalScope.openExportDialog;
@@ -51,6 +55,7 @@ function App(): JSX.Element {
       delete globalScope.openAboutDialog;
       delete globalScope.openSessionInfoDialog;
       delete globalScope.openSettingsDialog;
+      delete globalScope.openProjectsDialog;
     };
   }, []);
 
@@ -109,6 +114,7 @@ function App(): JSX.Element {
         onClose={() => setSessionInfoOpen(false)}
       />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <ProjectManagerModal open={projectManagerOpen} onClose={() => setProjectManagerOpen(false)} />
     </div>
   );
 }

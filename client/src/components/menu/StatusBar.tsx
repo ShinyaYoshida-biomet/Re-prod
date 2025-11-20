@@ -4,10 +4,16 @@ export function StatusBar(): JSX.Element {
   const editor = useStore((state) => state.editor);
   const settings = useStore((state) => state.settings);
   const execution = useStore((state) => state.execution);
+  const project = useStore((state) => state.project);
 
   return (
     <div className="statusbar">
       <div className="statusbar-left">
+        {project && (
+          <span className="statusbar-item">
+            Project: {project.name}
+          </span>
+        )}
         <span className="statusbar-item">
           {editor.filepath || 'Untitled'}
         </span>
