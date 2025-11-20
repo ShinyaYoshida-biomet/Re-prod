@@ -212,7 +212,7 @@ impl FileSystem {
 }
 
 pub struct FileWatcher {
-    watcher: RecommendedWatcher,
+    _watcher: RecommendedWatcher,
     rx: Receiver<notify::Result<notify::Event>>,
     root: PathBuf,
 }
@@ -226,7 +226,11 @@ impl FileWatcher {
 
         watcher.watch(&root, RecursiveMode::Recursive)?;
 
-        Ok(Self { watcher, rx, root })
+        Ok(Self {
+            _watcher: watcher,
+            rx,
+            root,
+        })
     }
 
     pub fn try_recv(&self) -> Option<FileSystemEvent> {
