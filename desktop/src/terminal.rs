@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::io::Read;
-use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -21,7 +20,6 @@ pub enum TerminalEvent {
 #[derive(Debug)]
 pub struct TerminalSessionMeta {
     pub id: String,
-    pub title: String,
 }
 
 struct TerminalSessionHandle {
@@ -46,19 +44,19 @@ pub enum TerminalManagerError {
 
 impl From<PtyError> for TerminalManagerError {
     fn from(err: PtyError) -> Self {
-        TerminalManagerError::Pty(err)
+        Self::Pty(err)
     }
 }
 
 impl From<ShellDetectionError> for TerminalManagerError {
     fn from(err: ShellDetectionError) -> Self {
-        TerminalManagerError::ShellDetection(err)
+        Self::ShellDetection(err)
     }
 }
 
 impl From<std::sync::PoisonError<std::sync::MutexGuard<'_, PtyProcess>>> for TerminalManagerError {
     fn from(_: std::sync::PoisonError<std::sync::MutexGuard<'_, PtyProcess>>) -> Self {
-        TerminalManagerError::LockPoisoned
+        Self::LockPoisoned
     }
 }
 
@@ -84,11 +82,6 @@ impl TerminalManager {
         let process_handle = Arc::new(Mutex::new(process));
 
         let session_id = Uuid::new_v4().to_string();
-        let session_title = Path::new(&shell_info.program)
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or("Shell")
-            .to_string();
 
         let reader_task = spawn_reader(
             process_handle.clone(),
@@ -110,10 +103,7 @@ impl TerminalManager {
             .await
             .insert(session_id.clone(), session);
 
-        Ok(TerminalSessionMeta {
-            id: session_id,
-            title: session_title,
-        })
+        Ok(TerminalSessionMeta { id: session_id })
     }
 
     pub async fn write(&self, session_id: &str, data: &str) -> Result<(), TerminalManagerError> {
@@ -128,10 +118,10 @@ impl TerminalManager {
         let payload = data.to_owned();
 
         let inner = tokio::task::spawn_blocking(move || {
-            let guard = session
+            session
                 .lock()
-                .map_err(|_| TerminalManagerError::LockPoisoned)?;
-            guard.write(&payload)?;
+                .map_err(|_| TerminalManagerError::LockPoisoned)?
+                .write(&payload)?;
             Ok::<(), TerminalManagerError>(())
         })
         .await
@@ -155,10 +145,10 @@ impl TerminalManager {
         };
 
         let inner = tokio::task::spawn_blocking(move || {
-            let guard = session
+            session
                 .lock()
-                .map_err(|_| TerminalManagerError::LockPoisoned)?;
-            guard.resize(cols, rows)?;
+                .map_err(|_| TerminalManagerError::LockPoisoned)?
+                .resize(cols, rows)?;
             Ok::<(), TerminalManagerError>(())
         })
         .await
@@ -178,8 +168,7 @@ impl TerminalManager {
         session.reader_task.abort();
         session.keepalive_task.abort();
 
-        let mut guard = session.process.lock()?;
-        guard.kill()?;
+        session.process.lock()?.kill()?;
 
         Ok(())
     }
@@ -210,10 +199,9 @@ fn spawn_reader(
             }
         }
 
-        let exit_code = match process.lock() {
-            Ok(mut guard) => guard.wait().ok().flatten(),
-            Err(_) => None,
-        };
+        let exit_code = process
+            .lock()
+            .map_or(None, |mut guard| guard.wait().ok().flatten());
 
         let _ = output_tx.send(TerminalEvent::Exit(exit_code));
         let _ = output_tx.send(TerminalEvent::KeepAlive); // signal watchers that we're still alive

@@ -84,6 +84,7 @@ pub async fn set_api_key(
     }
 
     config.save().map_err(|e| e.to_string())?;
+    drop(config);
 
     Ok(())
 }
@@ -99,7 +100,7 @@ pub async fn create_terminal_session(
         .create_session(shell, tx)
         .await
         .map_err(|err| err.to_string())?;
-    let session_id = session.id.clone();
+    let session_id = session.id;
     let session_id_for_task = session_id.clone();
     let emitter = app_handle.clone();
 

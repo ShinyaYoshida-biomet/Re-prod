@@ -14,10 +14,13 @@ pub(super) async fn handle_interrupt(runtime: &Arc<ProjectRuntime>) -> Vec<WSRes
 
 pub(super) async fn handle_restart(runtime: &Arc<ProjectRuntime>) -> Vec<WSResponse> {
     let restart_result = async {
-        {
-            let executor = runtime.r_executor.lock().await;
-            executor.reset().await.map_err(|e| e.to_string())?;
-        }
+        runtime
+            .r_executor
+            .lock()
+            .await
+            .reset()
+            .await
+            .map_err(|e| e.to_string())?;
         let cleared = runtime.timeline.reset().map_err(|e| e.to_string())?;
         Ok::<u64, String>(cleared as u64)
     }

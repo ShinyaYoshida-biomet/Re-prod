@@ -55,7 +55,7 @@ impl ProjectRuntime {
             )
         })?;
 
-        let r_executor = RExecutor::builder(temp_dir.clone(), config.r_path.clone())
+        let r_executor = RExecutor::builder(temp_dir, config.r_path.clone())
             .with_shared_timeline(timeline.clone())
             .with_working_dir(descriptor.root_path.clone())
             .build();
@@ -65,7 +65,7 @@ impl ProjectRuntime {
             descriptor,
             timeline,
             file_system: Arc::new(FileSystem::new(&filesystem_root)),
-            filesystem_tool: Arc::new(FileSystemTool::new(filesystem_root.clone())),
+            filesystem_tool: Arc::new(FileSystemTool::new(filesystem_root)),
             r_context_tool: Arc::new(RContextTool::new()),
             r_executor: Arc::new(Mutex::new(r_executor)),
         })
@@ -143,6 +143,7 @@ impl ProjectController {
         )?);
         self.refresh_registry(&runtime.descriptor).await?;
         runtimes.insert(project_id.to_string(), runtime.clone());
+        drop(runtimes);
         Ok(runtime)
     }
 
@@ -277,6 +278,7 @@ impl ProjectController {
             registry.upsert(ProjectRecord::from(&descriptor));
             registry.save()?;
         }
+        drop(registry);
         Ok(())
     }
 
@@ -289,6 +291,7 @@ impl ProjectController {
         let mut registry = self.registry.lock().await;
         registry.upsert(ProjectRecord::from(&descriptor));
         registry.save()?;
+        drop(registry);
         Ok(descriptor)
     }
 

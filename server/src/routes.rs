@@ -90,12 +90,12 @@ pub async fn get_api_key(
     State(state): State<AppState>,
 ) -> Resp<ApiKeyResponse> {
     let config = state.config.lock().await;
-
     let api_key = match provider.as_str() {
         ai::PROVIDER_ANTHROPIC => config.anthropic_api_key.clone(),
         ai::PROVIDER_OPENAI => config.openai_api_key.clone(),
         _ => return Err(err_400(format!("Unknown provider: {}", provider))),
     };
+    drop(config);
 
     api_key
         .map(|key| Json(ApiKeyResponse { api_key: key }))
