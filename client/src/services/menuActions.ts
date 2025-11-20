@@ -12,6 +12,7 @@
  */
 
 import { useStore } from '@/core/state/store';
+import { DEFAULT_R_SCRIPT } from '@/core/state/slices/editorSlice';
 import type { ViewPane } from '@/core/state/slices/viewSlice';
 import { interruptExecution, restartSession as restartSessionRequest } from './sessionControl';
 import { exportSessionSnapshot, importSessionSnapshot } from './sessionPersistence';
@@ -59,8 +60,8 @@ export const menuActions = {
       }
 
       // Reset editor state
-      store.setEditorContent('# New R Script\n\n');
-      store.setEditorFilepath('');
+      store.setEditorContent(DEFAULT_R_SCRIPT);
+      store.setEditorFilepath('analysis.R');
       store.setEditorIsDirty(false);
     },
     projects: () => {

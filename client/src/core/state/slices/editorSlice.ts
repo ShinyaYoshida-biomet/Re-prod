@@ -3,6 +3,29 @@ import type { StateCreator } from 'zustand';
 import type { CodeBlock } from '@shared/types';
 import type { EditorRef } from '@/components/editor/editorRef';
 
+export const DEFAULT_R_SCRIPT = `# Welcome to Re-prod ----
+# AI-Powered R Analysis IDE
+# Try Cmd/Ctrl+Enter to run current section
+# Try Shift+Enter to run and move to next section
+
+# Load Data ----
+data(mtcars)
+head(mtcars)
+
+# Summary Statistics ----
+summary(mtcars)
+str(mtcars)
+
+# Scatter Plot ----
+plot(mtcars$mpg, mtcars$hp,
+     xlab = "Miles per Gallon",
+     ylab = "Horsepower",
+     main = "MPG vs Horsepower",
+     col = "steelblue",
+     pch = 19)
+abline(lm(hp ~ mpg, data = mtcars), col = "red", lwd = 2)
+`;
+
 export interface EditorState {
   editor: {
     content: string;
@@ -31,28 +54,7 @@ export interface EditorState {
 
 export const createEditorSlice: StateCreator<EditorState> = (set) => ({
   editor: {
-    content: `# Welcome to Re-prod ----
-# AI-Powered R Analysis IDE
-# Try Cmd/Ctrl+Enter to run current section
-# Try Shift+Enter to run and move to next section
-
-# Load Data ----
-data(mtcars)
-head(mtcars)
-
-# Summary Statistics ----
-summary(mtcars)
-str(mtcars)
-
-# Scatter Plot ----
-plot(mtcars$mpg, mtcars$hp,
-     xlab = "Miles per Gallon",
-     ylab = "Horsepower",
-     main = "MPG vs Horsepower",
-     col = "steelblue",
-     pch = 19)
-abline(lm(hp ~ mpg, data = mtcars), col = "red", lwd = 2)
-`,
+    content: DEFAULT_R_SCRIPT,
     filepath: '',
     isDirty: false,
     cursorPosition: { line: 1, column: 1 }

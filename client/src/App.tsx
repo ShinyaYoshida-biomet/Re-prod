@@ -70,7 +70,7 @@ function App(): JSX.Element {
             </Allotment.Pane>
           )}
           {/* Left side: Editor + Bottom Pane */}
-          <Allotment.Pane minSize={400} preferredSize="60%">
+          <Allotment.Pane minSize={400} preferredSize="75%">
             <Allotment vertical>
               {panes.editor && (
                 <Allotment.Pane minSize={300} preferredSize="65%">
@@ -87,7 +87,7 @@ function App(): JSX.Element {
           </Allotment.Pane>
           {/* Right side: AI Assistant (full height) */}
           {panes.assistant && (
-            <Allotment.Pane minSize={300} preferredSize="40%">
+            <Allotment.Pane minSize={260} preferredSize="25%">
               <div className="ai-pane-wrapper">
                 <AIPanel />
               </div>

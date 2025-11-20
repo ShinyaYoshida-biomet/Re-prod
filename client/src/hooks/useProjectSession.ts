@@ -4,16 +4,18 @@ import type { ProjectRecord } from 'shared';
 import { useStore } from '@/core';
 import { projectService } from '@/services/projectService';
 import { socketService } from '@/services/socket';
+import { DEFAULT_R_SCRIPT } from '@/core/state/slices/editorSlice';
 import {
   applySessionSnapshot,
   getSessionSnapshot,
   refreshTimelineData,
 } from '@/services/sessionPersistence';
 
-function resetWorkspace(): void {
+function resetWorkspace(options: { useSample?: boolean } = {}): void {
   const state = useStore.getState();
-  state.setEditorContent('# New R Script\n\n');
-  state.setEditorFilepath('');
+  const useSample = options.useSample ?? false;
+  state.setEditorContent(useSample ? DEFAULT_R_SCRIPT : '# New R Script\n\n');
+  state.setEditorFilepath(useSample ? 'analysis.R' : '');
   state.setEditorIsDirty(false);
   state.clearAIMessages();
   state.resetExecutionState();
@@ -37,8 +39,12 @@ export function useProjectSession(): void {
       if (hasState) {
         applySessionSnapshot(message.state as any);
         setLastRestoredState(message.state as Record<string, unknown>);
+        const editorState = useStore.getState().editor;
+        if (!editorState.content?.trim()) {
+          resetWorkspace({ useSample: true });
+        }
       } else if (!isSameProject) {
-        resetWorkspace();
+        resetWorkspace({ useSample: true });
         void refreshTimelineData();
         setLastRestoredState(null);
       }
