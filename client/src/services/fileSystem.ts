@@ -74,7 +74,6 @@ const sendFsAction = async <TData>(
     'fs_result',
     (message) =>
       message.action === action &&
-      message.path === normalizedPath &&
       (normalizedTo ? message.to === normalizedTo : true)
   );
 
