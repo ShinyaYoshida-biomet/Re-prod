@@ -263,6 +263,9 @@ export function FileBrowserPane(): JSX.Element {
     (event: React.MouseEvent, node: TreeNode) => {
       event.stopPropagation();
       const isMeta = event.metaKey || event.ctrlKey;
+      const shouldToggleFolder =
+        node.is_dir && !event.shiftKey && !isMeta && event.detail === 1;
+
       if (event.shiftKey) {
         selectRange(node.path);
       } else if (isMeta) {
@@ -271,15 +274,17 @@ export function FileBrowserPane(): JSX.Element {
         setFocusedPath(node.path);
       } else {
         selectSinglePath(node.path);
+        if (shouldToggleFolder) {
+          void toggleFolder(node.path);
+        }
       }
     },
-    [selectRange, toggleSelection, selectSinglePath]
+    [selectRange, toggleSelection, selectSinglePath, toggleFolder]
   );
 
   const handleNodeDoubleClick = useCallback(
     async (node: TreeNode) => {
       if (node.is_dir) {
-        await toggleFolder(node.path);
         return;
       }
       try {
