@@ -14,7 +14,10 @@ use reprod_core::{
 use serde_json::{self, json};
 use std::{
     path::{Path, PathBuf},
-    sync::mpsc::{self, RecvTimeoutError, TryRecvError},
+    sync::{
+        mpsc::{self, RecvTimeoutError, TryRecvError},
+        Arc,
+    },
     thread,
     time::Duration,
 };
