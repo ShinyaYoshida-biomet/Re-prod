@@ -10,7 +10,7 @@ use reprod_core::{
 };
 
 pub(super) async fn handle_export_request(
-    state: &AppState,
+    _state: &AppState,
     runtime: &Arc<ProjectRuntime>,
     request: ExportRMarkdownRequest,
 ) -> Vec<WSResponse> {

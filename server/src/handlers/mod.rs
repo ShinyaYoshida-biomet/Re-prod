@@ -53,8 +53,6 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
             return;
         }
     };
-    let mut current_project_id = current_runtime.descriptor.config.id.clone();
-
     let (fs_event_tx, mut fs_event_rx) = tokio_mpsc::unbounded_channel::<FileSystemEvent>();
     let mut fs_watcher = Some(spawn_fs_watcher(
         current_runtime.descriptor.root_path.clone(),
@@ -98,7 +96,6 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                                 WSRequest::ProjectOpen { project_id } => {
                                     match state.projects.runtime_for(&project_id).await {
                                         Ok(runtime) => {
-                                            current_project_id = project_id.clone();
                                             current_runtime = runtime;
                                             if let Some(handle) = fs_watcher.take() {
                                                 handle.stop();
@@ -120,8 +117,7 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                                 WSRequest::ProjectCreate { name, path } => {
                                     match state.projects.create_new_project(Path::new(&path), &name).await {
                                         Ok(descriptor) => {
-                                            current_project_id = descriptor.config.id.clone();
-                                            match state.projects.runtime_for(&current_project_id).await {
+                                            match state.projects.runtime_for(&descriptor.config.id).await {
                                                 Ok(runtime) => {
                                                     current_runtime = runtime;
                                                     if let Some(handle) = fs_watcher.take() {
@@ -145,8 +141,7 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                                 WSRequest::ProjectAddExisting { path } => {
                                     match state.projects.add_existing_project(Path::new(&path)).await {
                                         Ok(descriptor) => {
-                                            current_project_id = descriptor.config.id.clone();
-                                            match state.projects.runtime_for(&current_project_id).await {
+                                            match state.projects.runtime_for(&descriptor.config.id).await {
                                                 Ok(runtime) => {
                                                     current_runtime = runtime;
                                                     if let Some(handle) = fs_watcher.take() {
@@ -170,8 +165,7 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                                 WSRequest::ProjectClone { remote, path, name } => {
                                     match state.projects.clone_project(&remote, Path::new(&path), name).await {
                                         Ok(descriptor) => {
-                                            current_project_id = descriptor.config.id.clone();
-                                            match state.projects.runtime_for(&current_project_id).await {
+                                            match state.projects.runtime_for(&descriptor.config.id).await {
                                                 Ok(runtime) => {
                                                     current_runtime = runtime;
                                                     if let Some(handle) = fs_watcher.take() {

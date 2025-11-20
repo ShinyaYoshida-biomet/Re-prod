@@ -8,7 +8,7 @@ use reprod_core::{
     project::{
         default_registry_path, locate_config, ProjectDescriptor, ProjectRecord, ProjectRegistry,
     },
-    Config, RExecutor, RExecutorBuilder,
+    Config, RExecutor,
 };
 use std::{
     collections::HashMap,
@@ -25,7 +25,6 @@ pub struct ProjectRuntime {
     pub filesystem_tool: Arc<FileSystemTool>,
     pub r_context_tool: Arc<RContextTool>,
     pub r_executor: Arc<Mutex<RExecutor>>,
-    pub temp_dir: PathBuf,
 }
 
 impl ProjectRuntime {
@@ -69,7 +68,6 @@ impl ProjectRuntime {
             filesystem_tool: Arc::new(FileSystemTool::new(filesystem_root.clone())),
             r_context_tool: Arc::new(RContextTool::new()),
             r_executor: Arc::new(Mutex::new(r_executor)),
-            temp_dir,
         })
     }
 }
@@ -212,11 +210,6 @@ impl ProjectController {
         descriptor.update_config()?;
 
         self.register_project(descriptor).await
-    }
-
-    pub async fn save_registry(&self) -> Result<()> {
-        let registry = self.registry.lock().await;
-        registry.save()
     }
 
     pub async fn load_state(&self, project_id: &str) -> Result<Option<serde_json::Value>> {
