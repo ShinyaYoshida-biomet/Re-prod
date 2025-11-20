@@ -19,7 +19,7 @@ pub struct ValidationResult {
 pub struct ToolValidator;
 
 impl ToolValidator {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self
     }
 
@@ -39,7 +39,7 @@ impl ToolValidator {
     /// Validate a single manifest
     pub async fn validate_manifest(
         manifest: &ToolManifest,
-        r_executor: Option<&mut RExecutor>,
+        r_executor: Option<&RExecutor>,
     ) -> ValidationResult {
         let mut errors = Vec::new();
         let mut warnings = Vec::new();
@@ -69,7 +69,7 @@ impl ToolValidator {
         }
     }
 
-    async fn validate_r_package(manifest: &ToolManifest, r_executor: &mut RExecutor) -> Result<()> {
+    async fn validate_r_package(manifest: &ToolManifest, r_executor: &RExecutor) -> Result<()> {
         let validation = &manifest.validation;
 
         // Check required packages

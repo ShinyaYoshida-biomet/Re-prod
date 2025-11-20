@@ -87,8 +87,7 @@ impl InMemoryTimeline {
 #[async_trait::async_trait]
 impl TimelineSink for InMemoryTimeline {
     async fn record(&self, event: ExecutionEvent) -> anyhow::Result<()> {
-        let mut guard = self.events.lock().expect("timeline lock poisoned");
-        guard.push(event);
+        self.events.lock().expect("timeline lock poisoned").push(event);
         Ok(())
     }
 }

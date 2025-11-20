@@ -152,7 +152,7 @@ pub async fn execute_tool(
     Json(request): Json<ToolExecutionRequest>,
 ) -> Resp<ToolExecutionResult> {
     let runtime = state.projects.default_runtime().await.map_err(err_500)?;
-    let mut r_executor = runtime.r_executor.lock().await;
+    let r_executor = runtime.r_executor.lock().await;
 
     state
         .tool_executor
@@ -160,7 +160,7 @@ pub async fn execute_tool(
             &request.tool_id,
             &request.capability_id,
             request.parameters,
-            &mut r_executor,
+            &r_executor,
         )
         .await
         .map(|result| Json(crate::conversions::to_proto_tool_result(result)))

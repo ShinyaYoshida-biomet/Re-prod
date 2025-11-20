@@ -31,7 +31,7 @@ impl Default for RContextTool {
 }
 
 impl RContextTool {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self
     }
 

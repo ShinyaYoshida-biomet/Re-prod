@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 /// Timeline export structure for JSON serialization.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TimelineExport {
     pub format_version: String,
     pub events: Vec<ExecutionEvent>,
@@ -18,7 +18,7 @@ pub struct ReproductionBundle {
 }
 
 /// Validation report for a bundle.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValidationReport {
     pub valid: bool,
     pub errors: Vec<String>,

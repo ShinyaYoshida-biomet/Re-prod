@@ -26,12 +26,12 @@ pub enum ReprodError {
 
 impl From<std::io::Error> for ReprodError {
     fn from(err: std::io::Error) -> Self {
-        ReprodError::IoError(err.to_string())
+        Self::IoError(err.to_string())
     }
 }
 
 impl From<anyhow::Error> for ReprodError {
     fn from(err: anyhow::Error) -> Self {
-        ReprodError::ExecutionError(err.to_string())
+        Self::ExecutionError(err.to_string())
     }
 }

@@ -33,13 +33,13 @@ pub enum PtyError {
 
 impl From<anyhow::Error> for PtyError {
     fn from(err: anyhow::Error) -> Self {
-        PtyError::Error(err.to_string())
+        Self::Error(err.to_string())
     }
 }
 
 impl From<std::io::Error> for PtyError {
     fn from(err: std::io::Error) -> Self {
-        PtyError::Error(err.to_string())
+        Self::Error(err.to_string())
     }
 }
 
@@ -86,6 +86,7 @@ impl PtyProcess {
 
         writer.write_all(data.as_bytes())?;
         writer.flush()?;
+        drop(writer);
 
         Ok(())
     }

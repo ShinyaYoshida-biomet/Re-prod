@@ -75,7 +75,7 @@ pub struct RMarkdownGenerator {
 
 impl RMarkdownGenerator {
     /// Create a new RMarkdown generator with the given options.
-    pub fn new(options: RMarkdownOptions) -> Self {
+    pub const fn new(options: RMarkdownOptions) -> Self {
         Self { options }
     }
 

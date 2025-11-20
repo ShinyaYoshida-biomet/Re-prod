@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Result of code execution
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ExecutionResult {
     pub success: bool,
     pub output: String,
@@ -12,7 +12,7 @@ pub struct ExecutionResult {
 }
 
 /// Plot information
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PlotInfo {
     pub filename: String,
     pub base64_data: String,
@@ -20,14 +20,14 @@ pub struct PlotInfo {
 }
 
 /// Chat message for AI communication
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ChatMessage {
     pub role: String,
     pub content: String,
 }
 
 /// Tool call from AI
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ToolCall {
     pub id: String,
     pub name: String,
@@ -35,7 +35,7 @@ pub struct ToolCall {
 }
 
 /// AI response with optional tool calls
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AIResponse {
     pub content: String,
     pub tool_calls: Option<Vec<ToolCall>>,
@@ -43,7 +43,7 @@ pub struct AIResponse {
 }
 
 /// Tool result to send back to AI
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ToolResult {
     pub tool_use_id: String,
     pub content: String,
@@ -51,7 +51,7 @@ pub struct ToolResult {
 }
 
 /// File change event
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct FileChangeEvent {
     pub event_type: String,
     pub path: String,
@@ -118,7 +118,7 @@ pub struct ExecutionContext {
 }
 
 /// Incoming execution request from UI/backend client.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ExecutionRequest {
     pub code: String,
     #[serde(default)]
@@ -136,7 +136,7 @@ pub struct EnvironmentSnapshot {
 }
 
 /// Event emitted to the timeline after execution completes.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ExecutionEvent {
     pub event_id: String,
     pub context: ExecutionContext,
@@ -147,7 +147,7 @@ pub struct ExecutionEvent {
 }
 
 /// Request to execute a tool capability
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ToolExecutionRequest {
     pub tool_id: String,
     pub capability_id: String,
@@ -155,7 +155,7 @@ pub struct ToolExecutionRequest {
 }
 
 /// Artifact generated during tool execution
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ArtifactInfo {
     pub path: String,
     pub artifact_type: String,
@@ -164,7 +164,7 @@ pub struct ArtifactInfo {
 }
 
 /// Result of tool execution with provenance metadata
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ToolExecutionResult {
     pub tool_id: String,
     pub capability_id: String,

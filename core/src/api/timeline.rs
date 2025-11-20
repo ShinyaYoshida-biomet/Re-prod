@@ -92,7 +92,7 @@ impl TryFrom<TimelineFiltersPayload> for TimelineFilters {
             None => None,
         };
 
-        Ok(TimelineFilters {
+        Ok(Self {
             actor,
             source,
             start_time: payload.start_time,
@@ -140,8 +140,8 @@ pub struct TimelineFiltersEcho {
 impl From<TimelineResponse> for TimelineResponsePayload {
     fn from(response: TimelineResponse) -> Self {
         let filters = response.query.filters.map(|f| TimelineFiltersEcho {
-            actor: f.actor.map(actor_to_string),
-            source: f.source.map(source_to_string),
+            actor: f.actor.map(|actor| actor_to_string(actor).to_string()),
+            source: f.source.map(|source| source_to_string(source).to_string()),
             start_time: f.start_time,
             end_time: f.end_time,
             has_plots: f.has_plots,
@@ -154,7 +154,7 @@ impl From<TimelineResponse> for TimelineResponsePayload {
             SortOrder::Desc => "desc".to_string(),
         });
 
-        TimelineResponsePayload {
+        Self {
             events: response.events,
             total: response.total,
             has_more: response.has_more,
@@ -190,7 +190,7 @@ pub struct TimelineStatsPayload {
 
 impl From<TimelineStats> for TimelineStatsPayload {
     fn from(stats: TimelineStats) -> Self {
-        TimelineStatsPayload {
+        Self {
             total_events: stats.total_events,
             total_plots: stats.total_plots,
             total_errors: stats.total_errors,
@@ -203,19 +203,19 @@ impl From<TimelineStats> for TimelineStatsPayload {
     }
 }
 
-fn actor_to_string(actor: ExecutionActor) -> String {
+const fn actor_to_string(actor: ExecutionActor) -> &'static str {
     match actor {
-        ExecutionActor::User => "user".to_string(),
-        ExecutionActor::Ai => "ai".to_string(),
+        ExecutionActor::User => "user",
+        ExecutionActor::Ai => "ai",
     }
 }
 
-fn source_to_string(source: ExecutionSource) -> String {
+const fn source_to_string(source: ExecutionSource) -> &'static str {
     match source {
-        ExecutionSource::Selection => "selection".to_string(),
-        ExecutionSource::Cell => "cell".to_string(),
-        ExecutionSource::WholeDocument => "whole_document".to_string(),
-        ExecutionSource::Unknown => "unknown".to_string(),
+        ExecutionSource::Selection => "selection",
+        ExecutionSource::Cell => "cell",
+        ExecutionSource::WholeDocument => "whole_document",
+        ExecutionSource::Unknown => "unknown",
     }
 }
 
@@ -949,7 +949,7 @@ pub struct ExportRMarkdownResponse {
 }
 
 impl ExportRMarkdownResponse {
-    pub fn success(output_path: String) -> Self {
+    pub const fn success(output_path: String) -> Self {
         Self {
             success: true,
             output_path,
@@ -957,7 +957,7 @@ impl ExportRMarkdownResponse {
         }
     }
 
-    pub fn error(error: String) -> Self {
+    pub const fn error(error: String) -> Self {
         Self {
             success: false,
             output_path: String::new(),

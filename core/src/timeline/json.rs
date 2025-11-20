@@ -76,7 +76,7 @@ impl JsonTimeline {
     }
 
     /// Convert ExecutionActor to string for storage
-    fn actor_to_string(actor: &ExecutionActor) -> &'static str {
+    const fn actor_to_string(actor: &ExecutionActor) -> &'static str {
         match actor {
             ExecutionActor::User => "user",
             ExecutionActor::Ai => "ai",
@@ -84,7 +84,7 @@ impl JsonTimeline {
     }
 
     /// Convert ExecutionSource to string for storage
-    fn source_to_string(source: &ExecutionSource) -> &'static str {
+    const fn source_to_string(source: &ExecutionSource) -> &'static str {
         match source {
             ExecutionSource::Selection => "selection",
             ExecutionSource::Cell => "cell",
@@ -318,6 +318,7 @@ impl JsonTimeline {
             .context("Failed to reopen timeline file")?;
 
         *writer = Some(file);
+        drop(writer);
 
         Ok(count)
     }
@@ -334,6 +335,7 @@ impl TimelineSink for JsonTimeline {
             writeln!(file, "{}", json).context("Failed to write timeline record")?;
             file.flush().context("Failed to flush timeline file")?;
         }
+        drop(writer);
 
         Ok(())
     }

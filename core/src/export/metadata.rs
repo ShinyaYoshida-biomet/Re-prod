@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Metadata for a reproduction bundle export.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BundleMetadata {
     pub format_version: String,
     pub bundle_id: String,
@@ -16,7 +16,7 @@ pub struct BundleMetadata {
 }
 
 /// Information about the session being exported.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SessionInfo {
     pub start_time: u64, // epoch milliseconds
     pub end_time: u64,   // epoch milliseconds
@@ -25,7 +25,7 @@ pub struct SessionInfo {
 }
 
 /// Environment information from the session.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct EnvironmentInfo {
     pub r_version: Option<String>,
     pub r_path: String,
@@ -35,7 +35,7 @@ pub struct EnvironmentInfo {
 }
 
 /// Statistics about the session.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Statistics {
     pub total_executions: usize,
     pub user_actions: usize,
@@ -46,7 +46,7 @@ pub struct Statistics {
 }
 
 /// File references in the bundle.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BundleFiles {
     pub timeline: String,
     pub code_files: Vec<String>,

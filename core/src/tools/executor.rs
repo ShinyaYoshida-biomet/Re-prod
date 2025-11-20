@@ -35,7 +35,7 @@ pub struct ToolExecutor {
 }
 
 impl ToolExecutor {
-    pub fn new(registry: std::sync::Arc<ToolRegistry>) -> Self {
+    pub const fn new(registry: std::sync::Arc<ToolRegistry>) -> Self {
         Self { registry }
     }
 
@@ -45,7 +45,7 @@ impl ToolExecutor {
         tool_id: &str,
         capability_id: &str,
         parameters: HashMap<String, Value>,
-        r_executor: &mut RExecutor,
+        r_executor: &RExecutor,
     ) -> Result<ToolExecutionResult> {
         let start_time = Instant::now();
 
@@ -85,7 +85,7 @@ impl ToolExecutor {
         _manifest: &ToolManifest,
         capability: &CapabilityDescriptor,
         parameters: HashMap<String, Value>,
-        r_executor: &mut RExecutor,
+        r_executor: &RExecutor,
     ) -> Result<ToolExecutionResult> {
         let code = self.render_template(&capability.template, &parameters)?;
 

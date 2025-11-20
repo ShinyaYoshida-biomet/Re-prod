@@ -20,7 +20,7 @@ pub struct ShellInfo {
 }
 
 impl ShellInfo {
-    fn with_args(program: String, args: Vec<String>) -> Self {
+    const fn with_args(program: String, args: Vec<String>) -> Self {
         Self { program, args }
     }
 }

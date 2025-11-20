@@ -48,18 +48,20 @@ impl ActiveChild {
     }
 
     async fn interrupt(&self) -> Result<()> {
-        let mut child = self.child.lock().await;
-        if let Err(error) = child.start_kill() {
-            // If the process already exited, treat it as a successful interrupt.
-            if error.kind() != std::io::ErrorKind::InvalidInput {
-                return Err(anyhow!(error));
+        {
+            let mut child = self.child.lock().await;
+            if let Err(error) = child.start_kill() {
+                // If the process already exited, treat it as a successful interrupt.
+                if error.kind() != std::io::ErrorKind::InvalidInput {
+                    return Err(anyhow!(error));
+                }
             }
         }
         self.interrupted.store(true, Ordering::SeqCst);
         Ok(())
     }
 
-    fn matches(&self, other: &ActiveChild) -> bool {
+    fn matches(&self, other: &Self) -> bool {
         Arc::ptr_eq(&self.child, &other.child)
     }
 
@@ -129,15 +131,13 @@ impl RExecutor {
         let stdout = String::from_utf8_lossy(&command_output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&command_output.stderr).to_string();
 
-        let mut error_output = if command_output.stderr.is_empty() {
+        let error_output = if command_output.interrupted {
+            Some("Execution interrupted by user.".to_string())
+        } else if command_output.stderr.is_empty() {
             None
         } else {
             Some(stderr)
         };
-
-        if command_output.interrupted {
-            error_output = Some("Execution interrupted by user.".to_string());
-        }
 
         let result = ExecutionResult {
             success: command_output.success && !command_output.interrupted,

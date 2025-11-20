@@ -36,7 +36,7 @@ pub struct FileSystem {
 impl FileSystem {
     pub fn new<P: AsRef<Path>>(root: P) -> Self {
         let root_path = root.as_ref().to_path_buf();
-        let canonical_root = canonicalize(&root_path).unwrap_or(root_path.clone());
+        let canonical_root = canonicalize(&root_path).unwrap_or_else(|_| root_path.clone());
         Self {
             root: root_path,
             canonical_root,
@@ -258,10 +258,10 @@ impl FileWatcher {
 
     fn map_event(&self, event: notify::Event) -> Option<FileSystemEvent> {
         match event.kind {
-            EventKind::Create(_) => event.paths.get(0).map(|path| FileSystemEvent::Created {
+            EventKind::Create(_) => event.paths.first().map(|path| FileSystemEvent::Created {
                 path: self.relative_path(path),
             }),
-            EventKind::Remove(_) => event.paths.get(0).map(|path| FileSystemEvent::Deleted {
+            EventKind::Remove(_) => event.paths.first().map(|path| FileSystemEvent::Deleted {
                 path: self.relative_path(path),
             }),
             EventKind::Modify(ModifyKind::Name(RenameMode::Both))
@@ -275,7 +275,7 @@ impl FileWatcher {
                     None
                 }
             }
-            EventKind::Modify(_) => event.paths.get(0).map(|path| FileSystemEvent::Modified {
+            EventKind::Modify(_) => event.paths.first().map(|path| FileSystemEvent::Modified {
                 path: self.relative_path(path),
             }),
             _ => None,

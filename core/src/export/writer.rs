@@ -17,22 +17,22 @@ pub enum WriterError {
 
 impl From<io::Error> for WriterError {
     fn from(err: io::Error) -> Self {
-        WriterError::Io(err)
+        Self::Io(err)
     }
 }
 
 impl From<serde_json::Error> for WriterError {
     fn from(err: serde_json::Error) -> Self {
-        WriterError::Json(err)
+        Self::Json(err)
     }
 }
 
 impl std::fmt::Display for WriterError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            WriterError::Io(e) => write!(f, "IO error: {}", e),
-            WriterError::Json(e) => write!(f, "JSON error: {}", e),
-            WriterError::Validation(e) => write!(f, "Validation error: {}", e),
+            Self::Io(e) => write!(f, "IO error: {}", e),
+            Self::Json(e) => write!(f, "JSON error: {}", e),
+            Self::Validation(e) => write!(f, "Validation error: {}", e),
         }
     }
 }
@@ -46,7 +46,7 @@ pub struct BundleWriter {
 
 impl BundleWriter {
     /// Create a new bundle writer.
-    pub fn new(bundle: ReproductionBundle) -> Self {
+    pub const fn new(bundle: ReproductionBundle) -> Self {
         Self { bundle }
     }
 

@@ -38,7 +38,7 @@ pub struct FileInfo {
 }
 
 impl FileSystemTool {
-    pub fn new(workspace_root: PathBuf) -> Self {
+    pub const fn new(workspace_root: PathBuf) -> Self {
         Self { workspace_root }
     }
 
