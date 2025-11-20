@@ -51,6 +51,7 @@ Cargo.lock
 
 # Tauri
 **/gen/
+desktop/icons/generate_icons.py
 
 # R temporary files
 .Rhistory
