@@ -14,7 +14,17 @@ const TERMINAL_EXIT_EVENT = 'terminal-exited';
 const TERMINAL_ERROR_EVENT = 'terminal-error';
 const TERMINAL_KEEPALIVE_EVENT = 'terminal-keepalive';
 
-const isTauriAvailable = typeof window !== 'undefined' && Boolean((window as typeof window & { __TAURI__?: unknown }).__TAURI__);
+const isTauriAvailable =
+  typeof window !== 'undefined' &&
+  Boolean(
+    (window as typeof window & {
+      __TAURI__?: unknown;
+      __TAURI_IPC__?: unknown;
+      __TAURI_INTERNALS__?: unknown;
+    }).__TAURI__ ||
+      (window as typeof window & { __TAURI_IPC__?: unknown }).__TAURI_IPC__ ||
+      (window as typeof window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__,
+  );
 
 interface UseTerminalResult {
   state: TerminalState;
