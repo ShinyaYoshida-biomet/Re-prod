@@ -11,6 +11,7 @@ export function TerminalPane(): JSX.Element {
     state,
     isAvailable,
     error,
+    errorDetail,
     createSession,
     closeSession,
     setActiveSession,
@@ -101,6 +102,7 @@ export function TerminalPane(): JSX.Element {
         {error && (
           <div className="alert alert-error mb-2">
             <p>{error}</p>
+            {errorDetail && <p className="muted">{errorDetail}</p>}
           </div>
         )}
         {!isAvailable && (

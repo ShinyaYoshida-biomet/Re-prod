@@ -30,6 +30,7 @@ interface UseTerminalResult {
   state: TerminalState;
   isAvailable: boolean;
   error: string | null;
+  errorDetail: string | null;
   createSession: () => Promise<void>;
   closeSession: (sessionId: string) => Promise<void>;
   setActiveSession: (sessionId: string) => void;
@@ -45,6 +46,7 @@ export function useTerminal(): UseTerminalResult {
     activeSessionId: null,
   });
   const [error, setError] = useState<string | null>(null);
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const handlersRef = useRef(new Map<string, (chunk: string) => void>());
   const sessionCounterRef = useRef(1);
 
@@ -100,10 +102,12 @@ export function useTerminal(): UseTerminalResult {
       const label = `Shell ${sessionCounterRef.current}`;
       sessionCounterRef.current += 1;
       setError(null);
+      setErrorDetail(null);
       addSession(sessionId, label);
     } catch (error) {
       console.error('Unable to create terminal session:', error);
       setError('Unable to start terminal session. Please restart the desktop app.');
+      setErrorDetail(error instanceof Error ? error.message : String(error));
     }
   }, [addSession]);
 
@@ -133,6 +137,7 @@ export function useTerminal(): UseTerminalResult {
       } catch (error) {
         console.error('Unable to write to terminal session:', error);
         setError('Failed to send input to terminal.');
+        setErrorDetail(error instanceof Error ? error.message : String(error));
       }
     },
     []
@@ -198,6 +203,8 @@ export function useTerminal(): UseTerminalResult {
         unlistenFns.push(
           await listen<TerminalErrorEvent>(TERMINAL_ERROR_EVENT, (evt) => {
             console.error('Terminal session error:', evt.payload.message);
+            setError('Terminal error occurred.');
+            setErrorDetail(evt.payload.message);
           })
         );
       } catch (error) {
@@ -226,6 +233,7 @@ export function useTerminal(): UseTerminalResult {
     state,
     isAvailable: isTauriAvailable,
     error,
+    errorDetail,
     createSession,
     closeSession,
     setActiveSession,
