@@ -10,6 +10,7 @@ export function TerminalPane(): JSX.Element {
   const {
     state,
     isAvailable,
+    error,
     createSession,
     closeSession,
     setActiveSession,
@@ -97,6 +98,11 @@ export function TerminalPane(): JSX.Element {
         </div>
       </div>
       <div className="terminal-pane__content">
+        {error && (
+          <div className="alert alert-error mb-2">
+            <p>{error}</p>
+          </div>
+        )}
         {!isAvailable && (
           <div className="terminal-pane__empty">
             <p>Terminal access is only available inside the desktop experience.</p>

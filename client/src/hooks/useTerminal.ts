@@ -29,6 +29,7 @@ const isTauriAvailable =
 interface UseTerminalResult {
   state: TerminalState;
   isAvailable: boolean;
+  error: string | null;
   createSession: () => Promise<void>;
   closeSession: (sessionId: string) => Promise<void>;
   setActiveSession: (sessionId: string) => void;
@@ -43,6 +44,7 @@ export function useTerminal(): UseTerminalResult {
     sessions: [],
     activeSessionId: null,
   });
+  const [error, setError] = useState<string | null>(null);
   const handlersRef = useRef(new Map<string, (chunk: string) => void>());
   const sessionCounterRef = useRef(1);
 
@@ -97,9 +99,11 @@ export function useTerminal(): UseTerminalResult {
       const sessionId = await invoke<string>('create_terminal_session');
       const label = `Shell ${sessionCounterRef.current}`;
       sessionCounterRef.current += 1;
+      setError(null);
       addSession(sessionId, label);
     } catch (error) {
       console.error('Unable to create terminal session:', error);
+      setError('Unable to start terminal session. Please restart the desktop app.');
     }
   }, [addSession]);
 
@@ -128,6 +132,7 @@ export function useTerminal(): UseTerminalResult {
         await invoke('write_to_terminal', { session_id: sessionId, data });
       } catch (error) {
         console.error('Unable to write to terminal session:', error);
+        setError('Failed to send input to terminal.');
       }
     },
     []
@@ -220,6 +225,7 @@ export function useTerminal(): UseTerminalResult {
   return {
     state,
     isAvailable: isTauriAvailable,
+    error,
     createSession,
     closeSession,
     setActiveSession,

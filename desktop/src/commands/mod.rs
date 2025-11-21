@@ -104,6 +104,14 @@ pub async fn create_terminal_session(
     let session_id_for_task = session_id.clone();
     let emitter = app_handle.clone();
 
+    let _ = emitter.emit(
+        "terminal-output",
+        TerminalOutputPayload {
+            session_id: session_id.clone(),
+            data: "Shell started. Type commands to begin.\r\n".to_string(),
+        },
+    );
+
     tokio::spawn(async move {
         while let Some(event) = rx.recv().await {
             match event {
