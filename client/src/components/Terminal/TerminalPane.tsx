@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo } from 'react';
+import { useRef } from 'react';
 import { PanelTabs } from '@/components/shared';
 import { IconPlus, IconXCircle } from '@/components/shared';
 import { useTerminal } from '@/hooks/useTerminal';
@@ -22,6 +23,7 @@ export function TerminalPane(): JSX.Element {
   } = useTerminal();
 
   const { sessions, activeSessionId } = state;
+  const didBootstrapRef = useRef(false);
 
   const sessionTabs = useMemo(
     () => sessions.map((session) => ({ id: session.id, label: session.title })),
@@ -29,11 +31,12 @@ export function TerminalPane(): JSX.Element {
   );
 
   useEffect(() => {
-    if (!isAvailable) {
+    if (!isAvailable || didBootstrapRef.current) {
       return;
     }
 
     if (sessions.length === 0) {
+      didBootstrapRef.current = true;
       void createSession();
     }
   }, [isAvailable, sessions.length, createSession]);
