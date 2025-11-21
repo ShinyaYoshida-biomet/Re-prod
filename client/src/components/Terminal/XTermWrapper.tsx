@@ -56,6 +56,11 @@ export function XTermWrapper({
 
     const inputListener = terminal.onData((data) => {
       // Locally echo input so users see keystrokes even if backend write fails.
+      if (data === '\r') {
+        terminal.write('\r\n');
+        onInput?.('\r');
+        return;
+      }
       terminal.write(data);
       onInput?.(data);
     });
