@@ -131,7 +131,6 @@ async fn handle_ws_text(
         None => false,
     }
 }
-
 async fn handle_ws_request(
     request: WSRequest,
     state: &AppState,

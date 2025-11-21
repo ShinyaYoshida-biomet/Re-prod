@@ -152,7 +152,7 @@ pub async fn execute_tool(
     Json(request): Json<ToolExecutionRequest>,
 ) -> Resp<ToolExecutionResult> {
     let runtime = state.projects.default_runtime().await.map_err(err_500)?;
-    let r_executor = runtime.r_executor.lock().await;
+    let mut r_executor = runtime.r_executor.lock().await;
 
     state
         .tool_executor

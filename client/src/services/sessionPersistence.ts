@@ -1,4 +1,5 @@
 import type { ExecutionLogEntry, AppSettings, AIMessage } from '@shared/types';
+import { extractCodeBlocks } from '@/core/ai/codeBlockUtils';
 import { useStore } from '@/core';
 import { queryTimeline } from '@/services/timelineService';
 
@@ -18,6 +19,20 @@ export interface SessionSnapshot {
   aiMessages: AIMessage[];
 }
 
+const normalizeAIMessages = (messages: AIMessage[]): AIMessage[] =>
+  messages.map((message) => {
+    if (message.codeBlocks && message.codeBlocks.length > 0) {
+      return message;
+    }
+
+    const fallbackText = message.content || message.code || '';
+    const codeBlocks = fallbackText ? extractCodeBlocks(fallbackText) : [];
+
+    return codeBlocks.length
+      ? { ...message, codeBlocks }
+      : message;
+  });
+
 export function getSessionSnapshot(): SessionSnapshot {
   const state = useStore.getState();
   return {
@@ -29,7 +44,7 @@ export function getSessionSnapshot(): SessionSnapshot {
     },
     executionHistory: state.execution.history,
     settings: state.settings,
-    aiMessages: state.ai.messages,
+    aiMessages: normalizeAIMessages(state.ai.messages),
   };
 }
 
@@ -80,7 +95,7 @@ export function applySessionSnapshot(snapshot: SessionSnapshot): void {
   state.setEditorIsDirty(false);
   state.loadExecutionHistory(snapshot.executionHistory ?? []);
   state.updateSettings(snapshot.settings);
-  state.setAIMessages(snapshot.aiMessages ?? []);
+  state.setAIMessages(normalizeAIMessages(snapshot.aiMessages ?? []));
   void refreshTimelineData();
 }
 

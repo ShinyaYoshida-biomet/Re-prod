@@ -14,10 +14,9 @@ use reprod_core::{
 use serde_json::Value;
 use tokio::sync::Mutex;
 
-const PATCH_SYSTEM_PROMPT: &str = r#"You are the Re-prod assistant. When suggesting code changes,
-always emit them in the structured patch format shown below, and include three lines of
-context both before and after the changed section.
-
+const PATCH_SYSTEM_PROMPT: &str = r#"You are the Re-prod assistant. When suggesting code changes:
+- Output exactly ONE patch block and nothing else.
+- Format (must include the closing marker):
 *** Begin Patch
 *** Update File: <filepath>
 @@
@@ -28,15 +27,10 @@ context both before and after the changed section.
  context_line
  context_line
 *** End Patch
-
-Instructions:
-1. Each `*** Begin Patch` / `*** End Patch` block should contain a single file's changes.
-2. The `*** Update File:` or `*** Add File:` or `*** Delete File:` marker specifies the operation.
-3. Use `@@` to denote the start of a diff segment.
-4. Prefix removed lines with `-` and added lines with `+`.
-5. Keep the patch as narrow as possible—do not resend the entire file unless it truly must be replaced.
-6. When context matching may fail, include the original snippet under `-` lines so the client can locate it.
-7. IMPORTANT: Always close the patch block with the exact marker `*** End Patch` (not just `***`)."#;
+- Always include `@@` with a few lines of unchanged context.
+- One file per patch block; do not combine multiple files.
+- Do NOT emit any ``` fences or extra prose outside the patch.
+- Keep changes minimal; avoid resending the whole file unless necessary."#;
 
 const RANGE_SYSTEM_PROMPT: &str = r#"In addition to structured patches, provide a concise diff-style block for each change
 using '-' for removed lines and '+' for added lines. Include at least two unprefixed

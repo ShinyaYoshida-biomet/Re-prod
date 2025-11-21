@@ -21,7 +21,7 @@ pub struct ProjectConfig {
     pub version: u32,
 }
 
-const fn default_version() -> u32 {
+fn default_version() -> u32 {
     1
 }
 
