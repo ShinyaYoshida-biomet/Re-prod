@@ -162,11 +162,31 @@ pub async fn write_to_terminal(
     session_id: String,
     data: String,
     manager: State<'_, Arc<TerminalManager>>,
+    app_handle: AppHandle,
 ) -> Result<(), String> {
-    manager
-        .write(&session_id, &data)
-        .await
-        .map_err(|err| err.to_string())
+    match manager.write(&session_id, &data).await {
+        Ok(()) => {
+            // Optimistic echo so the UI can confirm delivery.
+            let _ = app_handle.emit(
+                "terminal-output",
+                TerminalOutputPayload {
+                    session_id,
+                    data,
+                },
+            );
+            Ok(())
+        }
+        Err(err) => {
+            let _ = app_handle.emit(
+                "terminal-error",
+                TerminalErrorPayload {
+                    session_id: session_id.clone(),
+                    message: err.to_string(),
+                },
+            );
+            Err(err.to_string())
+        }
+    }
 }
 
 #[tauri::command]
