@@ -104,6 +104,19 @@ export function useTerminal(): UseTerminalResult {
       setError(null);
       setErrorDetail(null);
       addSession(sessionId, label);
+
+      // Smoke-test the session by sending a harmless newline; surfaces failures early.
+      try {
+        await invoke('write_to_terminal', {
+          sessionId,
+          session_id: sessionId,
+          data: '\r',
+        });
+      } catch (innerError) {
+        console.error('Terminal session started but input test failed:', innerError);
+        setError('Terminal session started, but input could not be sent.');
+        setErrorDetail(innerError instanceof Error ? innerError.message : String(innerError));
+      }
     } catch (error) {
       console.error('Unable to create terminal session:', error);
       setError('Unable to start terminal session. Please restart the desktop app.');
