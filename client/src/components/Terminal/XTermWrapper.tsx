@@ -54,7 +54,11 @@ export function XTermWrapper({
     fitAddon.fit();
     onResize?.(terminal.cols, terminal.rows);
 
-    const inputListener = terminal.onData((data) => onInput?.(data));
+    const inputListener = terminal.onData((data) => {
+      // Locally echo input so users see keystrokes even if backend write fails.
+      terminal.write(data);
+      onInput?.(data);
+    });
 
     const handleResize = () => {
       fitAddon.fit();
