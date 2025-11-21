@@ -9,6 +9,7 @@ use crate::terminal::TerminalManager;
 use reprod_core::{Config, RExecutor};
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tauri_plugin_pty;
 
 #[tokio::main]
 async fn main() {
@@ -33,6 +34,7 @@ async fn main() {
         .manage(r_executor)
         .manage(terminal_manager)
         .manage(config_state)
+        .plugin(tauri_plugin_pty::init())
         .invoke_handler(tauri::generate_handler![
             commands::execute_r_code,
             commands::send_ai_message,

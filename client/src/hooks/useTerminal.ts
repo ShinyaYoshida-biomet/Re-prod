@@ -1,18 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { listen, type UnlistenFn } from '@tauri-apps/api/event';
-import { invoke } from '@tauri-apps/api/core';
-import type {
-  TerminalErrorEvent,
-  TerminalExitEvent,
-  TerminalKeepAliveEvent,
-  TerminalOutputEvent,
-  TerminalState,
-} from '@/types/terminal';
-
-const TERMINAL_OUTPUT_EVENT = 'terminal-output';
-const TERMINAL_EXIT_EVENT = 'terminal-exited';
-const TERMINAL_ERROR_EVENT = 'terminal-error';
-const TERMINAL_KEEPALIVE_EVENT = 'terminal-keepalive';
+import { spawn, type Pty } from '@tauri-apps/plugin-pty';
+import type { TerminalState } from '@/types/terminal';
 
 const isTauriAvailable =
   typeof window !== 'undefined' &&
@@ -49,6 +37,7 @@ export function useTerminal(): UseTerminalResult {
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const handlersRef = useRef(new Map<string, (chunk: string) => void>());
   const sessionCounterRef = useRef(1);
+  const processesRef = useRef(new Map<string, Pty>());
 
   const addSession = useCallback((sessionId: string, title: string) => {
     setState((prev) => ({
@@ -98,43 +87,47 @@ export function useTerminal(): UseTerminalResult {
     }
 
     try {
-      const sessionId = await invoke<string>('create_terminal_session');
+      const pty = await spawn('bash', [], { cols: 80, rows: 24 });
+      const sessionId = pty.id ?? `pty-${Date.now()}`;
       const label = `Shell ${sessionCounterRef.current}`;
       sessionCounterRef.current += 1;
       setError(null);
       setErrorDetail(null);
       addSession(sessionId, label);
+      processesRef.current.set(sessionId, pty);
 
-      // Smoke-test the session by sending a harmless newline; surfaces failures early.
-      try {
-        await invoke('write_to_terminal', {
-          sessionId,
-          session_id: sessionId,
-          data: '\r',
-        });
-      } catch (innerError) {
-        console.error('Terminal session started but input test failed:', innerError);
-        setError('Terminal session started, but input could not be sent.');
-        setErrorDetail(innerError instanceof Error ? innerError.message : String(innerError));
-      }
+      pty.onData((data: string) => {
+        const handler = handlersRef.current.get(sessionId);
+        if (handler) {
+          handler(data);
+        }
+      });
+
+      pty.onExit(({ code }: { code: number }) => {
+        console.info(`Terminal session ${sessionId} exited with code ${code}`);
+        removeSession(sessionId);
+        processesRef.current.delete(sessionId);
+      });
     } catch (error) {
       console.error('Unable to create terminal session:', error);
       setError('Unable to start terminal session. Please restart the desktop app.');
       setErrorDetail(error instanceof Error ? error.message : String(error));
     }
-  }, [addSession]);
+  }, [addSession, removeSession]);
 
   const closeSession = useCallback(
     async (sessionId: string) => {
-      if (isTauriAvailable) {
+      const pty = processesRef.current.get(sessionId);
+      if (pty) {
         try {
-          await invoke('close_terminal_session', { sessionId });
+          await pty.kill();
         } catch (error) {
           console.error('Unable to close terminal session:', error);
         }
       }
 
       removeSession(sessionId);
+      processesRef.current.delete(sessionId);
     },
     [removeSession]
   );
@@ -145,12 +138,14 @@ export function useTerminal(): UseTerminalResult {
         return;
       }
 
+      const pty = processesRef.current.get(sessionId);
+      if (!pty) {
+        setError('Terminal session not found.');
+        return;
+      }
+
       try {
-        await invoke('write_to_terminal', {
-          sessionId, // some Tauri builds expect camelCase
-          session_id: sessionId, // backend definition is snake_case
-          data,
-        });
+        await pty.write(data);
       } catch (error) {
         console.error('Unable to write to terminal session:', error);
         setError('Failed to send input to terminal.');
@@ -166,8 +161,13 @@ export function useTerminal(): UseTerminalResult {
         return;
       }
 
+      const pty = processesRef.current.get(sessionId);
+      if (!pty) {
+        return;
+      }
+
       try {
-        await invoke('resize_terminal', { session_id: sessionId, cols, rows });
+        await pty.resize(cols, rows);
       } catch (error) {
         console.error('Unable to resize terminal session:', error);
       }
@@ -184,67 +184,13 @@ export function useTerminal(): UseTerminalResult {
   }, []);
 
   useEffect(() => {
-    if (!isTauriAvailable) {
-      return;
-    }
-
-    const unlistenFns: UnlistenFn[] = [];
-
-    const subscribe = async () => {
-      try {
-        unlistenFns.push(
-          await listen<TerminalOutputEvent>(TERMINAL_OUTPUT_EVENT, (evt) => {
-            const handler = handlersRef.current.get(evt.payload.session_id);
-            if (handler) {
-              handler(evt.payload.data);
-            }
-          })
-        );
-      } catch (error) {
-        console.error('Unable to listen for terminal output:', error);
-      }
-
-      try {
-        unlistenFns.push(
-          await listen<TerminalExitEvent>(TERMINAL_EXIT_EVENT, (evt) => {
-            if (evt.payload.session_id) {
-              removeSession(evt.payload.session_id);
-            }
-          })
-        );
-      } catch (error) {
-        console.error('Unable to listen for terminal exit events:', error);
-      }
-
-      try {
-        unlistenFns.push(
-          await listen<TerminalErrorEvent>(TERMINAL_ERROR_EVENT, (evt) => {
-            console.error('Terminal session error:', evt.payload.message);
-            setError('Terminal error occurred.');
-            setErrorDetail(evt.payload.message);
-          })
-        );
-      } catch (error) {
-        console.error('Unable to listen for terminal error events:', error);
-      }
-
-      try {
-        unlistenFns.push(
-          await listen<TerminalKeepAliveEvent>(TERMINAL_KEEPALIVE_EVENT, () => {
-            // Keep-alive events are informational; no UI update required.
-          })
-        );
-      } catch (error) {
-        console.error('Unable to listen for terminal keep-alive events:', error);
-      }
-    };
-
-    void subscribe();
-
     return () => {
-      unlistenFns.forEach((unlisten) => void unlisten());
+      processesRef.current.forEach((pty) => {
+        void pty.kill();
+      });
+      processesRef.current.clear();
     };
-  }, [removeSession]);
+  }, []);
 
   return {
     state,
