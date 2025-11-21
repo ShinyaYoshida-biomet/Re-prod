@@ -55,13 +55,7 @@ export function XTermWrapper({
     onResize?.(terminal.cols, terminal.rows);
 
     const inputListener = terminal.onData((data) => {
-      // Locally echo input so users see keystrokes even if backend write fails.
-      if (data === '\r') {
-        terminal.write('\r\n');
-        onInput?.('\r');
-        return;
-      }
-      terminal.write(data);
+      // Let backend/PTy handle echo to avoid double-echoing and maintain canonical behavior.
       onInput?.(data);
     });
 
