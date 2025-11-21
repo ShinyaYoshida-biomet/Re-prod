@@ -133,7 +133,11 @@ export function useTerminal(): UseTerminalResult {
       }
 
       try {
-        await invoke('write_to_terminal', { session_id: sessionId, data });
+        await invoke('write_to_terminal', {
+          sessionId, // some Tauri builds expect camelCase
+          session_id: sessionId, // backend definition is snake_case
+          data,
+        });
       } catch (error) {
         console.error('Unable to write to terminal session:', error);
         setError('Failed to send input to terminal.');
