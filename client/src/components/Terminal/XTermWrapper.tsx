@@ -21,7 +21,6 @@ export function XTermWrapper({
 }: XTermWrapperProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<Terminal | null>(null);
-  const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
   useEffect(() => {
     const element = containerRef.current;
@@ -64,15 +63,8 @@ export function XTermWrapper({
       onResize?.(terminal.cols, terminal.rows);
     };
 
-    const observer =
-      typeof ResizeObserver !== 'undefined'
-        ? new ResizeObserver(handleResize)
-        : null;
-
-    if (observer) {
-      observer.observe(element);
-      resizeObserverRef.current = observer;
-    }
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(handleResize) : null;
+    observer?.observe(element);
 
     if (autoFocus) {
       terminal.focus();
