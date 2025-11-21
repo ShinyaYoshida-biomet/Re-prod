@@ -71,3 +71,14 @@
   height: 100%;
   width: 100%;
 }
+
+/* Light theme for xterm */
+.terminal-session__term .xterm {
+  background-color: #f6f7fb;
+  color: #111827;
+}
+
+.terminal-session__term .xterm .xterm-viewport,
+.terminal-session__term .xterm .xterm-screen {
+  background-color: #f6f7fb;
+}

@@ -35,12 +35,22 @@ export function XTermWrapper({
       cursorBlink: true,
       fontFamily: 'Menlo, Monaco, Consolas, "Liberation Mono", monospace',
       scrollback: 2000,
+      fontSize: 13,
+      rendererType: 'canvas',
+      theme: {
+        background: '#f6f7fb',
+        foreground: '#111827',
+        cursor: '#1d4ed8',
+        cursorAccent: '#f6f7fb',
+        selectionBackground: '#c7d2fe80',
+      },
     });
 
     const fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
     terminal.loadAddon(new WebLinksAddon());
     terminal.open(element);
+    terminal.writeln('\u001b[90mTerminal ready. Connecting to shell...\u001b[0m');
     fitAddon.fit();
     onResize?.(terminal.cols, terminal.rows);
 
