@@ -815,3 +815,65 @@
 [data-theme="phylo"] .settings-number-input input[type="range"] {
   accent-color: #3b82f6;
 }
+
+/* Project Manager Modal */
+[data-theme="phylo"] .project-manager-section {
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 3px;
+  padding: 12px;
+}
+
+[data-theme="phylo"] .project-manager-section h3 {
+  color: #333333;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+[data-theme="phylo"] .project-card {
+  border-bottom: 1px solid #e0e0e0;
+  padding: 8px 0;
+}
+
+[data-theme="phylo"] .project-card strong {
+  font-size: 12px;
+  color: #333333;
+}
+
+[data-theme="phylo"] .project-card .muted {
+  color: #666666;
+  font-size: 11px;
+}
+
+[data-theme="phylo"] .project-manager input {
+  background: #ffffff;
+  border: 1px solid #cccccc;
+  border-radius: 3px;
+  color: #333333;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+[data-theme="phylo"] .project-manager input:focus {
+  outline: 1px solid #3b82f6;
+  outline-offset: -1px;
+}
+
+[data-theme="phylo"] .alert-error {
+  background: #fee2e2;
+  border: 1px solid #ef4444;
+  color: #991b1b;
+  border-radius: 3px;
+  font-size: 12px;
+  padding: 8px 12px;
+}
+
+[data-theme="phylo"] .project-manager .btn-link {
+  color: #3b82f6;
+  font-size: 11px;
+  text-decoration: none;
+}
+
+[data-theme="phylo"] .project-manager .btn-link:hover {
+  text-decoration: underline;
+}
