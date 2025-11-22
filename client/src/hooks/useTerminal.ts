@@ -103,7 +103,7 @@ export function useTerminal(): UseTerminalResult {
         }
       });
 
-      pty.onExit(({ code }: { code: number }) => {
+      pty.onExit((code) => {
         console.info(`Terminal session ${sessionId} exited with code ${code}`);
         removeSession(sessionId);
         processesRef.current.delete(sessionId);

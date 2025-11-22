@@ -35,7 +35,6 @@ export function XTermWrapper({
       fontFamily: 'Menlo, Monaco, Consolas, "Liberation Mono", monospace',
       scrollback: 2000,
       fontSize: 13,
-      rendererType: 'canvas',
       theme: {
         background: '#f6f7fb',
         foreground: '#111827',
