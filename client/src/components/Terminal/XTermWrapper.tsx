@@ -49,7 +49,6 @@ export function XTermWrapper({
     terminal.loadAddon(fitAddon);
     terminal.loadAddon(new WebLinksAddon());
     terminal.open(element);
-    terminal.writeln('\u001b[90mTerminal ready. Connecting to shell...\u001b[0m');
     fitAddon.fit();
     onResize?.(terminal.cols, terminal.rows);
 
