@@ -1,6 +1,7 @@
 {
   "identifier": "default",
   "description": "Default capabilities for development",
+  "windows": ["main"],
   "permissions": [
     "core:default",
     "pty:default"
