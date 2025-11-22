@@ -83,6 +83,7 @@ export function useAIConversation() {
         role: 'user',
         content: input,
         timestamp: Date.now(),
+        mode,
       };
 
       const requestMessages = [
@@ -93,7 +94,7 @@ export function useAIConversation() {
       const requestId = createRequestId();
 
       addAIMessage(userMessage);
-      startStreamingMessage(requestId);
+      startStreamingMessage(requestId, mode);
       setAILoading(true);
       setInput('');
 

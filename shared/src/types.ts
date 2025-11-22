@@ -189,6 +189,7 @@ export interface AIMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  mode?: AIMode;
   code?: string; // Deprecated: use codeBlocks instead
   codeBlocks?: CodeBlock[];
   planSteps?: PlanStep[];

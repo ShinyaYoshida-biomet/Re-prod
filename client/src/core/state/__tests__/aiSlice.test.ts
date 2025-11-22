@@ -9,11 +9,12 @@ function createTestStore() {
 describe('aiSlice streaming helpers', () => {
   it('handles streaming lifecycle', () => {
     const store = createTestStore();
-    store.getState().startStreamingMessage('msg-1');
+    store.getState().startStreamingMessage('msg-1', 'agent');
 
     store.getState().appendStreamingChunk('msg-1', 'Hello');
     store.getState().appendStreamingChunk('msg-1', ' world');
     expect(store.getState().ai.messages.at(-1)?.content).toBe('Hello world');
+    expect(store.getState().ai.messages.at(-1)?.mode).toBe('agent');
 
     const plan = [
       { id: 'plan-1', title: 'Step', status: 'running' as const },

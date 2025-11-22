@@ -55,7 +55,12 @@ export function StreamingMessage({ message, onApplyCode }: Props): JSX.Element {
 
           {hasCodeBlocks &&
             message.codeBlocks!.map((codeBlock) => (
-              <CodeBlockWithApply key={codeBlock.id} codeBlock={codeBlock} onApply={onApplyCode} />
+              <CodeBlockWithApply
+                key={codeBlock.id}
+                codeBlock={codeBlock}
+                onApply={onApplyCode}
+                showDiffPreview={message.mode === 'agent'}
+              />
             ))}
         </>
       )}

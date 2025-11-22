@@ -7,11 +7,23 @@ import type { CodeBlock } from '@shared/types';
 interface Props {
   codeBlock: CodeBlock;
   onApply: (codeBlock: CodeBlock) => Promise<void>;
+  showDiffPreview: boolean;
 }
 
-export function CodeBlockWithApply({ codeBlock, onApply }: Props): JSX.Element {
+const isStructuredCodeBlock = (block: CodeBlock): boolean => {
+  return Boolean(
+    block.patchText ||
+      (block.patchChunks && block.patchChunks.length > 0) ||
+      (block.simpleChanges && block.simpleChanges.length > 0) ||
+      block.targetRange ||
+      block.originalCode,
+  );
+};
+
+export function CodeBlockWithApply({ codeBlock, onApply, showDiffPreview }: Props): JSX.Element {
   const [applied, setApplied] = useState(false);
   const [currentBlock, setCurrentBlock] = useState<CodeBlock>(codeBlock);
+  const shouldShowDiffPreview = showDiffPreview && isStructuredCodeBlock(currentBlock);
 
   useEffect(() => {
     setCurrentBlock(codeBlock);
@@ -55,7 +67,9 @@ export function CodeBlockWithApply({ codeBlock, onApply }: Props): JSX.Element {
           </span>
         </div>
 
-        <CodeBlockDiffPreview codeBlock={currentBlock} onRetry={handleRetry} />
+        {shouldShowDiffPreview && (
+          <CodeBlockDiffPreview codeBlock={currentBlock} onRetry={handleRetry} />
+        )}
 
         <pre className="code-content">
           <code>{currentBlock.code}</code>

@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand';
-import type { AIMessage, CodeBlock, PlanStep, ToolCallLog } from '@shared/types';
+import type { AIMode, AIMessage, CodeBlock, PlanStep, ToolCallLog } from '@shared/types';
 
 type StreamingExtras = {
   codeBlocks?: CodeBlock[];
@@ -63,7 +63,7 @@ export interface AIState {
   setAISuggestions: (suggestions: string[]) => void;
   recordPatchMatchFailure: (reason: string, id: string) => void;
   recordPatchMatchSuccess: () => void;
-  startStreamingMessage: (streamingId: string) => void;
+  startStreamingMessage: (streamingId: string, mode?: AIMode) => void;
   appendStreamingChunk: (streamingId: string, chunk: string) => void;
   updateStreamingPlan: (streamingId: string, plan: PlanStep[]) => void;
   recordToolEvent: (streamingId: string, log: ToolCallLog) => void;
@@ -120,7 +120,7 @@ export const createAISlice: StateCreator<AIState> = (set) => ({
         patchMatchStatus: { lastFailureId: null, lastFailureReason: null },
       },
     })),
-  startStreamingMessage: (streamingId) =>
+  startStreamingMessage: (streamingId, mode) =>
     set((state) => ({
       ai: {
         ...state.ai,
@@ -133,6 +133,7 @@ export const createAISlice: StateCreator<AIState> = (set) => ({
             content: '',
             isComplete: false,
             timestamp: Date.now(),
+            mode,
           },
         ],
       },
