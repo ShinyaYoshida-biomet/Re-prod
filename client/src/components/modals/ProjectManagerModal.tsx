@@ -1,5 +1,4 @@
-import { useMemo, useState } from 'react';
-import type { ProjectRecord } from 'shared';
+import { useState } from 'react';
 
 import { useStore } from '@/core';
 import { persistCurrentProjectState } from '@/hooks/useProjectSession';
@@ -13,22 +12,12 @@ interface ProjectManagerModalProps {
 
 export function ProjectManagerModal({ open, onClose }: ProjectManagerModalProps): JSX.Element | null {
   const currentProject = useStore((state) => state.project);
-  const projects = useStore((state) => state.projects);
   const [newProjectName, setNewProjectName] = useState('New Project');
   const [newProjectPath, setNewProjectPath] = useState('');
-  const [existingPath, setExistingPath] = useState('');
   const [cloneRemote, setCloneRemote] = useState('');
   const [clonePath, setClonePath] = useState('');
   const [cloneName, setCloneName] = useState('');
   const [error, setError] = useState<string | null>(null);
-
-  const sortedProjects = useMemo<ProjectRecord[]>(() => {
-    return [...projects].sort((a, b) => {
-      const aTime = a.last_opened_at ?? 0;
-      const bTime = b.last_opened_at ?? 0;
-      return bTime - aTime;
-    });
-  }, [projects]);
 
   if (!open) {
     return null;
@@ -51,16 +40,6 @@ export function ProjectManagerModal({ open, onClose }: ProjectManagerModalProps)
     projectService.create({ name: newProjectName.trim(), path: newProjectPath.trim() });
   };
 
-  const handleAddExisting = () => {
-    if (!existingPath.trim()) {
-      setError('Provide a directory path.');
-      return;
-    }
-    setError(null);
-    persistCurrentProjectState();
-    projectService.addExisting(existingPath.trim());
-  };
-
   const handleClone = () => {
     if (!cloneRemote.trim() || !clonePath.trim()) {
       setError('Remote URL and destination path are required.');
@@ -80,7 +59,7 @@ export function ProjectManagerModal({ open, onClose }: ProjectManagerModalProps)
       open={open}
       onClose={onClose}
       title="Projects"
-      subtitle="Switch between recent projects or create new isolated workspaces."
+      subtitle="Create new isolated workspaces or clone from version control."
       maxWidth={800}
     >
       <div className="project-manager">
@@ -99,32 +78,6 @@ export function ProjectManagerModal({ open, onClose }: ProjectManagerModalProps)
             </div>
           ) : (
             <p>No project selected.</p>
-          )}
-        </section>
-
-        <section className="project-manager-section">
-          <div className="section-header">
-            <h3>Recent Projects</h3>
-            <button type="button" className="btn btn-link" onClick={() => projectService.requestList()}>
-              Refresh List
-            </button>
-          </div>
-          {sortedProjects.length === 0 ? (
-            <p>No recent projects yet.</p>
-          ) : (
-            <ul className="project-list">
-              {sortedProjects.map((project) => (
-                <li key={project.id} className="project-card">
-                  <div>
-                    <strong>{project.name}</strong>
-                    <p className="muted">{project.path}</p>
-                  </div>
-                  <button type="button" className="btn" onClick={() => handleProjectOpen(project.id)}>
-                    Open
-                  </button>
-                </li>
-              ))}
-            </ul>
           )}
         </section>
 
@@ -151,22 +104,6 @@ export function ProjectManagerModal({ open, onClose }: ProjectManagerModalProps)
           </div>
           <button type="button" className="btn btn-primary" onClick={handleCreate}>
             Create Project
-          </button>
-        </section>
-
-        <section className="project-manager-section">
-          <h3>Add Existing Directory</h3>
-          <label>
-            Directory Path
-            <input
-              type="text"
-              placeholder="/path/to/existing/project"
-              value={existingPath}
-              onChange={(event) => setExistingPath(event.target.value)}
-            />
-          </label>
-          <button type="button" className="btn" onClick={handleAddExisting}>
-            Add Project
           </button>
         </section>
 
