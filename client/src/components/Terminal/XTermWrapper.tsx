@@ -51,6 +51,8 @@ export function XTermWrapper({
     terminal.open(element);
     fitAddon.fit();
     onResize?.(terminal.cols, terminal.rows);
+    // Show a subtle placeholder prompt until the real shell prompt arrives
+    terminal.write('\u001b[90mbash-5.2$ \u001b[0m');
 
     const inputListener = terminal.onData((data) => {
       // Let backend/PTy handle echo to avoid double-echoing and maintain canonical behavior.
