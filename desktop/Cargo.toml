@@ -17,7 +17,7 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 uuid = { workspace = true }
 thiserror = { workspace = true }
-tauri-plugin-pty = "2"
+tauri-plugin-pty = "0.1"
 
 [features]
 default = ["custom-protocol"]
