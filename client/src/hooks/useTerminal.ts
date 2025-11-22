@@ -183,14 +183,8 @@ export function useTerminal(): UseTerminalResult {
     handlersRef.current.delete(sessionId);
   }, []);
 
-  useEffect(() => {
-    return () => {
-      processesRef.current.forEach((pty) => {
-        void pty.kill();
-      });
-      processesRef.current.clear();
-    };
-  }, []);
+  // Do not eagerly kill PTYs on unmount to avoid StrictMode double-invocation killing live sessions.
+  useEffect(() => {}, []);
 
   return {
     state,
