@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { spawn, type Pty } from '@tauri-apps/plugin-pty';
+import { invoke } from '@tauri-apps/api/core';
 import type { TerminalState } from '@/types/terminal';
 
 const isTauriAvailable =
@@ -37,7 +37,7 @@ export function useTerminal(): UseTerminalResult {
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const handlersRef = useRef(new Map<string, (chunk: string) => void>());
   const sessionCounterRef = useRef(1);
-  const processesRef = useRef(new Map<string, Pty>());
+  const processesRef = useRef(new Map<string, SimplePty>());
 
   const addSession = useCallback((sessionId: string, title: string) => {
     setState((prev) => ({
@@ -87,8 +87,8 @@ export function useTerminal(): UseTerminalResult {
     }
 
     try {
-      const pty = await spawn('bash', [], { cols: 80, rows: 24 });
-      const sessionId = pty.id ?? `pty-${Date.now()}`;
+      const pty = new SimplePty('bash', [], { cols: 80, rows: 24 });
+      const sessionId = `pty-${Date.now()}`;
       const label = `Shell ${sessionCounterRef.current}`;
       sessionCounterRef.current += 1;
       setError(null);
@@ -205,4 +205,98 @@ export function useTerminal(): UseTerminalResult {
     registerOutputHandler,
     unregisterOutputHandler,
   };
+}
+
+type DataHandler = (chunk: string) => void;
+type ExitHandler = (code: number) => void;
+
+class SimplePty {
+  pid: number | null = null;
+  private exited = false;
+  private init: Promise<void>;
+  private onDataHandlers: DataHandler[] = [];
+  private onExitHandlers: ExitHandler[] = [];
+
+  constructor(file: string, args: string[], opts: { cols?: number; rows?: number; cwd?: string }) {
+    const invokeArgs = {
+      file,
+      args,
+      termName: 'Terminal',
+      cols: opts.cols ?? null,
+      rows: opts.rows ?? null,
+      cwd: opts.cwd ?? null,
+      env: {},
+      encoding: null,
+      handleFlowControl: null,
+      flowControlPause: null,
+      flowControlResume: null,
+    };
+
+    this.init = invoke<number>('plugin:pty|spawn', invokeArgs).then((pid) => {
+      this.pid = pid;
+      this.readLoop();
+      this.waitLoop();
+    });
+  }
+
+  onData(handler: DataHandler): () => void {
+    this.onDataHandlers.push(handler);
+    return () => {
+      this.onDataHandlers = this.onDataHandlers.filter((h) => h !== handler);
+    };
+  }
+
+  onExit(handler: ExitHandler): () => void {
+    this.onExitHandlers.push(handler);
+    return () => {
+      this.onExitHandlers = this.onExitHandlers.filter((h) => h !== handler);
+    };
+  }
+
+  async write(data: string): Promise<void> {
+    await this.init;
+    if (this.pid == null) return;
+    await invoke('plugin:pty|write', { pid: this.pid, data });
+  }
+
+  async resize(cols: number, rows: number): Promise<void> {
+    await this.init;
+    if (this.pid == null) return;
+    await invoke('plugin:pty|resize', { pid: this.pid, cols, rows });
+  }
+
+  async kill(): Promise<void> {
+    await this.init;
+    if (this.pid == null) return;
+    this.exited = true;
+    await invoke('plugin:pty|kill', { pid: this.pid });
+  }
+
+  private async readLoop(): Promise<void> {
+    await this.init;
+    if (this.pid == null) return;
+    try {
+      for (;;) {
+        const data = await invoke<string>('plugin:pty|read', { pid: this.pid });
+        this.onDataHandlers.forEach((h) => h(data));
+      }
+    } catch (e: any) {
+      if (typeof e === 'string' && e.includes('EOF')) {
+        return;
+      }
+      console.error('Reading error:', e);
+    }
+  }
+
+  private async waitLoop(): Promise<void> {
+    await this.init;
+    if (this.pid == null || this.exited) return;
+    try {
+      const code = await invoke<number>('plugin:pty|exitstatus', { pid: this.pid });
+      this.exited = true;
+      this.onExitHandlers.forEach((h) => h(code));
+    } catch (e) {
+      console.error('Exit wait error:', e);
+    }
+  }
 }
