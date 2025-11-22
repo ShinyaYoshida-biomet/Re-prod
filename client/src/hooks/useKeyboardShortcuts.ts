@@ -87,6 +87,9 @@ export function useKeyboardShortcuts() {
       'Mod+=': () => menuActions.view.zoomIn(), // Also handle = key (no shift)
       'Mod+-': () => menuActions.view.zoomOut(),
       'Mod+0': () => menuActions.view.zoomReset(),
+
+      // Navigation
+      'Mod+[': () => menuActions.view.focusNextPane(),
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
