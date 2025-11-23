@@ -418,61 +418,6 @@ export const menuActions = {
       dispatchTerminalEvent('terminal:focus');
       dispatchTerminalEvent('terminal:new');
     },
-
-    /**
-     * Cycle focus between active panes
-     * Order: Editor -> AI Assistant -> Terminal -> Editor
-     */
-    focusNextPane: () => {
-      const active = document.activeElement;
-      const store = useStore.getState();
-      const { panes } = store.view;
-
-      // Helper to check if pane is active
-      const isVisible = (pane: string) => {
-        return panes[pane as keyof typeof panes] === true;
-      };
-
-      // Determine current context
-      let current = 'none';
-      if (active?.closest('.monaco-editor')) current = 'editor';
-      else if (active?.closest('.ai-input')) current = 'assistant';
-      else if (active?.closest('.terminal-wrapper')) current = 'terminal';
-
-      // Define cycle order
-      const cycle = [
-        { id: 'editor', focus: () => store.monacoEditor?.focus() },
-        {
-          id: 'assistant',
-          focus: () => (document.querySelector('.ai-input') as HTMLElement)?.focus(),
-        },
-        { id: 'terminal', focus: () => dispatchTerminalEvent('terminal:focus') },
-      ];
-
-      // Find next visible pane
-      let startIndex = cycle.findIndex((p) => p.id === current);
-      if (startIndex === -1) startIndex = -1; // Start from beginning if unknown
-
-      for (let i = 1; i <= cycle.length; i++) {
-        const nextIndex = (startIndex + i) % cycle.length;
-        const pane = cycle[nextIndex];
-
-        // Check if pane is visible (terminal is always "visible" in bottom pane context,
-        // but we should only focus it if we can. For now assume always available if not others)
-        // Actually, check against store.activePanes for 'editor' and 'assistant'.
-        // Terminal visibility is complex (bottom pane), let's assume it's a valid target.
-
-        let canFocus = false;
-        if (pane.id === 'editor') canFocus = isVisible('editor');
-        else if (pane.id === 'assistant') canFocus = isVisible('assistant');
-        else if (pane.id === 'terminal') canFocus = true; // Bottom pane usually always there
-
-        if (canFocus) {
-          pane.focus();
-          return;
-        }
-      }
-    },
   },
 
   // ===== HELP MENU =====

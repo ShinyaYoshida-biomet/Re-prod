@@ -61,11 +61,6 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { id: 'toggle-console', keys: ['⌘2', 'Ctrl+2'], description: 'Show or hide console' },
       { id: 'toggle-plots', keys: ['⌘3', 'Ctrl+3'], description: 'Show or hide plots' },
       { id: 'toggle-timeline', keys: ['⌘4', 'Ctrl+4'], description: 'Toggle timeline tab' },
-      {
-        id: 'focus-next',
-        keys: ['⌘[', 'Ctrl+['],
-        description: 'Cycle focus (Editor → AI → Terminal)',
-      },
     ],
   },
   {
