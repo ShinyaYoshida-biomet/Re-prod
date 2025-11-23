@@ -212,17 +212,27 @@ const attachSimpleChanges = (blocks: CodeBlock[], simpleChanges: SimpleCodeChang
   }
 
   let cursor = 0;
-  for (const block of blocks) {
-    const budget = Math.max(block.patchChunks?.length ?? 1, 1);
+  const lastIndex = blocks.length - 1;
+  for (const [index, block] of blocks.entries()) {
+    const remaining = simpleChanges.length - cursor;
+    if (remaining <= 0) {
+      break;
+    }
+
+    // If no patch chunks, let this block consume all remaining simple changes (especially when there's only one block).
+    const budget =
+      block.patchChunks && block.patchChunks.length > 0
+        ? block.patchChunks.length
+        : index === lastIndex
+          ? remaining
+          : Math.max(1, Math.ceil(remaining / (lastIndex - index + 1)));
+
     const assigned: SimpleCodeChange[] = [];
     for (let idx = 0; idx < budget && cursor < simpleChanges.length; idx += 1, cursor += 1) {
       assigned.push(simpleChanges[cursor]);
     }
     if (assigned.length) {
       block.simpleChanges = assigned;
-    }
-    if (cursor >= simpleChanges.length) {
-      break;
     }
   }
 };

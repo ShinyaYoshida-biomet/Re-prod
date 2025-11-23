@@ -120,6 +120,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
       const contextAlertMessage =
         "Unable to locate the suggested context in the current editor. Try running the suggestion again after scrolling the intended section into view.";
       let contextMatchingFailed = false;
+      let contextAlertPending = false;
 
       const resolveTargetRange = (): CodeRange | undefined => {
         if (codeBlock.targetRange) {
@@ -163,21 +164,31 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 
         const plannedEdits: Array<{ range: CodeRange; text: string }> = [];
         let snapshot = editorContent;
+        let appliedCount = 0;
 
         for (const change of codeBlock.simpleChanges) {
           const range = findCodeInEditor(snapshot, change.oldLines, change.beforeContext, change.afterContext);
           if (!range) {
-            contextMatchingFailed = true;
-            recordPatchMatchFailure('Unable to match contextual diff block', codeBlock.id);
-            if (typeof window !== "undefined") {
-              window.alert(contextAlertMessage);
+            // If the new lines already exist, treat as already applied and continue.
+            const alreadyApplied = findCodeInEditor(snapshot, change.newLines, [], []);
+            if (alreadyApplied) {
+              appliedCount += 1;
+              continue;
             }
-            return false;
+            contextMatchingFailed = true;
+            contextAlertPending = true;
+            recordPatchMatchFailure('Unable to match contextual diff block', codeBlock.id);
+            continue;
           }
 
           const replacement = change.newLines.join("\n");
           plannedEdits.push({ range, text: replacement });
           snapshot = applySnapshotEdit(snapshot, range, replacement);
+          appliedCount += 1;
+        }
+
+        if (!appliedCount) {
+          return false;
         }
 
         for (const edit of plannedEdits) {
@@ -193,19 +204,35 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
           return false;
         }
 
-        const content = monacoEditor.getValue();
+        const plannedEdits: Array<{ range: CodeRange; text: string }> = [];
+        let snapshot = editorContent;
+
         for (const chunk of codeBlock.patchChunks) {
-          const range = matchPatchChunk(content, chunk);
+          const range = matchPatchChunk(snapshot, chunk);
           if (!range) {
+            const alreadyApplied = chunk.newLines.length
+              ? findCodeInEditor(snapshot, chunk.newLines, [], [])
+              : null;
+            if (alreadyApplied) {
+              continue;
+            }
             console.warn("Unable to find context for patch chunk", chunk.context);
             recordPatchMatchFailure(
               `Unable to match patch chunk: ${chunk.context ?? 'missing context'}`,
               codeBlock.id,
             );
+            contextMatchingFailed = true;
+            contextAlertPending = true;
             return false;
           }
 
-          applyRange(range, chunk.newLines.join("\n"));
+          const replacement = chunk.newLines.join("\n");
+          plannedEdits.push({ range, text: replacement });
+          snapshot = applySnapshotEdit(snapshot, range, replacement);
+        }
+
+        for (const edit of plannedEdits) {
+          applyRange(edit.range, edit.text);
         }
 
         recordPatchMatchSuccess();
@@ -221,7 +248,8 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
               `Missing target range for ${codeBlock.action}`,
               codeBlock.id,
             );
-            if (typeof window !== "undefined") {
+            const hasExplicitContext = Boolean(codeBlock.targetRange);
+            if (alertOnFail && contextAlertPending && hasExplicitContext && typeof window !== "undefined") {
               window.alert(
                 "Unable to locate the suggested context in the current editor. " +
                   "Try running the suggestion again after scrolling the intended section into view.",
@@ -236,14 +264,24 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
         return true;
       };
 
-      switch (codeBlock.action) {
-        case "replace-all": {
-          if (applySimpleChanges()) {
-            break;
-          }
+      const hasStructuredContext = Boolean(
+        codeBlock.simpleChanges?.length ||
+          codeBlock.patchChunks?.length ||
+          codeBlock.targetRange,
+      );
 
+      const effectiveAction =
+        codeBlock.action === "insert" && codeBlock.simpleChanges?.length
+          ? "replace-range"
+          : codeBlock.action === "insert" && !hasStructuredContext
+            ? "replace-all"
+            : codeBlock.action;
+
+      switch (effectiveAction) {
+        case "replace-all": {
+          const simpleApplied = applySimpleChanges();
           const patchApplied = applyPatchChunks();
-          if (patchApplied) {
+          if (simpleApplied || patchApplied) {
             break;
           }
 
@@ -265,22 +303,35 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
           });
           break;
         }
-        case "replace-range":
-          if (applySimpleChanges()) {
-            break;
-          }
-          if (!applyPatchChunks()) {
-            applyRangeChange(codeBlock.code);
+        case "replace-range": {
+          const simpleApplied = applySimpleChanges();
+          const patchApplied = applyPatchChunks();
+          if (!simpleApplied && !patchApplied) {
+            const applied = applyRangeChange(codeBlock.code, contextMatchingFailed);
+            if (!applied) {
+              // No explicit context; offer to replace the whole file as a fallback
+              const target = codeBlock.filepath ? `file ${codeBlock.filepath}` : "current editor";
+              showConfirm(
+                "Confirm Replace All",
+                `Could not match the suggested context. Replace the entire ${target} with the suggested code?`,
+              ).then((confirmed) => {
+                if (confirmed) {
+                  monacoEditor.setValue(codeBlock.code);
+                  setEditorContent(codeBlock.code);
+                }
+              });
+            }
           }
           break;
-        case "delete-range":
-          if (applySimpleChanges()) {
-            break;
-          }
-          if (!applyPatchChunks()) {
-            applyRangeChange("");
+        }
+        case "delete-range": {
+          const simpleApplied = applySimpleChanges();
+          const patchApplied = applyPatchChunks();
+          if (!simpleApplied && !patchApplied) {
+            applyRangeChange("", contextMatchingFailed);
           }
           break;
+        }
         case "insert": {
           const position = monacoEditor.getPosition();
           if (position) {
