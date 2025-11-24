@@ -250,10 +250,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
             );
             const hasExplicitContext = Boolean(codeBlock.targetRange);
             if (alertOnFail && contextAlertPending && hasExplicitContext && typeof window !== "undefined") {
-              window.alert(
-                "Unable to locate the suggested context in the current editor. " +
-                  "Try running the suggestion again after scrolling the intended section into view.",
-              );
+              window.alert(contextAlertMessage);
             }
           }
           return false;
