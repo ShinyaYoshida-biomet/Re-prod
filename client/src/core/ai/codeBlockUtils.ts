@@ -219,11 +219,15 @@ const attachSimpleChanges = (blocks: CodeBlock[], simpleChanges: SimpleCodeChang
       break;
     }
 
-    // If no patch chunks, let this block consume all remaining simple changes (especially when there's only one block).
+    // Prefer spreading simple changes across patch chunks, but let the final block consume leftovers so we don't drop any.
+    const patchBudget = block.patchChunks?.length ?? 0;
+    const isLastBlock = index === lastIndex;
     const budget =
-      block.patchChunks && block.patchChunks.length > 0
-        ? block.patchChunks.length
-        : index === lastIndex
+      patchBudget > 0
+        ? isLastBlock
+          ? remaining
+          : Math.min(remaining, patchBudget)
+        : isLastBlock
           ? remaining
           : Math.max(1, Math.ceil(remaining / (lastIndex - index + 1)));
 
