@@ -53,6 +53,23 @@ describe('parseSimpleChanges', () => {
     });
   });
 
+  it('retains blank lines inside fenced diff blocks', () => {
+    const input = [
+      '```diff',
+      '- summary(mtcars)',
+      '+ summary(iris)',
+      '',
+      '- plot(mtcars$mpg)',
+      '+ plot(iris$Sepal.Length)',
+      '```',
+    ].join('\n');
+
+    const [change] = parseSimpleChanges(input);
+    expect(change).toBeDefined();
+    expect(change.oldLines).toEqual([' summary(mtcars)', '', ' plot(mtcars$mpg)']);
+    expect(change.newLines).toEqual([' summary(iris)', '', ' plot(iris$Sepal.Length)']);
+  });
+
   it('ignores text without balanced +/- sections', () => {
     const input = 'List:\n- item one\n- item two';
     expect(parseSimpleChanges(input)).toHaveLength(0);

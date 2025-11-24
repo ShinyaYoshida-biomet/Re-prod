@@ -49,6 +49,25 @@ describe('findCodeInEditor', () => {
     expect(range).toMatchObject({ startLine: 2, endLine: 2 });
   });
 
+  it('matches snippets that include blank lines', () => {
+    const content = [
+      'summary(mtcars)',
+      'str(mtcars)',
+      '',
+      'plot(mtcars$mpg, mtcars$hp)',
+      'abline(lm(hp ~ mpg, data = mtcars))',
+    ].join('\n');
+
+    const range = findCodeInEditor(content, [
+      'summary(mtcars)',
+      'str(mtcars)',
+      '',
+      'plot(mtcars$mpg, mtcars$hp)',
+    ]);
+
+    expect(range).toMatchObject({ startLine: 1, endLine: 4 });
+  });
+
   it('returns null when nothing matches', () => {
     expect(findCodeInEditor(sampleContent, ['missing <- 0'], [], [])).toBeNull();
   });

@@ -53,7 +53,11 @@ const parseDiffBlock = (block: string): SimpleCodeChange | null => {
     }
     if (line.startsWith('+')) {
       newLines.push(line.slice(1));
+      continue;
     }
+    // Treat neutral lines (including blanks) within the diff span as shared context
+    oldLines.push(line.startsWith(' ') ? line.slice(1) : line);
+    newLines.push(line.startsWith(' ') ? line.slice(1) : line);
   }
 
   if (!oldLines.length && !newLines.length) {
