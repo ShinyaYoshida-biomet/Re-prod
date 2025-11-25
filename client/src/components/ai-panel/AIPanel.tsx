@@ -39,7 +39,7 @@ export function AIPanel(): JSX.Element {
   }, [input]);
 
   const [mode, setMode] = useState<AIMode>('agent');
-  const placeholder = mode === 'agent' ? 'Describe a task or ask a question...' : 'How can I assist with your R project today?';
+  const placeholder = mode === 'agent' ? 'Describe a task...' : 'Ask a question...';
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
     if (e.key === 'Enter' && !e.shiftKey && !e.altKey && !e.metaKey) {
