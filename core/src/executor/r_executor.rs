@@ -205,7 +205,11 @@ if (file.exists(.reprod_state_path)) {{
 # Open PNG device
 .reprod_open_device <- function(index) {{
   filename <- sprintf("%s_%d.png", .reprod_plot_prefix, index)
-  png(file.path(.reprod_plot_dir, filename), width = 800, height = 600)
+  png(
+    file.path(.reprod_plot_dir, filename),
+    width = 800, height = 600,
+    type = "cairo"
+  )
 }}
 
 .reprod_open_device(1)
@@ -222,34 +226,16 @@ tryCatch(
   }}
 )
 
-# If no plots were produced yet, copy the current device output to PNG
+# If a device is open, close it to flush the PNG
 if (names(dev.cur()) != "null device") {{
-  existing_plots <- list.files(
-    .reprod_plot_dir,
-    pattern = sprintf("^%s_\\\\d+\\\\.png$", .reprod_plot_prefix)
-  )
-  if (length(existing_plots) == 0) {{
-    dev.copy(
-      png,
-      filename = file.path(.reprod_plot_dir, sprintf("%s_1.png", .reprod_plot_prefix)),
-      width = 800, height = 600
-    )
-    dev.off() # close the copy device
-  }}
-  dev.off() # close the main device
+  dev.off()
 }}
-
-# Persist workspace for next run
-tryCatch(
-  save.image(file = .reprod_state_path),
-  error = function(e) message("Failed to save workspace: ", e)
-)
 
 # If no plots were produced, try to render the last ggplot object automatically
 try({{
   existing_plots <- list.files(
     .reprod_plot_dir,
-    pattern = sprintf("^%s_\\\\d+\\\\.png$", .reprod_plot_prefix)
+    pattern = sprintf("^%s_\\d+\\.png$", .reprod_plot_prefix)
   )
   if (length(existing_plots) == 0 &&
       requireNamespace("ggplot2", quietly = TRUE)) {{
@@ -262,6 +248,12 @@ try({{
     }}
   }}
 }}, silent = TRUE)
+
+# Persist workspace for next run
+tryCatch(
+  save.image(file = .reprod_state_path),
+  error = function(e) message("Failed to save workspace: ", e)
+)
 
 quit(status = .reprod_exit_code, runLast = FALSE)
 "#,
