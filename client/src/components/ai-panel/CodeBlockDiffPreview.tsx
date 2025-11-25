@@ -94,6 +94,11 @@ export function CodeBlockDiffPreview({ codeBlock, onRetry }: Props): JSX.Element
             verticalScrollbarSize: 6,
             horizontalScrollbarSize: 6,
           },
+          lineNumbers: 'off', // Disable line numbers
+          glyphMargin: false, // Disable glyph margin (for breakpoints, etc.)
+          folding: false, // Disable code folding
+          lineDecorationsWidth: 0, // Remove space for line decorations
+          lineNumbersMinChars: 0, // Ensure no space is reserved for line numbers
         }}
       />
       <div className="code-diff-stats">
