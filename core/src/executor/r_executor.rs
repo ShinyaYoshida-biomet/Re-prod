@@ -255,7 +255,10 @@ try({{
       requireNamespace("ggplot2", quietly = TRUE)) {{
     last_plot <- tryCatch(ggplot2::last_plot(), error = function(e) NULL)
     if (inherits(last_plot, "ggplot")) {{
+      next_index <- length(existing_plots) + 1
+      .reprod_open_device(next_index)
       print(last_plot)
+      dev.off()
     }}
   }}
 }}, silent = TRUE)
