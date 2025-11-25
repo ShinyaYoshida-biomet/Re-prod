@@ -94,6 +94,7 @@ const gatherSegments = (text: string, ranges: Array<{ start: number; end: number
 };
 
 export function parseSimpleChanges(text: string): SimpleCodeChange[] {
+  CODE_FENCE_REGEX.lastIndex = 0;
   const changes: SimpleCodeChange[] = [];
   const fenceRanges: Array<{ start: number; end: number }> = [];
 

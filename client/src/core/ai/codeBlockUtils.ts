@@ -242,6 +242,8 @@ const attachSimpleChanges = (blocks: CodeBlock[], simpleChanges: SimpleCodeChang
 };
 
 export function extractCodeBlocks(text: string): CodeBlock[] {
+  R_CODE_BLOCK_REGEX.lastIndex = 0;
+  JSON_BLOCK_REGEX.lastIndex = 0;
   const simpleChanges = parseSimpleChanges(text);
   const patchHunks = parsePatchFormat(text);
   if (patchHunks.length > 0) {

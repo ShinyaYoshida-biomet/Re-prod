@@ -115,4 +115,18 @@ cat('hello world')
     expect(block.simpleChanges?.[0].oldLines.join(' ')).toContain('summary(mtcars)');
     expect(block.simpleChanges?.[1].oldLines.join(' ')).toContain('plot(mtcars$mpg');
   });
+
+  it('extracts code blocks consistently across multiple calls', () => {
+    const script = [
+      '```r',
+      "cat('hello world')",
+      '```',
+    ].join('\n');
+
+    const first = extractCodeBlocks(script);
+    const second = extractCodeBlocks(script);
+
+    expect(first[0].code.trim()).toBe("cat('hello world')");
+    expect(second[0].code.trim()).toBe("cat('hello world')");
+  });
 });

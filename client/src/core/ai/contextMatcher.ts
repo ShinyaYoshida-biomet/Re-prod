@@ -3,7 +3,7 @@ import type { PatchChunk } from '@shared/types';
 
 const normalizeLine = (line: string): string => line.trim();
 const normalizeSnippet = (lines: string[]): string[] => {
-  const normalized = lines.map((line) => line.trim());
+  const normalized = lines.map(normalizeLine);
   const hasContent = normalized.some((line) => line.length > 0);
   return hasContent ? normalized : [];
 };
@@ -39,9 +39,8 @@ export function computeTargetRange(
   content: string,
   snippet: string,
 ): CodeRange | null {
-  const snippetLines = snippet.split(/\r?\n/).map((line) => line.trim());
-  const hasContent = snippetLines.some((line) => line.length > 0);
-  if (!hasContent) {
+  const snippetLines = normalizeSnippet(snippet.split(/\r?\n/));
+  if (!snippetLines.length) {
     return null;
   }
 
