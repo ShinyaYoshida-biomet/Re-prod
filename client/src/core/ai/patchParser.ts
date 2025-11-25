@@ -16,6 +16,7 @@ export function parsePatchFormat(text: string): PatchHunk[] {
   const patchHunks: PatchHunk[] = [];
   // Accept both "*** End Patch" and just "***" as end markers (AI sometimes outputs shortened version)
   const blockRegex = /\*\*\* Begin Patch([\s\S]*?)(?:\*\*\* End Patch|\*\*\*(?:\s*$|\n))/g;
+  blockRegex.lastIndex = 0;
   let match: RegExpExecArray | null;
 
   while ((match = blockRegex.exec(text)) !== null) {
