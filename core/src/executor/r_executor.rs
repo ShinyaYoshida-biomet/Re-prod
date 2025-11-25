@@ -186,6 +186,15 @@ impl RExecutor {
 # Auto-generated plot capture wrapper
 .reprod_plot_dir <- "{temp_dir}"
 .reprod_plot_prefix <- "{plot_prefix}"
+.reprod_state_path <- file.path(.reprod_plot_dir, ".reprod_state.RData")
+
+# Restore workspace if it exists
+if (file.exists(.reprod_state_path)) {{
+  tryCatch(
+    load(.reprod_state_path, envir = .GlobalEnv),
+    error = function(e) message("Failed to restore workspace: ", e)
+  )
+}}
 
 # Open PNG device
 .reprod_open_device <- function(index) {{
@@ -200,6 +209,12 @@ impl RExecutor {
 
 # Close device to save file
 dev.off()
+
+# Persist workspace for next run
+tryCatch(
+  save.image(file = .reprod_state_path),
+  error = function(e) message("Failed to save workspace: ", e)
+)
 "#,
             temp_dir = temp_dir_str,
             plot_prefix = plot_prefix,
