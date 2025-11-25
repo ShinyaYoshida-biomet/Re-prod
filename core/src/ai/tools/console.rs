@@ -32,18 +32,19 @@ pub struct ConsoleLogSummary {
 }
 
 impl ConsoleLogSummary {
-    fn from_event(event: ExecutionEvent, max_chars: usize) -> Self {
+    fn from_event(event: &ExecutionEvent, max_chars: usize) -> Self {
         Self {
             created_at_ms: event.created_at_ms,
             success: event.result.success,
-            source: source_to_string(event.context.source),
-            document_path: event.context.document_path,
+            source: source_to_string(event.context.source.clone()),
+            document_path: event.context.document_path.clone(),
             duration_ms: event.result.execution_time_ms,
-            code: truncate(&collect_code(&event), max_chars),
+            code: truncate(&collect_code(event), max_chars),
             output: truncate(event.result.output.trim(), max_chars),
             error: event
                 .result
                 .error
+                .as_ref() // Use as_ref() to borrow the Option content
                 .map(|err| truncate(err.trim(), max_chars)),
             plot_count: event.result.plots.len(),
         }
@@ -110,7 +111,7 @@ pub fn fetch_console_logs(
     let summaries = response
         .events
         .into_iter()
-        .map(|event| ConsoleLogSummary::from_event(event, max_chars))
+        .map(|event| ConsoleLogSummary::from_event(&event, max_chars))
         .collect();
 
     Ok(summaries)

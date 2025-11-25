@@ -186,6 +186,7 @@ impl RExecutor {
 # Auto-generated plot capture wrapper
 .reprod_plot_dir <- "{temp_dir}"
 .reprod_state_path <- file.path(.reprod_plot_dir, ".reprod_state.RData")
+.reprod_packages_path <- file.path(.reprod_plot_dir, ".reprod_packages.rds")
 
 # Ensure plot directory exists
 if (!dir.exists(.reprod_plot_dir)) {{
@@ -200,10 +201,29 @@ if (file.exists(.reprod_state_path)) {{
   )
 }}
 
+# Restore loaded packages if it exists
+if (file.exists(.reprod_packages_path)) {{
+  tryCatch(
+    {{
+      pkgs <- readRDS(.reprod_packages_path)
+      # Filter out base packages that are always loaded
+      base_pkgs <- c("stats", "graphics", "grDevices", "utils", "datasets", "methods", "base")
+      pkgs <- setdiff(pkgs, base_pkgs)
+      for (pkg in pkgs) {{
+        if (!require(pkg, character.only = TRUE, quietly = TRUE)) {{
+          message("Warning: Failed to restore package: ", pkg)
+        }}
+      }}
+    }},
+    error = function(e) message("Failed to restore packages: ", e)
+  )
+}}
+
 # Reset run-scoped state to avoid stale values from previous sessions
 .reprod_plot_dir <- "{temp_dir}"
 .reprod_plot_prefix <- "{plot_prefix}"
 .reprod_state_path <- file.path(.reprod_plot_dir, ".reprod_state.RData")
+.reprod_packages_path <- file.path(.reprod_plot_dir, ".reprod_packages.rds")
 .reprod_exit_code <- 0
 
 # Open PNG device
@@ -257,6 +277,15 @@ try({{
 tryCatch(
   save.image(file = .reprod_state_path),
   error = function(e) message("Failed to save workspace: ", e)
+)
+
+# Persist loaded packages for next run
+tryCatch(
+  {{
+    pkgs <- .packages()
+    saveRDS(pkgs, file = .reprod_packages_path)
+  }},
+  error = function(e) message("Failed to save packages: ", e)
 )
 
 quit(status = .reprod_exit_code, runLast = FALSE)
