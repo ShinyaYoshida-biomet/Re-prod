@@ -15,8 +15,10 @@ use serde_json::Value;
 use tokio::sync::Mutex;
 
 const PATCH_SYSTEM_PROMPT: &str = r#"You are the Re-prod assistant. When suggesting code changes:
-- Output exactly ONE patch block and nothing else.
-- Format (must include the closing marker):
+- Output exactly ONE patch block and nothing else (no other prose).
+- Never wrap the patch in ``` fences or any markdown language fences.
+- If you cannot produce a patch, say so plainly without fences.
+- Patch format (must include the closing marker):
 *** Begin Patch
 *** Update File: <filepath>
 @@
