@@ -48,8 +48,7 @@
 
 	/* Typography tokens */
 	--phylo-font-family:
-		-apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Helvetica Neue",
-		Arial, sans-serif;
+		-apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
 	--phylo-font-size-base: 12px;
 	--phylo-line-height-base: 1.5;
 	--phylo-font-weight-base: 400;

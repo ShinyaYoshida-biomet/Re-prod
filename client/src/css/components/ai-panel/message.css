@@ -88,11 +88,7 @@
 
 .message-user {
 	align-self: flex-end;
-	background: linear-gradient(
-		180deg,
-		rgba(47, 111, 237, 0.92),
-		rgba(37, 87, 200, 0.92)
-	);
+	background: linear-gradient(180deg, rgba(47, 111, 237, 0.92), rgba(37, 87, 200, 0.92));
 	color: white;
 	padding: 10px 14px;
 	border-radius: 12px 12px 4px 12px;
@@ -157,11 +153,7 @@
 .ai-input-container-wrapper {
 	padding: 14px 18px;
 	border-top: 1px solid rgba(148, 163, 184, 0.22);
-	background: linear-gradient(
-		180deg,
-		rgba(244, 246, 251, 0.95),
-		rgba(236, 240, 250, 0.95)
-	);
+	background: linear-gradient(180deg, rgba(244, 246, 251, 0.95), rgba(236, 240, 250, 0.95));
 }
 
 .ai-input-container.vscode-style {

@@ -193,13 +193,7 @@
 .menu-item-shortcut {
 	font-size: 11px;
 	color: var(--text-muted, #9ca3af);
-	font-family: var(
-		--font-code,
-		"Berkeley Mono",
-		"Fira Code",
-		"Consolas",
-		monospace
-	);
+	font-family: var(--font-code, "Berkeley Mono", "Fira Code", "Consolas", monospace);
 	margin-left: 24px;
 }
 

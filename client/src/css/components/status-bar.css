@@ -4,11 +4,7 @@
 	align-items: center;
 	height: 28px;
 	padding: 0 16px;
-	background: linear-gradient(
-		180deg,
-		rgba(245, 247, 253, 0.88),
-		rgba(236, 240, 250, 0.9)
-	);
+	background: linear-gradient(180deg, rgba(245, 247, 253, 0.88), rgba(236, 240, 250, 0.9));
 	border: 1px solid var(--border-color);
 	border-radius: var(--panel-radius);
 	font-size: 11px;

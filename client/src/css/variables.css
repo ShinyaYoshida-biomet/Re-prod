@@ -57,29 +57,16 @@
 	--btn-font-size: 12px;
 	--btn-radius: 6px; /* Standard border radius (was 999px pill shape) */
 	--btn-border: 1px solid rgba(148, 163, 184, 0.4);
-	--btn-bg: linear-gradient(
-		180deg,
-		rgba(255, 255, 255, 0.85),
-		rgba(244, 246, 251, 0.85)
-	);
+	--btn-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(244, 246, 251, 0.85));
 	--btn-color: var(--text-primary);
 	--btn-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 	--btn-height: 28px;
-	--btn-transition:
-		transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-	--btn-hover-bg: linear-gradient(
-		180deg,
-		rgba(255, 255, 255, 0.95),
-		rgba(236, 240, 248, 0.95)
-	);
+	--btn-transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+	--btn-hover-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(236, 240, 248, 0.95));
 	--btn-hover-shadow: 0 6px 14px rgba(47, 111, 237, 0.08);
 	--btn-hover-transform: translateY(-1px);
 	--btn-hover-border-color: rgba(148, 163, 184, 0.4);
-	--btn-active-bg: linear-gradient(
-		180deg,
-		rgba(255, 255, 255, 0.95),
-		rgba(236, 240, 248, 0.95)
-	);
+	--btn-active-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(236, 240, 248, 0.95));
 	--btn-active-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.12);
 	--btn-active-transform: translateY(0);
 	--btn-primary-bg: linear-gradient(180deg, #2f6fed, #2756ca);
@@ -105,8 +92,7 @@
 	--tab-radius: 0; /* Standard tabs without border radius (was 10px 10px 0 0) */
 	--tab-border: 1px solid transparent;
 	--tab-divider: none;
-	--tab-transition:
-		transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+	--tab-transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 	--tab-shadow: none;
 	--tab-active-color: var(--accent-blue);
 	--tab-active-bg: rgba(47, 111, 237, 0.16);

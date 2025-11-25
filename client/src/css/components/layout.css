@@ -117,11 +117,7 @@
 	border: var(--btn-border, 1px solid rgba(148, 163, 184, 0.4));
 	background: var(
 		--btn-bg,
-		linear-gradient(
-			180deg,
-			rgba(255, 255, 255, 0.85),
-			rgba(244, 246, 251, 0.85)
-		)
+		linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(244, 246, 251, 0.85))
 	);
 	color: var(--btn-color, var(--text-primary));
 	cursor: pointer;
@@ -149,11 +145,7 @@
 	box-shadow: var(--btn-hover-shadow, 0 6px 14px rgba(47, 111, 237, 0.08));
 	background: var(
 		--btn-hover-bg,
-		linear-gradient(
-			180deg,
-			rgba(255, 255, 255, 0.95),
-			rgba(236, 240, 248, 0.95)
-		)
+		linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(236, 240, 248, 0.95))
 	);
 	border-color: var(--btn-hover-border-color, rgba(148, 163, 184, 0.4));
 }
@@ -165,11 +157,7 @@
 		--btn-active-bg,
 		var(
 			--btn-hover-bg,
-			linear-gradient(
-				180deg,
-				rgba(255, 255, 255, 0.95),
-				rgba(236, 240, 248, 0.95)
-			)
+			linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(236, 240, 248, 0.95))
 		)
 	);
 }
@@ -182,14 +170,8 @@
 }
 
 .btn-primary:hover:not(:disabled) {
-	background: var(
-		--btn-primary-hover-bg,
-		linear-gradient(180deg, #2f6fed, #244fc1)
-	);
-	box-shadow: var(
-		--btn-primary-hover-shadow,
-		0 12px 24px rgba(47, 111, 237, 0.35)
-	);
+	background: var(--btn-primary-hover-bg, linear-gradient(180deg, #2f6fed, #244fc1));
+	box-shadow: var(--btn-primary-hover-shadow, 0 12px 24px rgba(47, 111, 237, 0.35));
 }
 
 .btn-icon {
