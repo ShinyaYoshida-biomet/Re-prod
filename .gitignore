@@ -89,3 +89,10 @@ wt-*/
 # Runtime application data
 .reprod/
 
+# Gemini CLI
+.gemini/
+
+# Codex
+.codex/
+
+
