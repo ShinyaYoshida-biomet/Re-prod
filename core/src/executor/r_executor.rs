@@ -222,9 +222,21 @@ tryCatch(
   }}
 )
 
-# Close device to save file
+# If no plots were produced yet, copy the current device output to PNG
 if (names(dev.cur()) != "null device") {{
-  dev.off()
+  existing_plots <- list.files(
+    .reprod_plot_dir,
+    pattern = sprintf("^%s_\\\\d+\\\\.png$", .reprod_plot_prefix)
+  )
+  if (length(existing_plots) == 0) {{
+    dev.copy(
+      png,
+      filename = file.path(.reprod_plot_dir, sprintf("%s_1.png", .reprod_plot_prefix)),
+      width = 800, height = 600
+    )
+    dev.off() # close the copy device
+  }}
+  dev.off() # close the main device
 }}
 
 # Persist workspace for next run
