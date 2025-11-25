@@ -62,7 +62,7 @@
   font-size: 12px;
   line-height: 1.6;
   overflow-x: auto;
-  background: #ffffff;
+  background: var(--bg-code); /* Restored variable */
   color: var(--text-primary);
   border-bottom: 1px solid rgba(148, 163, 184, 0.15);
   
@@ -128,21 +128,5 @@
   color: var(--text-muted);
   background: #f8fafc;
   border-top: 1px solid rgba(148, 163, 184, 0.1);
-    text-align: right;
-  }
-  
-  /* Monaco Editor Scrollbar Overrides for AI Panel */
-  .code-diff-preview .monaco-editor .scrollbar .slider {
-    width: 4px !important;
-    background: rgba(148, 163, 184, 0.4) !important;
-    border-radius: 2px !important;
-  }
-  
-  .code-diff-preview .monaco-editor .scrollbar.vertical {
-    width: 6px !important;
-  }
-  
-  .code-diff-preview .monaco-editor .scrollbar .slider:hover {
-    background: rgba(148, 163, 184, 0.6) !important;
-  }
-  
+  text-align: right;
+}
