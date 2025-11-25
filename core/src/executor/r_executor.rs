@@ -187,6 +187,7 @@ impl RExecutor {
 .reprod_plot_dir <- "{temp_dir}"
 .reprod_plot_prefix <- "{plot_prefix}"
 .reprod_state_path <- file.path(.reprod_plot_dir, ".reprod_state.RData")
+.reprod_exit_code <- 0
 
 # Restore workspace if it exists
 if (file.exists(.reprod_state_path)) {{
@@ -205,16 +206,29 @@ if (file.exists(.reprod_state_path)) {{
 .reprod_open_device(1)
 
 # User code
-{code}
+tryCatch(
+  {{
+    {code}
+  }},
+  error = function(e) {{
+    .reprod_exit_code <<- 1
+    assign(".reprod_last_error", e, envir = .GlobalEnv)
+    message("REPROD_ERROR: ", conditionMessage(e))
+  }}
+)
 
 # Close device to save file
-dev.off()
+if (dev.cur() > 1) {{
+  dev.off()
+}}
 
 # Persist workspace for next run
 tryCatch(
   save.image(file = .reprod_state_path),
   error = function(e) message("Failed to save workspace: ", e)
 )
+
+quit(status = .reprod_exit_code, runLast = FALSE)
 "#,
             temp_dir = temp_dir_str,
             plot_prefix = plot_prefix,
