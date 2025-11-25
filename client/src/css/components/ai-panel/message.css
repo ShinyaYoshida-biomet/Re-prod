@@ -58,18 +58,18 @@
 }
 
 .message-header {
-  font-size: 10px; /* Reduced from 11px */
+  font-size: 11px; /* Reverted from 10px */
   font-weight: 600;
   color: rgba(255, 255, 255, 0.85);
   margin-bottom: 4px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  opacity: 0.8; /* Make slightly less prominent */
+  /* Removed opacity: 0.8; */
 }
 
 .message-assistant .message-header {
   color: var(--text-muted);
-  opacity: 0.7; /* Even less prominent for assistant */
+  /* Removed opacity: 0.7; */
 }
 
 .message-content {
