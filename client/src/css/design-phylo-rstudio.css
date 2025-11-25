@@ -36,10 +36,10 @@
   --phylo-border-strong: 1px solid #999999;
 
   /* DNA Base Colors - Use sparingly for accents */
-  --phylo-adenine: #22c55e;   /* A: Green */
-  --phylo-thymine: #ef4444;   /* T: Red */
-  --phylo-cytosine: #3b82f6;  /* C: Blue */
-  --phylo-guanine: #eab308;   /* G: Yellow */
+  --phylo-adenine: #22c55e; /* A: Green */
+  --phylo-thymine: #ef4444; /* T: Red */
+  --phylo-cytosine: #3b82f6; /* C: Blue */
+  --phylo-guanine: #eab308; /* G: Yellow */
 
   /* State colors */
   --phylo-success: #22c55e;
@@ -47,7 +47,9 @@
   --phylo-warning: #f59e0b;
 
   /* Typography tokens */
-  --phylo-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  --phylo-font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Helvetica Neue",
+    Arial, sans-serif;
   --phylo-font-size-base: 12px;
   --phylo-line-height-base: 1.5;
   --phylo-font-weight-base: 400;
@@ -200,13 +202,11 @@
    AI PANEL - Lab Notebook Style
    ============================================ */
 [data-theme="phylo"] .ai-panel .panel-content {
-  background: var(--phylo-bg-ai);
 }
 
 [data-theme="phylo"] .ai-messages {
   padding: 12px;
   gap: 12px;
-  background: var(--phylo-bg-ai);
 }
 
 [data-theme="phylo"] .ai-welcome {
@@ -392,7 +392,7 @@
 }
 
 [data-theme="phylo"] .timeline-list {
-  font-family: 'Monaco', 'Menlo', 'Consolas', 'Courier New', monospace;
+  font-family: "Monaco", "Menlo", "Consolas", "Courier New", monospace;
   font-size: 11px;
   line-height: 1.4;
   gap: 8px;
@@ -470,7 +470,7 @@
    CONSOLE - Phylogenetic Tree Style
    ============================================ */
 [data-theme="phylo"] .console-output {
-  font-family: 'Monaco', 'Menlo', 'Consolas', 'Courier New', monospace;
+  font-family: "Monaco", "Menlo", "Consolas", "Courier New", monospace;
   font-size: 11px;
   line-height: 1.4;
   padding: 12px;
