@@ -3,6 +3,7 @@ import type { AIMode } from '@shared/types';
 import { IconSend, IconSquare } from '@/components/shared';
 import { StreamingMessage } from './StreamingMessage';
 import { useAIConversation } from '@/hooks/useAIConversation';
+import { ProviderSwitcher } from './ProviderSwitcher';
 
 export function AIPanel(): JSX.Element {
   const {
@@ -51,6 +52,7 @@ export function AIPanel(): JSX.Element {
     <div className="panel ai-panel">
       <div className="panel-header">
         <div className="panel-title">AI Assistant</div>
+        <ProviderSwitcher />
       </div>
       <div className="panel-content">
         <div className="ai-messages">

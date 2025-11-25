@@ -97,7 +97,17 @@ pub async fn get_api_key(
     };
     drop(config);
 
-    api_key
+    let masked_key = api_key.map(|key| {
+        if key.len() <= 10 {
+            "********".to_string()
+        } else {
+            let prefix = &key[0..7];
+            let suffix = &key[key.len() - 4..];
+            format!("{}...{}", prefix, suffix)
+        }
+    });
+
+    masked_key
         .map(|key| Json(ApiKeyResponse { api_key: key }))
         .ok_or_else(|| err_404("API key not configured"))
 }
@@ -116,6 +126,23 @@ pub async fn set_api_key(
     }
 
     config.save().map(|_| StatusCode::OK).map_err(err_500)
+}
+
+pub async fn test_provider(
+    Path(provider_name): Path<String>,
+    State(state): State<AppState>,
+) -> Result<Json<TestProviderResponse>, HttpError> {
+    let config_lock = state.config.lock().await;
+    let provider = ai::factory::from_name_and_config(&provider_name, &config_lock);
+    drop(config_lock); // Release lock
+
+    match provider.test_connection().await {
+        Ok(_) => Ok(Json(TestProviderResponse {
+            status: "success".to_string(),
+            message: "Connection successful".to_string(),
+        })),
+        Err(e) => Err(err_500(format!("Connection test failed: {}", e))),
+    }
 }
 
 pub async fn list_tools(State(state): State<AppState>) -> Json<Vec<ToolManifest>> {
@@ -196,4 +223,10 @@ pub struct SetProviderRequest {
 #[derive(serde::Serialize)]
 pub struct GetProviderResponse {
     pub provider: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct TestProviderResponse {
+    pub status: String,
+    pub message: String,
 }

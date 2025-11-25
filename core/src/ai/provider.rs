@@ -20,4 +20,7 @@ pub trait AIProvider: Send + Sync {
 
     /// Check if provider is configured
     fn is_configured(&self) -> bool;
+
+    /// Test connection to the provider
+    async fn test_connection(&self) -> Result<(), ReprodError>;
 }

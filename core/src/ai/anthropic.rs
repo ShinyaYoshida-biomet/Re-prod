@@ -156,4 +156,45 @@ impl AIProvider for AnthropicProvider {
             stop_reason,
         })
     }
+
+    async fn test_connection(&self) -> Result<(), ReprodError> {
+        let api_key = self
+            .api_key
+            .as_ref()
+            .ok_or_else(|| ReprodError::AIError("Anthropic API key not configured".to_string()))?;
+
+        // Minimal request to verify API key
+        let test_messages = vec![ChatMessage {
+            role: "user".to_string(),
+            content: "hello".to_string(),
+        }];
+
+        let response = self
+            .client
+            .post(&self.base_url)
+            .header("x-api-key", api_key)
+            .header("anthropic-version", "2023-06-01")
+            .header("content-type", "application/json")
+            .json(&json!({
+                "model": "claude-3-haiku-20240307", // Use a cheaper model for testing
+                "messages": test_messages,
+                "max_tokens": 1, // Request minimal tokens
+            }))
+            .timeout(std::time::Duration::from_secs(10)) // Shorter timeout for testing
+            .send()
+            .await
+            .map_err(|e| ReprodError::AIError(format!("Anthropic connection test failed: {}", e)))?;
+
+        if response.status().is_success() {
+            Ok(())
+        } else {
+            let status = response.status();
+            let text = response.text().await.unwrap_or_default();
+            Err(ReprodError::AIError(format!(
+                "Anthropic connection test failed with status {}: {}",
+                status, text
+            )))
+        }
+    }
 }
+

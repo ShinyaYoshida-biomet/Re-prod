@@ -67,6 +67,10 @@ async fn main() {
             "/api/config/provider",
             axum::routing::put(routes::set_provider),
         )
+        .route(
+            "/api/config/test/:provider",
+            axum::routing::post(routes::test_provider),
+        )
         .route("/api/tools", get(routes::list_tools))
         .route(
             "/api/tools/execute",

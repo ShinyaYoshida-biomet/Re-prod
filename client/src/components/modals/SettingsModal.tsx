@@ -4,6 +4,7 @@ import { IconSettings } from '@/components/shared';
 import { useStore } from '@/core';
 import { DEFAULT_SETTINGS } from '@/constants/defaultSettings';
 import { ModalShell } from './ModalShell';
+import { SettingsPanel } from '../settings/SettingsPanel';
 
 interface SettingsModalProps {
   open: boolean;
@@ -91,7 +92,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps): JSX.Elemen
           <label className="settings-row">
             <span>
               Font size
-              <small>Applies instantly to Monaco editor.</small>
+              <small>Applies to instantly Monaco editor.</small>
             </span>
             <div className="settings-number-input">
               <input
@@ -142,6 +143,11 @@ export function SettingsModal({ open, onClose }: SettingsModalProps): JSX.Elemen
               placeholder="Rscript"
             />
           </label>
+        </section>
+
+        <section>
+          <h3>LLM Providers</h3>
+          <SettingsPanel />
         </section>
       </form>
     </ModalShell>
