@@ -8,8 +8,8 @@ mod terminal;
 use crate::terminal::TerminalManager;
 use reprod_core::{Config, RExecutor};
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use tauri_plugin_pty;
+use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() {

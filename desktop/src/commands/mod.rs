@@ -169,10 +169,7 @@ pub async fn write_to_terminal(
             // Optimistic echo so the UI can confirm delivery.
             let _ = app_handle.emit(
                 "terminal-output",
-                TerminalOutputPayload {
-                    session_id,
-                    data,
-                },
+                TerminalOutputPayload { session_id, data },
             );
             Ok(())
         }

@@ -183,7 +183,9 @@ impl AIProvider for AnthropicProvider {
             .timeout(std::time::Duration::from_secs(10)) // Shorter timeout for testing
             .send()
             .await
-            .map_err(|e| ReprodError::AIError(format!("Anthropic connection test failed: {}", e)))?;
+            .map_err(|e| {
+                ReprodError::AIError(format!("Anthropic connection test failed: {}", e))
+            })?;
 
         if response.status().is_success() {
             Ok(())
@@ -197,4 +199,3 @@ impl AIProvider for AnthropicProvider {
         }
     }
 }
-
