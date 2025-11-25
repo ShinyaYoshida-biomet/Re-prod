@@ -72,7 +72,7 @@
 }
 
 .code-content::-webkit-scrollbar {
-  height: 6px; /* Narrower scrollbar */
+  height: 4px; /* Narrower scrollbar */
 }
 
 .code-content::-webkit-scrollbar-track {
