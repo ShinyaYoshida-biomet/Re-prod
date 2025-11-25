@@ -189,6 +189,11 @@ impl RExecutor {
 .reprod_state_path <- file.path(.reprod_plot_dir, ".reprod_state.RData")
 .reprod_exit_code <- 0
 
+# Ensure plot directory exists
+if (!dir.exists(.reprod_plot_dir)) {{
+  dir.create(.reprod_plot_dir, recursive = TRUE, showWarnings = FALSE)
+}}
+
 # Restore workspace if it exists
 if (file.exists(.reprod_state_path)) {{
   tryCatch(
@@ -218,7 +223,7 @@ tryCatch(
 )
 
 # Close device to save file
-if (dev.cur() > 1) {{
+if (names(dev.cur()) != "null device") {{
   dev.off()
 }}
 
