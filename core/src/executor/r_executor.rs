@@ -185,9 +185,7 @@ impl RExecutor {
             r#"
 # Auto-generated plot capture wrapper
 .reprod_plot_dir <- "{temp_dir}"
-.reprod_plot_prefix <- "{plot_prefix}"
 .reprod_state_path <- file.path(.reprod_plot_dir, ".reprod_state.RData")
-.reprod_exit_code <- 0
 
 # Ensure plot directory exists
 if (!dir.exists(.reprod_plot_dir)) {{
@@ -201,6 +199,12 @@ if (file.exists(.reprod_state_path)) {{
     error = function(e) message("Failed to restore workspace: ", e)
   )
 }}
+
+# Reset run-scoped state to avoid stale values from previous sessions
+.reprod_plot_dir <- "{temp_dir}"
+.reprod_plot_prefix <- "{plot_prefix}"
+.reprod_state_path <- file.path(.reprod_plot_dir, ".reprod_state.RData")
+.reprod_exit_code <- 0
 
 # Open PNG device
 .reprod_open_device <- function(index) {{
