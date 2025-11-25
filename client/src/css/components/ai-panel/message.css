@@ -103,16 +103,18 @@
 }
 
 .message-header {
-  font-size: 11px;
+  font-size: 10px; /* Reduced from 11px */
   font-weight: 600;
   color: rgba(255, 255, 255, 0.85);
   margin-bottom: 4px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  opacity: 0.8; /* Make slightly less prominent */
 }
 
 .message-assistant .message-header {
   color: var(--text-muted);
+  opacity: 0.7; /* Even less prominent for assistant */
 }
 
 .message-content {
@@ -355,4 +357,17 @@
 
 .ai-input-container.vscode-style .ai-input::-webkit-scrollbar-thumb:hover {
   background-color: rgba(148, 163, 184, 0.5);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .ai-messages {
+    padding: 12px;
+  }
+  .message {
+    max-width: 95%;
+  }
+  .ai-input-container-wrapper {
+    padding: 10px;
+  }
 }
