@@ -13,7 +13,7 @@ import type {
   ExportPdfOptionKey,
   ExportPdfOptions,
 } from '@/types/exportDialog';
-import type { ExportRMarkdownRequestPayload } from 'shared';
+import type { ExportRMarkdownRequestPayload, CodeFolding } from 'shared';
 
 function reducer(state: ExportDialogState, action: ExportDialogAction): ExportDialogState {
   switch (action.type) {
@@ -35,6 +35,8 @@ function reducer(state: ExportDialogState, action: ExportDialogAction): ExportDi
         ...state,
         pdfOptions: { ...state.pdfOptions, [action.key]: action.value },
       };
+    case 'set-code-folding':
+      return { ...state, codeFolding: action.payload };
     case 'set-document-path':
       return { ...state, documentPath: action.payload };
     case 'set-output-path':
@@ -57,6 +59,8 @@ interface UseExportDialogReturn {
   setMode: (next: ExportRMarkdownRequestPayload['mode']) => void;
   options: ExportDialogOptions;
   setOption: (key: ExportOptionKey, value: boolean) => void;
+  codeFolding: CodeFolding;
+  setCodeFolding: (next: CodeFolding) => void;
   pdfOptions: ExportPdfOptions;
   setPdfOption: <TKey extends ExportPdfOptionKey>(key: TKey, value: ExportPdfOptions[TKey]) => void;
   documentPath: string;
@@ -75,7 +79,7 @@ interface UseExportDialogProps {
 
 export function useExportDialog({ open, onClose }: UseExportDialogProps): UseExportDialogReturn {
   const [state, dispatch] = useReducer(reducer, exportDialogInitialState);
-  const { format, mode, options, pdfOptions, documentPath, outputPath, exporting, error } = state;
+  const { format, mode, options, codeFolding, pdfOptions, documentPath, outputPath, exporting, error } = state;
 
   useEffect(() => {
     if (!open) {
@@ -134,12 +138,18 @@ export function useExportDialog({ open, onClose }: UseExportDialogProps): UseExp
       format: format === 'pdf' ? 'pdf' : 'rmarkdown',
       outputPath,
       documentPath: mode === 'document' ? trimmedDocumentPath : undefined,
+      codeFolding,
       includeTimestamps: options.includeTimestamps,
       showActor: options.showActor,
       embedPlots: options.embedPlots,
       includeOutputs: options.includeOutputs,
       includeErrors: options.includeErrors,
       includeSummary: options.includeSummary,
+      outputTruncation: {
+        headLines: 20,
+        tailLines: 8,
+        maxLines: 200,
+      },
       pdfOptions:
         format === 'pdf'
           ? {
@@ -174,6 +184,8 @@ export function useExportDialog({ open, onClose }: UseExportDialogProps): UseExp
     setMode: (next) => dispatch({ type: 'set-mode', payload: next }),
     options,
     setOption,
+    codeFolding,
+    setCodeFolding: (next) => dispatch({ type: 'set-code-folding', payload: next }),
     pdfOptions,
     setPdfOption,
     documentPath,

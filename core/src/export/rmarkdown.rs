@@ -59,6 +59,20 @@ impl Default for ExportFormat {
     }
 }
 
+/// Code folding preference for HTML output.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CodeFolding {
+    Show,
+    Hide,
+}
+
+impl Default for CodeFolding {
+    fn default() -> Self {
+        Self::Show
+    }
+}
+
 /// Options specific to PDF rendering.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PdfRenderOptions {
@@ -89,12 +103,16 @@ impl Default for PdfRenderOptions {
 pub struct RMarkdownOptions {
     pub mode: ExportMode,
     pub show_code: bool,
+    pub code_folding: CodeFolding,
     pub include_timestamps: bool,
     pub show_actor: bool,
     pub embed_plots: bool,
     pub include_outputs: bool,
     pub include_errors: bool,
     pub include_summary: bool,
+    pub output_head_lines: usize,
+    pub output_tail_lines: usize,
+    pub output_max_lines: usize,
 }
 
 impl Default for RMarkdownOptions {
@@ -102,12 +120,16 @@ impl Default for RMarkdownOptions {
         Self {
             mode: ExportMode::Timeline,
             show_code: true,
+            code_folding: CodeFolding::Show,
             include_timestamps: true,
             show_actor: true,
             embed_plots: true,
             include_outputs: true,
             include_errors: false,
             include_summary: true,
+            output_head_lines: 20,
+            output_tail_lines: 8,
+            output_max_lines: 200,
         }
     }
 }
@@ -160,6 +182,11 @@ impl RMarkdownGenerator {
     }
 
     fn generate_yaml_header_timeline(&self, bundle: &ReproductionBundle) -> String {
+        let code_folding = match self.options.code_folding {
+            CodeFolding::Show => "show",
+            CodeFolding::Hide => "hide",
+        };
+
         format!(
             r#"---
 title: "Re-prod Analysis Report (Timeline Export)"
@@ -169,12 +196,22 @@ output:
   html_document:
     toc: true
     toc_depth: 2
-    code_folding: show
+    code_folding: {}
     theme: united
+header-includes:
+  - |
+    <style>
+      .rp-output {{ background: #f6f8fa; padding: 10px 12px; border-radius: 6px; }}
+      .rp-error {{ background: #fff2f0; padding: 10px 12px; border-left: 4px solid #d93025; border-radius: 6px; }}
+    </style>
+  - |
+    \usepackage{{xcolor}}
+    \newenvironment{{rpoutput}}{{\begin{{quote}}\colorbox{{gray!10}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
+    \newenvironment{{rperror}}{{\begin{{quote}}\colorbox{{red!5}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
 ---
 
 "#,
-            bundle.metadata.created_at
+            bundle.metadata.created_at, code_folding
         )
     }
 
@@ -250,23 +287,31 @@ output:
 
             // Output
             if self.options.include_outputs && !event.result.output.is_empty() {
-                section.push_str("**Output**:\n```\n");
-                section.push_str(&event.result.output);
-                if !event.result.output.ends_with('\n') {
+                let (trimmed, truncated) = self.trim_output(&event.result.output);
+                section.push_str("::: {.rp-output}\n```\n");
+                section.push_str(&trimmed);
+                if !trimmed.ends_with('\n') {
                     section.push('\n');
                 }
-                section.push_str("```\n\n");
+                if truncated {
+                    section.push_str("... (output truncated)\n");
+                }
+                section.push_str("```\n:::\n\n");
             }
 
             // Error
             if self.options.include_errors {
                 if let Some(error) = &event.result.error {
-                    section.push_str("**Error**:\n```\n");
-                    section.push_str(error);
-                    if !error.ends_with('\n') {
+                    let (trimmed, truncated) = self.trim_output(error);
+                    section.push_str("::: {.rp-error}\n```\n");
+                    section.push_str(&trimmed);
+                    if !trimmed.ends_with('\n') {
                         section.push('\n');
                     }
-                    section.push_str("```\n\n");
+                    if truncated {
+                        section.push_str("... (error truncated)\n");
+                    }
+                    section.push_str("```\n:::\n\n");
                 }
             }
         }
@@ -280,6 +325,39 @@ output:
 
         section.push_str("---\n\n");
         section
+    }
+
+    fn trim_output(&self, text: &str) -> (String, bool) {
+        let lines: Vec<&str> = text.lines().collect();
+        let total = lines.len();
+        if total <= self.options.output_max_lines {
+            return (text.to_string(), false);
+        }
+
+        let head = self.options.output_head_lines.min(total);
+        let tail = self
+            .options
+            .output_tail_lines
+            .min(total.saturating_sub(head));
+
+        if head + tail >= total {
+            return (text.to_string(), false);
+        }
+
+        let mut result = String::new();
+        for line in lines.iter().take(head) {
+            result.push_str(line);
+            result.push('\n');
+        }
+        let skipped = total.saturating_sub(head + tail);
+        result.push_str(&format!("... ({} lines truncated) ...\n", skipped));
+        if tail > 0 {
+            for line in lines.iter().skip(total - tail) {
+                result.push_str(line);
+                result.push('\n');
+            }
+        }
+        (result, true)
     }
 
     fn generate_summary(&self, bundle: &ReproductionBundle) -> String {
@@ -342,6 +420,11 @@ output:
     // ===== Document Mode Helpers =====
 
     fn generate_yaml_header_document(&self, document_path: &str) -> String {
+        let code_folding = match self.options.code_folding {
+            CodeFolding::Show => "show",
+            CodeFolding::Hide => "hide",
+        };
+
         let title = std::path::Path::new(document_path)
             .file_stem()
             .and_then(|s| s.to_str())
@@ -355,12 +438,23 @@ date: "{}"
 output:
   html_document:
     toc: true
-    code_folding: show
+    code_folding: {}
+header-includes:
+  - |
+    <style>
+      .rp-output {{ background: #f6f8fa; padding: 10px 12px; border-radius: 6px; }}
+      .rp-error {{ background: #fff2f0; padding: 10px 12px; border-left: 4px solid #d93025; border-radius: 6px; }}
+    </style>
+  - |
+    \usepackage{{xcolor}}
+    \newenvironment{{rpoutput}}{{\begin{{quote}}\colorbox{{gray!10}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
+    \newenvironment{{rperror}}{{\begin{{quote}}\colorbox{{red!5}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
 ---
 
 "#,
             title,
-            chrono::Utc::now().format("%Y-%m-%d")
+            chrono::Utc::now().format("%Y-%m-%d"),
+            code_folding
         )
     }
 
@@ -924,11 +1018,15 @@ ggplot(mtcars, aes(x = wt, y = mpg)) + geom_point()
         let options = RMarkdownOptions::default();
         assert_eq!(options.mode, ExportMode::Timeline);
         assert!(options.show_code);
+        assert_eq!(options.code_folding, CodeFolding::Show);
         assert!(options.include_timestamps);
         assert!(options.show_actor);
         assert!(options.embed_plots);
         assert!(options.include_outputs);
         assert!(!options.include_errors);
         assert!(options.include_summary);
+        assert_eq!(options.output_head_lines, 20);
+        assert_eq!(options.output_tail_lines, 8);
+        assert_eq!(options.output_max_lines, 200);
     }
 }

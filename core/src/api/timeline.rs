@@ -3,7 +3,7 @@ use crate::{
     executor::timeline::{
         SortOrder, TimelineFilters, TimelineQuery, TimelineResponse, TimelineStats,
     },
-    export::{ExportFormat, ExportMode, PdfRenderOptions, RMarkdownOptions},
+    export::{CodeFolding, ExportFormat, ExportMode, PdfRenderOptions, RMarkdownOptions},
     ExecutionActor, ExecutionEvent, ExecutionSource,
 };
 use serde::{Deserialize, Serialize};
@@ -892,6 +892,8 @@ pub struct ExportRMarkdownRequest {
     pub output_path: String,
     #[serde(rename = "documentPath")]
     pub document_path: Option<String>,
+    #[serde(rename = "codeFolding")]
+    pub code_folding: Option<String>,
     #[serde(rename = "includeTimestamps")]
     pub include_timestamps: bool,
     #[serde(rename = "showActor")]
@@ -904,6 +906,8 @@ pub struct ExportRMarkdownRequest {
     pub include_errors: bool,
     #[serde(rename = "includeSummary")]
     pub include_summary: bool,
+    #[serde(rename = "outputTruncation")]
+    pub output_truncation: Option<OutputTruncationPayload>,
     #[serde(rename = "pdfOptions")]
     pub pdf_options: Option<PdfOptionsPayload>,
 }
@@ -954,15 +958,32 @@ impl ExportRMarkdownRequest {
             .map(|options: &PdfRenderOptions| options.include_source)
             .unwrap_or(true);
 
+        let code_folding = match self.code_folding.as_deref() {
+            Some("hide") => CodeFolding::Hide,
+            Some("show") | None => CodeFolding::Show,
+            Some(other) => {
+                return Err(ReprodError::ProtocolError(format!(
+                    "Invalid code folding option: {}",
+                    other
+                )))
+            }
+        };
+
+        let truncation = self.output_truncation.unwrap_or_default();
+
         let options = RMarkdownOptions {
             mode,
             show_code,
+            code_folding,
             include_timestamps: self.include_timestamps,
             show_actor: self.show_actor,
             embed_plots: self.embed_plots,
             include_outputs: self.include_outputs,
             include_errors: self.include_errors,
             include_summary: self.include_summary,
+            output_head_lines: truncation.head_lines,
+            output_tail_lines: truncation.tail_lines,
+            output_max_lines: truncation.max_lines,
         };
 
         Ok((mode, format, options, pdf_options, self.output_path))
@@ -1008,6 +1029,38 @@ impl From<PdfOptionsPayload> for PdfRenderOptions {
 
 const fn bool_true() -> bool {
     true
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct OutputTruncationPayload {
+    #[serde(default = "default_head_lines")]
+    pub head_lines: usize,
+    #[serde(default = "default_tail_lines")]
+    pub tail_lines: usize,
+    #[serde(default = "default_max_lines")]
+    pub max_lines: usize,
+}
+
+impl Default for OutputTruncationPayload {
+    fn default() -> Self {
+        Self {
+            head_lines: default_head_lines(),
+            tail_lines: default_tail_lines(),
+            max_lines: default_max_lines(),
+        }
+    }
+}
+
+const fn default_head_lines() -> usize {
+    20
+}
+
+const fn default_tail_lines() -> usize {
+    8
+}
+
+const fn default_max_lines() -> usize {
+    200
 }
 
 const fn default_fig_width() -> f64 {

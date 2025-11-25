@@ -1,4 +1,4 @@
-import type { ExportRMarkdownRequestPayload, PdfExportOptions } from 'shared';
+import type { CodeFolding, ExportRMarkdownRequestPayload, PdfExportOptions } from 'shared';
 
 export type ExportDialogOptions = Pick<
   ExportRMarkdownRequestPayload,
@@ -24,6 +24,7 @@ export interface ExportDialogState {
   format: ExportFormat;
   mode: ExportRMarkdownRequestPayload['mode'];
   options: ExportDialogOptions;
+  codeFolding: CodeFolding;
   pdfOptions: ExportPdfOptions;
   documentPath: string;
   outputPath: string;
@@ -36,6 +37,7 @@ export type ExportDialogAction =
   | { type: 'set-mode'; payload: ExportRMarkdownRequestPayload['mode'] }
   | { type: 'set-option'; key: ExportOptionKey; value: boolean }
   | { type: 'set-pdf-option'; key: ExportPdfOptionKey; value: ExportPdfOptions[ExportPdfOptionKey] }
+  | { type: 'set-code-folding'; payload: CodeFolding }
   | { type: 'set-document-path'; payload: string }
   | { type: 'set-output-path'; payload: string }
   | { type: 'set-exporting'; payload: boolean }
@@ -75,6 +77,7 @@ export const exportDialogInitialState: ExportDialogState = {
   format: 'rmarkdown',
   mode: 'timeline',
   options: exportDialogDefaultOptions,
+  codeFolding: 'show',
   pdfOptions: exportDialogDefaultPdfOptions,
   documentPath: '',
   outputPath: 'analysis_report.Rmd',

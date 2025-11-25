@@ -27,6 +27,13 @@ type ToolExecutionResponse = {
 
 export type ExportMode = 'timeline' | 'document';
 export type ExportFormat = 'rmarkdown' | 'pdf';
+export type CodeFolding = 'show' | 'hide';
+
+export interface OutputTruncationOptions {
+  headLines: number;
+  tailLines: number;
+  maxLines: number;
+}
 
 export interface PdfExportOptions {
   toc: boolean;
@@ -42,12 +49,14 @@ export interface ExportRMarkdownRequestPayload {
   format?: ExportFormat;
   outputPath: string;
   documentPath?: string;
+  codeFolding?: CodeFolding;
   includeTimestamps: boolean;
   showActor: boolean;
   embedPlots: boolean;
   includeOutputs: boolean;
   includeErrors: boolean;
   includeSummary: boolean;
+  outputTruncation?: OutputTruncationOptions;
   pdfOptions?: PdfExportOptions;
 }
 

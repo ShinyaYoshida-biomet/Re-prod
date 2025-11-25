@@ -36,12 +36,18 @@ describe('ExportDialog', () => {
       mode: 'timeline',
       format: 'rmarkdown',
       outputPath: 'analysis_report.Rmd',
+      codeFolding: 'show',
       includeTimestamps: true,
       showActor: true,
       embedPlots: true,
       includeOutputs: true,
       includeErrors: false,
       includeSummary: true,
+      outputTruncation: {
+        headLines: 20,
+        tailLines: 8,
+        maxLines: 200,
+      },
     });
     expect(sentRequest.request.pdfOptions).toBeUndefined();
     expect(sentRequest.request.documentPath).toBeUndefined();

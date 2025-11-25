@@ -13,6 +13,8 @@ export function ExportDialog({ open, onClose }: ExportDialogProps): JSX.Element 
     setMode,
     options,
     setOption,
+    codeFolding,
+    setCodeFolding,
     pdfOptions,
     setPdfOption,
     documentPath,
@@ -238,6 +240,21 @@ export function ExportDialog({ open, onClose }: ExportDialogProps): JSX.Element 
                 <label className="export-label" id="options-label">
                   Options
                 </label>
+                <div className="export-field">
+                  <label className="export-field-label" htmlFor="codeFolding">
+                    Code Folding
+                  </label>
+                  <select
+                    id="codeFolding"
+                    className="export-input"
+                    value={codeFolding}
+                    onChange={(e) => setCodeFolding(e.target.value as typeof codeFolding)}
+                    disabled={exporting}
+                  >
+                    <option value="show">Show code by default</option>
+                    <option value="hide">Hide code by default</option>
+                  </select>
+                </div>
                 <div
                   className="export-checkbox-group"
                   role="group"
@@ -319,7 +336,7 @@ export function ExportDialog({ open, onClose }: ExportDialogProps): JSX.Element 
                   value={outputPath}
                   onChange={(e) => setOutputPath(e.target.value)}
                   disabled={exporting}
-                aria-required="true"
+                  aria-required="true"
                 aria-describedby="outputPath-hint"
               />
               <p id="outputPath-hint" className="export-hint">

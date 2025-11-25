@@ -1,5 +1,5 @@
 use reprod_core::export::{
-    BundleMetadata, ExportMode, RMarkdownGenerator, RMarkdownOptions, ReproductionBundle,
+    BundleMetadata, CodeFolding, ExportMode, RMarkdownGenerator, RMarkdownOptions, ReproductionBundle,
 };
 use reprod_core::protocol::{
     CodeBlockKind, CodeBlockMetadata, EnvironmentSnapshot, ExecutionActor, ExecutionContext,
@@ -128,12 +128,16 @@ fn test_rmarkdown_timeline_export_integration() {
     let options = RMarkdownOptions {
         mode: ExportMode::Timeline,
         show_code: true,
+        code_folding: CodeFolding::Show,
         include_timestamps: true,
         show_actor: true,
         embed_plots: true,
         include_outputs: true,
         include_errors: true,
         include_summary: true,
+        output_head_lines: 20,
+        output_tail_lines: 8,
+        output_max_lines: 200,
     };
 
     let generator = RMarkdownGenerator::new(options);
@@ -229,6 +233,7 @@ ggplot(data_clean, aes(x = x, y = y)) +
 
     let options = RMarkdownOptions {
         mode: ExportMode::Document,
+        code_folding: CodeFolding::Show,
         show_code: true,
         include_timestamps: false,
         show_actor: false,
@@ -236,6 +241,9 @@ ggplot(data_clean, aes(x = x, y = y)) +
         include_outputs: false,
         include_errors: false,
         include_summary: false,
+        output_head_lines: 20,
+        output_tail_lines: 8,
+        output_max_lines: 200,
     };
 
     let generator = RMarkdownGenerator::new(options);
@@ -329,6 +337,7 @@ fn test_rmarkdown_export_with_errors() {
     // Test with errors included
     let options_with_errors = RMarkdownOptions {
         mode: ExportMode::Timeline,
+        code_folding: CodeFolding::Show,
         show_code: true,
         include_timestamps: false,
         show_actor: false,
@@ -336,6 +345,9 @@ fn test_rmarkdown_export_with_errors() {
         include_outputs: false,
         include_errors: true,
         include_summary: false,
+        output_head_lines: 20,
+        output_tail_lines: 8,
+        output_max_lines: 200,
     };
 
     let generator = RMarkdownGenerator::new(options_with_errors.clone());
@@ -388,6 +400,7 @@ fn test_rmarkdown_export_options_combinations() {
     // Test 1: Minimal options
     let minimal_options = RMarkdownOptions {
         mode: ExportMode::Timeline,
+        code_folding: CodeFolding::Show,
         show_code: true,
         include_timestamps: false,
         show_actor: false,
@@ -395,6 +408,9 @@ fn test_rmarkdown_export_options_combinations() {
         include_outputs: false,
         include_errors: false,
         include_summary: false,
+        output_head_lines: 20,
+        output_tail_lines: 8,
+        output_max_lines: 200,
     };
 
     let generator = RMarkdownGenerator::new(minimal_options);
@@ -411,6 +427,7 @@ fn test_rmarkdown_export_options_combinations() {
     // Test 2: Full options
     let full_options = RMarkdownOptions {
         mode: ExportMode::Timeline,
+        code_folding: CodeFolding::Show,
         show_code: true,
         include_timestamps: true,
         show_actor: true,
@@ -418,6 +435,9 @@ fn test_rmarkdown_export_options_combinations() {
         include_outputs: true,
         include_errors: true,
         include_summary: true,
+        output_head_lines: 20,
+        output_tail_lines: 8,
+        output_max_lines: 200,
     };
 
     let generator = RMarkdownGenerator::new(full_options);

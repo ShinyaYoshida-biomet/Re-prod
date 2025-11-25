@@ -37,8 +37,8 @@ pub mod writer;
 pub use bundle::{ReproductionBundle, TimelineExport, ValidationReport};
 pub use metadata::{BundleFiles, BundleMetadata, EnvironmentInfo, SessionInfo, Statistics};
 pub use rmarkdown::{
-    render_pdf_document, ExportFormat, ExportMode, PdfRenderOptions, RMarkdownGenerator,
-    RMarkdownOptions,
+    render_pdf_document, CodeFolding, ExportFormat, ExportMode, PdfRenderOptions,
+    RMarkdownGenerator, RMarkdownOptions,
 };
 pub use scripts::{generate_readme, generate_replay_script, generate_validation_script};
 pub use writer::{BundleWriter, WriterError};
