@@ -3,94 +3,94 @@
 // When updating, verify with `cargo check --workspace` and `pnpm -r lint`.
 
 // Execution metadata shared between frontend and backend (protocol layer)
-export type ExecutionSource = 'selection' | 'cell' | 'whole_document' | 'unknown';
-export type ExecutionActor = 'user' | 'ai';
-export type CodeBlockKind = 'section' | 'chunk' | 'document' | 'selection';
+export type ExecutionSource = "selection" | "cell" | "whole_document" | "unknown";
+export type ExecutionActor = "user" | "ai";
+export type CodeBlockKind = "section" | "chunk" | "document" | "selection";
 
 export interface CodeBlockMetadata {
-  id: string;
-  index: number;
-  kind: CodeBlockKind;
-  label?: string | null;
-  start_line: number;
-  end_line: number;
-  code: string;
+	id: string;
+	index: number;
+	kind: CodeBlockKind;
+	label?: string | null;
+	start_line: number;
+	end_line: number;
+	code: string;
 }
 
 export interface ExecutionContext {
-  source: ExecutionSource;
-  document_path?: string | null;
-  cell_index?: number | null;
-  triggered_at_ms: number; // epoch ms (0 if unknown)
-  actor: ExecutionActor;
+	source: ExecutionSource;
+	document_path?: string | null;
+	cell_index?: number | null;
+	triggered_at_ms: number; // epoch ms (0 if unknown)
+	actor: ExecutionActor;
 }
 
 export interface ExecutionRequest {
-  code: string;
-  context: ExecutionContext;
-  blocks: CodeBlockMetadata[];
+	code: string;
+	context: ExecutionContext;
+	blocks: CodeBlockMetadata[];
 }
 
 export interface EnvironmentSnapshot {
-  r_path: string;
-  working_dir: string;
-  temp_dir: string;
+	r_path: string;
+	working_dir: string;
+	temp_dir: string;
 }
 
 export interface PlotInfo {
-  filename: string;
-  base64_data: string;
-  index: number;
+	filename: string;
+	base64_data: string;
+	index: number;
 }
 
 export interface ExecutionResult {
-  success: boolean;
-  output: string;
-  error?: string | null;
-  plots: PlotInfo[];
-  execution_time_ms: number;
+	success: boolean;
+	output: string;
+	error?: string | null;
+	plots: PlotInfo[];
+	execution_time_ms: number;
 }
 
 export interface ExecutionEvent {
-  event_id: string;
-  context: ExecutionContext;
-  blocks: CodeBlockMetadata[];
-  result: ExecutionResult;
-  environment: EnvironmentSnapshot;
-  created_at_ms: number;
+	event_id: string;
+	context: ExecutionContext;
+	blocks: CodeBlockMetadata[];
+	result: ExecutionResult;
+	environment: EnvironmentSnapshot;
+	created_at_ms: number;
 }
 
 export interface ChatMessage {
-  role: string;
-  content: string;
+	role: string;
+	content: string;
 }
 
 export interface FileChangeEvent {
-  event_type: string;
-  path: string;
+	event_type: string;
+	path: string;
 }
 
 export interface ToolExecutionRequest {
-  tool_id: string;
-  capability_id: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  parameters: Record<string, any>;
+	tool_id: string;
+	capability_id: string;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	parameters: Record<string, any>;
 }
 
 export interface ArtifactInfo {
-  path: string;
-  artifact_type: string;
-  label?: string | null;
-  record_as: string;
+	path: string;
+	artifact_type: string;
+	label?: string | null;
+	record_as: string;
 }
 
 export interface ToolExecutionResult {
-  tool_id: string;
-  capability_id: string;
-  success: boolean;
-  stdout?: string | null;
-  stderr?: string | null;
-  artifacts: ArtifactInfo[];
-  execution_time_ms: number;
-  error?: string | null;
+	tool_id: string;
+	capability_id: string;
+	success: boolean;
+	stdout?: string | null;
+	stderr?: string | null;
+	artifacts: ArtifactInfo[];
+	execution_time_ms: number;
+	error?: string | null;
 }

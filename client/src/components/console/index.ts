@@ -1,1 +1,1 @@
-export { ConsolePanel } from './ConsolePanel';
+export { ConsolePanel } from "./ConsolePanel";

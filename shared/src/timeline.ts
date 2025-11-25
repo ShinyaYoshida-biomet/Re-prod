@@ -4,133 +4,133 @@
  */
 
 // Import for use in interfaces
-import type { ExecutionEventPayload } from './types';
+import type { ExecutionEventPayload } from "./types";
 
 // Re-export existing execution types for convenience
 export type {
-  ExecutionEventPayload,
-  ExecutionContextPayload,
-  ExecutionSource,
-  ExecutionActor,
-  CodeBlockMetadataPayload,
-  CodeBlockKind,
-  ExecutionResultPayload,
-  PlotInfoPayload,
-  EnvironmentSnapshotPayload,
-} from './types';
+	CodeBlockKind,
+	CodeBlockMetadataPayload,
+	EnvironmentSnapshotPayload,
+	ExecutionActor,
+	ExecutionContextPayload,
+	ExecutionEventPayload,
+	ExecutionResultPayload,
+	ExecutionSource,
+	PlotInfoPayload,
+} from "./types";
 
 /**
  * Query parameters for fetching timeline events.
  * Used by UI to request filtered/sorted/paginated events from backend.
  */
 export interface TimelineQuery {
-  filters?: {
-    /** Filter by actor (user or AI) */
-    actor?: 'user' | 'ai';
+	filters?: {
+		/** Filter by actor (user or AI) */
+		actor?: "user" | "ai";
 
-    /** Filter by execution source */
-    source?: 'selection' | 'cell' | 'whole_document';
+		/** Filter by execution source */
+		source?: "selection" | "cell" | "whole_document";
 
-    /** Filter by time range (epoch milliseconds) */
-    startTime?: number;
-    endTime?: number;
+		/** Filter by time range (epoch milliseconds) */
+		startTime?: number;
+		endTime?: number;
 
-    /** Only events with plots */
-    hasPlots?: boolean;
+		/** Only events with plots */
+		hasPlots?: boolean;
 
-    /** Only events with errors */
-    hasErrors?: boolean;
+		/** Only events with errors */
+		hasErrors?: boolean;
 
-    /** Text search in code blocks */
-    codeContains?: string;
-  };
+		/** Text search in code blocks */
+		codeContains?: string;
+	};
 
-  /** Sort order (default: desc, newest first) */
-  sort?: 'asc' | 'desc';
+	/** Sort order (default: desc, newest first) */
+	sort?: "asc" | "desc";
 
-  /** Pagination limit (default: 50, max: 200) */
-  limit?: number;
+	/** Pagination limit (default: 50, max: 200) */
+	limit?: number;
 
-  /** Pagination offset (default: 0) */
-  offset?: number;
+	/** Pagination offset (default: 0) */
+	offset?: number;
 }
 
 /**
  * Response containing timeline events with pagination metadata.
  */
 export interface TimelineResponse {
-  /** Array of execution events matching the query */
-  events: ExecutionEventPayload[];
+	/** Array of execution events matching the query */
+	events: ExecutionEventPayload[];
 
-  /** Total number of events matching filters (ignoring pagination) */
-  total: number;
+	/** Total number of events matching filters (ignoring pagination) */
+	total: number;
 
-  /** Whether more events exist beyond current page */
-  hasMore: boolean;
+	/** Whether more events exist beyond current page */
+	hasMore: boolean;
 
-  /** Query that produced this response (for debugging) */
-  query: TimelineQuery;
+	/** Query that produced this response (for debugging) */
+	query: TimelineQuery;
 }
 
 /**
  * Statistics about the timeline for UI summary display.
  */
 export interface TimelineStats {
-  totalEvents: number;
-  totalPlots: number;
-  totalErrors: number;
-  userActions: number;
-  aiActions: number;
-  sessionStartTime: number; // epoch ms
-  sessionEndTime: number; // epoch ms
-  sessionDuration: number; // milliseconds
+	totalEvents: number;
+	totalPlots: number;
+	totalErrors: number;
+	userActions: number;
+	aiActions: number;
+	sessionStartTime: number; // epoch ms
+	sessionEndTime: number; // epoch ms
+	sessionDuration: number; // milliseconds
 }
 
 /**
  * Client → Server: Request timeline events
  */
 export interface TimelineQueryMessage {
-  type: 'timeline_query';
-  query: TimelineQuery;
+	type: "timeline_query";
+	query: TimelineQuery;
 }
 
 /**
  * Server → Client: Timeline query response
  */
 export interface TimelineResponseMessage {
-  type: 'timeline_response';
-  data: TimelineResponse;
+	type: "timeline_response";
+	data: TimelineResponse;
 }
 
 /**
  * Server → Client: New event added to timeline (real-time push)
  */
 export interface TimelineEventAddedMessage {
-  type: 'timeline_event_added';
-  event: ExecutionEventPayload;
+	type: "timeline_event_added";
+	event: ExecutionEventPayload;
 }
 
 /**
  * Client → Server: Request timeline statistics
  */
 export interface TimelineStatsQueryMessage {
-  type: 'timeline_stats_query';
+	type: "timeline_stats_query";
 }
 
 /**
  * Server → Client: Timeline statistics response
  */
 export interface TimelineStatsResponseMessage {
-  type: 'timeline_stats_response';
-  stats: TimelineStats;
+	type: "timeline_stats_response";
+	stats: TimelineStats;
 }
 
 /**
  * Union type of all timeline-related WebSocket messages
  */
 export type TimelineMessage =
-  | TimelineQueryMessage
-  | TimelineResponseMessage
-  | TimelineEventAddedMessage
-  | TimelineStatsQueryMessage
-  | TimelineStatsResponseMessage;
+	| TimelineQueryMessage
+	| TimelineResponseMessage
+	| TimelineEventAddedMessage
+	| TimelineStatsQueryMessage
+	| TimelineStatsResponseMessage;

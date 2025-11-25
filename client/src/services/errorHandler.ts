@@ -6,17 +6,17 @@
  */
 
 type NotifyOptions = {
-  description?: string;
-  error?: unknown;
-  actionLabel?: string;
-  onAction?: () => void;
-  duration?: number;
-  persist?: boolean;
+	description?: string;
+	error?: unknown;
+	actionLabel?: string;
+	onAction?: () => void;
+	duration?: number;
+	persist?: boolean;
 };
 
 const DEFAULT_DURATION = 6000;
-const CONTAINER_ID = 'app-error-notifications';
-const STYLE_ID = 'app-error-notification-styles';
+const CONTAINER_ID = "app-error-notifications";
+const STYLE_ID = "app-error-notification-styles";
 
 const styles = `
   #${CONTAINER_ID} {
@@ -106,130 +106,130 @@ const styles = `
 `;
 
 export class ErrorHandler {
-  private static styleInjected = false;
+	private static styleInjected = false;
 
-  static notify(message: string, options: NotifyOptions = {}): void {
-    if (typeof document === 'undefined') {
-      ErrorHandler.logToConsole(message, options.error);
-      return;
-    }
+	static notify(message: string, options: NotifyOptions = {}): void {
+		if (typeof document === "undefined") {
+			ErrorHandler.logToConsole(message, options.error);
+			return;
+		}
 
-    ErrorHandler.injectStyles();
-    const container = ErrorHandler.ensureContainer();
-    const notification = document.createElement('div');
-    notification.className = 'error-notification';
-    notification.setAttribute('role', 'alert');
-    notification.setAttribute('aria-live', 'assertive');
-    notification.style.position = 'relative';
+		ErrorHandler.injectStyles();
+		const container = ErrorHandler.ensureContainer();
+		const notification = document.createElement("div");
+		notification.className = "error-notification";
+		notification.setAttribute("role", "alert");
+		notification.setAttribute("aria-live", "assertive");
+		notification.style.position = "relative";
 
-    const title = document.createElement('p');
-    title.className = 'error-notification__title';
-    title.textContent = message;
-    notification.appendChild(title);
+		const title = document.createElement("p");
+		title.className = "error-notification__title";
+		title.textContent = message;
+		notification.appendChild(title);
 
-    const description = options.description ?? ErrorHandler.describe(options.error);
-    if (description) {
-      const descriptionEl = document.createElement('p');
-      descriptionEl.className = 'error-notification__description';
-      descriptionEl.textContent = description;
-      notification.appendChild(descriptionEl);
-    }
+		const description = options.description ?? ErrorHandler.describe(options.error);
+		if (description) {
+			const descriptionEl = document.createElement("p");
+			descriptionEl.className = "error-notification__description";
+			descriptionEl.textContent = description;
+			notification.appendChild(descriptionEl);
+		}
 
-    if (options.actionLabel && options.onAction) {
-      const actions = document.createElement('div');
-      actions.className = 'error-notification__actions';
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'error-notification__button';
-      button.textContent = options.actionLabel;
-      button.addEventListener('click', () => {
-        options.onAction?.();
-        ErrorHandler.dismiss(notification);
-      });
-      actions.appendChild(button);
-      notification.appendChild(actions);
-    }
+		if (options.actionLabel && options.onAction) {
+			const actions = document.createElement("div");
+			actions.className = "error-notification__actions";
+			const button = document.createElement("button");
+			button.type = "button";
+			button.className = "error-notification__button";
+			button.textContent = options.actionLabel;
+			button.addEventListener("click", () => {
+				options.onAction?.();
+				ErrorHandler.dismiss(notification);
+			});
+			actions.appendChild(button);
+			notification.appendChild(actions);
+		}
 
-    const close = document.createElement('button');
-    close.type = 'button';
-    close.className = 'error-notification__close';
-    close.setAttribute('aria-label', 'Dismiss notification');
-    close.textContent = '\u00d7';
-    close.addEventListener('click', () => ErrorHandler.dismiss(notification));
-    notification.appendChild(close);
+		const close = document.createElement("button");
+		close.type = "button";
+		close.className = "error-notification__close";
+		close.setAttribute("aria-label", "Dismiss notification");
+		close.textContent = "\u00d7";
+		close.addEventListener("click", () => ErrorHandler.dismiss(notification));
+		notification.appendChild(close);
 
-    container.appendChild(notification);
+		container.appendChild(notification);
 
-    if (!options.persist) {
-      const duration = options.duration ?? DEFAULT_DURATION;
-      window.setTimeout(() => ErrorHandler.dismiss(notification), duration);
-    }
+		if (!options.persist) {
+			const duration = options.duration ?? DEFAULT_DURATION;
+			window.setTimeout(() => ErrorHandler.dismiss(notification), duration);
+		}
 
-    ErrorHandler.logToConsole(message, options.error);
-  }
+		ErrorHandler.logToConsole(message, options.error);
+	}
 
-  private static ensureContainer(): HTMLDivElement {
-    const existing = document.getElementById(CONTAINER_ID) as HTMLDivElement | null;
-    if (existing) {
-      return existing;
-    }
-    const container = document.createElement('div');
-    container.id = CONTAINER_ID;
-    container.setAttribute('aria-live', 'assertive');
-    container.setAttribute('aria-atomic', 'true');
-    document.body.appendChild(container);
-    return container;
-  }
+	private static ensureContainer(): HTMLDivElement {
+		const existing = document.getElementById(CONTAINER_ID) as HTMLDivElement | null;
+		if (existing) {
+			return existing;
+		}
+		const container = document.createElement("div");
+		container.id = CONTAINER_ID;
+		container.setAttribute("aria-live", "assertive");
+		container.setAttribute("aria-atomic", "true");
+		document.body.appendChild(container);
+		return container;
+	}
 
-  private static injectStyles(): void {
-    if (ErrorHandler.styleInjected || typeof document === 'undefined') {
-      return;
-    }
-    if (document.getElementById(STYLE_ID)) {
-      ErrorHandler.styleInjected = true;
-      return;
-    }
-    const styleEl = document.createElement('style');
-    styleEl.id = STYLE_ID;
-    styleEl.textContent = styles;
-    document.head.appendChild(styleEl);
-    ErrorHandler.styleInjected = true;
-  }
+	private static injectStyles(): void {
+		if (ErrorHandler.styleInjected || typeof document === "undefined") {
+			return;
+		}
+		if (document.getElementById(STYLE_ID)) {
+			ErrorHandler.styleInjected = true;
+			return;
+		}
+		const styleEl = document.createElement("style");
+		styleEl.id = STYLE_ID;
+		styleEl.textContent = styles;
+		document.head.appendChild(styleEl);
+		ErrorHandler.styleInjected = true;
+	}
 
-  private static describe(error: unknown): string | undefined {
-    if (!error) {
-      return undefined;
-    }
+	private static describe(error: unknown): string | undefined {
+		if (!error) {
+			return undefined;
+		}
 
-    if (typeof error === 'string') {
-      return error;
-    }
+		if (typeof error === "string") {
+			return error;
+		}
 
-    if (error instanceof Error) {
-      return error.message;
-    }
+		if (error instanceof Error) {
+			return error.message;
+		}
 
-    try {
-      return JSON.stringify(error);
-    } catch {
-      return undefined;
-    }
-  }
+		try {
+			return JSON.stringify(error);
+		} catch {
+			return undefined;
+		}
+	}
 
-  private static dismiss(element: HTMLElement): void {
-    element.classList.add('error-notification--leaving');
-    window.setTimeout(() => {
-      element.remove();
-    }, 180);
-  }
+	private static dismiss(element: HTMLElement): void {
+		element.classList.add("error-notification--leaving");
+		window.setTimeout(() => {
+			element.remove();
+		}, 180);
+	}
 
-  private static logToConsole(message: string, error?: unknown): void {
-    if (error) {
-      console.error(message, error);
-    } else {
-      console.error(message);
-    }
-  }
+	private static logToConsole(message: string, error?: unknown): void {
+		if (error) {
+			console.error(message, error);
+		} else {
+			console.error(message);
+		}
+	}
 }
 
 export default ErrorHandler;

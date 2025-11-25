@@ -1,102 +1,101 @@
 export type PatchChunk = {
-  context?: string;
-  oldLines: string[];
-  newLines: string[];
+	context?: string;
+	oldLines: string[];
+	newLines: string[];
 };
 
 export type PatchHunk = {
-  type: 'add' | 'delete' | 'update';
-  filepath: string;
-  chunks: PatchChunk[];
+	type: "add" | "delete" | "update";
+	filepath: string;
+	chunks: PatchChunk[];
 };
 
 const fileHeaderRegex = /^\*\*\* (Update|Add|Delete) File:\s*(.+)$/;
 
 export function parsePatchFormat(text: string): PatchHunk[] {
-  const patchHunks: PatchHunk[] = [];
-  // Accept both "*** End Patch" and just "***" as end markers (AI sometimes outputs shortened version)
-  const blockRegex = /\*\*\* Begin Patch([\s\S]*?)(?:\*\*\* End Patch|\*\*\*(?:\s*$|\n))/g;
-  blockRegex.lastIndex = 0;
-  let match: RegExpExecArray | null;
+	const patchHunks: PatchHunk[] = [];
+	// Accept both "*** End Patch" and just "***" as end markers (AI sometimes outputs shortened version)
+	const blockRegex = /\*\*\* Begin Patch([\s\S]*?)(?:\*\*\* End Patch|\*\*\*(?:\s*$|\n))/g;
+	blockRegex.lastIndex = 0;
+	let match: RegExpExecArray | null;
 
-  while ((match = blockRegex.exec(text)) !== null) {
-    const block = match[1];
-    const lines = block.split(/\r?\n/);
-    let currentHunk: PatchHunk | null = null;
-    let currentChunk: PatchChunk | null = null;
+	while ((match = blockRegex.exec(text)) !== null) {
+		const block = match[1];
+		const lines = block.split(/\r?\n/);
+		let currentHunk: PatchHunk | null = null;
+		let currentChunk: PatchChunk | null = null;
 
-    const pushHunk = () => {
-      if (currentHunk) {
-        patchHunks.push(currentHunk);
-        currentHunk = null;
-        currentChunk = null;
-      }
-    };
+		const pushHunk = () => {
+			if (currentHunk) {
+				patchHunks.push(currentHunk);
+				currentHunk = null;
+				currentChunk = null;
+			}
+		};
 
-    const ensureChunk = (): PatchChunk | null => {
-      if (!currentHunk) {
-        return null;
-      }
-      if (!currentChunk) {
-        currentChunk = { oldLines: [], newLines: [] };
-        currentHunk.chunks.push(currentChunk);
-      }
-      return currentChunk;
-    };
+		const ensureChunk = (): PatchChunk | null => {
+			if (!currentHunk) {
+				return null;
+			}
+			if (!currentChunk) {
+				currentChunk = { oldLines: [], newLines: [] };
+				currentHunk.chunks.push(currentChunk);
+			}
+			return currentChunk;
+		};
 
-    for (const line of lines) {
-      const headerMatch = line.match(fileHeaderRegex);
-      if (headerMatch) {
-        pushHunk();
-        const [, action, filepath] = headerMatch;
-        const type =
-          action === 'Add' ? 'add' : action === 'Delete' ? 'delete' : 'update';
-        currentHunk = { type, filepath: filepath.trim(), chunks: [] };
-        continue;
-      }
+		for (const line of lines) {
+			const headerMatch = line.match(fileHeaderRegex);
+			if (headerMatch) {
+				pushHunk();
+				const [, action, filepath] = headerMatch;
+				const type = action === "Add" ? "add" : action === "Delete" ? "delete" : "update";
+				currentHunk = { type, filepath: filepath.trim(), chunks: [] };
+				continue;
+			}
 
-      if (!currentHunk) {
-        continue;
-      }
+			if (!currentHunk) {
+				continue;
+			}
 
-      if (line.startsWith('@@')) {
-        currentChunk = {
-          context: line,
-          oldLines: [],
-          newLines: [],
-        };
-        currentHunk.chunks.push(currentChunk);
-        continue;
-      }
+			if (line.startsWith("@@")) {
+				currentChunk = {
+					context: line,
+					oldLines: [],
+					newLines: [],
+				};
+				currentHunk.chunks.push(currentChunk);
+				continue;
+			}
 
-      const chunk = ensureChunk();
-      if (!chunk) {
-        continue;
-      }
+			const chunk = ensureChunk();
+			if (!chunk) {
+				continue;
+			}
 
-      if (line.startsWith('-')) {
-        chunk.oldLines.push(line.slice(1));
-        continue;
-      }
+			if (line.startsWith("-")) {
+				chunk.oldLines.push(line.slice(1));
+				continue;
+			}
 
-      if (line.startsWith('+')) {
-        chunk.newLines.push(line.slice(1));
-        continue;
-      }
+			if (line.startsWith("+")) {
+				chunk.newLines.push(line.slice(1));
+				continue;
+			}
 
-      if (line.startsWith(' ')) {
-        const context = line.slice(1);
-        chunk.oldLines.push(context);
-        chunk.newLines.push(context);
-        continue;
-      }
+			if (line.startsWith(" ")) {
+				const context = line.slice(1);
+				chunk.oldLines.push(context);
+				chunk.newLines.push(context);
+				continue;
+			}
 
-      chunk.oldLines.push(line);
-      chunk.newLines.push(line);
-    }
+			chunk.oldLines.push(line);
+			chunk.newLines.push(line);
+		}
 
-    pushHunk();
-  }
+		pushHunk();
+	}
 
-  return patchHunks;
+	return patchHunks;
 }

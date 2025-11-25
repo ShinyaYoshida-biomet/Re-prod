@@ -1,16 +1,16 @@
-import type { CodeBlock } from '@shared/types';
+import type { CodeBlock } from "@shared/types";
 
 export async function applyCodeChangeFile(codeBlock: CodeBlock): Promise<void> {
-  const response = await fetch('/api/ai/code-change', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ codeBlock }),
-  });
+	const response = await fetch("/api/ai/code-change", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({ codeBlock }),
+	});
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `Failed to apply code change (${response.status})`);
-  }
+	if (!response.ok) {
+		const text = await response.text();
+		throw new Error(text || `Failed to apply code change (${response.status})`);
+	}
 }

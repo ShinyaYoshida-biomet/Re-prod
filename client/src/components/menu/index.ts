@@ -1,2 +1,2 @@
-export { MenuBar } from './MenuBar';
-export { StatusBar } from './StatusBar';
+export { MenuBar } from "./MenuBar";
+export { StatusBar } from "./StatusBar";

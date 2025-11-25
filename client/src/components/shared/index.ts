@@ -1,3 +1,3 @@
-export * from './icons';
-export { PanelTabs, type PanelTabItem } from './PanelTabs';
-export { ConfirmDialog } from './dialog';
+export { ConfirmDialog } from "./dialog";
+export * from "./icons";
+export { type PanelTabItem, PanelTabs } from "./PanelTabs";

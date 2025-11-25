@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
-import { socketService } from '@/services/socket';
-import { useStore } from '@/core';
+import { useEffect } from "react";
+import { useStore } from "@/core";
+import { socketService } from "@/services/socket";
 
 /**
  * Establishes and tracks the lifecycle of the shared WebSocket connection.
@@ -10,22 +10,22 @@ import { useStore } from '@/core';
  * Components can simply call `useSocketConnection()` near the top level.
  */
 export function useSocketConnection(): void {
-  const setConnected = useStore((state) => state.setConnected);
+	const setConnected = useStore((state) => state.setConnected);
 
-  useEffect(() => {
-    socketService.connect();
+	useEffect(() => {
+		socketService.connect();
 
-    if (socketService.isConnected()) {
-      setConnected(true);
-    }
+		if (socketService.isConnected()) {
+			setConnected(true);
+		}
 
-    const unsubscribe = socketService.onConnectionChange((status) => {
-      setConnected(status === 'connected');
-    });
+		const unsubscribe = socketService.onConnectionChange((status) => {
+			setConnected(status === "connected");
+		});
 
-    return () => {
-      unsubscribe();
-      socketService.disconnect();
-    };
-  }, [setConnected]);
+		return () => {
+			unsubscribe();
+			socketService.disconnect();
+		};
+	}, [setConnected]);
 }

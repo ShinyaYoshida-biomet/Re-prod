@@ -8,24 +8,24 @@
 /**
  * Documentation website URL
  */
-export const DOCS_URL = 'https://reprod.dev/docs';
+export const DOCS_URL = "https://reprod.dev/docs";
 
 /**
  * GitHub repository URL
  */
-export const GITHUB_URL = 'https://github.com/reprod';
+export const GITHUB_URL = "https://github.com/reprod";
 
 /**
  * GitHub new issue URL
  */
-export const GITHUB_ISSUE_URL = 'https://github.com/reprod/issues/new';
+export const GITHUB_ISSUE_URL = "https://github.com/reprod/issues/new";
 
 // ===== API URLs =====
 
 /**
  * Base URL for the backend API server
  */
-export const API_BASE_URL = 'http://localhost:3001/api';
+export const API_BASE_URL = "http://localhost:3001/api";
 
 /**
  * API endpoint for provider configuration

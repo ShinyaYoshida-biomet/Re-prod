@@ -1,21 +1,21 @@
 .editor-panel {
-  border: none;
-  background: var(--bg-primary);
+	border: none;
+	background: var(--bg-primary);
 }
 
 .dirty-marker {
-  color: var(--warning-color);
-  font-weight: 700;
-  margin-left: 6px;
+	color: var(--warning-color);
+	font-weight: 700;
+	margin-left: 6px;
 }
 
 .cell-boundary-decoration {
-  background: rgba(47, 111, 237, 0.12);
-  border-left: 3px solid var(--accent-blue);
-  width: 6px !important;
-  margin-left: 2px;
+	background: rgba(47, 111, 237, 0.12);
+	border-left: 3px solid var(--accent-blue);
+	width: 6px !important;
+	margin-left: 2px;
 }
 
 .executing-cell-background {
-  background-color: rgba(47, 111, 237, 0.08);
+	background-color: rgba(47, 111, 237, 0.08);
 }

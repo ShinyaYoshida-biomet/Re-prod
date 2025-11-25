@@ -1,48 +1,48 @@
 .ai-plan-card {
-  margin-top: 12px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  background: rgba(248, 250, 255, 0.8);
+	margin-top: 12px;
+	padding: 12px 14px;
+	border-radius: 12px;
+	border: 1px solid rgba(148, 163, 184, 0.3);
+	background: rgba(248, 250, 255, 0.8);
 }
 
 .ai-plan-card__title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 8px;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-secondary);
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	margin-bottom: 8px;
 }
 
 .ai-plan-card ol {
-  margin: 0;
-  padding-left: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+	margin: 0;
+	padding-left: 18px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
 }
 
 .ai-plan-card li {
-  font-size: 12px;
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
+	font-size: 12px;
+	display: flex;
+	gap: 8px;
+	align-items: baseline;
 }
 
 .ai-plan-card__status {
-  font-weight: 600;
-  color: var(--accent-blue);
+	font-weight: 600;
+	color: var(--accent-blue);
 }
 
 .ai-plan-card li[data-status="running"] .ai-plan-card__status {
-  color: #f97316;
+	color: #f97316;
 }
 
 .ai-plan-card li[data-status="done"] .ai-plan-card__status {
-  color: #16a34a;
+	color: #16a34a;
 }
 
 .ai-plan-card li[data-status="error"] .ai-plan-card__status {
-  color: #dc2626;
+	color: #dc2626;
 }

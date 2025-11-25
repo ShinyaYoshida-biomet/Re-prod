@@ -1,37 +1,33 @@
 {
-  "compilerOptions": {
-    "target": "ES2020",
-    "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "skipLibCheck": true,
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx",
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["client/src/*"],
-      "@/components/*": ["client/src/components/*"],
-      "@/core/*": ["client/src/core/*"],
-      "@/hooks/*": ["client/src/hooks/*"],
-      "@/utils/*": ["client/src/utils/*"],
-      "@/css/*": ["client/src/css/*"],
-      "@server/*": ["server/src/*"],
-      "@shared/*": ["shared/src/*"]
-    },
-    "rootDirs": [
-      "client/src",
-      "server/src",
-      "shared/src"
-    ]
-  },
-  "include": ["client/src", "server/src", "shared/src"],
-  "references": [{ "path": "client/tsconfig.node.json" }]
+	"compilerOptions": {
+		"target": "ES2020",
+		"useDefineForClassFields": true,
+		"lib": ["ES2020", "DOM", "DOM.Iterable"],
+		"module": "ESNext",
+		"skipLibCheck": true,
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"noEmit": true,
+		"jsx": "react-jsx",
+		"strict": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noFallthroughCasesInSwitch": true,
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["client/src/*"],
+			"@/components/*": ["client/src/components/*"],
+			"@/core/*": ["client/src/core/*"],
+			"@/hooks/*": ["client/src/hooks/*"],
+			"@/utils/*": ["client/src/utils/*"],
+			"@/css/*": ["client/src/css/*"],
+			"@server/*": ["server/src/*"],
+			"@shared/*": ["shared/src/*"]
+		},
+		"rootDirs": ["client/src", "server/src", "shared/src"]
+	},
+	"include": ["client/src", "server/src", "shared/src"],
+	"references": [{ "path": "client/tsconfig.node.json" }]
 }
