@@ -30,7 +30,7 @@ const DEFAULT_PROVIDERS: Provider[] = [
   {
     name: 'openai',
     displayName: 'OpenAI GPT',
-    models: ['gpt-4-turbo', 'gpt-4o'],
+    models: ['gpt-5', 'gpt-4-turbo', 'gpt-4o'],
     isConfigured: false,
   },
 ];
