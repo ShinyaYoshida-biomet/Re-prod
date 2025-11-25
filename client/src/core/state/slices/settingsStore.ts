@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { API_CONFIG_PROVIDER_URL, getApiKeyUrl, getTestConnectionUrl } from '@/constants/urls';
 
 interface Provider {
   name: string;
@@ -45,7 +46,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       // Fetch active provider
-      const providerRes = await fetch('http://localhost:3001/api/config/provider');
+      const providerRes = await fetch(API_CONFIG_PROVIDER_URL);
       if (!providerRes.ok) throw new Error('Failed to fetch active provider');
       const { provider } = await providerRes.json();
 
@@ -53,7 +54,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const updatedProviders = await Promise.all(
         DEFAULT_PROVIDERS.map(async (p) => {
           try {
-            const res = await fetch(`http://localhost:3001/api/config/key/${p.name}`);
+            const res = await fetch(getApiKeyUrl(p.name));
             if (res.ok) {
               const { api_key } = await res.json();
               return { ...p, isConfigured: true, apiKeyMasked: api_key };
@@ -74,7 +75,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   setActiveProvider: async (provider: string) => {
     set({ isLoading: true, error: null });
     try {
-      const res = await fetch('http://localhost:3001/api/config/provider', {
+      const res = await fetch(API_CONFIG_PROVIDER_URL, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ provider }),
@@ -89,7 +90,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   setApiKey: async (provider: string, apiKey: string) => {
     set({ isLoading: true, error: null });
     try {
-      const res = await fetch(`http://localhost:3001/api/config/key/${provider}`, {
+      const res = await fetch(getApiKeyUrl(provider), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ api_key: apiKey }),
@@ -106,7 +107,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   testConnection: async (provider: string) => {
     set({ isLoading: true, error: null });
     try {
-      const res = await fetch(`http://localhost:3001/api/config/test/${provider}`, {
+      const res = await fetch(getTestConnectionUrl(provider), {
         method: 'POST',
       });
       if (!res.ok) throw new Error('Connection test failed');

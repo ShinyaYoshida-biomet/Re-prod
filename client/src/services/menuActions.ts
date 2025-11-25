@@ -16,6 +16,7 @@ import { DEFAULT_R_SCRIPT } from '@/core/state/slices/editorSlice';
 import type { ViewPane } from '@/core/state/slices/viewSlice';
 import { interruptExecution, restartSession as restartSessionRequest } from './sessionControl';
 import { exportSessionSnapshot, importSessionSnapshot } from './sessionPersistence';
+import { DOCS_URL, GITHUB_ISSUE_URL } from '@/constants/urls';
 
 const callGlobalHandler = (name: string) => {
   if (typeof window === 'undefined') {
@@ -426,7 +427,7 @@ export const menuActions = {
      * Open documentation in new tab
      */
     docs: () => {
-      window.open('https://reprod.dev/docs', '_blank');
+      window.open(DOCS_URL, '_blank');
     },
 
     /**
@@ -441,7 +442,7 @@ export const menuActions = {
      * Open GitHub issues page
      */
     reportIssue: () => {
-      window.open('https://github.com/reprod/issues/new', '_blank');
+      window.open(GITHUB_ISSUE_URL, '_blank');
     },
 
     /**

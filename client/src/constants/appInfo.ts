@@ -3,6 +3,8 @@
  * Centralized definitions for app metadata, links, and tech stack
  */
 
+import { DOCS_URL, GITHUB_URL, GITHUB_ISSUE_URL } from './urls';
+
 export interface AppLink {
   label: string;
   href: string;
@@ -14,9 +16,9 @@ export interface TechStackItem {
 }
 
 export const LINKS: AppLink[] = [
-  { label: 'Documentation', href: 'https://reprod.dev/docs' },
-  { label: 'GitHub', href: 'https://github.com/reprod' },
-  { label: 'Report Issue', href: 'https://github.com/reprod/issues/new' },
+  { label: 'Documentation', href: DOCS_URL },
+  { label: 'GitHub', href: GITHUB_URL },
+  { label: 'Report Issue', href: GITHUB_ISSUE_URL },
 ];
 
 export const TECH_STACK: TechStackItem[] = [
