@@ -1,25 +1,39 @@
 import { useCallback, useEffect, useReducer } from 'react';
 import { exportRMarkdown, ExportServiceError } from '@/services/exportService';
+import {
+  adjustOutputPathForFormat,
+  exportDialogInitialState,
+} from '@/types/exportDialog';
 import type {
   ExportDialogAction,
   ExportDialogOptions,
   ExportFormat,
   ExportDialogState,
   ExportOptionKey,
+  ExportPdfOptionKey,
+  ExportPdfOptions,
 } from '@/types/exportDialog';
-import { exportDialogInitialState } from '@/types/exportDialog';
 import type { ExportRMarkdownRequestPayload } from 'shared';
 
 function reducer(state: ExportDialogState, action: ExportDialogAction): ExportDialogState {
   switch (action.type) {
     case 'set-format':
-      return { ...state, format: action.payload };
+      return {
+        ...state,
+        format: action.payload,
+        outputPath: adjustOutputPathForFormat(state.outputPath, action.payload),
+      };
     case 'set-mode':
       return { ...state, mode: action.payload };
     case 'set-option':
       return {
         ...state,
         options: { ...state.options, [action.key]: action.value },
+      };
+    case 'set-pdf-option':
+      return {
+        ...state,
+        pdfOptions: { ...state.pdfOptions, [action.key]: action.value },
       };
     case 'set-document-path':
       return { ...state, documentPath: action.payload };
@@ -43,6 +57,8 @@ interface UseExportDialogReturn {
   setMode: (next: ExportRMarkdownRequestPayload['mode']) => void;
   options: ExportDialogOptions;
   setOption: (key: ExportOptionKey, value: boolean) => void;
+  pdfOptions: ExportPdfOptions;
+  setPdfOption: <TKey extends ExportPdfOptionKey>(key: TKey, value: ExportPdfOptions[TKey]) => void;
   documentPath: string;
   setDocumentPath: (value: string) => void;
   outputPath: string;
@@ -59,7 +75,7 @@ interface UseExportDialogProps {
 
 export function useExportDialog({ open, onClose }: UseExportDialogProps): UseExportDialogReturn {
   const [state, dispatch] = useReducer(reducer, exportDialogInitialState);
-  const { format, mode, options, documentPath, outputPath, exporting, error } = state;
+  const { format, mode, options, pdfOptions, documentPath, outputPath, exporting, error } = state;
 
   useEffect(() => {
     if (!open) {
@@ -88,6 +104,13 @@ export function useExportDialog({ open, onClose }: UseExportDialogProps): UseExp
     dispatch({ type: 'set-option', key, value });
   }, []);
 
+  const setPdfOption = useCallback(
+    <TKey extends ExportPdfOptionKey>(key: TKey, value: ExportPdfOptions[TKey]) => {
+      dispatch({ type: 'set-pdf-option', key, value });
+    },
+    []
+  );
+
   const handleExport = useCallback(async (): Promise<void> => {
     dispatch({ type: 'set-exporting', payload: true });
     dispatch({ type: 'set-error', payload: '' });
@@ -108,6 +131,7 @@ export function useExportDialog({ open, onClose }: UseExportDialogProps): UseExp
 
     const payload: ExportRMarkdownRequestPayload = {
       mode,
+      format: format === 'pdf' ? 'pdf' : 'rmarkdown',
       outputPath,
       documentPath: mode === 'document' ? trimmedDocumentPath : undefined,
       includeTimestamps: options.includeTimestamps,
@@ -116,6 +140,17 @@ export function useExportDialog({ open, onClose }: UseExportDialogProps): UseExp
       includeOutputs: options.includeOutputs,
       includeErrors: options.includeErrors,
       includeSummary: options.includeSummary,
+      pdfOptions:
+        format === 'pdf'
+          ? {
+              toc: pdfOptions.toc,
+              includeSource: pdfOptions.includeSource,
+              highlightTheme: pdfOptions.highlightTheme,
+              figWidth: pdfOptions.figWidth,
+              figHeight: pdfOptions.figHeight,
+              latexPreamble: pdfOptions.latexPreamble || undefined,
+            }
+          : undefined,
     };
 
     try {
@@ -130,7 +165,7 @@ export function useExportDialog({ open, onClose }: UseExportDialogProps): UseExp
     } finally {
       dispatch({ type: 'set-exporting', payload: false });
     }
-  }, [format, mode, options, documentPath, outputPath, onClose]);
+  }, [format, mode, options, pdfOptions, documentPath, outputPath, onClose]);
 
   return {
     format,
@@ -139,6 +174,8 @@ export function useExportDialog({ open, onClose }: UseExportDialogProps): UseExp
     setMode: (next) => dispatch({ type: 'set-mode', payload: next }),
     options,
     setOption,
+    pdfOptions,
+    setPdfOption,
     documentPath,
     setDocumentPath: (value) => dispatch({ type: 'set-document-path', payload: value }),
     outputPath,

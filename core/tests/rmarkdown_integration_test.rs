@@ -127,6 +127,7 @@ fn test_rmarkdown_timeline_export_integration() {
     // Generate RMarkdown with all options enabled
     let options = RMarkdownOptions {
         mode: ExportMode::Timeline,
+        show_code: true,
         include_timestamps: true,
         show_actor: true,
         embed_plots: true,
@@ -228,6 +229,7 @@ ggplot(data_clean, aes(x = x, y = y)) +
 
     let options = RMarkdownOptions {
         mode: ExportMode::Document,
+        show_code: true,
         include_timestamps: false,
         show_actor: false,
         embed_plots: false,
@@ -327,6 +329,7 @@ fn test_rmarkdown_export_with_errors() {
     // Test with errors included
     let options_with_errors = RMarkdownOptions {
         mode: ExportMode::Timeline,
+        show_code: true,
         include_timestamps: false,
         show_actor: false,
         embed_plots: false,
@@ -385,6 +388,7 @@ fn test_rmarkdown_export_options_combinations() {
     // Test 1: Minimal options
     let minimal_options = RMarkdownOptions {
         mode: ExportMode::Timeline,
+        show_code: true,
         include_timestamps: false,
         show_actor: false,
         embed_plots: false,
@@ -407,6 +411,7 @@ fn test_rmarkdown_export_options_combinations() {
     // Test 2: Full options
     let full_options = RMarkdownOptions {
         mode: ExportMode::Timeline,
+        show_code: true,
         include_timestamps: true,
         show_actor: true,
         embed_plots: true,

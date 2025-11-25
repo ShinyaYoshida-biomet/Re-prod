@@ -13,6 +13,8 @@ export function ExportDialog({ open, onClose }: ExportDialogProps): JSX.Element 
     setMode,
     options,
     setOption,
+    pdfOptions,
+    setPdfOption,
     documentPath,
     setDocumentPath,
     outputPath,
@@ -89,6 +91,18 @@ export function ExportDialog({ open, onClose }: ExportDialogProps): JSX.Element 
                 <input
                   type="radio"
                   name="format"
+                  value="pdf"
+                  checked={format === 'pdf'}
+                  onChange={(e) => setFormat(e.target.value as typeof format)}
+                  disabled={exporting}
+                  aria-label="PDF Document"
+                />
+                <span>PDF Document (.pdf)</span>
+              </label>
+              <label className="export-radio">
+                <input
+                  type="radio"
+                  name="format"
                   value="both"
                   checked={format === 'both'}
                   onChange={(e) => setFormat(e.target.value as typeof format)}
@@ -100,7 +114,7 @@ export function ExportDialog({ open, onClose }: ExportDialogProps): JSX.Element 
             </div>
           </div>
 
-          {(format === 'rmarkdown' || format === 'both') && (
+          {format !== 'bundle' && (
             <>
               <div className="export-section">
                 <label className="export-label" id="mode-label">
@@ -167,6 +181,59 @@ export function ExportDialog({ open, onClose }: ExportDialogProps): JSX.Element 
                 </div>
               )}
 
+              {format === 'pdf' && (
+                <>
+                  <div className="export-section">
+                    <p className="export-hint">
+                      PDF export requires LaTeX (TinyTeX recommended). If you hit compilation errors,
+                      install TinyTeX inside R with <code>tinytex::install_tinytex()</code>.
+                    </p>
+                  </div>
+
+                  <div className="export-section">
+                    <label className="export-label" id="pdf-options-label">
+                      PDF Options
+                    </label>
+                    <div
+                      className="export-checkbox-group"
+                      role="group"
+                      aria-labelledby="pdf-options-label"
+                    >
+                      <label className="export-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={pdfOptions.toc}
+                          onChange={(e) => setPdfOption('toc', e.target.checked)}
+                          disabled={exporting}
+                          aria-label="Include table of contents"
+                        />
+                        <span>Include table of contents</span>
+                      </label>
+                      <label className="export-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={pdfOptions.includeSource}
+                          onChange={(e) => setPdfOption('includeSource', e.target.checked)}
+                          disabled={exporting}
+                          aria-label="Include source code"
+                        />
+                        <span>Include source code</span>
+                      </label>
+                      <label className="export-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={options.embedPlots}
+                          onChange={(e) => setOption('embedPlots', e.target.checked)}
+                          disabled={exporting}
+                          aria-label="Embed plot images inline"
+                        />
+                        <span>Embed plot images inline</span>
+                      </label>
+                    </div>
+                  </div>
+                </>
+              )}
+
               <div className="export-section">
                 <label className="export-label" id="options-label">
                   Options
@@ -196,16 +263,18 @@ export function ExportDialog({ open, onClose }: ExportDialogProps): JSX.Element 
                     />
                     <span>Show actor (User/AI) for each chunk</span>
                   </label>
-                  <label className="export-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={options.embedPlots}
-                      onChange={(e) => setOption('embedPlots', e.target.checked)}
-                      disabled={exporting}
-                      aria-label="Embed plot images inline"
-                    />
-                    <span>Embed plot images inline</span>
-                  </label>
+                  {format !== 'pdf' && (
+                    <label className="export-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={options.embedPlots}
+                        onChange={(e) => setOption('embedPlots', e.target.checked)}
+                        disabled={exporting}
+                        aria-label="Embed plot images inline"
+                      />
+                      <span>Embed plot images inline</span>
+                    </label>
+                  )}
                   <label className="export-checkbox">
                     <input
                       type="checkbox"
@@ -250,15 +319,15 @@ export function ExportDialog({ open, onClose }: ExportDialogProps): JSX.Element 
                   value={outputPath}
                   onChange={(e) => setOutputPath(e.target.value)}
                   disabled={exporting}
-                  aria-required="true"
-                  aria-describedby="outputPath-hint"
-                />
-                <p id="outputPath-hint" className="export-hint">
-                  File path where the RMarkdown will be saved
-                </p>
-              </div>
-            </>
-          )}
+                aria-required="true"
+                aria-describedby="outputPath-hint"
+              />
+              <p id="outputPath-hint" className="export-hint">
+                  File path where the {format === 'pdf' ? 'PDF file' : 'RMarkdown'} will be saved
+              </p>
+            </div>
+          </>
+        )}
 
           {error && (
             <div className="export-error" role="alert" aria-live="polite">

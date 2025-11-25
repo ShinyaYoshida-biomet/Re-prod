@@ -1,4 +1,4 @@
-import type { ExportRMarkdownRequestPayload } from 'shared';
+import type { ExportRMarkdownRequestPayload, PdfExportOptions } from 'shared';
 
 export type ExportDialogOptions = Pick<
   ExportRMarkdownRequestPayload,
@@ -7,12 +7,24 @@ export type ExportDialogOptions = Pick<
 
 export type ExportOptionKey = keyof ExportDialogOptions;
 
-export type ExportFormat = 'bundle' | 'rmarkdown' | 'both';
+export type ExportPdfOptions = Required<
+  Pick<PdfExportOptions, 'toc' | 'includeSource'> & {
+    highlightTheme: string;
+    figWidth: number;
+    figHeight: number;
+    latexPreamble: string;
+  }
+>;
+
+export type ExportPdfOptionKey = keyof ExportPdfOptions;
+
+export type ExportFormat = 'bundle' | 'rmarkdown' | 'pdf' | 'both';
 
 export interface ExportDialogState {
   format: ExportFormat;
   mode: ExportRMarkdownRequestPayload['mode'];
   options: ExportDialogOptions;
+  pdfOptions: ExportPdfOptions;
   documentPath: string;
   outputPath: string;
   exporting: boolean;
@@ -23,6 +35,7 @@ export type ExportDialogAction =
   | { type: 'set-format'; payload: ExportFormat }
   | { type: 'set-mode'; payload: ExportRMarkdownRequestPayload['mode'] }
   | { type: 'set-option'; key: ExportOptionKey; value: boolean }
+  | { type: 'set-pdf-option'; key: ExportPdfOptionKey; value: ExportPdfOptions[ExportPdfOptionKey] }
   | { type: 'set-document-path'; payload: string }
   | { type: 'set-output-path'; payload: string }
   | { type: 'set-exporting'; payload: boolean }
@@ -38,10 +51,31 @@ export const exportDialogDefaultOptions: ExportDialogOptions = {
   includeSummary: true,
 };
 
+export const exportDialogDefaultPdfOptions: ExportPdfOptions = {
+  toc: true,
+  includeSource: true,
+  highlightTheme: 'tango',
+  figWidth: 7,
+  figHeight: 5,
+  latexPreamble: '',
+};
+
+export function adjustOutputPathForFormat(outputPath: string, format: ExportFormat): string {
+  const trimmed = outputPath.trim();
+  if (format === 'pdf' && trimmed.toLowerCase().endsWith('.rmd')) {
+    return trimmed.replace(/\.rmd$/i, '.pdf');
+  }
+  if ((format === 'rmarkdown' || format === 'both') && trimmed.toLowerCase().endsWith('.pdf')) {
+    return trimmed.replace(/\.pdf$/i, '.Rmd');
+  }
+  return trimmed;
+}
+
 export const exportDialogInitialState: ExportDialogState = {
   format: 'rmarkdown',
   mode: 'timeline',
   options: exportDialogDefaultOptions,
+  pdfOptions: exportDialogDefaultPdfOptions,
   documentPath: '',
   outputPath: 'analysis_report.Rmd',
   exporting: false,

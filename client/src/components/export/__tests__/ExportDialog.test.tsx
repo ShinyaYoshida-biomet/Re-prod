@@ -34,6 +34,7 @@ describe('ExportDialog', () => {
     expect(sentRequest.type).toBe('export_rmarkdown');
     expect(sentRequest.request).toMatchObject({
       mode: 'timeline',
+      format: 'rmarkdown',
       outputPath: 'analysis_report.Rmd',
       includeTimestamps: true,
       showActor: true,
@@ -42,6 +43,7 @@ describe('ExportDialog', () => {
       includeErrors: false,
       includeSummary: true,
     });
+    expect(sentRequest.request.pdfOptions).toBeUndefined();
     expect(sentRequest.request.documentPath).toBeUndefined();
   });
 
@@ -76,6 +78,44 @@ describe('ExportDialog', () => {
     expect(onClose).not.toHaveBeenCalled();
     const [sentRequest] = sendMock.mock.calls[0];
     expect(sentRequest.request.documentPath).toBe('/tmp/report.R');
+  });
+
+  it('sends PDF export requests with PDF options and updated output path', async () => {
+    const sendMock = vi.fn((request, handler) => {
+      handler({
+        type: 'export_rmarkdown_response',
+        response: { success: true, outputPath: 'analysis_report.pdf' },
+      });
+      return true;
+    });
+
+    vi.spyOn(socketService, 'send').mockImplementation(sendMock);
+    const onClose = vi.fn();
+
+    render(<ExportDialog open onClose={onClose} />);
+
+    fireEvent.click(screen.getByRole('radio', { name: /PDF Document/i }));
+    const outputPathInput = screen.getByLabelText('Output Path') as HTMLInputElement;
+    expect(outputPathInput.value).toBe('analysis_report.pdf');
+
+    const includeSourceCheckbox = screen.getByLabelText('Include source code');
+    fireEvent.click(includeSourceCheckbox); // disable source code
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+
+    const [sentRequest] = sendMock.mock.calls[0];
+    expect(sentRequest.request.format).toBe('pdf');
+    expect(sentRequest.request.outputPath).toBe('analysis_report.pdf');
+    expect(sentRequest.request.pdfOptions).toMatchObject({
+      toc: true,
+      includeSource: false,
+      highlightTheme: 'tango',
+      figWidth: 7,
+      figHeight: 5,
+    });
+    expect(sentRequest.request.embedPlots).toBe(true);
   });
 
   it('toggles includeTimestamps option correctly', async () => {

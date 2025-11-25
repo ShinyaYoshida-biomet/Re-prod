@@ -26,9 +26,20 @@ type ToolExecutionResponse = {
 };
 
 export type ExportMode = 'timeline' | 'document';
+export type ExportFormat = 'rmarkdown' | 'pdf';
+
+export interface PdfExportOptions {
+  toc: boolean;
+  includeSource: boolean;
+  highlightTheme?: string;
+  figWidth?: number;
+  figHeight?: number;
+  latexPreamble?: string | null;
+}
 
 export interface ExportRMarkdownRequestPayload {
   mode: ExportMode;
+  format?: ExportFormat;
   outputPath: string;
   documentPath?: string;
   includeTimestamps: boolean;
@@ -37,6 +48,7 @@ export interface ExportRMarkdownRequestPayload {
   includeOutputs: boolean;
   includeErrors: boolean;
   includeSummary: boolean;
+  pdfOptions?: PdfExportOptions;
 }
 
 export interface ExportRMarkdownResponsePayload {
