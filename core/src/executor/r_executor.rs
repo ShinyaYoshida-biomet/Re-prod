@@ -229,19 +229,19 @@ tryCatch(
 )
 
 # If no plots were produced, try to render the last ggplot object automatically
-try({
+try({{
   existing_plots <- list.files(
     .reprod_plot_dir,
     pattern = sprintf("^%s_\\\\d+\\\\.png$", .reprod_plot_prefix)
   )
   if (length(existing_plots) == 0 &&
-      requireNamespace("ggplot2", quietly = TRUE)) {
+      requireNamespace("ggplot2", quietly = TRUE)) {{
     last_plot <- tryCatch(ggplot2::last_plot(), error = function(e) NULL)
-    if (inherits(last_plot, "ggplot")) {
+    if (inherits(last_plot, "ggplot")) {{
       print(last_plot)
-    }
-  }
-}, silent = TRUE)
+    }}
+  }}
+}}, silent = TRUE)
 
 quit(status = .reprod_exit_code, runLast = FALSE)
 "#,
