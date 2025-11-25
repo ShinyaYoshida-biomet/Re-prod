@@ -201,13 +201,11 @@
    AI PANEL - Lab Notebook Style
    ============================================ */
 [data-theme="phylo"] .ai-panel .panel-content {
-	background: var(--phylo-bg-ai);
 }
 
 [data-theme="phylo"] .ai-messages {
 	padding: 12px;
 	gap: 12px;
-	background: var(--phylo-bg-ai);
 }
 
 [data-theme="phylo"] .ai-welcome {

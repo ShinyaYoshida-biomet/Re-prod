@@ -90,6 +90,17 @@ export function CodeBlockDiffPreview({ codeBlock, onRetry }: Props): JSX.Element
 					renderSideBySide: false,
 					automaticLayout: true,
 					scrollBeyondLastLine: false,
+					scrollbar: {
+						vertical: "auto",
+						horizontal: "auto",
+						verticalScrollbarSize: 6,
+						horizontalScrollbarSize: 6,
+					},
+					lineNumbers: "on",
+					glyphMargin: false,
+					folding: false,
+					lineDecorationsWidth: 18,
+					lineNumbersMinChars: 3,
 				}}
 			/>
 			<div className="code-diff-stats">
