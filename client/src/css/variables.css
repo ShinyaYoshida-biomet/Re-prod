@@ -16,11 +16,22 @@
 	/* Borders & depth */
 	--border-color: rgba(30, 41, 59, 0.12);
 	--border-light: rgba(148, 163, 184, 0.2);
-	--border-strong: rgba(15, 23, 42, 0.22);
+	--border-medium: rgba(148, 163, 184, 0.3);
+	--border-strong: rgba(148, 163, 184, 0.4);
+	--border-subtle: rgba(148, 163, 184, 0.15);
+	--border-faint: rgba(148, 163, 184, 0.1);
+	--border-dark: rgba(15, 23, 42, 0.22);
 	--panel-radius: 12px;
 	--shadow-sm: 0 8px 18px rgba(15, 23, 42, 0.08);
 	--shadow-md: 0 18px 40px rgba(15, 23, 42, 0.12);
 	--shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+
+	/* Overlay & transparency */
+	--overlay-light: rgba(255, 255, 255, 0.6);
+	--overlay-medium: rgba(255, 255, 255, 0.85);
+	--overlay-strong: rgba(255, 255, 255, 0.95);
+	--overlay-subtle: rgba(255, 255, 255, 0.2);
+	--overlay-faint: rgba(255, 255, 255, 0.05);
 	--panel-header-min-height: 38px;
 	--panel-header-padding: 0 16px; /* Standardized padding (was 0 18px) */
 	--panel-header-shadow: var(--shadow-inset);

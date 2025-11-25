@@ -61,8 +61,8 @@
 	max-width: 100%;
 	max-height: 100%;
 	object-fit: contain;
-	background-color: #ffffff;
-	border: 1px solid rgba(148, 163, 184, 0.3);
+	background-color: var(--bg-primary);
+	border: 1px solid var(--border-medium);
 	box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
@@ -83,7 +83,7 @@
 	padding: 16px;
 	border-radius: 14px;
 	background: rgba(255, 255, 255, 0.78);
-	border: 1px solid rgba(148, 163, 184, 0.22);
+	border: 1px solid var(--border-light);
 	box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
 }
 

@@ -1,8 +1,8 @@
 .ai-tool-log {
 	margin-top: 12px;
-	border: 1px solid rgba(148, 163, 184, 0.3);
+	border: 1px solid var(--border-medium);
 	border-radius: 12px;
-	background: #fff;
+	background: var(--bg-primary);
 }
 
 .ai-tool-log__title {
@@ -21,7 +21,7 @@
 }
 
 .ai-tool-log li + li {
-	border-top: 1px solid rgba(148, 163, 184, 0.2);
+	border-top: 1px solid var(--border-light);
 }
 
 .ai-tool-log details {

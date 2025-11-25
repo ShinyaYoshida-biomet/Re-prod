@@ -69,7 +69,7 @@
 	font-size: 12px;
 	line-height: 1.55;
 	background: var(--bg-code);
-	border: 1px solid rgba(148, 163, 184, 0.25);
+	border: 1px solid var(--border-medium);
 }
 
 .console-stdout {

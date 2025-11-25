@@ -39,7 +39,7 @@
 	height: 100%;
 	display: flex;
 	flex-direction: column;
-	background: #ffffff;
+	background: var(--bg-primary);
 	border: 1px solid #d5dae1;
 	border-radius: 4px;
 	overflow: hidden;
@@ -114,7 +114,7 @@
 	padding: var(--btn-padding, 6px 14px);
 	font-size: var(--btn-font-size, 12px);
 	border-radius: var(--btn-radius, 999px);
-	border: var(--btn-border, 1px solid rgba(148, 163, 184, 0.4));
+	border: var(--btn-border, 1px solid var(--border-strong));
 	background: var(
 		--btn-bg,
 		linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(244, 246, 251, 0.85))
@@ -147,7 +147,7 @@
 		--btn-hover-bg,
 		linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(236, 240, 248, 0.95))
 	);
-	border-color: var(--btn-hover-border-color, rgba(148, 163, 184, 0.4));
+	border-color: var(--btn-hover-border-color, var(--border-strong));
 }
 
 .btn:active:not(:disabled) {
@@ -164,7 +164,7 @@
 
 .btn-primary {
 	background: var(--btn-primary-bg, linear-gradient(180deg, #2f6fed, #2756ca));
-	color: var(--btn-primary-color, #ffffff);
+	color: var(--btn-primary-color, var(--bg-primary));
 	border-color: var(--btn-primary-border, transparent);
 	box-shadow: var(--btn-primary-shadow, 0 10px 20px rgba(47, 111, 237, 0.25));
 }

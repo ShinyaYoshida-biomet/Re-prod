@@ -107,7 +107,7 @@
 	color: var(--text-secondary);
 	padding: var(--menu-connection-padding, 4px 8px);
 	border-radius: var(--menu-item-border-radius, 3px);
-	background: var(--menu-connection-bg, #ffffff);
+	background: var(--menu-connection-bg, var(--bg-primary));
 	border: 1px solid var(--menu-connection-border, #d0d7de);
 	box-shadow: none;
 }
@@ -140,7 +140,7 @@
 	top: 100%;
 	left: 0;
 	min-width: 220px;
-	background: var(--menu-dropdown-bg, #ffffff);
+	background: var(--menu-dropdown-bg, var(--bg-primary));
 	border: 1px solid var(--menu-dropdown-border, #d0d7de);
 	border-radius: 0; /* No rounding */
 	box-shadow: var(--menu-dropdown-shadow, 0 4px 12px rgba(0, 0, 0, 0.1));

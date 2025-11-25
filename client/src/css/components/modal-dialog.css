@@ -502,7 +502,7 @@
 }
 
 [data-theme="phylo"] .modal-dialog {
-	background: #ffffff;
+	background: var(--bg-primary);
 	border: 1px solid #cccccc;
 	border-radius: 3px;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -545,7 +545,7 @@
 
 /* Shortcuts Modal */
 [data-theme="phylo"] .shortcuts-search input {
-	background: #ffffff;
+	background: var(--bg-primary);
 	border: 1px solid #cccccc;
 	border-radius: 3px;
 	padding: 6px 8px;
@@ -563,7 +563,7 @@
 }
 
 [data-theme="phylo"] .shortcut-group {
-	background: #ffffff;
+	background: var(--bg-primary);
 	border: 1px solid #e0e0e0;
 	border-radius: 3px;
 	padding: 10px;
@@ -596,7 +596,7 @@
 
 [data-theme="phylo"] .keycap {
 	border: 1px solid #cccccc;
-	background: #ffffff;
+	background: var(--bg-primary);
 	border-radius: 3px;
 	padding: 2px 6px;
 	font-size: 11px;
@@ -739,7 +739,7 @@
 [data-theme="phylo"] .session-info-output {
 	border: 1px solid #cccccc;
 	border-radius: 3px;
-	background: #ffffff;
+	background: var(--bg-primary);
 }
 
 [data-theme="phylo"] .session-info-output-header {
@@ -786,7 +786,7 @@
 
 [data-theme="phylo"] .settings-row input[type="text"],
 [data-theme="phylo"] .settings-row select {
-	background: #ffffff;
+	background: var(--bg-primary);
 	border: 1px solid #cccccc;
 	border-radius: 3px;
 	padding: 6px 8px;
@@ -846,7 +846,7 @@
 }
 
 [data-theme="phylo"] .project-manager input {
-	background: #ffffff;
+	background: var(--bg-primary);
 	border: 1px solid #cccccc;
 	border-radius: 3px;
 	color: #333333;
