@@ -566,9 +566,13 @@ pub async fn render_pdf_document(
         .unwrap_or_else(|| working_dir.to_path_buf());
 
     if let Some(parent) = resolved_output.parent() {
-        fs::create_dir_all(parent)
-            .await
-            .map_err(|e| format!("Failed to create output directory {}: {}", parent.display(), e))?;
+        fs::create_dir_all(parent).await.map_err(|e| {
+            format!(
+                "Failed to create output directory {}: {}",
+                parent.display(),
+                e
+            )
+        })?;
     }
 
     let temp_dir = tempdir().map_err(|e| format!("Failed to create temp directory: {}", e))?;
@@ -603,7 +607,11 @@ pub async fn render_pdf_document(
         .map_err(|e| format!("Failed to write render script: {}", e))?;
 
     let output = Command::new(r_path)
-        .args(["--vanilla", "--quiet", script_path.to_string_lossy().as_ref()])
+        .args([
+            "--vanilla",
+            "--quiet",
+            script_path.to_string_lossy().as_ref(),
+        ])
         .current_dir(working_dir)
         .output()
         .await
@@ -637,7 +645,11 @@ fn build_pdf_render_script(
     options: &PdfRenderOptions,
     preamble_path: Option<&Path>,
 ) -> String {
-    let include_source = if options.include_source { "TRUE" } else { "FALSE" };
+    let include_source = if options.include_source {
+        "TRUE"
+    } else {
+        "FALSE"
+    };
     let toc = if options.toc { "TRUE" } else { "FALSE" };
     let includes = preamble_path.map_or_else(
         || "rmarkdown::includes()".to_string(),

@@ -154,9 +154,13 @@ async fn materialize_plots(bundle: &ReproductionBundle, working_dir: &Path) -> R
 
             for target_path in targets {
                 if let Some(parent) = target_path.parent() {
-                    tokio::fs::create_dir_all(parent)
-                        .await
-                        .map_err(|e| format!("Failed to create plot directory {}: {}", parent.display(), e))?;
+                    tokio::fs::create_dir_all(parent).await.map_err(|e| {
+                        format!(
+                            "Failed to create plot directory {}: {}",
+                            parent.display(),
+                            e
+                        )
+                    })?;
                 }
 
                 tokio::fs::write(&target_path, &bytes)

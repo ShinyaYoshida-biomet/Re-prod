@@ -951,8 +951,10 @@ impl ExportRMarkdownRequest {
             }
         };
 
-        let pdf_options: Option<PdfRenderOptions> =
-            self.pdf_options.as_ref().map(|options| options.clone().into());
+        let pdf_options: Option<PdfRenderOptions> = self
+            .pdf_options
+            .as_ref()
+            .map(|options| options.clone().into());
         let show_code = pdf_options
             .as_ref()
             .map(|options: &PdfRenderOptions| options.include_source)

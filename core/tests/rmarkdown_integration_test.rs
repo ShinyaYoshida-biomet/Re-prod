@@ -1,5 +1,6 @@
 use reprod_core::export::{
-    BundleMetadata, CodeFolding, ExportMode, RMarkdownGenerator, RMarkdownOptions, ReproductionBundle,
+    BundleMetadata, CodeFolding, ExportMode, RMarkdownGenerator, RMarkdownOptions,
+    ReproductionBundle,
 };
 use reprod_core::protocol::{
     CodeBlockKind, CodeBlockMetadata, EnvironmentSnapshot, ExecutionActor, ExecutionContext,
