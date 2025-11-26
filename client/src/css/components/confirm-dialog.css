@@ -1,68 +1,68 @@
 /* Confirm Dialog Overlay */
 .confirm-dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(15, 23, 42, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(4px);
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(15, 23, 42, 0.6);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+	backdrop-filter: blur(4px);
 }
 
 /* Confirm Dialog */
 .confirm-dialog {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-color);
-  border-radius: var(--panel-radius);
-  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.2);
-  width: 480px;
-  max-width: 90vw;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+	background: var(--bg-elevated);
+	border: 1px solid var(--border-color);
+	border-radius: var(--panel-radius);
+	box-shadow: 0 24px 48px rgba(15, 23, 42, 0.2);
+	width: 480px;
+	max-width: 90vw;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
 }
 
 /* Header */
 .confirm-dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px;
-  background: var(--bg-toolbar);
-  border-bottom: 1px solid var(--border-light);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 16px;
+	background: var(--bg-toolbar);
+	border-bottom: 1px solid var(--border-light);
 }
 
 .confirm-dialog-header h2 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-  letter-spacing: var(--letter-spacing-base);
+	margin: 0;
+	font-size: 16px;
+	font-weight: 600;
+	color: var(--text-primary);
+	letter-spacing: var(--letter-spacing-base);
 }
 
 /* Content */
 .confirm-dialog-content {
-  padding: 20px 16px;
-  background: var(--bg-primary);
+	padding: 20px 16px;
+	background: var(--bg-primary);
 }
 
 .confirm-dialog-message {
-  font-size: 13px;
-  color: var(--text-primary);
-  line-height: 1.6;
+	font-size: 13px;
+	color: var(--text-primary);
+	line-height: 1.6;
 }
 
 /* Footer */
 .confirm-dialog-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 16px;
-  background: var(--bg-toolbar);
-  border-top: 1px solid var(--border-light);
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 12px;
+	padding: 16px;
+	background: var(--bg-toolbar);
+	border-top: 1px solid var(--border-light);
 }

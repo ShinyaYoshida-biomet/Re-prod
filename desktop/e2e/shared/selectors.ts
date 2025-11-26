@@ -3,29 +3,29 @@
  */
 
 export const selectors = {
-  // Editor
-  editor: '.monaco-editor textarea',
+	// Editor
+	editor: ".monaco-editor textarea",
 
-  // Buttons
-  runButton: 'button[title="Run All (Cmd/Ctrl+Shift+Enter)"]',
+	// Buttons
+	runButton: 'button[title="Run All (Cmd/Ctrl+Shift+Enter)"]',
 
-  // Console
-  consoleOutput: '.console-stdout',
-  consoleError: '.console-stderr',
+	// Console
+	consoleOutput: ".console-stdout",
+	consoleError: ".console-stderr",
 
-  // Dialogs
-  timelineDialog: '.timeline-dialog',
-  exportDialog: '.export-dialog',
+	// Dialogs
+	timelineDialog: ".timeline-dialog",
+	exportDialog: ".export-dialog",
 
-  // Timeline
-  timelineEvent: '.timeline-event',
-  timelineStats: '.timeline-stat',
-  timelineFilterDropdown: '.timeline-filter',
+	// Timeline
+	timelineEvent: ".timeline-event",
+	timelineStats: ".timeline-stat",
+	timelineFilterDropdown: ".timeline-filter",
 
-  // Export
-  exportFormatBundleRadio: 'input[value="bundle"]',
-  exportFormatRMarkdownRadio: 'input[value="rmarkdown"]',
-  exportFormatBothRadio: 'input[value="both"]',
-  exportModeStandaloneRadio: 'input[value="standalone"]',
-  exportModeLinkedRadio: 'input[value="linked"]',
+	// Export
+	exportFormatBundleRadio: 'input[value="bundle"]',
+	exportFormatRMarkdownRadio: 'input[value="rmarkdown"]',
+	exportFormatBothRadio: 'input[value="both"]',
+	exportModeStandaloneRadio: 'input[value="standalone"]',
+	exportModeLinkedRadio: 'input[value="linked"]',
 } as const;

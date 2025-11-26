@@ -1,188 +1,190 @@
 .console-content {
-  font-family: Monaco, Menlo, Consolas, monospace;
-  font-size: 12px;
-  background: var(--bg-primary);
+	font-family: Monaco, Menlo, Consolas, monospace;
+	font-size: 12px;
+	background: var(--bg-primary);
 }
 
 .console-output {
-  padding: 18px;
-  overflow-y: auto;
-  height: 100%;
-  background: var(--bg-primary);
+	padding: 18px;
+	overflow-y: auto;
+	height: 100%;
+	background: var(--bg-primary);
 }
 
 .console-welcome {
-  color: var(--text-secondary);
-  font-style: italic;
+	color: var(--text-secondary);
+	font-style: italic;
 }
 
 .console-entry {
-  margin-bottom: 18px;
-  padding: 16px;
-  border-radius: 12px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  box-shadow: 0 12px 18px rgba(15, 23, 42, 0.06);
+	margin-bottom: 18px;
+	padding: 16px;
+	border-radius: 12px;
+	background: var(--bg-secondary);
+	border: 1px solid var(--border-color);
+	box-shadow: 0 12px 18px rgba(15, 23, 42, 0.06);
 }
 
 .console-entry:last-child {
-  margin-bottom: 0;
+	margin-bottom: 0;
 }
 
 .console-meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-  font-size: 11px;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 10px;
+	font-size: 11px;
+	color: var(--text-secondary);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
 }
 
 .console-time {
-  font-weight: 600;
-  color: var(--text-primary);
+	font-weight: 600;
+	color: var(--text-primary);
 }
 
 .console-duration {
-  color: var(--text-muted);
+	color: var(--text-muted);
 }
 
 .console-error-badge {
-  background: rgba(220, 76, 63, 0.12);
-  color: var(--error-color);
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 600;
+	background: rgba(220, 76, 63, 0.12);
+	color: var(--error-color);
+	padding: 2px 8px;
+	border-radius: 999px;
+	font-size: 10px;
+	font-weight: 600;
 }
 
 .console-stdout,
 .console-stderr {
-  margin: 10px 0;
-  padding: 12px;
-  border-radius: 10px;
-  overflow-x: auto;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  font-size: 12px;
-  line-height: 1.55;
-  background: var(--bg-code);
-  border: 1px solid rgba(148, 163, 184, 0.25);
+	margin: 10px 0;
+	padding: 12px;
+	border-radius: 10px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+	font-size: 12px;
+	line-height: 1.55;
+	background: var(--bg-code);
+	border: 1px solid var(--border-medium);
 }
 
 .console-stdout {
-  border-left: 4px solid var(--success-color);
+	border-left: 4px solid var(--success-color);
 }
 
 .console-stderr {
-  color: var(--error-color);
-  border-left: 4px solid var(--error-color);
-  background: rgba(220, 76, 63, 0.08);
+	color: var(--error-color);
+	border-left: 4px solid var(--error-color);
+	background: rgba(220, 76, 63, 0.08);
 }
 
 .console-plots-info {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  background-color: rgba(47, 111, 237, 0.1);
-  border-left: 4px solid var(--accent-blue);
-  border-radius: 10px;
-  margin-top: 10px;
-  font-size: 11px;
-  color: var(--accent-blue);
-  font-weight: 600;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 12px;
+	background-color: rgba(47, 111, 237, 0.1);
+	border-left: 4px solid var(--accent-blue);
+	border-radius: 10px;
+	margin-top: 10px;
+	font-size: 11px;
+	color: var(--accent-blue);
+	font-weight: 600;
 }
 
 .console-plots-info.clickable {
-  cursor: pointer;
-  transition: all 0.2s ease;
+	cursor: pointer;
+	transition: all 0.2s ease;
 }
 
 .console-plots-info.clickable:hover {
-  background-color: rgba(47, 111, 237, 0.18);
-  transform: translateX(2px);
+	background-color: rgba(47, 111, 237, 0.18);
+	transform: translateX(2px);
 }
 
 .console-plots-info.clickable:active {
-  transform: translateX(4px);
-  background-color: rgba(47, 111, 237, 0.25);
+	transform: translateX(4px);
+	background-color: rgba(47, 111, 237, 0.25);
 }
 
 .console-plots-info svg {
-  width: 16px;
-  height: 16px;
+	width: 16px;
+	height: 16px;
 }
 
 .console-history {
-  padding: 18px;
-  overflow-y: auto;
-  height: 100%;
-  background: var(--bg-primary);
+	padding: 18px;
+	overflow-y: auto;
+	height: 100%;
+	background: var(--bg-primary);
 }
 
 .history-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
 }
 
 .history-item {
-  padding: 14px 16px;
-  background-color: var(--bg-secondary);
-  border-radius: 12px;
-  border: 1px solid var(--border-color);
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+	padding: 14px 16px;
+	background-color: var(--bg-secondary);
+	border-radius: 12px;
+	border: 1px solid var(--border-color);
+	cursor: pointer;
+	transition:
+		transform 0.15s ease,
+		box-shadow 0.15s ease;
 }
 
 .history-item:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 20px rgba(15, 23, 42, 0.08);
+	transform: translateY(-1px);
+	box-shadow: 0 12px 20px rgba(15, 23, 42, 0.08);
 }
 
 .history-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 6px;
-  font-size: 11px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 6px;
+	font-size: 11px;
 }
 
 .history-number {
-  font-weight: 700;
-  color: var(--accent-blue);
+	font-weight: 700;
+	color: var(--accent-blue);
 }
 
 .history-time {
-  flex: 1;
-  color: var(--text-secondary);
+	flex: 1;
+	color: var(--text-secondary);
 }
 
 .history-status {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
 }
 
 .history-status svg {
-  width: 16px;
-  height: 16px;
+	width: 16px;
+	height: 16px;
 }
 
 .history-status.success {
-  color: var(--success-color);
+	color: var(--success-color);
 }
 
 .history-status.error {
-  color: var(--error-color);
+	color: var(--error-color);
 }
 
 .history-summary {
-  font-size: 11px;
-  color: var(--text-muted);
+	font-size: 11px;
+	color: var(--text-muted);
 }

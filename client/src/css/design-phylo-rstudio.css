@@ -17,185 +17,184 @@
    CSS VARIABLES OVERRIDE
    ============================================ */
 :root {
-  /* Base colors - Monochrome */
-  --phylo-bg-primary: #ffffff;
-  --phylo-bg-secondary: #f5f5f5;
-  --phylo-bg-tertiary: #e8e8e8;
-  --phylo-bg-toolbar: #fafafa;
-  --phylo-bg-code: #f9f9f9;
-  --phylo-bg-ai: #fffef5; /* Slightly yellowish like lab notebook */
+	/* Base colors - Monochrome */
+	--phylo-bg-primary: #ffffff;
+	--phylo-bg-secondary: #f5f5f5;
+	--phylo-bg-tertiary: #e8e8e8;
+	--phylo-bg-toolbar: #fafafa;
+	--phylo-bg-code: #f9f9f9;
+	--phylo-bg-ai: #fffef5; /* Slightly yellowish like lab notebook */
 
-  /* Typography */
-  --phylo-text-primary: #1a1a1a;
-  --phylo-text-secondary: #4a4a4a;
-  --phylo-text-muted: #7a7a7a;
+	/* Typography */
+	--phylo-text-primary: #1a1a1a;
+	--phylo-text-secondary: #4a4a4a;
+	--phylo-text-muted: #7a7a7a;
 
-  /* Borders - 1px everywhere */
-  --phylo-border: 1px solid #cccccc;
-  --phylo-border-light: 1px solid #e0e0e0;
-  --phylo-border-strong: 1px solid #999999;
+	/* Borders - 1px everywhere */
+	--phylo-border: 1px solid #cccccc;
+	--phylo-border-light: 1px solid #e0e0e0;
+	--phylo-border-strong: 1px solid #999999;
 
-  /* DNA Base Colors - Use sparingly for accents */
-  --phylo-adenine: #22c55e; /* A: Green */
-  --phylo-thymine: #ef4444; /* T: Red */
-  --phylo-cytosine: #3b82f6; /* C: Blue */
-  --phylo-guanine: #eab308; /* G: Yellow */
+	/* DNA Base Colors - Use sparingly for accents */
+	--phylo-adenine: #22c55e; /* A: Green */
+	--phylo-thymine: #ef4444; /* T: Red */
+	--phylo-cytosine: #3b82f6; /* C: Blue */
+	--phylo-guanine: #eab308; /* G: Yellow */
 
-  /* State colors */
-  --phylo-success: #22c55e;
-  --phylo-error: #ef4444;
-  --phylo-warning: #f59e0b;
+	/* State colors */
+	--phylo-success: #22c55e;
+	--phylo-error: #ef4444;
+	--phylo-warning: #f59e0b;
 
-  /* Typography tokens */
-  --phylo-font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Helvetica Neue",
-    Arial, sans-serif;
-  --phylo-font-size-base: 12px;
-  --phylo-line-height-base: 1.5;
-  --phylo-font-weight-base: 400;
+	/* Typography tokens */
+	--phylo-font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
+	--phylo-font-size-base: 12px;
+	--phylo-line-height-base: 1.5;
+	--phylo-font-weight-base: 400;
 
-  /* Layout */
-  --phylo-panel-radius: 3px;
-  --phylo-panel-gap: 1px; /* Serves as border */
+	/* Layout */
+	--phylo-panel-radius: 3px;
+	--phylo-panel-gap: 1px; /* Serves as border */
 }
 
 /* ============================================
    GLOBAL OVERRIDES
    ============================================ */
 :root[data-theme="phylo"] {
-  background: #e8e8e8;
-  font-family: var(--phylo-font-family);
-  font-size: var(--phylo-font-size-base);
-  line-height: var(--phylo-line-height-base);
-  /* Map theme tokens to app variables */
-  --bg-primary: var(--phylo-bg-primary);
-  --bg-secondary: var(--phylo-bg-secondary);
-  --bg-tertiary: var(--phylo-bg-tertiary);
-  --bg-toolbar: var(--phylo-bg-toolbar);
-  --bg-elevated: var(--phylo-bg-primary);
-  --bg-code: var(--phylo-bg-code);
-  --text-primary: var(--phylo-text-primary);
-  --text-secondary: var(--phylo-text-secondary);
-  --text-muted: var(--phylo-text-muted);
-  --border-color: #cccccc;
-  --border-light: #e0e0e0;
-  --border-strong: #999999;
-  --panel-radius: var(--phylo-panel-radius);
-  --shadow-sm: none;
-  --shadow-md: none;
-  --shadow-inset: none;
-  --panel-header-min-height: 32px;
-  --panel-header-padding: 0 12px;
-  --panel-header-shadow: none;
-  --panel-actions-gap: 6px;
-  --panel-title-font-size: 12px;
-  --panel-title-gap: 6px;
-  --panel-title-letter-spacing: 0;
-  --accent-blue: var(--phylo-cytosine);
-  --accent-blue-hover: #2563eb;
-  --accent-blue-light: rgba(59, 130, 246, 0.18);
-  --success-color: var(--phylo-success);
-  --error-color: var(--phylo-error);
-  --warning-color: var(--phylo-warning);
-  --font-family-base: var(--phylo-font-family);
-  --font-size-base: var(--phylo-font-size-base);
-  --line-height-base: var(--phylo-line-height-base);
-  --letter-spacing-base: 0;
-  --btn-padding: 5px 12px;
-  --btn-font-size: 11px;
-  --btn-radius: 3px;
-  --btn-border: var(--phylo-border);
-  --btn-bg: var(--phylo-bg-secondary);
-  --btn-color: var(--phylo-text-primary);
-  --btn-shadow: none;
-  --btn-height: 24px;
-  --btn-transition: background 0.1s ease, border-color 0.1s ease;
-  --btn-hover-bg: var(--phylo-bg-tertiary);
-  --btn-hover-shadow: none;
-  --btn-hover-transform: none;
-  --btn-hover-border-color: #999999;
-  --btn-active-bg: #d8d8d8;
-  --btn-active-shadow: none;
-  --btn-active-transform: none;
-  --btn-primary-bg: var(--phylo-cytosine);
-  --btn-primary-color: #ffffff;
-  --btn-primary-border: transparent;
-  --btn-primary-shadow: none;
-  --btn-primary-hover-bg: #2563eb;
-  --btn-primary-hover-shadow: none;
-  --btn-icon-padding: 4px;
-  --btn-icon-size: 24px;
-  --btn-icon-height: 24px;
-  --btn-icon-radius: 3px;
-  --tabs-gap: 0;
-  --tabs-padding: 0;
-  --tabs-background: var(--phylo-bg-tertiary);
-  --tabs-border-bottom: var(--phylo-border);
-  --tab-padding: 6px 12px;
-  --tab-font-size: 11px;
-  --tab-color: var(--phylo-text-secondary);
-  --tab-bg: var(--phylo-bg-secondary);
-  --tab-radius: 0;
-  --tab-border: none;
-  --tab-divider: var(--phylo-border-light);
-  --tab-transition: background 0.1s ease;
-  --tab-shadow: none;
-  --tab-active-color: var(--phylo-text-primary);
-  --tab-active-bg: var(--phylo-bg-primary);
-  --tab-active-border: transparent;
-  --tab-active-shadow: none;
-  --tab-active-underline: 2px solid var(--phylo-cytosine);
-  --menu-height: 32px;
-  --menu-padding: 0 12px;
-  --menu-gap: 20px;
-  --menu-bg: var(--phylo-bg-tertiary);
-  --menu-border-color: var(--phylo-border);
-  --menu-border-radius: 0;
-  --menu-shadow: none;
-  --menu-item-gap: 2px;
-  --menu-item-padding: 4px 10px;
-  --menu-item-font-size: 12px;
-  --menu-item-border-radius: 3px;
-  --menu-item-hover-bg: var(--phylo-bg-secondary);
-  --menu-item-active-bg: var(--phylo-bg-tertiary);
-  --menu-dropdown-bg: var(--phylo-bg-primary);
-  --menu-dropdown-border: var(--phylo-border);
-  --menu-dropdown-shadow: none;
-  --menu-dropdown-hover-bg: var(--phylo-bg-secondary);
-  --menu-dropdown-active-bg: var(--phylo-bg-tertiary);
-  --menu-dropdown-separator: var(--phylo-border-light);
-  --menu-connection-bg: var(--phylo-bg-primary);
-  --menu-connection-border: var(--phylo-border);
-  --menu-connection-padding: 4px 8px;
-  --menu-connection-gap: 6px;
-  --menu-connection-font-size: 11px;
-  --menu-ai-bg: var(--phylo-bg-primary);
-  --menu-ai-border: var(--phylo-guanine);
-  --menu-ai-hover-bg: var(--phylo-bg-secondary);
-  --menu-info-color: var(--phylo-cytosine);
-  --menu-success-color: var(--phylo-success);
-  --menu-error-color: var(--phylo-error);
+	background: #e8e8e8;
+	font-family: var(--phylo-font-family);
+	font-size: var(--phylo-font-size-base);
+	line-height: var(--phylo-line-height-base);
+	/* Map theme tokens to app variables */
+	--bg-primary: var(--phylo-bg-primary);
+	--bg-secondary: var(--phylo-bg-secondary);
+	--bg-tertiary: var(--phylo-bg-tertiary);
+	--bg-toolbar: var(--phylo-bg-toolbar);
+	--bg-elevated: var(--phylo-bg-primary);
+	--bg-code: var(--phylo-bg-code);
+	--text-primary: var(--phylo-text-primary);
+	--text-secondary: var(--phylo-text-secondary);
+	--text-muted: var(--phylo-text-muted);
+	--border-color: #cccccc;
+	--border-light: #e0e0e0;
+	--border-strong: #999999;
+	--panel-radius: var(--phylo-panel-radius);
+	--shadow-sm: none;
+	--shadow-md: none;
+	--shadow-inset: none;
+	--panel-header-min-height: 32px;
+	--panel-header-padding: 0 12px;
+	--panel-header-shadow: none;
+	--panel-actions-gap: 6px;
+	--panel-title-font-size: 12px;
+	--panel-title-gap: 6px;
+	--panel-title-letter-spacing: 0;
+	--accent-blue: var(--phylo-cytosine);
+	--accent-blue-hover: #2563eb;
+	--accent-blue-light: rgba(59, 130, 246, 0.18);
+	--success-color: var(--phylo-success);
+	--error-color: var(--phylo-error);
+	--warning-color: var(--phylo-warning);
+	--font-family-base: var(--phylo-font-family);
+	--font-size-base: var(--phylo-font-size-base);
+	--line-height-base: var(--phylo-line-height-base);
+	--letter-spacing-base: 0;
+	--btn-padding: 5px 12px;
+	--btn-font-size: 11px;
+	--btn-radius: 3px;
+	--btn-border: var(--phylo-border);
+	--btn-bg: var(--phylo-bg-secondary);
+	--btn-color: var(--phylo-text-primary);
+	--btn-shadow: none;
+	--btn-height: 24px;
+	--btn-transition: background 0.1s ease, border-color 0.1s ease;
+	--btn-hover-bg: var(--phylo-bg-tertiary);
+	--btn-hover-shadow: none;
+	--btn-hover-transform: none;
+	--btn-hover-border-color: #999999;
+	--btn-active-bg: #d8d8d8;
+	--btn-active-shadow: none;
+	--btn-active-transform: none;
+	--btn-primary-bg: var(--phylo-cytosine);
+	--btn-primary-color: #ffffff;
+	--btn-primary-border: transparent;
+	--btn-primary-shadow: none;
+	--btn-primary-hover-bg: #2563eb;
+	--btn-primary-hover-shadow: none;
+	--btn-icon-padding: 4px;
+	--btn-icon-size: 24px;
+	--btn-icon-height: 24px;
+	--btn-icon-radius: 3px;
+	--tabs-gap: 0;
+	--tabs-padding: 0;
+	--tabs-background: var(--phylo-bg-tertiary);
+	--tabs-border-bottom: var(--phylo-border);
+	--tab-padding: 6px 12px;
+	--tab-font-size: 11px;
+	--tab-color: var(--phylo-text-secondary);
+	--tab-bg: var(--phylo-bg-secondary);
+	--tab-radius: 0;
+	--tab-border: none;
+	--tab-divider: var(--phylo-border-light);
+	--tab-transition: background 0.1s ease;
+	--tab-shadow: none;
+	--tab-active-color: var(--phylo-text-primary);
+	--tab-active-bg: var(--phylo-bg-primary);
+	--tab-active-border: transparent;
+	--tab-active-shadow: none;
+	--tab-active-underline: 2px solid var(--phylo-cytosine);
+	--menu-height: 32px;
+	--menu-padding: 0 12px;
+	--menu-gap: 20px;
+	--menu-bg: var(--phylo-bg-tertiary);
+	--menu-border-color: var(--phylo-border);
+	--menu-border-radius: 0;
+	--menu-shadow: none;
+	--menu-item-gap: 2px;
+	--menu-item-padding: 4px 10px;
+	--menu-item-font-size: 12px;
+	--menu-item-border-radius: 3px;
+	--menu-item-hover-bg: var(--phylo-bg-secondary);
+	--menu-item-active-bg: var(--phylo-bg-tertiary);
+	--menu-dropdown-bg: var(--phylo-bg-primary);
+	--menu-dropdown-border: var(--phylo-border);
+	--menu-dropdown-shadow: none;
+	--menu-dropdown-hover-bg: var(--phylo-bg-secondary);
+	--menu-dropdown-active-bg: var(--phylo-bg-tertiary);
+	--menu-dropdown-separator: var(--phylo-border-light);
+	--menu-connection-bg: var(--phylo-bg-primary);
+	--menu-connection-border: var(--phylo-border);
+	--menu-connection-padding: 4px 8px;
+	--menu-connection-gap: 6px;
+	--menu-connection-font-size: 11px;
+	--menu-ai-bg: var(--phylo-bg-primary);
+	--menu-ai-border: var(--phylo-guanine);
+	--menu-ai-hover-bg: var(--phylo-bg-secondary);
+	--menu-info-color: var(--phylo-cytosine);
+	--menu-success-color: var(--phylo-success);
+	--menu-error-color: var(--phylo-error);
 }
 
 /* ============================================
    APP LAYOUT
    ============================================ */
 [data-theme="phylo"] .app {
-  padding: 0;
-  gap: 0;
-  background: var(--phylo-bg-tertiary);
+	padding: 0;
+	gap: 0;
+	background: var(--phylo-bg-tertiary);
 }
 
 [data-theme="phylo"] .workspace-shell {
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
+	padding: 0;
+	background: transparent;
+	border: none;
+	border-radius: 0;
+	box-shadow: none;
 }
 
 [data-theme="phylo"] .workspace-shell .allotment__layout {
-  gap: var(--phylo-panel-gap) !important;
+	gap: var(--phylo-panel-gap) !important;
 }
 
 /* ============================================
@@ -205,176 +204,176 @@
 }
 
 [data-theme="phylo"] .ai-messages {
-  padding: 12px;
-  gap: 12px;
+	padding: 12px;
+	gap: 12px;
 }
 
 [data-theme="phylo"] .ai-welcome {
-  padding: 24px;
-  border-radius: var(--phylo-panel-radius);
-  background: var(--phylo-bg-primary);
-  border: 1px dashed #cccccc;
-  box-shadow: none;
+	padding: 24px;
+	border-radius: var(--phylo-panel-radius);
+	background: var(--phylo-bg-primary);
+	border: 1px dashed #cccccc;
+	box-shadow: none;
 }
 
 [data-theme="phylo"] .ai-welcome-icon svg {
-  width: 40px;
-  height: 40px;
+	width: 40px;
+	height: 40px;
 }
 
 [data-theme="phylo"] .ai-welcome h3 {
-  font-size: 14px;
-  margin-bottom: 6px;
+	font-size: 14px;
+	margin-bottom: 6px;
 }
 
 [data-theme="phylo"] .ai-welcome p {
-  font-size: 11px;
-  margin-bottom: 12px;
+	font-size: 11px;
+	margin-bottom: 12px;
 }
 
 [data-theme="phylo"] .suggestion {
-  padding: 8px 12px;
-  border-radius: var(--phylo-panel-radius);
-  background-color: var(--phylo-bg-primary);
-  border: var(--phylo-border);
-  font-size: 11px;
-  transition: background 0.1s ease;
-  box-shadow: none;
+	padding: 8px 12px;
+	border-radius: var(--phylo-panel-radius);
+	background-color: var(--phylo-bg-primary);
+	border: var(--phylo-border);
+	font-size: 11px;
+	transition: background 0.1s ease;
+	box-shadow: none;
 }
 
 [data-theme="phylo"] .suggestion:hover {
-  background: var(--phylo-bg-secondary);
-  transform: none;
-  box-shadow: none;
+	background: var(--phylo-bg-secondary);
+	transform: none;
+	box-shadow: none;
 }
 
 [data-theme="phylo"] .message-user {
-  background: var(--phylo-cytosine);
-  color: white;
-  padding: 8px 12px;
-  border-radius: var(--phylo-panel-radius);
-  box-shadow: none;
+	background: var(--phylo-cytosine);
+	color: white;
+	padding: 8px 12px;
+	border-radius: var(--phylo-panel-radius);
+	box-shadow: none;
 }
 
 [data-theme="phylo"] .message-assistant {
-  background: transparent;
-  padding: 10px 12px;
-  border-radius: var(--phylo-panel-radius);
-  border: var(--phylo-border);
-  box-shadow: none;
+	background: transparent;
+	padding: 10px 12px;
+	border-radius: var(--phylo-panel-radius);
+	border: var(--phylo-border);
+	box-shadow: none;
 }
 
 [data-theme="phylo"] .message-header {
-  font-size: 10px;
-  margin-bottom: 4px;
+	font-size: 10px;
+	margin-bottom: 4px;
 }
 
 [data-theme="phylo"] .message-content {
-  font-size: 11px;
-  line-height: 1.5;
-  gap: 6px;
+	font-size: 11px;
+	line-height: 1.5;
+	gap: 6px;
 }
 
 [data-theme="phylo"] .message-code {
-  margin-top: 6px;
-  padding: 8px;
-  background-color: var(--phylo-bg-code);
-  border-radius: var(--phylo-panel-radius);
-  border: var(--phylo-border-light);
+	margin-top: 6px;
+	padding: 8px;
+	background-color: var(--phylo-bg-code);
+	border-radius: var(--phylo-panel-radius);
+	border: var(--phylo-border-light);
 }
 
 [data-theme="phylo"] .message-code pre {
-  font-size: 10px;
+	font-size: 10px;
 }
 
 [data-theme="phylo"] .ai-input-container-wrapper {
-  padding: 12px;
-  border-top: var(--phylo-border);
-  background: var(--phylo-bg-toolbar);
+	padding: 12px;
+	border-top: var(--phylo-border);
+	background: var(--phylo-bg-toolbar);
 }
 
 [data-theme="phylo"] .ai-input-container {
-  gap: 8px;
-  background: transparent;
+	gap: 8px;
+	background: transparent;
 }
 
 [data-theme="phylo"] .ai-input {
-  padding: 8px 10px;
-  border: var(--phylo-border);
-  border-radius: var(--phylo-panel-radius);
-  background-color: var(--phylo-bg-primary);
-  font-size: 11px;
-  min-height: 60px;
-  max-height: 240px;
-  box-shadow: none;
+	padding: 8px 10px;
+	border: var(--phylo-border);
+	border-radius: var(--phylo-panel-radius);
+	background-color: var(--phylo-bg-primary);
+	font-size: 11px;
+	min-height: 60px;
+	max-height: 240px;
+	box-shadow: none;
 }
 
 [data-theme="phylo"] .ai-input:focus {
-  outline: 1px solid var(--phylo-cytosine);
-  border-color: var(--phylo-cytosine);
+	outline: 1px solid var(--phylo-cytosine);
+	border-color: var(--phylo-cytosine);
 }
 
 [data-theme="phylo"] .send-btn {
-  background: var(--phylo-cytosine);
-  font-size: 11px;
-  height: 24px;
-  padding: 0 10px;
+	background: var(--phylo-cytosine);
+	font-size: 11px;
+	height: 24px;
+	padding: 0 10px;
 }
 
 [data-theme="phylo"] .send-btn:hover:not(:disabled) {
-  background: #2563eb;
+	background: #2563eb;
 }
 
 [data-theme="phylo"] .send-btn:disabled {
-  background: var(--phylo-bg-secondary);
-  color: var(--phylo-text-muted);
-  border: var(--phylo-border);
+	background: var(--phylo-bg-secondary);
+	color: var(--phylo-text-muted);
+	border: var(--phylo-border);
 }
 
 /* ============================================
    CODE BLOCKS
    ============================================ */
 [data-theme="phylo"] .code-block-container {
-  margin: 12px 0;
-  border: var(--phylo-border);
-  border-radius: var(--phylo-panel-radius);
-  background: var(--phylo-bg-primary);
-  box-shadow: none;
-  backdrop-filter: none;
+	margin: 12px 0;
+	border: var(--phylo-border);
+	border-radius: var(--phylo-panel-radius);
+	background: var(--phylo-bg-primary);
+	box-shadow: none;
+	backdrop-filter: none;
 }
 
 [data-theme="phylo"] .code-explanation {
-  gap: 6px;
-  padding: 10px 12px;
-  background: var(--phylo-bg-secondary);
-  border-bottom: var(--phylo-border-light);
-  font-size: 11px;
+	gap: 6px;
+	padding: 10px 12px;
+	background: var(--phylo-bg-secondary);
+	border-bottom: var(--phylo-border-light);
+	font-size: 11px;
 }
 
 [data-theme="phylo"] .code-header {
-  padding: 8px 12px;
-  background: var(--phylo-bg-toolbar);
-  border-bottom: var(--phylo-border-light);
-  font-size: 10px;
+	padding: 8px 12px;
+	background: var(--phylo-bg-toolbar);
+	border-bottom: var(--phylo-border-light);
+	font-size: 10px;
 }
 
 [data-theme="phylo"] .code-content {
-  padding: 12px;
-  font-size: 11px;
-  line-height: 1.5;
-  background: var(--phylo-bg-code);
-  border-bottom: var(--phylo-border-light);
+	padding: 12px;
+	font-size: 11px;
+	line-height: 1.5;
+	background: var(--phylo-bg-code);
+	border-bottom: var(--phylo-border-light);
 }
 
 [data-theme="phylo"] .code-actions {
-  gap: 8px;
-  padding: 10px 12px;
-  background: var(--phylo-bg-toolbar);
+	gap: 8px;
+	padding: 10px 12px;
+	background: var(--phylo-bg-toolbar);
 }
 
 [data-theme="phylo"] .code-actions .btn {
-  font-size: 10px;
-  padding: 5px 10px;
+	font-size: 10px;
+	padding: 5px 10px;
 }
 
 /* ============================================
@@ -383,358 +382,358 @@
 [data-theme="phylo"] .timeline-panel-header,
 [data-theme="phylo"] .timeline-panel-controls,
 [data-theme="phylo"] .timeline-stats {
-  background: var(--phylo-bg-toolbar);
-  border-bottom: var(--phylo-border-light);
+	background: var(--phylo-bg-toolbar);
+	border-bottom: var(--phylo-border-light);
 }
 
 [data-theme="phylo"] .timeline-panel-content {
-  padding: 10px;
+	padding: 10px;
 }
 
 [data-theme="phylo"] .timeline-list {
-  font-family: "Monaco", "Menlo", "Consolas", "Courier New", monospace;
-  font-size: 11px;
-  line-height: 1.4;
-  gap: 8px;
+	font-family: "Monaco", "Menlo", "Consolas", "Courier New", monospace;
+	font-size: 11px;
+	line-height: 1.4;
+	gap: 8px;
 }
 
 [data-theme="phylo"] .timeline-event {
-  padding: 10px 12px;
-  background: var(--phylo-bg-secondary);
-  border: var(--phylo-border);
-  border-radius: var(--phylo-panel-radius);
-  box-shadow: none;
-  transition: background 0.1s ease;
+	padding: 10px 12px;
+	background: var(--phylo-bg-secondary);
+	border: var(--phylo-border);
+	border-radius: var(--phylo-panel-radius);
+	box-shadow: none;
+	transition: background 0.1s ease;
 }
 
 [data-theme="phylo"] .timeline-event:hover {
-  background: var(--phylo-bg-tertiary);
-  transform: none;
-  box-shadow: none;
+	background: var(--phylo-bg-tertiary);
+	transform: none;
+	box-shadow: none;
 }
 
 [data-theme="phylo"] .timeline-event-header {
-  gap: 8px;
-  margin-bottom: 8px;
-  font-size: 10px;
+	gap: 8px;
+	margin-bottom: 8px;
+	font-size: 10px;
 }
 
 [data-theme="phylo"] .timeline-event-code pre {
-  padding: 8px;
-  background: var(--phylo-bg-code);
-  border-radius: var(--phylo-panel-radius);
-  font-size: 10px;
-  line-height: 1.4;
+	padding: 8px;
+	background: var(--phylo-bg-code);
+	border-radius: var(--phylo-panel-radius);
+	font-size: 10px;
+	line-height: 1.4;
 }
 
 [data-theme="phylo"] .timeline-stat {
-  padding: 6px;
-  background: var(--phylo-bg-primary);
-  border-radius: var(--phylo-panel-radius);
-  border: var(--phylo-border);
+	padding: 6px;
+	background: var(--phylo-bg-primary);
+	border-radius: var(--phylo-panel-radius);
+	border: var(--phylo-border);
 }
 
 [data-theme="phylo"] .timeline-stat-value {
-  font-size: 16px;
+	font-size: 16px;
 }
 
 [data-theme="phylo"] .timeline-stat-label {
-  font-size: 10px;
+	font-size: 10px;
 }
 
 [data-theme="phylo"] .timeline-filter select,
 [data-theme="phylo"] .timeline-filter input[type="text"],
 [data-theme="phylo"] .timeline-sort select {
-  padding: 4px 8px;
-  border: var(--phylo-border);
-  border-radius: var(--phylo-panel-radius);
-  font-size: 11px;
+	padding: 4px 8px;
+	border: var(--phylo-border);
+	border-radius: var(--phylo-panel-radius);
+	font-size: 11px;
 }
 
 [data-theme="phylo"] .timeline-filter-clear,
 [data-theme="phylo"] .timeline-load-more {
-  padding: 6px 10px;
-  background: var(--phylo-bg-secondary);
-  border: var(--phylo-border);
-  border-radius: var(--phylo-panel-radius);
-  font-size: 11px;
-  box-shadow: none;
+	padding: 6px 10px;
+	background: var(--phylo-bg-secondary);
+	border: var(--phylo-border);
+	border-radius: var(--phylo-panel-radius);
+	font-size: 11px;
+	box-shadow: none;
 }
 
 [data-theme="phylo"] .timeline-filter-clear:hover,
 [data-theme="phylo"] .timeline-load-more:hover {
-  background: var(--phylo-bg-tertiary);
+	background: var(--phylo-bg-tertiary);
 }
 
 /* ============================================
    CONSOLE - Phylogenetic Tree Style
    ============================================ */
 [data-theme="phylo"] .console-output {
-  font-family: "Monaco", "Menlo", "Consolas", "Courier New", monospace;
-  font-size: 11px;
-  line-height: 1.4;
-  padding: 12px;
+	font-family: "Monaco", "Menlo", "Consolas", "Courier New", monospace;
+	font-size: 11px;
+	line-height: 1.4;
+	padding: 12px;
 }
 
 [data-theme="phylo"] .console-entry {
-  margin-bottom: 12px;
-  padding: 10px 12px;
-  border-radius: var(--phylo-panel-radius);
-  background: var(--phylo-bg-secondary);
-  border: var(--phylo-border);
-  box-shadow: none;
+	margin-bottom: 12px;
+	padding: 10px 12px;
+	border-radius: var(--phylo-panel-radius);
+	background: var(--phylo-bg-secondary);
+	border: var(--phylo-border);
+	box-shadow: none;
 }
 
 [data-theme="phylo"] .console-meta {
-  gap: 8px;
-  margin-bottom: 8px;
-  font-size: 10px;
+	gap: 8px;
+	margin-bottom: 8px;
+	font-size: 10px;
 }
 
 [data-theme="phylo"] .console-stdout,
 [data-theme="phylo"] .console-stderr {
-  margin: 8px 0;
-  padding: 8px 10px;
-  border-radius: var(--phylo-panel-radius);
-  font-size: 11px;
-  line-height: 1.4;
-  background: var(--phylo-bg-code);
-  border: var(--phylo-border-light);
+	margin: 8px 0;
+	padding: 8px 10px;
+	border-radius: var(--phylo-panel-radius);
+	font-size: 11px;
+	line-height: 1.4;
+	background: var(--phylo-bg-code);
+	border: var(--phylo-border-light);
 }
 
 [data-theme="phylo"] .console-stdout {
-  border-left: 3px solid var(--phylo-success);
+	border-left: 3px solid var(--phylo-success);
 }
 
 [data-theme="phylo"] .console-stderr {
-  color: var(--phylo-error);
-  border-left: 3px solid var(--phylo-error);
-  background: rgba(239, 68, 68, 0.05);
+	color: var(--phylo-error);
+	border-left: 3px solid var(--phylo-error);
+	background: rgba(239, 68, 68, 0.05);
 }
 
 [data-theme="phylo"] .console-error-badge {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--phylo-error);
-  padding: 2px 6px;
-  border-radius: var(--phylo-panel-radius);
-  font-size: 9px;
+	background: rgba(239, 68, 68, 0.1);
+	color: var(--phylo-error);
+	padding: 2px 6px;
+	border-radius: var(--phylo-panel-radius);
+	font-size: 9px;
 }
 
 [data-theme="phylo"] .console-plots-info {
-  padding: 8px 10px;
-  background-color: rgba(59, 130, 246, 0.08);
-  border-left: 3px solid var(--phylo-cytosine);
-  border-radius: var(--phylo-panel-radius);
-  margin-top: 8px;
-  font-size: 10px;
-  box-shadow: none;
+	padding: 8px 10px;
+	background-color: rgba(59, 130, 246, 0.08);
+	border-left: 3px solid var(--phylo-cytosine);
+	border-radius: var(--phylo-panel-radius);
+	margin-top: 8px;
+	font-size: 10px;
+	box-shadow: none;
 }
 
 [data-theme="phylo"] .console-plots-info.clickable:hover {
-  background-color: rgba(59, 130, 246, 0.12);
-  transform: none;
+	background-color: rgba(59, 130, 246, 0.12);
+	transform: none;
 }
 
 [data-theme="phylo"] .console-plots-info.clickable:active {
-  transform: none;
-  background-color: rgba(59, 130, 246, 0.15);
+	transform: none;
+	background-color: rgba(59, 130, 246, 0.15);
 }
 
 [data-theme="phylo"] .console-history {
-  padding: 12px;
+	padding: 12px;
 }
 
 [data-theme="phylo"] .history-list {
-  gap: 8px;
+	gap: 8px;
 }
 
 [data-theme="phylo"] .history-item {
-  padding: 10px 12px;
-  background-color: var(--phylo-bg-secondary);
-  border-radius: var(--phylo-panel-radius);
-  border: var(--phylo-border);
-  transition: background 0.1s ease;
-  box-shadow: none;
+	padding: 10px 12px;
+	background-color: var(--phylo-bg-secondary);
+	border-radius: var(--phylo-panel-radius);
+	border: var(--phylo-border);
+	transition: background 0.1s ease;
+	box-shadow: none;
 }
 
 [data-theme="phylo"] .history-item:hover {
-  background: var(--phylo-bg-tertiary);
-  transform: none;
-  box-shadow: none;
+	background: var(--phylo-bg-tertiary);
+	transform: none;
+	box-shadow: none;
 }
 
 [data-theme="phylo"] .history-header {
-  gap: 8px;
-  margin-bottom: 6px;
-  font-size: 10px;
+	gap: 8px;
+	margin-bottom: 6px;
+	font-size: 10px;
 }
 
 [data-theme="phylo"] .history-summary {
-  font-size: 10px;
+	font-size: 10px;
 }
 
 /* ============================================
    SASH (SPLIT PANE) OVERRIDES
    ============================================ */
 [data-theme="phylo"] .sash {
-  background-color: var(--phylo-bg-tertiary) !important;
+	background-color: var(--phylo-bg-tertiary) !important;
 }
 
 [data-theme="phylo"] .sash:hover {
-  background-color: var(--phylo-cytosine) !important;
+	background-color: var(--phylo-cytosine) !important;
 }
 
 [data-theme="phylo"] .sash-vertical {
-  width: 1px !important;
+	width: 1px !important;
 }
 
 [data-theme="phylo"] .sash-horizontal {
-  height: 1px !important;
+	height: 1px !important;
 }
 
 /* ============================================
    SCROLLBARS
    ============================================ */
 [data-theme="phylo"] ::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+	width: 12px;
+	height: 12px;
 }
 
 [data-theme="phylo"] ::-webkit-scrollbar-track {
-  background: var(--phylo-bg-secondary);
+	background: var(--phylo-bg-secondary);
 }
 
 [data-theme="phylo"] ::-webkit-scrollbar-thumb {
-  background: #cccccc;
-  border-radius: 0;
-  border: 2px solid var(--phylo-bg-secondary);
+	background: #cccccc;
+	border-radius: 0;
+	border: 2px solid var(--phylo-bg-secondary);
 }
 
 [data-theme="phylo"] ::-webkit-scrollbar-thumb:hover {
-  background: #999999;
+	background: #999999;
 }
 
 /* ============================================
    MENU BAR
    ============================================ */
 [data-theme="phylo"] .menubar {
-  background: var(--phylo-bg-toolbar);
-  border: var(--phylo-border);
-  border-radius: 0;
-  padding: 0 12px;
-  height: 36px;
-  box-shadow: none;
-  backdrop-filter: none;
+	background: var(--phylo-bg-toolbar);
+	border: var(--phylo-border);
+	border-radius: 0;
+	padding: 0 12px;
+	height: 36px;
+	box-shadow: none;
+	backdrop-filter: none;
 }
 
 [data-theme="phylo"] .menubar::after {
-  display: none;
+	display: none;
 }
 
 [data-theme="phylo"] .menubar-brand {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--phylo-text-primary);
-  letter-spacing: 0;
+	font-size: 13px;
+	font-weight: 700;
+	color: var(--phylo-text-primary);
+	letter-spacing: 0;
 }
 
 [data-theme="phylo"] .menu-item {
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: 3px;
-  background: transparent;
-  border: none;
+	padding: 6px 12px;
+	font-size: 12px;
+	font-weight: 500;
+	border-radius: 3px;
+	background: transparent;
+	border: none;
 }
 
 [data-theme="phylo"] .menu-item:hover {
-  background: var(--phylo-bg-secondary);
-  color: var(--phylo-text-primary);
+	background: var(--phylo-bg-secondary);
+	color: var(--phylo-text-primary);
 }
 
 [data-theme="phylo"] .connection-indicator {
-  padding: 4px 10px;
-  border-radius: 3px;
-  background: var(--phylo-bg-secondary);
-  border: var(--phylo-border);
-  box-shadow: none;
+	padding: 4px 10px;
+	border-radius: 3px;
+	background: var(--phylo-bg-secondary);
+	border: var(--phylo-border);
+	box-shadow: none;
 }
 
 [data-theme="phylo"] .connection-dot {
-  width: 8px;
-  height: 8px;
-  box-shadow: none;
+	width: 8px;
+	height: 8px;
+	box-shadow: none;
 }
 
 /* ============================================
    STATUS BAR
    ============================================ */
 [data-theme="phylo"] .statusbar {
-  background: var(--phylo-bg-toolbar);
-  border: var(--phylo-border);
-  border-radius: 0;
-  padding: 0 12px;
-  height: 24px;
-  font-size: 11px;
-  box-shadow: none;
-  backdrop-filter: none;
+	background: var(--phylo-bg-toolbar);
+	border: var(--phylo-border);
+	border-radius: 0;
+	padding: 0 12px;
+	height: 24px;
+	font-size: 11px;
+	box-shadow: none;
+	backdrop-filter: none;
 }
 
 [data-theme="phylo"] .statusbar-item {
-  gap: 4px;
+	gap: 4px;
 }
 
 [data-theme="phylo"] .statusbar-modified {
-  color: var(--phylo-warning);
+	color: var(--phylo-warning);
 }
 
 [data-theme="phylo"] .statusbar-running {
-  color: var(--phylo-cytosine);
+	color: var(--phylo-cytosine);
 }
 
 /* ============================================
    SPINNER
    ============================================ */
 [data-theme="phylo"] .spinner {
-  width: 12px;
-  height: 12px;
-  border: 2px solid var(--phylo-bg-tertiary);
-  border-top-color: var(--phylo-cytosine);
-  border-radius: 50%;
+	width: 12px;
+	height: 12px;
+	border: 2px solid var(--phylo-bg-tertiary);
+	border-top-color: var(--phylo-cytosine);
+	border-radius: 50%;
 }
 
 /* ============================================
    STOP BUTTON
    ============================================ */
 [data-theme="phylo"] .btn-stop {
-  background: var(--phylo-thymine);
-  color: white;
-  border-color: transparent;
-  box-shadow: none;
+	background: var(--phylo-thymine);
+	color: white;
+	border-color: transparent;
+	box-shadow: none;
 }
 
 [data-theme="phylo"] .btn-stop:hover:not(:disabled) {
-  background: #dc2626;
+	background: #dc2626;
 }
 
 /* ============================================
    EDITOR
    ============================================ */
 [data-theme="phylo"] .editor-panel {
-  background: var(--phylo-bg-primary);
+	background: var(--phylo-bg-primary);
 }
 
 [data-theme="phylo"] .dirty-marker {
-  color: var(--phylo-warning);
+	color: var(--phylo-warning);
 }
 
 [data-theme="phylo"] .cell-boundary-decoration {
-  background: rgba(59, 130, 246, 0.1);
-  border-left: 2px solid var(--phylo-cytosine);
+	background: rgba(59, 130, 246, 0.1);
+	border-left: 2px solid var(--phylo-cytosine);
 }
 
 [data-theme="phylo"] .executing-cell-background {
-  background-color: rgba(59, 130, 246, 0.05);
+	background-color: rgba(59, 130, 246, 0.05);
 }
 
 /* ============================================
@@ -742,97 +741,97 @@
    ============================================ */
 [data-theme="phylo"] .plots-panel,
 [data-theme="phylo"] .plots-panel .panel-header {
-  background: transparent;
+	background: transparent;
 }
 
 [data-theme="phylo"] .plot-counter {
-  font-size: 10px;
+	font-size: 10px;
 }
 
 [data-theme="phylo"] .plots-container,
 [data-theme="phylo"] .viewer-container,
 [data-theme="phylo"] .help-container {
-  background: var(--phylo-bg-primary);
+	background: var(--phylo-bg-primary);
 }
 
 [data-theme="phylo"] .empty-state {
-  padding: 24px;
-  gap: 10px;
+	padding: 24px;
+	gap: 10px;
 }
 
 [data-theme="phylo"] .empty-icon svg {
-  width: 40px;
-  height: 40px;
-  color: var(--phylo-text-muted);
+	width: 40px;
+	height: 40px;
+	color: var(--phylo-text-muted);
 }
 
 [data-theme="phylo"] .empty-state p {
-  font-size: 12px;
+	font-size: 12px;
 }
 
 [data-theme="phylo"] .empty-hint {
-  font-size: 11px;
+	font-size: 11px;
 }
 
 [data-theme="phylo"] .plot-viewer {
-  padding: 12px;
-  background: var(--phylo-bg-secondary);
+	padding: 12px;
+	background: var(--phylo-bg-secondary);
 }
 
 [data-theme="phylo"] .plot-image {
-  border: var(--phylo-border);
-  box-shadow: none;
+	border: var(--phylo-border);
+	box-shadow: none;
 }
 
 [data-theme="phylo"] .help-content {
-  padding: 18px;
-  gap: 14px;
+	padding: 18px;
+	gap: 14px;
 }
 
 [data-theme="phylo"] .help-content h3 {
-  font-size: 14px;
+	font-size: 14px;
 }
 
 [data-theme="phylo"] .help-section {
-  padding: 12px;
-  border-radius: var(--phylo-panel-radius);
-  background: var(--phylo-bg-secondary);
-  border: var(--phylo-border);
-  box-shadow: none;
+	padding: 12px;
+	border-radius: var(--phylo-panel-radius);
+	background: var(--phylo-bg-secondary);
+	border: var(--phylo-border);
+	box-shadow: none;
 }
 
 [data-theme="phylo"] .help-section h4 {
-  font-size: 12px;
-  margin-bottom: 6px;
+	font-size: 12px;
+	margin-bottom: 6px;
 }
 
 [data-theme="phylo"] .help-section li {
-  font-size: 11px;
-  padding-left: 14px;
+	font-size: 11px;
+	padding-left: 14px;
 }
 
 [data-theme="phylo"] .help-section li::before {
-  width: 4px;
-  height: 4px;
-  background: var(--phylo-cytosine);
-  box-shadow: none;
+	width: 4px;
+	height: 4px;
+	background: var(--phylo-cytosine);
+	box-shadow: none;
 }
 
 /* ============================================
    UTILITIES
    ============================================ */
 [data-theme="phylo"] .phylo-success-text {
-  color: var(--phylo-success);
+	color: var(--phylo-success);
 }
 
 [data-theme="phylo"] .phylo-error-text {
-  color: var(--phylo-error);
+	color: var(--phylo-error);
 }
 
 [data-theme="phylo"] .phylo-warning-text {
-  color: var(--phylo-warning);
+	color: var(--phylo-warning);
 }
 
 [data-theme="phylo"] .phylo-muted-text {
-  color: var(--phylo-text-muted);
+	color: var(--phylo-text-muted);
 }

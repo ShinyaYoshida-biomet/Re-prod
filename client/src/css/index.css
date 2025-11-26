@@ -1,22 +1,22 @@
 /* Main CSS entry point */
-@import './globals.css';
-@import './utils.css';
+@import "./globals.css";
+@import "./utils.css";
 
 /* Component styles */
-@import './components/editor.css';
-@import './components/ai-panel/index.css';
-@import './components/right-pane.css';
-@import './components/console.css';
-@import './components/terminal.css';
-@import './components/timeline.css';
-@import './components/timeline-dialog.css';
-@import './components/menu.css';
-@import './components/status-bar.css';
-@import './components/layout.css';
-@import './components/file-browser.css';
-@import './components/export-dialog.css';
-@import './components/confirm-dialog.css';
-@import './components/modal-dialog.css';
+@import "./components/editor.css";
+@import "./components/ai-panel/index.css";
+@import "./components/right-pane.css";
+@import "./components/console.css";
+@import "./components/terminal.css";
+@import "./components/timeline.css";
+@import "./components/timeline-dialog.css";
+@import "./components/menu.css";
+@import "./components/status-bar.css";
+@import "./components/layout.css";
+@import "./components/file-browser.css";
+@import "./components/export-dialog.css";
+@import "./components/confirm-dialog.css";
+@import "./components/modal-dialog.css";
 
 /* Design themes */
-@import './design-phylo-rstudio.css';
+@import "./design-phylo-rstudio.css";

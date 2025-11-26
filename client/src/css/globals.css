@@ -1,119 +1,119 @@
-@import './variables.css';
+@import "./variables.css";
 
 /* CSS Reset */
 * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
 }
 
 /* Accessibility: Focus visible styles for keyboard navigation */
 *:focus-visible {
-  outline: 2px solid var(--accent-blue);
-  outline-offset: 2px;
+	outline: 2px solid var(--accent-blue);
+	outline-offset: 2px;
 }
 
 html,
 body,
 #root {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
 }
 
 html {
-  font-size: calc(var(--font-size-base) * var(--app-zoom));
+	font-size: calc(var(--font-size-base) * var(--app-zoom));
 }
 
 body {
-  margin: 0;
-  background: #ffffff;
-  color: var(--text-primary);
-  font-family: var(--font-family-base);
-  font-size: inherit;
-  line-height: var(--line-height-base);
-  font-weight: var(--font-weight-base);
-  letter-spacing: var(--letter-spacing-base);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+	margin: 0;
+	background: #ffffff;
+	color: var(--text-primary);
+	font-family: var(--font-family-base);
+	font-size: inherit;
+	line-height: var(--line-height-base);
+	font-weight: var(--font-weight-base);
+	letter-spacing: var(--letter-spacing-base);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 }
 
 code {
-  font-family: 'Monaco', 'Menlo', 'Consolas', 'Courier New', monospace;
+	font-family: "Monaco", "Menlo", "Consolas", "Courier New", monospace;
 }
 
 button {
-  font-family: inherit;
-  font-size: inherit;
-  cursor: pointer;
-  border: none;
-  background: none;
-  padding: 0;
+	font-family: inherit;
+	font-size: inherit;
+	cursor: pointer;
+	border: none;
+	background: none;
+	padding: 0;
 }
 
 button:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
+	cursor: not-allowed;
+	opacity: 0.6;
 }
 
 input,
 textarea {
-  font-family: inherit;
-  font-size: inherit;
-  border: 1px solid var(--border-color);
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+	font-family: inherit;
+	font-size: inherit;
+	border: 1px solid var(--border-color);
+	background-color: var(--bg-primary);
+	color: var(--text-primary);
 }
 
 input:focus,
 textarea:focus {
-  outline: 2px solid var(--accent-blue-light);
-  outline-offset: 1px;
-  border-color: var(--accent-blue);
+	outline: 2px solid var(--accent-blue-light);
+	outline-offset: 1px;
+	border-color: var(--accent-blue);
 }
 
 /* Scrollbars */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+	width: 10px;
+	height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+	background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.3);
-  border-radius: 8px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
+	background: rgba(100, 116, 139, 0.3);
+	border-radius: 8px;
+	border: 2px solid transparent;
+	background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.45);
+	background: rgba(100, 116, 139, 0.45);
 }
 
 ::-webkit-scrollbar-corner {
-  background: transparent;
+	background: transparent;
 }
 
 /* Allotment (split pane) overrides */
 .split-view-view {
-  background: transparent;
+	background: transparent;
 }
 
 .sash {
-  background-color: rgba(148, 163, 184, 0.35) !important;
+	background-color: rgba(148, 163, 184, 0.35) !important;
 }
 
 .sash:hover {
-  background-color: rgba(47, 111, 237, 0.45) !important;
+	background-color: rgba(47, 111, 237, 0.45) !important;
 }
 
 .sash-vertical {
-  width: 2px !important;
+	width: 2px !important;
 }
 
 .sash-horizontal {
-  height: 2px !important;
+	height: 2px !important;
 }

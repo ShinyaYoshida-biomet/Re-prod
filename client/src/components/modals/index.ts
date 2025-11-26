@@ -1,5 +1,5 @@
-export { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
-export { AboutModal } from './AboutModal';
-export { SessionInfoModal } from './SessionInfoModal';
-export { SettingsModal } from './SettingsModal';
-export { ProjectManagerModal } from './ProjectManagerModal';
+export { AboutModal } from "./AboutModal";
+export { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
+export { ProjectManagerModal } from "./ProjectManagerModal";
+export { SessionInfoModal } from "./SessionInfoModal";
+export { SettingsModal } from "./SettingsModal";

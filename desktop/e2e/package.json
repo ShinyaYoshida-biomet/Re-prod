@@ -1,28 +1,28 @@
 {
-  "name": "@reprod/e2e",
-  "private": true,
-  "scripts": {
-    "test": "playwright test",
-    "test:playwright": "playwright test",
-    "test:playwright:ui": "playwright test --ui",
-    "test:playwright:headed": "playwright test --headed",
-    "test:playwright:debug": "playwright test --debug",
-    "test:webdriver": "wdio run wdio.conf.ts",
-    "test:webdriver:debug": "wdio run wdio.conf.ts --debug",
-    "test:all": "pnpm test:playwright && pnpm test:webdriver"
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.56.1",
-    "@types/mocha": "^10.0.0",
-    "@types/node": "^20.0.0",
-    "@wdio/cli": "^8.0.0",
-    "@wdio/globals": "^8.0.0",
-    "@wdio/local-runner": "^8.0.0",
-    "@wdio/mocha-framework": "^8.0.0",
-    "@wdio/spec-reporter": "^8.0.0",
-    "@wdio/types": "^8.0.0",
-    "ts-node": "^10.9.0",
-    "typescript": "^5.0.0",
-    "webdriverio": "^8.0.0"
-  }
+	"name": "@reprod/e2e",
+	"private": true,
+	"scripts": {
+		"test": "playwright test",
+		"test:playwright": "playwright test",
+		"test:playwright:ui": "playwright test --ui",
+		"test:playwright:headed": "playwright test --headed",
+		"test:playwright:debug": "playwright test --debug",
+		"test:webdriver": "wdio run wdio.conf.ts",
+		"test:webdriver:debug": "wdio run wdio.conf.ts --debug",
+		"test:all": "pnpm test:playwright && pnpm test:webdriver"
+	},
+	"devDependencies": {
+		"@playwright/test": "^1.56.1",
+		"@types/mocha": "^10.0.0",
+		"@types/node": "^20.0.0",
+		"@wdio/cli": "^8.0.0",
+		"@wdio/globals": "^8.0.0",
+		"@wdio/local-runner": "^8.0.0",
+		"@wdio/mocha-framework": "^8.0.0",
+		"@wdio/spec-reporter": "^8.0.0",
+		"@wdio/types": "^8.0.0",
+		"ts-node": "^10.9.0",
+		"typescript": "^5.0.0",
+		"webdriverio": "^8.0.0"
+	}
 }

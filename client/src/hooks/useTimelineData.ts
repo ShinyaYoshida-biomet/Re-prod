@@ -1,160 +1,157 @@
-import { useEffect, useState } from 'react';
-import { useStore } from '@/core';
+import { useEffect, useState } from "react";
+import type { ExecutionEventPayload, TimelineStats } from "shared";
+import { useStore } from "@/core";
+import { appendEventToStats, matchesTimelineFilters } from "@/core/timeline/utils";
 import {
-  queryTimeline,
-  getTimelineStats,
-  subscribeToTimelineEvents,
-} from '@/services/timelineService';
-import type { ExecutionEventPayload, TimelineStats } from 'shared';
-import {
-  matchesTimelineFilters,
-  appendEventToStats,
-} from '@/core/timeline/utils';
+	getTimelineStats,
+	queryTimeline,
+	subscribeToTimelineEvents,
+} from "@/services/timelineService";
 
 export function useTimelineData() {
-  const {
-    events,
-    total,
-    hasMore,
-    loading,
-    error,
-    filters,
-    sort,
-    limit,
-    offset,
-    setEvents,
-    addEvent,
-    setFilters,
-    setSort,
-    setLoading,
-    setError,
-    loadMore,
-  } = useStore((state) => ({
-    events: state.events,
-    total: state.total,
-    hasMore: state.hasMore,
-    loading: state.loading,
-    error: state.error,
-    filters: state.filters,
-    sort: state.sort,
-    limit: state.limit,
-    offset: state.offset,
-    setEvents: state.setEvents,
-    addEvent: state.addEvent,
-    setFilters: state.setFilters,
-    setSort: state.setSort,
-    setLoading: state.setLoading,
-    setError: state.setError,
-    loadMore: state.loadMore,
-  }));
+	const {
+		events,
+		total,
+		hasMore,
+		loading,
+		error,
+		filters,
+		sort,
+		limit,
+		offset,
+		setEvents,
+		addEvent,
+		setFilters,
+		setSort,
+		setLoading,
+		setError,
+		loadMore,
+	} = useStore((state) => ({
+		events: state.events,
+		total: state.total,
+		hasMore: state.hasMore,
+		loading: state.loading,
+		error: state.error,
+		filters: state.filters,
+		sort: state.sort,
+		limit: state.limit,
+		offset: state.offset,
+		setEvents: state.setEvents,
+		addEvent: state.addEvent,
+		setFilters: state.setFilters,
+		setSort: state.setSort,
+		setLoading: state.setLoading,
+		setError: state.setError,
+		loadMore: state.loadMore,
+	}));
 
-  const isConnected = useStore((state) => state.isConnected);
-  const [stats, setStats] = useState<TimelineStats | null>(null);
-  const [statsLoading, setStatsLoading] = useState(false);
+	const isConnected = useStore((state) => state.isConnected);
+	const [stats, setStats] = useState<TimelineStats | null>(null);
+	const [statsLoading, setStatsLoading] = useState(false);
 
-  useEffect(() => {
-    if (!isConnected) {
-      setLoading(false);
-      return;
-    }
+	useEffect(() => {
+		if (!isConnected) {
+			setLoading(false);
+			return;
+		}
 
-    const fetchEvents = async () => {
-      setLoading(true);
-      setError(null);
+		const fetchEvents = async () => {
+			setLoading(true);
+			setError(null);
 
-      try {
-        const response = await queryTimeline({
-          filters,
-          sort,
-          limit,
-          offset: 0,
-        });
+			try {
+				const response = await queryTimeline({
+					filters,
+					sort,
+					limit,
+					offset: 0,
+				});
 
-        setEvents(response.events, response.total, response.hasMore);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load timeline');
-      }
-    };
+				setEvents(response.events, response.total, response.hasMore);
+			} catch (err) {
+				setError(err instanceof Error ? err.message : "Failed to load timeline");
+			}
+		};
 
-    void fetchEvents();
-  }, [filters, sort, limit, isConnected, setLoading, setError, setEvents]);
+		void fetchEvents();
+	}, [filters, sort, limit, isConnected, setLoading, setError, setEvents]);
 
-  useEffect(() => {
-    if (!isConnected || offset === 0) {
-      return;
-    }
+	useEffect(() => {
+		if (!isConnected || offset === 0) {
+			return;
+		}
 
-    const fetchMoreEvents = async () => {
-      setLoading(true);
-      setError(null);
+		const fetchMoreEvents = async () => {
+			setLoading(true);
+			setError(null);
 
-      try {
-        const response = await queryTimeline({
-          filters,
-          sort,
-          limit,
-          offset,
-        });
+			try {
+				const response = await queryTimeline({
+					filters,
+					sort,
+					limit,
+					offset,
+				});
 
-        setEvents([...events, ...response.events], response.total, response.hasMore);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load more events');
-      }
-    };
+				setEvents([...events, ...response.events], response.total, response.hasMore);
+			} catch (err) {
+				setError(err instanceof Error ? err.message : "Failed to load more events");
+			}
+		};
 
-    void fetchMoreEvents();
-  }, [offset, isConnected, filters, sort, limit, events, setEvents, setLoading, setError]);
+		void fetchMoreEvents();
+	}, [offset, isConnected, filters, sort, limit, events, setEvents, setLoading, setError]);
 
-  useEffect(() => {
-    if (!isConnected) {
-      setStats(null);
-      return;
-    }
+	useEffect(() => {
+		if (!isConnected) {
+			setStats(null);
+			return;
+		}
 
-    const fetchStats = async () => {
-      setStatsLoading(true);
-      try {
-        const statsData = await getTimelineStats();
-        setStats(statsData);
-      } catch (err) {
-        console.error('Failed to load timeline stats:', err);
-      } finally {
-        setStatsLoading(false);
-      }
-    };
+		const fetchStats = async () => {
+			setStatsLoading(true);
+			try {
+				const statsData = await getTimelineStats();
+				setStats(statsData);
+			} catch (err) {
+				console.error("Failed to load timeline stats:", err);
+			} finally {
+				setStatsLoading(false);
+			}
+		};
 
-    void fetchStats();
-  }, [isConnected]);
+		void fetchStats();
+	}, [isConnected]);
 
-  useEffect(() => {
-    if (!isConnected) {
-      return undefined;
-    }
+	useEffect(() => {
+		if (!isConnected) {
+			return undefined;
+		}
 
-    const unsubscribe = subscribeToTimelineEvents((event: ExecutionEventPayload) => {
-      if (!matchesTimelineFilters(event, filters)) {
-        return;
-      }
+		const unsubscribe = subscribeToTimelineEvents((event: ExecutionEventPayload) => {
+			if (!matchesTimelineFilters(event, filters)) {
+				return;
+			}
 
-      addEvent(event);
-      setStats((prev) => appendEventToStats(event, prev));
-    });
+			addEvent(event);
+			setStats((prev) => appendEventToStats(event, prev));
+		});
 
-    return unsubscribe;
-  }, [isConnected, filters, addEvent]);
+		return unsubscribe;
+	}, [isConnected, filters, addEvent]);
 
-  return {
-    events,
-    total,
-    hasMore,
-    loading,
-    error,
-    filters,
-    sort,
-    loadMore,
-    setFilters,
-    setSort,
-    stats,
-    statsLoading,
-  };
+	return {
+		events,
+		total,
+		hasMore,
+		loading,
+		error,
+		filters,
+		sort,
+		loadMore,
+		setFilters,
+		setSort,
+		stats,
+		statsLoading,
+	};
 }

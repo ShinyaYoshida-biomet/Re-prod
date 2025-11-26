@@ -1,45 +1,43 @@
-import React from "react";
+import type React from "react";
 
 export interface CheckboxProps {
-  label: string;
+	label: string;
 
-  checked: boolean;
+	checked: boolean;
 
-  onChange: (checked: boolean) => void;
+	onChange: (checked: boolean) => void;
 
-  id?: string;
+	id?: string;
 
-  disabled?: boolean;
+	disabled?: boolean;
 
-  className?: string;
+	className?: string;
 }
 
 export const Checkbox: React.FC<CheckboxProps> = ({
-  label,
-  checked,
-  onChange,
-  id,
-  disabled = false,
-  className = "",
+	label,
+	checked,
+	onChange,
+	id,
+	disabled = false,
+	className = "",
 }) => {
-  const inputId = id || `checkbox-${label.replace(/\s+/g, "-").toLowerCase()}`;
+	const inputId = id || `checkbox-${label.replace(/\s+/g, "-").toLowerCase()}`;
 
-  return (
-    <label
-      htmlFor={inputId}
-      className={`checkbox ${
-        disabled ? "checkbox--disabled" : ""
-      } ${className}`}
-    >
-      <input
-        id={inputId}
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        disabled={disabled}
-        aria-label={label}
-      />
-      <span className="checkbox-label">{label}</span>
-    </label>
-  );
+	return (
+		<label
+			htmlFor={inputId}
+			className={`checkbox ${disabled ? "checkbox--disabled" : ""} ${className}`}
+		>
+			<input
+				id={inputId}
+				type="checkbox"
+				checked={checked}
+				onChange={(e) => onChange(e.target.checked)}
+				disabled={disabled}
+				aria-label={label}
+			/>
+			<span className="checkbox-label">{label}</span>
+		</label>
+	);
 };

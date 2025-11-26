@@ -1,16 +1,16 @@
-import type { StateCreator } from 'zustand';
-import type { AppSettings } from '@shared/types';
-import { DEFAULT_SETTINGS } from '@/constants/defaultSettings';
+import type { AppSettings } from "@shared/types";
+import type { StateCreator } from "zustand";
+import { DEFAULT_SETTINGS } from "@/constants/defaultSettings";
 
 export interface SettingsState {
-  settings: AppSettings;
-  updateSettings: (settings: Partial<AppSettings>) => void;
+	settings: AppSettings;
+	updateSettings: (settings: Partial<AppSettings>) => void;
 }
 
 export const createSettingsSlice: StateCreator<SettingsState> = (set) => ({
-  settings: { ...DEFAULT_SETTINGS },
-  updateSettings: (newSettings) =>
-    set((state) => ({
-      settings: { ...state.settings, ...newSettings }
-    }))
+	settings: { ...DEFAULT_SETTINGS },
+	updateSettings: (newSettings) =>
+		set((state) => ({
+			settings: { ...state.settings, ...newSettings },
+		})),
 });

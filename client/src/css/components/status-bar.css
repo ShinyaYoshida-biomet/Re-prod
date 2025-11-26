@@ -1,37 +1,37 @@
 .statusbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 28px;
-  padding: 0 16px;
-  background: linear-gradient(180deg, rgba(245, 247, 253, 0.88), rgba(236, 240, 250, 0.9));
-  border: 1px solid var(--border-color);
-  border-radius: var(--panel-radius);
-  font-size: 11px;
-  color: var(--text-secondary);
-  backdrop-filter: blur(12px);
-  box-shadow: var(--shadow-sm);
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	height: 28px;
+	padding: 0 16px;
+	background: linear-gradient(180deg, rgba(245, 247, 253, 0.88), rgba(236, 240, 250, 0.9));
+	border: 1px solid var(--border-color);
+	border-radius: var(--panel-radius);
+	font-size: 11px;
+	color: var(--text-secondary);
+	backdrop-filter: blur(12px);
+	box-shadow: var(--shadow-sm);
 }
 
 .statusbar-left,
 .statusbar-right {
-  display: flex;
-  align-items: center;
-  gap: 14px;
+	display: flex;
+	align-items: center;
+	gap: 14px;
 }
 
 .statusbar-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+	display: flex;
+	align-items: center;
+	gap: 6px;
 }
 
 .statusbar-modified {
-  color: var(--warning-color);
-  font-weight: 600;
+	color: var(--warning-color);
+	font-weight: 600;
 }
 
 .statusbar-running {
-  color: var(--accent-blue);
-  font-weight: 600;
+	color: var(--accent-blue);
+	font-weight: 600;
 }

@@ -1,1 +1,1 @@
-export { BottomPane } from './BottomPane';
+export { BottomPane } from "./BottomPane";

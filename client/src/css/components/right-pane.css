@@ -1,121 +1,121 @@
 .plot-counter {
-  font-size: 11px;
-  color: var(--text-secondary);
-  min-width: 56px;
-  text-align: center;
-  font-weight: 600;
+	font-size: 11px;
+	color: var(--text-secondary);
+	min-width: 56px;
+	text-align: center;
+	font-weight: 600;
 }
 
 .plots-container,
 .help-container,
 .timeline-container {
-  height: 100%;
-  overflow: auto;
-  background: var(--bg-primary);
+	height: 100%;
+	overflow: auto;
+	background: var(--bg-primary);
 }
 
 .empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--text-secondary);
-  text-align: center;
-  padding: 36px;
-  gap: 12px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	color: var(--text-secondary);
+	text-align: center;
+	padding: 36px;
+	gap: 12px;
 }
 
 .empty-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .empty-icon svg {
-  width: 48px;
-  height: 48px;
-  color: var(--accent-blue);
+	width: 48px;
+	height: 48px;
+	color: var(--accent-blue);
 }
 
 .empty-state p {
-  font-size: 13px;
-  margin: 0;
+	font-size: 13px;
+	margin: 0;
 }
 
 .empty-hint {
-  color: var(--text-muted);
-  font-size: 12px;
+	color: var(--text-muted);
+	font-size: 12px;
 }
 
 .plot-viewer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  padding: 18px;
-  background: linear-gradient(160deg, rgba(248, 249, 253, 0.95), rgba(236, 240, 250, 0.95));
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	padding: 18px;
+	background: linear-gradient(160deg, rgba(248, 249, 253, 0.95), rgba(236, 240, 250, 0.95));
 }
 
 .plot-image {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  background-color: #ffffff;
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+	max-width: 100%;
+	max-height: 100%;
+	object-fit: contain;
+	background-color: var(--bg-primary);
+	border: 1px solid var(--border-medium);
+	box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
 .help-content {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+	padding: 24px;
+	display: flex;
+	flex-direction: column;
+	gap: 18px;
 }
 
 .help-content h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
+	font-size: 16px;
+	font-weight: 600;
+	color: var(--text-primary);
 }
 
 .help-section {
-  padding: 16px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+	padding: 16px;
+	border-radius: 14px;
+	background: rgba(255, 255, 255, 0.78);
+	border: 1px solid var(--border-light);
+	box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
 }
 
 .help-section h4 {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 8px;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--text-primary);
+	margin-bottom: 8px;
 }
 
 .help-section ul {
-  list-style: none;
-  padding: 0;
-  display: grid;
-  gap: 6px;
+	list-style: none;
+	padding: 0;
+	display: grid;
+	gap: 6px;
 }
 
 .help-section li {
-  font-size: 12px;
-  color: var(--text-secondary);
-  padding-left: 18px;
-  position: relative;
+	font-size: 12px;
+	color: var(--text-secondary);
+	padding-left: 18px;
+	position: relative;
 }
 
 .help-section li::before {
-  content: '';
-  position: absolute;
-  left: 4px;
-  top: 6px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent-blue);
-  box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.12);
+	content: "";
+	position: absolute;
+	left: 4px;
+	top: 6px;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--accent-blue);
+	box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.12);
 }
