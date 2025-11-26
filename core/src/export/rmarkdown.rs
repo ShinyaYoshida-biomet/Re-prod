@@ -898,7 +898,7 @@ mod tests {
         let bundle = ReproductionBundle::from_events(events);
         let rmd = generator.from_timeline(&bundle);
 
-        assert!(rmd.contains("**Output**:"));
+        assert!(rmd.contains("::: {.rp-output}"));
         assert!(rmd.contains("[1] 1 2 3 4 5"));
     }
 
