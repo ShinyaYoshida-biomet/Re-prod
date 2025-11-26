@@ -53,6 +53,8 @@ export interface AIState {
 		patchMatchFailures: number;
 		patchMatchStatus: PatchMatchStatus;
 	};
+	aiPanelRef: { focusInput: () => void } | null;
+	setAIPanelRef: (ref: { focusInput: () => void } | null) => void;
 	addAIMessage: (message: AIMessage) => void;
 	setAILoading: (isLoading: boolean) => void;
 	clearAIMessages: () => void;
@@ -79,6 +81,8 @@ export const createAISlice: StateCreator<AIState> = (set) => ({
 		patchMatchFailures: 0,
 		patchMatchStatus: { lastFailureId: null, lastFailureReason: null },
 	},
+	aiPanelRef: null,
+	setAIPanelRef: (ref) => set({ aiPanelRef: ref }),
 	addAIMessage: (message) =>
 		set((state) => ({
 			ai: { ...state.ai, messages: [...state.ai.messages, message] },

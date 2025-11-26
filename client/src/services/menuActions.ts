@@ -16,6 +16,7 @@ import { DEFAULT_FILENAMES, UI_TIMING, ZOOM } from "@/constants/ui";
 import { DEFAULT_R_SCRIPT } from "@/core/state/slices/editorSlice";
 import type { ViewPane } from "@/core/state/slices/viewSlice";
 import { useStore } from "@/core/state/store";
+import { downloadFile, openFile } from "@/utils/fileOperations";
 import { interruptExecution, restartSession as restartSessionRequest } from "./sessionControl";
 import { exportSessionSnapshot, importSessionSnapshot } from "./sessionPersistence";
 
@@ -74,25 +75,19 @@ export const menuActions = {
 		 * Open file dialog
 		 * Browser file picker for .R and .Rmd files
 		 */
-		open: () => {
-			const input = document.createElement("input");
-			input.type = "file";
-			input.accept = ".R,.Rmd";
-			input.onchange = async (e) => {
-				const file = (e.target as HTMLInputElement).files?.[0];
+		open: async () => {
+			try {
+				const file = await openFile(".R,.Rmd");
 				if (!file) return;
 
-				try {
-					const content = await file.text();
-					const store = useStore.getState();
-					store.setEditorContent(content);
-					store.setEditorFilepath(file.name);
-					store.setEditorIsDirty(false);
-				} catch (error) {
-					console.error(`Failed to open file: ${error}`);
-				}
-			};
-			input.click();
+				const content = await file.text();
+				const store = useStore.getState();
+				store.setEditorContent(content);
+				store.setEditorFilepath(file.name);
+				store.setEditorIsDirty(false);
+			} catch (error) {
+				console.error(`Failed to open file: ${error}`);
+			}
 		},
 
 		/**
@@ -113,13 +108,7 @@ export const menuActions = {
 			}
 
 			// Save file (simplified - no socket event for now)
-			const blob = new Blob([content], { type: "text/plain" });
-			const url = URL.createObjectURL(blob);
-			const a = document.createElement("a");
-			a.href = url;
-			a.download = filepath;
-			a.click();
-			URL.revokeObjectURL(url);
+			downloadFile(filepath, content);
 
 			store.setEditorIsDirty(false);
 		},
@@ -137,13 +126,7 @@ export const menuActions = {
 				return;
 			}
 
-			const blob = new Blob([content], { type: "text/plain" });
-			const url = URL.createObjectURL(blob);
-			const a = document.createElement("a");
-			a.href = url;
-			a.download = DEFAULT_FILENAMES.UNTITLED_R_SCRIPT;
-			a.click();
-			URL.revokeObjectURL(url);
+			downloadFile(DEFAULT_FILENAMES.UNTITLED_R_SCRIPT, content);
 		},
 
 		/**
@@ -219,9 +202,9 @@ export const menuActions = {
 		aiAssist: () => {
 			// Focus AI panel input
 			setTimeout(() => {
-				const aiInput = document.querySelector(".ai-input") as HTMLTextAreaElement;
-				if (aiInput) {
-					aiInput.focus();
+				const { aiPanelRef } = useStore.getState();
+				if (aiPanelRef) {
+					aiPanelRef.focusInput();
 				}
 			}, UI_TIMING.AI_INPUT_FOCUS_DELAY_MS);
 		},
@@ -314,9 +297,9 @@ export const menuActions = {
 		 * Show timeline dialog
 		 */
 		showTimeline: () => {
-			// Call global timeline dialog handler
-			if (typeof (window as any).openTimelineDialog === "function") {
-				(window as any).openTimelineDialog();
+			const { timelinePanelRef } = useStore.getState();
+			if (timelinePanelRef) {
+				timelinePanelRef.scrollIntoView();
 			} else {
 				console.error("Timeline dialog not initialized");
 			}

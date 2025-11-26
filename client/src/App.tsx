@@ -25,8 +25,9 @@ import { useSocketConnection } from "@/hooks/useSocketConnection";
 function App(): JSX.Element {
 	const panes = useStore((state) => state.view.panes);
 	const theme = useStore((state) => state.settings.theme);
+	const setAIPanelRef = useStore((state) => state.setAIPanelRef);
+	const setTimelinePanelRef = useStore((state) => state.setTimelinePanelRef);
 	const [exportDialogOpen, setExportDialogOpen] = useState(false);
-	const [timelineDialogOpen, setTimelineDialogOpen] = useState(false);
 	const [shortcutsOpen, setShortcutsOpen] = useState(false);
 	const [aboutOpen, setAboutOpen] = useState(false);
 	const [sessionInfoOpen, setSessionInfoOpen] = useState(false);
@@ -47,7 +48,6 @@ function App(): JSX.Element {
 	useEffect(() => {
 		const globalScope = window as typeof window & Record<string, () => void>;
 		globalScope.openExportDialog = () => setExportDialogOpen(true);
-		globalScope.openTimelineDialog = () => setTimelineDialogOpen(true);
 		globalScope.openShortcutsDialog = () => setShortcutsOpen(true);
 		globalScope.openAboutDialog = () => setAboutOpen(true);
 		globalScope.openSessionInfoDialog = () => setSessionInfoOpen(true);
@@ -56,7 +56,6 @@ function App(): JSX.Element {
 
 		return () => {
 			delete globalScope.openExportDialog;
-			delete globalScope.openTimelineDialog;
 			delete globalScope.openShortcutsDialog;
 			delete globalScope.openAboutDialog;
 			delete globalScope.openSessionInfoDialog;
@@ -92,7 +91,7 @@ function App(): JSX.Element {
 					{panes.assistant && (
 						<Allotment.Pane minSize={260} preferredSize="25%">
 							<div className="ai-pane-wrapper">
-								<AIPanel />
+								<AIPanel ref={setAIPanelRef} />
 							</div>
 						</Allotment.Pane>
 					)}
@@ -100,7 +99,7 @@ function App(): JSX.Element {
 			</div>
 			<StatusBar />
 			<ExportDialog open={exportDialogOpen} onClose={() => setExportDialogOpen(false)} />
-			<TimelineDialog open={timelineDialogOpen} onClose={() => setTimelineDialogOpen(false)} />
+			<TimelineDialog ref={setTimelinePanelRef} />
 			<KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 			<AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
 			<SessionInfoModal open={sessionInfoOpen} onClose={() => setSessionInfoOpen(false)} />

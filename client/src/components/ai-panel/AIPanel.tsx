@@ -1,16 +1,26 @@
 import type { AIMode } from "@shared/types";
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { IconSend, IconSquare } from "@/components/shared";
 import { useAIConversation } from "@/hooks/useAIConversation";
 import { ProviderSwitcher } from "./ProviderSwitcher";
 import { StreamingMessage } from "./StreamingMessage";
 
-export function AIPanel(): JSX.Element {
+export interface AIPanelRef {
+	focusInput: () => void;
+}
+
+export const AIPanel = forwardRef<AIPanelRef>((_, ref) => {
 	const { input, setInput, messages, isLoading, handleAsk, handleStop, handleApplyCode } =
 		useAIConversation();
 
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+	useImperativeHandle(ref, () => ({
+		focusInput: () => {
+			textareaRef.current?.focus();
+		},
+	}));
 
 	useEffect(() => {
 		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -133,4 +143,5 @@ export function AIPanel(): JSX.Element {
 			</div>
 		</div>
 	);
-}
+});
+AIPanel.displayName = "AIPanel";

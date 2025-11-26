@@ -15,6 +15,9 @@ export interface TimelineState {
 	limit: number;
 	offset: number;
 
+	timelinePanelRef: { scrollIntoView: () => void } | null;
+	setTimelinePanelRef: (ref: { scrollIntoView: () => void } | null) => void;
+
 	// Actions
 	setEvents: (events: ExecutionEventPayload[], total: number, hasMore: boolean) => void;
 	addEvent: (event: ExecutionEventPayload) => void;
@@ -36,10 +39,13 @@ const initialState = {
 	sort: "desc" as const,
 	limit: 50,
 	offset: 0,
+	timelinePanelRef: null,
 };
 
 export const createTimelineSlice: StateCreator<TimelineState> = (set) => ({
 	...initialState,
+
+	setTimelinePanelRef: (ref) => set({ timelinePanelRef: ref }),
 
 	setEvents: (events, total, hasMore) =>
 		set(() => ({
