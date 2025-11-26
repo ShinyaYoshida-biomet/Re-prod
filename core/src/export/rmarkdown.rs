@@ -932,7 +932,7 @@ mod tests {
         let bundle = ReproductionBundle::from_events(vec![event]);
         let rmd = generator.from_timeline(&bundle);
 
-        assert!(rmd.contains("**Error**:"));
+        assert!(rmd.contains("::: {.rp-error}"));
         assert!(rmd.contains("Error: object not found"));
     }
 

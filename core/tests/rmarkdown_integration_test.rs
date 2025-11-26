@@ -354,7 +354,7 @@ fn test_rmarkdown_export_with_errors() {
     let generator = RMarkdownGenerator::new(options_with_errors.clone());
     let rmd_with_errors = generator.from_timeline(&bundle);
 
-    assert!(rmd_with_errors.contains("**Error**:"));
+    assert!(rmd_with_errors.contains("::: {.rp-error}"));
     assert!(rmd_with_errors.contains("Error: test error"));
 
     // Test with errors excluded
@@ -366,7 +366,7 @@ fn test_rmarkdown_export_with_errors() {
     let generator = RMarkdownGenerator::new(options_without_errors);
     let rmd_without_errors = generator.from_timeline(&bundle);
 
-    assert!(!rmd_without_errors.contains("**Error**:"));
+    assert!(!rmd_without_errors.contains("::: {.rp-error}"));
 
     println!("✓ RMarkdown error handling integration test passed!");
 }
@@ -421,7 +421,7 @@ fn test_rmarkdown_export_options_combinations() {
     assert!(minimal_rmd.contains("x <- rnorm(100)"));
     assert!(!minimal_rmd.contains("User"));
     assert!(!minimal_rmd.contains("AI Assistant"));
-    assert!(!minimal_rmd.contains("**Output**:"));
+    assert!(!minimal_rmd.contains("::: {.rp-output}"));
     assert!(!minimal_rmd.contains("![Plot]"));
     assert!(!minimal_rmd.contains("# Session Summary"));
 
@@ -447,7 +447,7 @@ fn test_rmarkdown_export_options_combinations() {
     assert!(full_rmd.contains("Event 1 - User"));
     assert!(full_rmd.contains("Event 2 - AI Assistant"));
     assert!(full_rmd.contains("**Executed**:"));
-    assert!(full_rmd.contains("**Output**:"));
+    assert!(full_rmd.contains("::: {.rp-output}"));
     assert!(full_rmd.contains("![Plot](evt-002_plot.png)"));
     assert!(full_rmd.contains("# Session Summary"));
 
