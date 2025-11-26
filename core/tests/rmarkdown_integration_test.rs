@@ -177,7 +177,7 @@ fn test_rmarkdown_timeline_export_integration() {
     assert!(rmd_content.contains("ggplot(data_clean, aes(x, y)) + geom_point()"));
 
     // Verify outputs
-    assert!(rmd_content.contains("**Output**:"));
+    assert!(rmd_content.contains("::: {.rp-output}"));
     assert!(rmd_content.contains("[1] Success"));
 
     // Verify plots
