@@ -12,6 +12,7 @@
  */
 
 import { DOCS_URL, GITHUB_ISSUE_URL } from "@/constants/urls";
+import { DEFAULT_FILENAMES, UI_TIMING, ZOOM } from "@/constants/ui";
 import { DEFAULT_R_SCRIPT } from "@/core/state/slices/editorSlice";
 import type { ViewPane } from "@/core/state/slices/viewSlice";
 import { useStore } from "@/core/state/store";
@@ -62,7 +63,7 @@ export const menuActions = {
 
 			// Reset editor state
 			store.setEditorContent(DEFAULT_R_SCRIPT);
-			store.setEditorFilepath("analysis.R");
+			store.setEditorFilepath(DEFAULT_FILENAMES.NEW_R_SCRIPT);
 			store.setEditorIsDirty(false);
 		},
 		projects: () => {
@@ -140,7 +141,7 @@ export const menuActions = {
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement("a");
 			a.href = url;
-			a.download = "untitled.R";
+			a.download = DEFAULT_FILENAMES.UNTITLED_R_SCRIPT;
 			a.click();
 			URL.revokeObjectURL(url);
 		},
@@ -222,7 +223,7 @@ export const menuActions = {
 				if (aiInput) {
 					aiInput.focus();
 				}
-			}, 100);
+			}, UI_TIMING.AI_INPUT_FOCUS_DELAY_MS);
 		},
 	},
 
@@ -386,7 +387,7 @@ export const menuActions = {
 		 */
 		zoomIn: () => {
 			const { adjustZoom } = useStore.getState();
-			adjustZoom(0.1);
+			adjustZoom(ZOOM.STEP);
 		},
 
 		/**
@@ -394,7 +395,7 @@ export const menuActions = {
 		 */
 		zoomOut: () => {
 			const { adjustZoom } = useStore.getState();
-			adjustZoom(-0.1);
+			adjustZoom(-ZOOM.STEP);
 		},
 
 		/**
