@@ -21,10 +21,11 @@ use base64::Engine;
 use std::process::Stdio;
 use tokio::{
     fs,
-    io::{AsyncRead, AsyncReadExt},
+    io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader},
     process::{Child, Command},
     sync::Mutex as AsyncMutex,
     task::JoinHandle,
+    time::{timeout, Duration},
 };
 use uuid::Uuid;
 
@@ -43,6 +44,8 @@ struct ActiveChild {
     child: SharedChild,
     interrupted: Arc<AtomicBool>,
 }
+
+const PERSISTENT_DELIMITER: &str = "---REPROD-PERSIST-END---";
 
 impl ActiveChild {
     fn new(child: Child) -> Self {
@@ -87,6 +90,7 @@ pub struct RExecutor {
     timeline: Arc<dyn TimelineSink>,
     command_runner: Arc<dyn CommandRunner>,
     plot_history: Option<Arc<AsyncMutex<PlotHistoryManager>>>,
+    persistent_mode: bool,
 }
 
 impl RExecutor {
@@ -98,6 +102,7 @@ impl RExecutor {
             timeline: Arc::new(NoopTimeline),
             command_runner: Arc::new(ProcessCommandRunner::default()),
             plot_history: None,
+            persistent_mode: false,
         }
     }
 
@@ -136,7 +141,11 @@ impl RExecutor {
         let plot_prefix = format!("plot_{}", timestamp);
         let script_path = self.temp_dir.join(format!("script_{}.R", timestamp));
 
-        let wrapped_code = self.wrap_code_with_plot_capture(&request.code, &plot_prefix);
+        let wrapped_code = if self.persistent_mode {
+            self.wrap_code_with_plot_capture_persistent(&request.code, &plot_prefix)
+        } else {
+            self.wrap_code_with_plot_capture(&request.code, &plot_prefix)
+        };
         fs::write(&script_path, wrapped_code).await?;
 
         let command_output = self
@@ -216,6 +225,25 @@ impl RExecutor {
 
     pub async fn reset(&self) -> Result<()> {
         let _ = self.interrupt().await?;
+        if self.persistent_mode {
+            let reset_prefix = "reset";
+            let script_path = self.temp_dir.join("reset_persistent.R");
+            let reset_code = self.wrap_code_with_plot_capture_persistent(
+                r#"
+rm(list = ls(all.names = TRUE))
+if (length(dev.list()) > 0) {
+  dev.off(which = dev.list())
+}
+"#,
+                reset_prefix,
+            );
+            fs::write(&script_path, reset_code).await?;
+            let _ = self
+                .command_runner
+                .run(&self.r_path, &script_path, &self.working_dir)
+                .await?;
+            let _ = fs::remove_file(&script_path).await;
+        }
         self.cleanup_temp_dir().await?;
         Ok(())
     }
@@ -232,6 +260,72 @@ impl RExecutor {
             }
         }
         Ok(())
+    }
+
+    fn wrap_code_with_plot_capture_persistent(&self, code: &str, plot_prefix: &str) -> String {
+        let temp_dir_str = self.temp_dir.to_str().unwrap_or("");
+
+        format!(
+            r#"
+# Auto-generated plot capture wrapper (persistent session)
+.reprod_plot_dir <- "{temp_dir}"
+.reprod_plot_prefix <- "{plot_prefix}"
+
+if (!dir.exists(.reprod_plot_dir)) {{
+  dir.create(.reprod_plot_dir, recursive = TRUE, showWarnings = FALSE)
+}}
+
+.reprod_open_device <- function(index) {{
+  filename <- sprintf("%s_%d.png", .reprod_plot_prefix, index)
+  png(
+    file.path(.reprod_plot_dir, filename),
+    width = {plot_width}, height = {plot_height},
+    type = "cairo"
+  )
+}}
+
+.reprod_open_device(1)
+
+tryCatch(
+  {{
+    {code}
+  }},
+  error = function(e) {{
+    assign(".reprod_last_error", e, envir = .GlobalEnv)
+    message("REPROD_ERROR: ", conditionMessage(e))
+  }}
+)
+
+if (names(dev.cur()) != "null device") {{
+  dev.off()
+}}
+
+try({{
+  existing_plots <- list.files(
+    .reprod_plot_dir,
+    pattern = sprintf("^%s_\\d+\\.png$", .reprod_plot_prefix)
+  )
+  if (length(existing_plots) == 0 &&
+      requireNamespace("ggplot2", quietly = TRUE)) {{
+    last_plot <- tryCatch(ggplot2::last_plot(), error = function(e) NULL)
+    if (inherits(last_plot, "ggplot")) {{
+      next_index <- length(existing_plots) + 1
+      .reprod_open_device(next_index)
+      print(last_plot)
+      dev.off()
+    }}
+  }}
+}}, silent = TRUE)
+
+cat("{delimiter}\n")
+"#,
+            temp_dir = temp_dir_str,
+            plot_prefix = plot_prefix,
+            plot_width = DEFAULT_PLOT_WIDTH,
+            plot_height = DEFAULT_PLOT_HEIGHT,
+            code = code,
+            delimiter = PERSISTENT_DELIMITER,
+        )
     }
 
     fn wrap_code_with_plot_capture(&self, code: &str, plot_prefix: &str) -> String {
@@ -387,6 +481,7 @@ pub struct RExecutorBuilder {
     timeline: Arc<dyn TimelineSink>,
     command_runner: Arc<dyn CommandRunner>,
     plot_history: Option<Arc<AsyncMutex<PlotHistoryManager>>>,
+    persistent_mode: bool,
 }
 
 impl RExecutorBuilder {
@@ -398,6 +493,7 @@ impl RExecutorBuilder {
             timeline: Arc::new(NoopTimeline),
             command_runner: Arc::new(ProcessCommandRunner::default()),
             plot_history: None,
+            persistent_mode: false,
         }
     }
 
@@ -435,14 +531,29 @@ impl RExecutorBuilder {
         self
     }
 
+    pub fn use_persistent_mode(mut self) -> Self {
+        self.persistent_mode = true;
+        self
+    }
+
     pub fn build(self) -> RExecutor {
+        let command_runner: Arc<dyn CommandRunner> = if self.persistent_mode {
+            Arc::new(PersistentProcessCommandRunner::new(
+                self.r_path.clone(),
+                self.working_dir.clone(),
+            ))
+        } else {
+            self.command_runner
+        };
+
         RExecutor {
             temp_dir: self.temp_dir,
             r_path: self.r_path,
             working_dir: self.working_dir,
             timeline: self.timeline,
-            command_runner: self.command_runner,
+            command_runner,
             plot_history: self.plot_history,
+            persistent_mode: self.persistent_mode,
         }
     }
 }
@@ -469,6 +580,142 @@ pub struct CommandOutput {
 #[derive(Default)]
 struct ProcessCommandRunner {
     active_child: AsyncMutex<Option<ActiveChild>>,
+}
+
+struct PersistentChild {
+    process: Child,
+    stdin: tokio::process::ChildStdin,
+    stdout: BufReader<tokio::process::ChildStdout>,
+    stderr: BufReader<tokio::process::ChildStderr>,
+}
+
+struct PersistentProcessCommandRunner {
+    child: AsyncMutex<Option<PersistentChild>>,
+    in_flight: AsyncMutex<()>,
+    working_dir: PathBuf,
+    r_path: String,
+    interrupted: Arc<AtomicBool>,
+}
+
+impl PersistentProcessCommandRunner {
+    fn new(r_path: String, working_dir: PathBuf) -> Self {
+        Self {
+            child: AsyncMutex::new(None),
+            in_flight: AsyncMutex::new(()),
+            working_dir,
+            r_path,
+            interrupted: Arc::new(AtomicBool::new(false)),
+        }
+    }
+
+    async fn ensure_child(&self) -> Result<()> {
+        let mut guard = self.child.lock().await;
+        let needs_spawn = guard
+            .as_mut()
+            .map(|child| match child.process.try_wait() {
+                Ok(Some(_)) => true,
+                Ok(None) => false,
+                Err(_) => true,
+            })
+            .unwrap_or(true);
+
+        if needs_spawn {
+            let mut process = Command::new(&self.r_path)
+                .args(["--interactive", "--no-save", "--no-restore", "--quiet"])
+                .current_dir(&self.working_dir)
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()?;
+
+            let stdin = process
+                .stdin
+                .take()
+                .ok_or_else(|| anyhow!("Missing stdin"))?;
+            let stdout = process
+                .stdout
+                .take()
+                .ok_or_else(|| anyhow!("Missing stdout"))?;
+            let stderr = process
+                .stderr
+                .take()
+                .ok_or_else(|| anyhow!("Missing stderr"))?;
+
+            *guard = Some(PersistentChild {
+                process,
+                stdin,
+                stdout: BufReader::new(stdout),
+                stderr: BufReader::new(stderr),
+            });
+        }
+
+        Ok(())
+    }
+
+    async fn read_until_delimiter(
+        child: &mut PersistentChild,
+        timeout_duration: Duration,
+    ) -> Result<(Vec<u8>, Vec<u8>, bool)> {
+        let mut stdout_buf = Vec::new();
+        let mut stderr_buf = Vec::new();
+        let mut saw_error_marker = false;
+        let mut stdout_line = String::new();
+        let mut stderr_line = String::new();
+
+        loop {
+            let read_result = timeout(timeout_duration, async {
+                tokio::select! {
+                    res = child.stdout.read_line(&mut stdout_line) => res.map(|n| ("stdout", n)),
+                    res = child.stderr.read_line(&mut stderr_line) => res.map(|n| ("stderr", n)),
+                }
+            })
+            .await??;
+
+            match read_result {
+                ("stdout", 0) => {
+                    break;
+                }
+                ("stdout", _) => {
+                    if stdout_line.contains(PERSISTENT_DELIMITER) {
+                        stdout_line.clear();
+                        break;
+                    }
+
+                    stdout_buf.extend_from_slice(stdout_line.as_bytes());
+                    stdout_line.clear();
+                }
+                ("stderr", 0) => {
+                    continue;
+                }
+                ("stderr", _) => {
+                    stderr_buf.extend_from_slice(stderr_line.as_bytes());
+                    if stderr_line.contains("REPROD_ERROR:") {
+                        saw_error_marker = true;
+                    }
+                    stderr_line.clear();
+                }
+                _ => {}
+            }
+        }
+
+        loop {
+            match timeout(
+                Duration::from_millis(50),
+                child.stderr.read_line(&mut stderr_line),
+            )
+            .await
+            {
+                Ok(Ok(0)) | Err(_) => break,
+                Ok(Ok(_)) => {
+                    stderr_buf.extend_from_slice(stderr_line.as_bytes());
+                    stderr_line.clear();
+                }
+                Ok(Err(e)) => return Err(anyhow!(e)),
+            }
+        }
+
+        Ok((stdout_buf, stderr_buf, !saw_error_marker))
+    }
 }
 
 #[async_trait]
@@ -542,6 +789,63 @@ impl CommandRunner for ProcessCommandRunner {
         } else {
             Ok(false)
         }
+    }
+}
+
+#[async_trait]
+impl CommandRunner for PersistentProcessCommandRunner {
+    async fn run(
+        &self,
+        _r_path: &str,
+        script_path: &Path,
+        _working_dir: &Path,
+    ) -> Result<CommandOutput> {
+        let _guard = self.in_flight.lock().await;
+        self.ensure_child().await?;
+
+        let mut child_guard = self.child.lock().await;
+        let child = child_guard
+            .as_mut()
+            .ok_or_else(|| anyhow!("Persistent process missing"))?;
+
+        let script_str = fs::read_to_string(script_path).await?;
+        child.stdin.write_all(script_str.as_bytes()).await?;
+        child.stdin.flush().await?;
+
+        let (stdout_bytes, stderr_bytes, status_ok) =
+            Self::read_until_delimiter(child, Duration::from_secs(30)).await?;
+        let was_interrupted = self.interrupted.swap(false, Ordering::SeqCst);
+
+        Ok(CommandOutput {
+            success: status_ok && !was_interrupted,
+            stdout: stdout_bytes,
+            stderr: stderr_bytes,
+            interrupted: was_interrupted,
+        })
+    }
+
+    async fn interrupt(&self) -> Result<bool> {
+        let mut guard = self.child.lock().await;
+        if let Some(child) = guard.as_mut() {
+            if let Some(id) = child.process.id() {
+                #[cfg(unix)]
+                {
+                    use nix::sys::signal::{kill, Signal};
+                    use nix::unistd::Pid;
+                    let _ = kill(Pid::from_raw(id as i32), Signal::SIGINT);
+                }
+
+                #[cfg(windows)]
+                {
+                    let _ = child.process.start_kill();
+                }
+
+                self.interrupted.store(true, Ordering::SeqCst);
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
     }
 }
 
@@ -654,6 +958,40 @@ mod tests {
         async fn interrupt(&self) -> Result<bool> {
             Ok(false)
         }
+    }
+
+    #[test]
+    fn persistent_wrapper_does_not_quit_or_save_image() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let exec = RExecutor::builder(temp_dir.path().to_path_buf(), "Rscript".into())
+            .use_persistent_mode()
+            .build();
+
+        let wrapped = exec.wrap_code_with_plot_capture_persistent("x <- 1", "pfx");
+        assert!(
+            !wrapped.contains("save.image"),
+            "Persistent wrapper should not save image per call"
+        );
+        assert!(
+            !wrapped.contains("quit("),
+            "Persistent wrapper should not quit the R process"
+        );
+        assert!(
+            wrapped.contains(PERSISTENT_DELIMITER),
+            "Persistent wrapper must emit delimiter"
+        );
+    }
+
+    #[test]
+    fn builder_sets_persistent_flag() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let exec = RExecutor::builder(temp_dir.path().to_path_buf(), "Rscript".into())
+            .use_persistent_mode()
+            .build();
+        assert!(
+            exec.persistent_mode,
+            "builder should set persistent mode flag"
+        );
     }
 
     #[tokio::test]
