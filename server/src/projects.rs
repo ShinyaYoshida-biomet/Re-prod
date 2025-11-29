@@ -65,6 +65,7 @@ impl ProjectRuntime {
             .with_shared_timeline(timeline.clone())
             .with_plot_history(plot_history.clone())
             .with_working_dir(descriptor.root_path.clone())
+            .use_persistent_mode()
             .build();
 
         let filesystem_root = descriptor.root_path.clone();
