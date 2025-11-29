@@ -270,6 +270,19 @@ if (length(dev.list()) > 0) {
         Ok(())
     }
 
+    /// Kill and respawn the persistent process, clearing httpgd url.
+    pub async fn restart(&self) -> Result<()> {
+        if !self.persistent_mode {
+            return Ok(());
+        }
+        // Interrupt existing process
+        let _ = self.interrupt().await?;
+        // Clear stored httpgd url so next execute reinitializes
+        let mut url_guard = self.httpgd_url.lock().await;
+        *url_guard = None;
+        Ok(())
+    }
+
     async fn cleanup_temp_dir(&self) -> Result<()> {
         let mut entries = fs::read_dir(&self.temp_dir).await?;
         while let Some(entry) = entries.next_entry().await? {
