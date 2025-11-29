@@ -46,6 +46,7 @@ struct ActiveChild {
 }
 
 const PERSISTENT_DELIMITER: &str = "---REPROD-PERSIST-END---";
+const HTTPGD_MARKER: &str = "__REPROD_HTTPGD_URL__";
 
 impl ActiveChild {
     fn new(child: Child) -> Self {
@@ -91,6 +92,8 @@ pub struct RExecutor {
     command_runner: Arc<dyn CommandRunner>,
     plot_history: Option<Arc<AsyncMutex<PlotHistoryManager>>>,
     persistent_mode: bool,
+    use_httpgd: bool,
+    httpgd_url: Arc<AsyncMutex<Option<String>>>,
 }
 
 impl RExecutor {
@@ -103,6 +106,8 @@ impl RExecutor {
             command_runner: Arc::new(ProcessCommandRunner::default()),
             plot_history: None,
             persistent_mode: false,
+            use_httpgd: false,
+            httpgd_url: Arc::new(AsyncMutex::new(None)),
         }
     }
 
@@ -142,7 +147,11 @@ impl RExecutor {
         let script_path = self.temp_dir.join(format!("script_{}.R", timestamp));
 
         let wrapped_code = if self.persistent_mode {
-            self.wrap_code_with_plot_capture_persistent(&request.code, &plot_prefix)
+            self.wrap_code_with_plot_capture_persistent(
+                &request.code,
+                &plot_prefix,
+                self.use_httpgd,
+            )
         } else {
             self.wrap_code_with_plot_capture(&request.code, &plot_prefix)
         };
@@ -153,11 +162,23 @@ impl RExecutor {
             .run(&self.r_path, &script_path, &self.working_dir)
             .await?;
 
-        let captures = self.collect_plots(&plot_prefix).await?;
+        let captures = if self.use_httpgd {
+            match self.collect_httpgd_plots().await {
+                Ok(Some(httpgd_captures)) => httpgd_captures,
+                _ => self.collect_plots(&plot_prefix).await?,
+            }
+        } else {
+            self.collect_plots(&plot_prefix).await?
+        };
         let _ = fs::remove_file(&script_path).await;
 
         let execution_time_ms = start.elapsed().as_millis() as u64;
-        let stdout = String::from_utf8_lossy(&command_output.stdout).to_string();
+        let stdout_raw = String::from_utf8_lossy(&command_output.stdout).to_string();
+        let (stdout, maybe_httpgd) = Self::extract_httpgd_url(stdout_raw);
+        if let Some(url) = maybe_httpgd {
+            let mut guard = self.httpgd_url.lock().await;
+            *guard = Some(url);
+        }
         let stderr = String::from_utf8_lossy(&command_output.stderr).to_string();
 
         let error_output = if command_output.interrupted {
@@ -236,6 +257,7 @@ if (length(dev.list()) > 0) {
 }
 "#,
                 reset_prefix,
+                self.use_httpgd,
             );
             fs::write(&script_path, reset_code).await?;
             let _ = self
@@ -262,7 +284,12 @@ if (length(dev.list()) > 0) {
         Ok(())
     }
 
-    fn wrap_code_with_plot_capture_persistent(&self, code: &str, plot_prefix: &str) -> String {
+    fn wrap_code_with_plot_capture_persistent(
+        &self,
+        code: &str,
+        plot_prefix: &str,
+        use_httpgd: bool,
+    ) -> String {
         let temp_dir_str = self.temp_dir.to_str().unwrap_or("");
 
         format!(
@@ -284,7 +311,23 @@ if (!dir.exists(.reprod_plot_dir)) {{
   )
 }}
 
-.reprod_open_device(1)
+httpgd_failed <- FALSE
+if ({use_httpgd}) {{
+  tryCatch({{
+    if (!requireNamespace("httpgd", quietly = TRUE)) {{
+      install.packages("httpgd", repos = "https://cloud.r-project.org")
+    }}
+    httpgd::hgd(silent = TRUE)
+    cat("{httpgd_marker} ", httpgd::hgd_url(), "\n")
+  }}, error = function(e) {{
+    httpgd_failed <<- TRUE
+    message("REPROD_HTTPGD_ERROR: ", conditionMessage(e))
+  }})
+}}
+
+if (!{use_httpgd} || httpgd_failed) {{
+  .reprod_open_device(1)
+}}
 
 tryCatch(
   {{
@@ -324,6 +367,8 @@ cat("{delimiter}\n")
             plot_width = DEFAULT_PLOT_WIDTH,
             plot_height = DEFAULT_PLOT_HEIGHT,
             code = code,
+            use_httpgd = if use_httpgd { "TRUE" } else { "FALSE" },
+            httpgd_marker = HTTPGD_MARKER,
             delimiter = PERSISTENT_DELIMITER,
         )
     }
@@ -458,6 +503,91 @@ quit(status = .reprod_exit_code, runLast = FALSE)
         Ok(plots)
     }
 
+    async fn collect_httpgd_plots(&self) -> Result<Option<Vec<CapturedPlot>>> {
+        let url = {
+            let guard = self.httpgd_url.lock().await;
+            guard.clone()
+        };
+
+        if url.is_none() {
+            return Ok(None);
+        }
+        let base = url.unwrap();
+        let client = reqwest::Client::new();
+
+        // Try to list plot ids; fall back to single plot fetch if parsing fails.
+        let mut plots = Vec::new();
+        let plots_endpoint = format!("{}/plots?index=0&limit=50", base);
+        let ids: Option<Vec<String>> = match client.get(&plots_endpoint).send().await {
+            Ok(resp) => {
+                let val: serde_json::Value = resp.json().await.unwrap_or(serde_json::Value::Null);
+                if let Some(arr) = val.as_array() {
+                    Some(
+                        arr.iter()
+                            .filter_map(|v| {
+                                if v.is_string() {
+                                    v.as_str().map(|s| s.to_string())
+                                } else if v.is_number() {
+                                    Some(v.to_string())
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect(),
+                    )
+                } else {
+                    None
+                }
+            }
+            Err(_) => None,
+        };
+
+        let target_ids: Vec<String> = ids.unwrap_or_else(|| vec!["latest".to_string()]);
+
+        for pid in target_ids {
+            let plot_url = if pid == "latest" {
+                format!(
+                    "{}/plot?renderer=png&width={}&height={}",
+                    base, DEFAULT_PLOT_WIDTH, DEFAULT_PLOT_HEIGHT
+                )
+            } else {
+                format!(
+                    "{}/plot?renderer=png&id={}&width={}&height={}",
+                    base, pid, DEFAULT_PLOT_WIDTH, DEFAULT_PLOT_HEIGHT
+                )
+            };
+
+            if let Ok(resp) = client.get(&plot_url).send().await {
+                if resp.status().is_success() {
+                    if let Ok(bytes) = resp.bytes().await {
+                        let base64_data = base64::engine::general_purpose::STANDARD.encode(&bytes);
+                        let timestamp = Self::now_ms();
+                        plots.push(CapturedPlot {
+                            info: PlotInfo {
+                                id: Uuid::new_v4().to_string(),
+                                filename: format!("httpgd_{}.png", pid),
+                                base64_data,
+                                index: plots.len() as u32 + 1,
+                                width: Some(DEFAULT_PLOT_WIDTH),
+                                height: Some(DEFAULT_PLOT_HEIGHT),
+                                timestamp: Some(timestamp),
+                                code: None,
+                                storage_path: None,
+                            },
+                            data: bytes.to_vec(),
+                        });
+                    }
+                }
+            }
+        }
+
+        if plots.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(plots))
+        }
+    }
+
     fn environment_snapshot(&self) -> EnvironmentSnapshot {
         EnvironmentSnapshot {
             r_path: self.r_path.clone(),
@@ -472,6 +602,21 @@ quit(status = .reprod_exit_code, runLast = FALSE)
             .unwrap_or_default()
             .as_millis() as u64
     }
+
+    fn extract_httpgd_url(stdout: String) -> (String, Option<String>) {
+        let mut url: Option<String> = None;
+        let mut cleaned = Vec::new();
+
+        for line in stdout.lines() {
+            if let Some(rest) = line.strip_prefix(HTTPGD_MARKER) {
+                url = Some(rest.trim().to_string());
+                continue;
+            }
+            cleaned.push(line);
+        }
+
+        (cleaned.join("\n"), url)
+    }
 }
 
 pub struct RExecutorBuilder {
@@ -482,6 +627,7 @@ pub struct RExecutorBuilder {
     command_runner: Arc<dyn CommandRunner>,
     plot_history: Option<Arc<AsyncMutex<PlotHistoryManager>>>,
     persistent_mode: bool,
+    use_httpgd: bool,
 }
 
 impl RExecutorBuilder {
@@ -494,6 +640,7 @@ impl RExecutorBuilder {
             command_runner: Arc::new(ProcessCommandRunner::default()),
             plot_history: None,
             persistent_mode: false,
+            use_httpgd: false,
         }
     }
 
@@ -533,6 +680,13 @@ impl RExecutorBuilder {
 
     pub fn use_persistent_mode(mut self) -> Self {
         self.persistent_mode = true;
+        // default httpgd on when persistent unless overridden
+        self.use_httpgd = true;
+        self
+    }
+
+    pub fn with_httpgd(mut self, enabled: bool) -> Self {
+        self.use_httpgd = enabled;
         self
     }
 
@@ -554,6 +708,8 @@ impl RExecutorBuilder {
             command_runner,
             plot_history: self.plot_history,
             persistent_mode: self.persistent_mode,
+            use_httpgd: self.use_httpgd && self.persistent_mode,
+            httpgd_url: Arc::new(AsyncMutex::new(None)),
         }
     }
 }
