@@ -330,11 +330,11 @@ if ({use_httpgd}) {{
     }}
     httpgd::hgd(silent = TRUE)
     httpgd_ready <<- TRUE
-    cat("REPROD_HTTPGD_READY: ", httpgd::hgd_url(), "\n")
-    cat("{httpgd_marker} ", httpgd::hgd_url(), "\n")
+    cat("REPROD_HTTPGD_READY: ", httpgd::hgd_url(), "\n", file=stderr())
+    cat("{httpgd_marker} ", httpgd::hgd_url(), "\n", file=stderr())
   }}, error = function(e) {{
     httpgd_failed <<- TRUE
-    message("REPROD_HTTPGD_ERROR: ", conditionMessage(e))
+    cat("REPROD_HTTPGD_ERROR: ", conditionMessage(e), "\n", file=stderr())
   }})
 }}
 
@@ -351,9 +351,9 @@ if (!{use_httpgd} || httpgd_failed) {{
   tryCatch({{
     .reprod_open_device(1)
     reprod_png_available <<- TRUE
-    message("REPROD_PNG_DEVICE: ", file.path(.reprod_plot_dir, sprintf("%s_1.png", .reprod_plot_prefix)))
+    cat("REPROD_PNG_DEVICE: ", file.path(.reprod_plot_dir, sprintf("%s_1.png", .reprod_plot_prefix)), "\n", file=stderr())
   }}, error = function(e) {{
-    message("REPROD_PNG_ERROR: ", conditionMessage(e))
+    cat("REPROD_PNG_ERROR: ", conditionMessage(e), "\n", file=stderr())
   }})
 }}
 
