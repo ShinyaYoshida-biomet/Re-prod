@@ -27,6 +27,7 @@ use tokio::{
     task::JoinHandle,
     time::{timeout, Duration},
 };
+use tracing::info;
 use uuid::Uuid;
 
 use super::{segment_r_code, NoopTimeline, SegmentationInput, TimelineSink};
@@ -146,12 +147,16 @@ impl RExecutor {
         let plot_prefix = format!("plot_{}", timestamp);
         let script_path = self.temp_dir.join(format!("script_{}.R", timestamp));
 
+        info!(
+            target: "reprod.r.exec",
+            persistent = self.persistent_mode,
+            httpgd = self.use_httpgd,
+            "wrapping code for execution"
+        );
+
+        let use_httpgd = self.use_httpgd && self.httpgd_available().await;
         let wrapped_code = if self.persistent_mode {
-            self.wrap_code_with_plot_capture_persistent(
-                &request.code,
-                &plot_prefix,
-                self.use_httpgd,
-            )
+            self.wrap_code_with_plot_capture_persistent(&request.code, &plot_prefix, use_httpgd)
         } else {
             self.wrap_code_with_plot_capture(&request.code, &plot_prefix)
         };
@@ -174,12 +179,20 @@ impl RExecutor {
 
         let execution_time_ms = start.elapsed().as_millis() as u64;
         let stdout_raw = String::from_utf8_lossy(&command_output.stdout).to_string();
+        let stderr_raw = String::from_utf8_lossy(&command_output.stderr).to_string();
+        info!(
+            target: "reprod.r.exec",
+            stdout = %stdout_raw,
+            stderr = %stderr_raw,
+            "R execution output (raw)"
+        );
+
         let (stdout, maybe_httpgd) = Self::extract_httpgd_url(stdout_raw);
         if let Some(url) = maybe_httpgd {
             let mut guard = self.httpgd_url.lock().await;
             *guard = Some(url);
         }
-        let stderr = String::from_utf8_lossy(&command_output.stderr).to_string();
+        let stderr = stderr_raw;
 
         let error_output = if command_output.interrupted {
             Some("Execution interrupted by user.".to_string())
@@ -314,6 +327,7 @@ if (length(dev.list()) > 0) {
         format!(
             r#"
 # Auto-generated plot capture wrapper (persistent session)
+cat("REPROD_WRAPPER_ENTER: persistent\n")
 .reprod_plot_dir <- "{temp_dir}"
 .reprod_plot_prefix <- "{plot_prefix}"
 
@@ -322,29 +336,30 @@ if (!dir.exists(.reprod_plot_dir)) {{
 }}
 
 httpgd_failed <- FALSE
-httpgd_ready <- FALSE
-httpgd_url <- NA_character_
-if ({use_httpgd}) {{
-  tryCatch({{
-    if (!requireNamespace("httpgd", quietly = TRUE)) {{
-      install.packages("httpgd", repos = "https://cloud.r-project.org")
+    httpgd_ready <- FALSE
+    httpgd_url <- NA_character_
+    if ({use_httpgd} && requireNamespace("httpgd", quietly = TRUE)) {{
+      tryCatch({{
+        httpgd::hgd(silent = TRUE)
+        httpgd_ready <<- TRUE
+        httpgd_url <<- httpgd::hgd_url()
+        cat("REPROD_HTTPGD_READY: ", httpgd::hgd_url(), "\n", file=stderr())
+        cat("{httpgd_marker} ", httpgd::hgd_url(), "\n", file=stderr())
+        cat("REPROD_HTTPGD_READY: ", httpgd::hgd_url(), "\n") # stdout mirror
+        cat("{httpgd_marker} ", httpgd::hgd_url(), "\n")      # stdout mirror
+      }}, error = function(e) {{
+        httpgd_failed <<- TRUE
+        cat("REPROD_HTTPGD_ERROR: ", conditionMessage(e), "\n", file=stderr())
+        cat("REPROD_HTTPGD_ERROR: ", conditionMessage(e), "\n") # stdout mirror
+      }})
+    }} else if ({use_httpgd}) {{
+      httpgd_failed <- TRUE
+      cat("REPROD_HTTPGD_ERROR: httpgd not installed\n", file=stderr())
+      cat("REPROD_HTTPGD_ERROR: httpgd not installed\n")
     }}
-    httpgd::hgd(silent = TRUE)
-    httpgd_ready <<- TRUE
-    httpgd_url <<- httpgd::hgd_url()
-    cat("REPROD_HTTPGD_READY: ", httpgd::hgd_url(), "\n", file=stderr())
-    cat("{httpgd_marker} ", httpgd::hgd_url(), "\n", file=stderr())
-    cat("REPROD_HTTPGD_READY: ", httpgd::hgd_url(), "\n") # stdout mirror
-    cat("{httpgd_marker} ", httpgd::hgd_url(), "\n")      # stdout mirror
-  }}, error = function(e) {{
-    httpgd_failed <<- TRUE
-    cat("REPROD_HTTPGD_ERROR: ", conditionMessage(e), "\n", file=stderr())
-    cat("REPROD_HTTPGD_ERROR: ", conditionMessage(e), "\n") # stdout mirror
-  }})
-}}
 
 reprod_png_available <- FALSE
-if (!{use_httpgd}) {{
+if (!{use_httpgd} || httpgd_failed) {{
   .reprod_open_device <- function(index) {{
     filename <- sprintf("%s_%d.png", .reprod_plot_prefix, index)
     png(
@@ -362,9 +377,6 @@ if (!{use_httpgd}) {{
     cat("REPROD_PNG_ERROR: ", conditionMessage(e), "\n", file=stderr())
     cat("REPROD_PNG_ERROR: ", conditionMessage(e), "\n") # stdout mirror
   }})
-}} else if (httpgd_failed) {{
-  cat("REPROD_HTTPGD_ERROR_NO_FALLBACK: httpgd failed and PNG fallback disabled to avoid empty filename issues\n", file=stderr())
-  cat("REPROD_HTTPGD_ERROR_NO_FALLBACK: httpgd failed and PNG fallback disabled to avoid empty filename issues\n")
 }}
 
 tryCatch(
@@ -374,50 +386,53 @@ tryCatch(
   error = function(e) {{
     assign(".reprod_last_error", e, envir = .GlobalEnv)
     cat("REPROD_ERROR: ", conditionMessage(e), "\n", file=stderr())
-    cat("REPROD_TRACEBACK: ", paste(utils::capture.output(traceback()), collapse = \" | \"), "\n", file=stderr())
-    cat("REPROD_DEVICES: ", paste(names(dev.list()), collapse = \",\"), "\n", file=stderr())
+    cat("REPROD_TRACEBACK: ", paste(utils::capture.output(traceback()), collapse = " | "), "\n", file=stderr())
+    cat("REPROD_DEVICES: ", paste(names(dev.list()), collapse = ","), "\n", file=stderr())
     cat("REPROD_PLOT_DIR: ", .reprod_plot_dir, "\n", file=stderr())
     cat("REPROD_HTTPGD_READY: ", httpgd_ready, " HTTPGD_FAILED: ", httpgd_failed, " PNG_AVAILABLE: ", reprod_png_available, " HTTPGD_URL: ", httpgd_url, "\n", file=stderr())
     cat("REPROD_GETWD: ", getwd(), "\n", file=stderr())
     cat("REPROD_ERROR: ", conditionMessage(e), "\n") # stdout mirror
-    cat("REPROD_TRACEBACK: ", paste(utils::capture.output(traceback()), collapse = \" | \"), "\n") # stdout mirror
-    cat("REPROD_DEVICES: ", paste(names(dev.list()), collapse = \",\"), "\n") # stdout mirror
+    cat("REPROD_TRACEBACK: ", paste(utils::capture.output(traceback()), collapse = " | "), "\n") # stdout mirror
+    cat("REPROD_DEVICES: ", paste(names(dev.list()), collapse = ","), "\n") # stdout mirror
     cat("REPROD_PLOT_DIR: ", .reprod_plot_dir, "\n") # stdout mirror
     cat("REPROD_HTTPGD_READY: ", httpgd_ready, " HTTPGD_FAILED: ", httpgd_failed, " PNG_AVAILABLE: ", reprod_png_available, " HTTPGD_URL: ", httpgd_url, "\n") # stdout mirror
     cat("REPROD_GETWD: ", getwd(), "\n") # stdout mirror
   }}
 )
 
-if (reprod_png_available && (!{use_httpgd}) && names(dev.cur()) != "null device") {{
+if (reprod_png_available && (!{use_httpgd} || httpgd_failed) && names(dev.cur()) != "null device") {{
   tryCatch(dev.off(), error = function(e) message("REPROD_DEVICE_CLOSE_ERROR: ", conditionMessage(e)))
 }}
 
-if (reprod_png_available && (!{use_httpgd})) {{
-  try{{
+if (reprod_png_available && (!{use_httpgd} || httpgd_failed)) {{
+  tryCatch({{
     existing_plots <- list.files(
       .reprod_plot_dir,
       pattern = sprintf("^%s_\\d+\\.png$", .reprod_plot_prefix)
     )
-  if (length(existing_plots) == 0 &&
-      requireNamespace("ggplot2", quietly = TRUE)) {{
-    last_plot <- tryCatch(ggplot2::last_plot(), error = function(e) NULL)
-    if (inherits(last_plot, "ggplot")) {{
-      next_index <- length(existing_plots) + 1
-      .reprod_open_device(next_index)
-      print(last_plot)
-      dev.off()
+    if (length(existing_plots) == 0 &&
+        requireNamespace("ggplot2", quietly = TRUE)) {{
+      last_plot <- tryCatch(ggplot2::last_plot(), error = function(e) NULL)
+      if (inherits(last_plot, "ggplot")) {{
+        next_index <- length(existing_plots) + 1
+        .reprod_open_device(next_index)
+        print(last_plot)
+        dev.off()
+      }}
     }}
-  }}
-}}, silent = TRUE)
+  }}, error = function(e) {{
+    cat("REPROD_PNG_POST_ERROR: ", conditionMessage(e), "\n", file=stderr())
+    cat("REPROD_PNG_POST_ERROR: ", conditionMessage(e), "\n")
+  }})
 }}
 
 cat("REPROD_STATE: HTTPGD_READY=", httpgd_ready, " HTTPGD_FAILED=", httpgd_failed,
     " PNG_AVAILABLE=", reprod_png_available, " PLOT_DIR=", .reprod_plot_dir,
-    " GETWD=", getwd(), " DEVICES=", paste(names(dev.list()), collapse=\",\"), " HTTPGD_URL=", httpgd_url, "\n",
+    " GETWD=", getwd(), " DEVICES=", paste(names(dev.list()), collapse=","), " HTTPGD_URL=", httpgd_url, "\n",
     file=stderr())
 cat("REPROD_STATE: HTTPGD_READY=", httpgd_ready, " HTTPGD_FAILED=", httpgd_failed,
     " PNG_AVAILABLE=", reprod_png_available, " PLOT_DIR=", .reprod_plot_dir,
-    " GETWD=", getwd(), " DEVICES=", paste(names(dev.list()), collapse=\",\"), " HTTPGD_URL=", httpgd_url, "\n")
+    " GETWD=", getwd(), " DEVICES=", paste(names(dev.list()), collapse=","), " HTTPGD_URL=", httpgd_url, "\n")
 
 cat("{delimiter}\n")
 "#,
@@ -438,6 +453,7 @@ cat("{delimiter}\n")
         format!(
             r#"
 # Auto-generated plot capture wrapper
+cat("REPROD_WRAPPER_ENTER: oneshot\n")
 .reprod_plot_dir <- "{temp_dir}"
 .reprod_state_path <- file.path(.reprod_plot_dir, ".reprod_state.RData")
 
@@ -662,6 +678,25 @@ quit(status = .reprod_exit_code, runLast = FALSE)
             .as_millis() as u64
     }
 
+    async fn httpgd_available(&self) -> bool {
+        let output = Command::new(&self.r_path)
+            .args([
+                "--vanilla",
+                "--quiet",
+                "-e",
+                "quit(status=!requireNamespace('httpgd', quietly=TRUE))",
+            ])
+            .current_dir(&self.working_dir)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .output()
+            .await;
+        match output {
+            Ok(out) => out.status.success(),
+            Err(_) => false,
+        }
+    }
+
     fn extract_httpgd_url(stdout: String) -> (String, Option<String>) {
         let mut url: Option<String> = None;
 
@@ -824,6 +859,14 @@ impl PersistentProcessCommandRunner {
         }
     }
 
+    fn repl_command(&self) -> String {
+        if self.r_path.to_lowercase().contains("rscript") {
+            "R".to_string()
+        } else {
+            self.r_path.clone()
+        }
+    }
+
     async fn ensure_child(&self) -> Result<()> {
         let mut guard = self.child.lock().await;
         let needs_spawn = guard
@@ -836,8 +879,9 @@ impl PersistentProcessCommandRunner {
             .unwrap_or(true);
 
         if needs_spawn {
-            let mut process = Command::new(&self.r_path)
-                .args(["--interactive", "--no-save", "--no-restore", "--quiet"])
+            let repl = self.repl_command();
+            let mut process = Command::new(&repl)
+                .args(["--no-save", "--no-restore", "--quiet", "--slave"])
                 .current_dir(&self.working_dir)
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
@@ -1024,8 +1068,17 @@ impl CommandRunner for PersistentProcessCommandRunner {
             .as_mut()
             .ok_or_else(|| anyhow!("Persistent process missing"))?;
 
+        // Send the entire script as a single block to avoid line-by-line execution issues.
         let script_str = fs::read_to_string(script_path).await?;
-        child.stdin.write_all(script_str.as_bytes()).await?;
+        let mut block = String::with_capacity(script_str.len() + 4);
+        block.push_str("{\n");
+        block.push_str(&script_str);
+        if !block.ends_with('\n') {
+            block.push('\n');
+        }
+        block.push_str("}\n");
+
+        child.stdin.write_all(block.as_bytes()).await?;
         child.stdin.flush().await?;
 
         let (stdout_bytes, stderr_bytes, status_ok) =
