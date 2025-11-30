@@ -334,14 +334,17 @@ if ({use_httpgd}) {{
     httpgd_url <<- httpgd::hgd_url()
     cat("REPROD_HTTPGD_READY: ", httpgd::hgd_url(), "\n", file=stderr())
     cat("{httpgd_marker} ", httpgd::hgd_url(), "\n", file=stderr())
+    cat("REPROD_HTTPGD_READY: ", httpgd::hgd_url(), "\n") # stdout mirror
+    cat("{httpgd_marker} ", httpgd::hgd_url(), "\n")      # stdout mirror
   }}, error = function(e) {{
     httpgd_failed <<- TRUE
     cat("REPROD_HTTPGD_ERROR: ", conditionMessage(e), "\n", file=stderr())
+    cat("REPROD_HTTPGD_ERROR: ", conditionMessage(e), "\n") # stdout mirror
   }})
 }}
 
 reprod_png_available <- FALSE
-if (!{use_httpgd} || httpgd_failed) {{
+if (!{use_httpgd}) {{
   .reprod_open_device <- function(index) {{
     filename <- sprintf("%s_%d.png", .reprod_plot_prefix, index)
     png(
@@ -354,9 +357,14 @@ if (!{use_httpgd} || httpgd_failed) {{
     .reprod_open_device(1)
     reprod_png_available <<- TRUE
     cat("REPROD_PNG_DEVICE: ", file.path(.reprod_plot_dir, sprintf("%s_1.png", .reprod_plot_prefix)), "\n", file=stderr())
+    cat("REPROD_PNG_DEVICE: ", file.path(.reprod_plot_dir, sprintf("%s_1.png", .reprod_plot_prefix)), "\n") # stdout mirror
   }}, error = function(e) {{
     cat("REPROD_PNG_ERROR: ", conditionMessage(e), "\n", file=stderr())
+    cat("REPROD_PNG_ERROR: ", conditionMessage(e), "\n") # stdout mirror
   }})
+}} else if (httpgd_failed) {{
+  cat("REPROD_HTTPGD_ERROR_NO_FALLBACK: httpgd failed and PNG fallback disabled to avoid empty filename issues\n", file=stderr())
+  cat("REPROD_HTTPGD_ERROR_NO_FALLBACK: httpgd failed and PNG fallback disabled to avoid empty filename issues\n")
 }}
 
 tryCatch(
@@ -371,36 +379,45 @@ tryCatch(
     cat("REPROD_PLOT_DIR: ", .reprod_plot_dir, "\n", file=stderr())
     cat("REPROD_HTTPGD_READY: ", httpgd_ready, " HTTPGD_FAILED: ", httpgd_failed, " PNG_AVAILABLE: ", reprod_png_available, " HTTPGD_URL: ", httpgd_url, "\n", file=stderr())
     cat("REPROD_GETWD: ", getwd(), "\n", file=stderr())
+    cat("REPROD_ERROR: ", conditionMessage(e), "\n") # stdout mirror
+    cat("REPROD_TRACEBACK: ", paste(utils::capture.output(traceback()), collapse = \" | \"), "\n") # stdout mirror
+    cat("REPROD_DEVICES: ", paste(names(dev.list()), collapse = \",\"), "\n") # stdout mirror
+    cat("REPROD_PLOT_DIR: ", .reprod_plot_dir, "\n") # stdout mirror
+    cat("REPROD_HTTPGD_READY: ", httpgd_ready, " HTTPGD_FAILED: ", httpgd_failed, " PNG_AVAILABLE: ", reprod_png_available, " HTTPGD_URL: ", httpgd_url, "\n") # stdout mirror
+    cat("REPROD_GETWD: ", getwd(), "\n") # stdout mirror
   }}
 )
 
-if (reprod_png_available && (!{use_httpgd} || httpgd_failed) && names(dev.cur()) != "null device") {{
+if (reprod_png_available && (!{use_httpgd}) && names(dev.cur()) != "null device") {{
   tryCatch(dev.off(), error = function(e) message("REPROD_DEVICE_CLOSE_ERROR: ", conditionMessage(e)))
 }}
 
-if (reprod_png_available && (!{use_httpgd} || httpgd_failed)) {{
+if (reprod_png_available && (!{use_httpgd})) {{
   try{{
     existing_plots <- list.files(
       .reprod_plot_dir,
       pattern = sprintf("^%s_\\d+\\.png$", .reprod_plot_prefix)
     )
-    if (length(existing_plots) == 0 &&
-        requireNamespace("ggplot2", quietly = TRUE)) {{
-      last_plot <- tryCatch(ggplot2::last_plot(), error = function(e) NULL)
-      if (inherits(last_plot, "ggplot")) {{
-        next_index <- length(existing_plots) + 1
-        .reprod_open_device(next_index)
-        print(last_plot)
-        dev.off()
-      }}
+  if (length(existing_plots) == 0 &&
+      requireNamespace("ggplot2", quietly = TRUE)) {{
+    last_plot <- tryCatch(ggplot2::last_plot(), error = function(e) NULL)
+    if (inherits(last_plot, "ggplot")) {{
+      next_index <- length(existing_plots) + 1
+      .reprod_open_device(next_index)
+      print(last_plot)
+      dev.off()
     }}
-  }}, silent = TRUE)
+  }}
+}}, silent = TRUE)
 }}
 
 cat("REPROD_STATE: HTTPGD_READY=", httpgd_ready, " HTTPGD_FAILED=", httpgd_failed,
     " PNG_AVAILABLE=", reprod_png_available, " PLOT_DIR=", .reprod_plot_dir,
     " GETWD=", getwd(), " DEVICES=", paste(names(dev.list()), collapse=\",\"), " HTTPGD_URL=", httpgd_url, "\n",
     file=stderr())
+cat("REPROD_STATE: HTTPGD_READY=", httpgd_ready, " HTTPGD_FAILED=", httpgd_failed,
+    " PNG_AVAILABLE=", reprod_png_available, " PLOT_DIR=", .reprod_plot_dir,
+    " GETWD=", getwd(), " DEVICES=", paste(names(dev.list()), collapse=\",\"), " HTTPGD_URL=", httpgd_url, "\n")
 
 cat("{delimiter}\n")
 "#,
