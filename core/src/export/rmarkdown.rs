@@ -200,8 +200,12 @@ header-includes:
   - |
     \usepackage{{xcolor}}
     \usepackage{{helvet}}
+    \usepackage{{sectsty}}
+    \usepackage{{framed}}
+    \definecolor{{darkblue}}{{RGB}}{{0,0,139}}
+    \sectionfont{{\color{{darkblue}}}}
     \renewcommand{{\familydefault}}{{\sfdefault}}
-    \newenvironment{{rpoutput}}{{\begin{{quote}}\colorbox{{gray!10}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
+    \newenvironment{{rpoutput}}{{\def\FrameCommand{{\color{{gray!50}}\vrule width 3pt \hspace{{5pt}}}}\MakeFramed {{\advance\hsize-\width \FrameRestore}}}}{{\endMakeFramed}}
     \newenvironment{{rperror}}{{\begin{{quote}}\colorbox{{red!5}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
 ---
 
@@ -440,8 +444,12 @@ header-includes:
   - |
     \usepackage{{xcolor}}
     \usepackage{{helvet}}
+    \usepackage{{sectsty}}
+    \usepackage{{framed}}
+    \definecolor{{darkblue}}{{RGB}}{{0,0,139}}
+    \sectionfont{{\color{{darkblue}}}}
     \renewcommand{{\familydefault}}{{\sfdefault}}
-    \newenvironment{{rpoutput}}{{\begin{{quote}}\colorbox{{gray!10}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
+    \newenvironment{{rpoutput}}{{\def\FrameCommand{{\color{{gray!50}}\vrule width 3pt \hspace{{5pt}}}}\MakeFramed {{\advance\hsize-\width \FrameRestore}}}}{{\endMakeFramed}}
     \newenvironment{{rperror}}{{\begin{{quote}}\colorbox{{red!5}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
 ---
 
@@ -691,7 +699,9 @@ render_pdf <- function() {{
     fig.width = {fig_width},
     fig.height = {fig_height},
     message = FALSE,
-    warning = FALSE
+    warning = FALSE,
+    comment = NA,
+    background = '#F5F5F5'
   )
 
   output_format <- rmarkdown::pdf_document(

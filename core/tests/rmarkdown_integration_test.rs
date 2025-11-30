@@ -160,6 +160,9 @@ fn test_rmarkdown_timeline_export_integration() {
     assert!(rmd_content.contains("geometry: \"margin=1in\""));
     assert!(rmd_content.contains("fontsize: 11pt"));
     assert!(rmd_content.contains("\\usepackage{helvet}"));
+    assert!(rmd_content.contains("\\usepackage{sectsty}"));
+    assert!(rmd_content.contains("\\usepackage{framed}"));
+    assert!(rmd_content.contains("\\definecolor{darkblue}"));
     assert!(rmd_content.contains("\\renewcommand{\\familydefault}{\\sfdefault}"));
 
     // Verify session info
@@ -270,6 +273,9 @@ ggplot(data_clean, aes(x = x, y = y)) +
     assert!(rmd_content.contains("geometry: \"margin=1in\""));
     assert!(rmd_content.contains("fontsize: 11pt"));
     assert!(rmd_content.contains("\\usepackage{helvet}"));
+    assert!(rmd_content.contains("\\usepackage{sectsty}"));
+    assert!(rmd_content.contains("\\usepackage{framed}"));
+    assert!(rmd_content.contains("\\definecolor{darkblue}"));
     assert!(rmd_content.contains("\\renewcommand{\\familydefault}{\\sfdefault}"));
 
     // Verify document overview
