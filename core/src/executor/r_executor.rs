@@ -1136,7 +1136,7 @@ mod tests {
             .use_persistent_mode()
             .build();
 
-        let wrapped = exec.wrap_code_with_plot_capture_persistent("x <- 1", "pfx");
+        let wrapped = exec.wrap_code_with_plot_capture_persistent("x <- 1", "pfx", true);
         assert!(
             !wrapped.contains("save.image"),
             "Persistent wrapper should not save image per call"
