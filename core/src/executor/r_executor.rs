@@ -309,7 +309,7 @@ if (length(dev.list()) > 0) {
         plot_prefix: &str,
         use_httpgd: bool,
     ) -> String {
-        let temp_dir_str = self.temp_dir.to_str().unwrap_or("");
+        let temp_dir_str = self.temp_dir.to_string_lossy();
 
         format!(
             r#"
@@ -404,7 +404,7 @@ cat("{delimiter}\n")
     }
 
     fn wrap_code_with_plot_capture(&self, code: &str, plot_prefix: &str) -> String {
-        let temp_dir_str = self.temp_dir.to_str().unwrap_or("");
+        let temp_dir_str = self.temp_dir.to_string_lossy();
 
         format!(
             r#"
