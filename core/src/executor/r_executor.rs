@@ -321,22 +321,15 @@ if (!dir.exists(.reprod_plot_dir)) {{
   dir.create(.reprod_plot_dir, recursive = TRUE, showWarnings = FALSE)
 }}
 
-.reprod_open_device <- function(index) {{
-  filename <- sprintf("%s_%d.png", .reprod_plot_prefix, index)
-  png(
-    file.path(.reprod_plot_dir, filename),
-    width = {plot_width}, height = {plot_height},
-    type = "cairo"
-  )
-}}
-
 httpgd_failed <- FALSE
+httpgd_ready <- FALSE
 if ({use_httpgd}) {{
   tryCatch({{
     if (!requireNamespace("httpgd", quietly = TRUE)) {{
       install.packages("httpgd", repos = "https://cloud.r-project.org")
     }}
     httpgd::hgd(silent = TRUE)
+    httpgd_ready <<- TRUE
     cat("{httpgd_marker} ", httpgd::hgd_url(), "\n")
   }}, error = function(e) {{
     httpgd_failed <<- TRUE
@@ -344,12 +337,20 @@ if ({use_httpgd}) {{
   }})
 }}
 
-png_failed <- FALSE
+reprod_png_available <- FALSE
 if (!{use_httpgd} || httpgd_failed) {{
+  .reprod_open_device <- function(index) {{
+    filename <- sprintf("%s_%d.png", .reprod_plot_prefix, index)
+    png(
+      file.path(.reprod_plot_dir, filename),
+      width = {plot_width}, height = {plot_height},
+      type = "cairo"
+    )
+  }}
   tryCatch({{
     .reprod_open_device(1)
+    reprod_png_available <<- TRUE
   }}, error = function(e) {{
-    png_failed <<- TRUE
     message("REPROD_PNG_ERROR: ", conditionMessage(e))
   }})
 }}
@@ -364,26 +365,28 @@ tryCatch(
   }}
 )
 
-if (names(dev.cur()) != "null device") {{
-  dev.off()
+if (reprod_png_available && (!{use_httpgd} || httpgd_failed) && names(dev.cur()) != "null device") {{
+  tryCatch(dev.off(), error = function(e) message("REPROD_DEVICE_CLOSE_ERROR: ", conditionMessage(e)))
 }}
 
-try({{
-  existing_plots <- list.files(
-    .reprod_plot_dir,
-    pattern = sprintf("^%s_\\d+\\.png$", .reprod_plot_prefix)
-  )
-  if (length(existing_plots) == 0 &&
-      requireNamespace("ggplot2", quietly = TRUE)) {{
-    last_plot <- tryCatch(ggplot2::last_plot(), error = function(e) NULL)
-    if (inherits(last_plot, "ggplot")) {{
-      next_index <- length(existing_plots) + 1
-      .reprod_open_device(next_index)
-      print(last_plot)
-      dev.off()
+if (reprod_png_available && (!{use_httpgd} || httpgd_failed)) {{
+  try{{
+    existing_plots <- list.files(
+      .reprod_plot_dir,
+      pattern = sprintf("^%s_\\d+\\.png$", .reprod_plot_prefix)
+    )
+    if (length(existing_plots) == 0 &&
+        requireNamespace("ggplot2", quietly = TRUE)) {{
+      last_plot <- tryCatch(ggplot2::last_plot(), error = function(e) NULL)
+      if (inherits(last_plot, "ggplot")) {{
+        next_index <- length(existing_plots) + 1
+        .reprod_open_device(next_index)
+        print(last_plot)
+        dev.off()
+      }}
     }}
-  }}
-}}, silent = TRUE)
+  }}, silent = TRUE)
+}}
 
 cat("{delimiter}\n")
 "#,

@@ -34,9 +34,11 @@ export function useBottomPaneState(): UseBottomPaneStateResult {
 	const focusPlotById = useStore((state) => state.focusPlotById);
 	const selectPreviousPlot = useStore((state) => state.selectPreviousPlot);
 	const selectNextPlot = useStore((state) => state.selectNextPlot);
+	const executionResults = useStore((state) => state.execution.results);
 
 	const [activeTab, setActiveTab] = useState<BottomPaneTab>(DEFAULT_TAB);
 	const previousPlotCount = useRef(0);
+	const previousResultCount = useRef(0);
 
 	const allPlots = useMemo<ExecutionLogPlot[]>(() => plotHistory.items, [plotHistory.items]);
 
@@ -87,6 +89,15 @@ export function useBottomPaneState(): UseBottomPaneStateResult {
 		}
 		previousPlotCount.current = allPlots.length;
 	}, [allPlots.length, focusPlotByIndex]);
+
+	// Whenever a new execution result arrives, switch to console to show output.
+	useEffect(() => {
+		const prevCount = previousResultCount.current;
+		if (executionResults.length > prevCount) {
+			setActiveTab("console");
+		}
+		previousResultCount.current = executionResults.length;
+	}, [executionResults.length]);
 
 	useEffect(() => {
 		if (allPlots.length > 0 && !plotHistory.activePlotId) {
