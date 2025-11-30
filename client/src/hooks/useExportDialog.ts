@@ -126,12 +126,6 @@ export function useExportDialog({ open, onClose }: UseExportDialogProps): UseExp
 		dispatch({ type: "set-exporting", payload: true });
 		dispatch({ type: "set-error", payload: "" });
 
-		if (format === "bundle") {
-			dispatch({ type: "set-error", payload: "Bundle export is not supported yet." });
-			dispatch({ type: "set-exporting", payload: false });
-			return;
-		}
-
 		const trimmedDocumentPath = documentPath.trim();
 
 		if (mode === "document" && !trimmedDocumentPath) {
@@ -143,9 +137,8 @@ export function useExportDialog({ open, onClose }: UseExportDialogProps): UseExp
 			return;
 		}
 
-		const payload: ExportRMarkdownRequestPayload = {
+		const basePayload = {
 			mode,
-			format: format === "pdf" ? "pdf" : "rmarkdown",
 			outputPath,
 			documentPath: mode === "document" ? trimmedDocumentPath : undefined,
 			codeFolding,
@@ -160,21 +153,37 @@ export function useExportDialog({ open, onClose }: UseExportDialogProps): UseExp
 				tailLines: 8,
 				maxLines: 200,
 			},
-			pdfOptions:
-				format === "pdf"
-					? {
-							toc: pdfOptions.toc,
-							includeSource: pdfOptions.includeSource,
-							highlightTheme: pdfOptions.highlightTheme,
-							figWidth: pdfOptions.figWidth,
-							figHeight: pdfOptions.figHeight,
-							latexPreamble: pdfOptions.latexPreamble || undefined,
-						}
-					: undefined,
+		};
+
+		const pdfPayload = {
+			...basePayload,
+			format: "pdf" as const,
+			pdfOptions: {
+				toc: pdfOptions.toc,
+				includeSource: pdfOptions.includeSource,
+				highlightTheme: pdfOptions.highlightTheme,
+				figWidth: pdfOptions.figWidth,
+				figHeight: pdfOptions.figHeight,
+				latexPreamble: pdfOptions.latexPreamble || undefined,
+			},
+		};
+
+		const rmdPayload = {
+			...basePayload,
+			format: "rmarkdown" as const,
 		};
 
 		try {
-			await exportRMarkdown(payload);
+			if (format === "both") {
+				// Export RMarkdown first
+				await exportRMarkdown(rmdPayload);
+				// Then export PDF
+				await exportRMarkdown(pdfPayload);
+			} else if (format === "pdf") {
+				await exportRMarkdown(pdfPayload);
+			} else {
+				await exportRMarkdown(rmdPayload);
+			}
 			onClose();
 		} catch (err) {
 			if (err instanceof ExportServiceError || err instanceof Error) {

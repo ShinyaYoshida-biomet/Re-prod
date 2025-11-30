@@ -35,6 +35,7 @@
 	padding: 16px;
 	background: var(--bg-toolbar);
 	border-bottom: 1px solid var(--border-light);
+	gap: 12px;
 }
 
 .export-dialog-header h2 {
@@ -43,6 +44,13 @@
 	font-weight: 600;
 	color: var(--text-primary);
 	letter-spacing: var(--letter-spacing-base);
+}
+
+.export-dialog-subtitle {
+	margin: 4px 0 0 0;
+	font-size: 12px;
+	font-weight: 400;
+	color: var(--text-secondary);
 }
 
 /* Content */
