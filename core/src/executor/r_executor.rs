@@ -323,6 +323,7 @@ if (!dir.exists(.reprod_plot_dir)) {{
 
 httpgd_failed <- FALSE
 httpgd_ready <- FALSE
+httpgd_url <- NA_character_
 if ({use_httpgd}) {{
   tryCatch({{
     if (!requireNamespace("httpgd", quietly = TRUE)) {{
@@ -330,6 +331,7 @@ if ({use_httpgd}) {{
     }}
     httpgd::hgd(silent = TRUE)
     httpgd_ready <<- TRUE
+    httpgd_url <<- httpgd::hgd_url()
     cat("REPROD_HTTPGD_READY: ", httpgd::hgd_url(), "\n", file=stderr())
     cat("{httpgd_marker} ", httpgd::hgd_url(), "\n", file=stderr())
   }}, error = function(e) {{
@@ -367,7 +369,7 @@ tryCatch(
     cat("REPROD_TRACEBACK: ", paste(utils::capture.output(traceback()), collapse = \" | \"), "\n", file=stderr())
     cat("REPROD_DEVICES: ", paste(names(dev.list()), collapse = \",\"), "\n", file=stderr())
     cat("REPROD_PLOT_DIR: ", .reprod_plot_dir, "\n", file=stderr())
-    cat("REPROD_HTTPGD_READY: ", httpgd_ready, " HTTPGD_FAILED: ", httpgd_failed, " PNG_AVAILABLE: ", reprod_png_available, "\n", file=stderr())
+    cat("REPROD_HTTPGD_READY: ", httpgd_ready, " HTTPGD_FAILED: ", httpgd_failed, " PNG_AVAILABLE: ", reprod_png_available, " HTTPGD_URL: ", httpgd_url, "\n", file=stderr())
     cat("REPROD_GETWD: ", getwd(), "\n", file=stderr())
   }}
 )
@@ -394,6 +396,11 @@ if (reprod_png_available && (!{use_httpgd} || httpgd_failed)) {{
     }}
   }}, silent = TRUE)
 }}
+
+cat("REPROD_STATE: HTTPGD_READY=", httpgd_ready, " HTTPGD_FAILED=", httpgd_failed,
+    " PNG_AVAILABLE=", reprod_png_available, " PLOT_DIR=", .reprod_plot_dir,
+    " GETWD=", getwd(), " DEVICES=", paste(names(dev.list()), collapse=\",\"), " HTTPGD_URL=", httpgd_url, "\n",
+    file=stderr())
 
 cat("{delimiter}\n")
 "#,
