@@ -309,7 +309,7 @@ if (length(dev.list()) > 0) {
         plot_prefix: &str,
         use_httpgd: bool,
     ) -> String {
-        let temp_dir_str = self.temp_dir.to_string_lossy();
+        let temp_dir_str = r_escape(&self.temp_dir.to_string_lossy());
 
         format!(
             r#"
@@ -363,7 +363,12 @@ tryCatch(
   }},
   error = function(e) {{
     assign(".reprod_last_error", e, envir = .GlobalEnv)
-    message("REPROD_ERROR: ", conditionMessage(e))
+    cat("REPROD_ERROR: ", conditionMessage(e), "\n", file=stderr())
+    cat("REPROD_TRACEBACK: ", paste(utils::capture.output(traceback()), collapse = \" | \"), "\n", file=stderr())
+    cat("REPROD_DEVICES: ", paste(names(dev.list()), collapse = \",\"), "\n", file=stderr())
+    cat("REPROD_PLOT_DIR: ", .reprod_plot_dir, "\n", file=stderr())
+    cat("REPROD_HTTPGD_READY: ", httpgd_ready, " HTTPGD_FAILED: ", httpgd_failed, " PNG_AVAILABLE: ", reprod_png_available, "\n", file=stderr())
+    cat("REPROD_GETWD: ", getwd(), "\n", file=stderr())
   }}
 )
 
@@ -404,7 +409,7 @@ cat("{delimiter}\n")
     }
 
     fn wrap_code_with_plot_capture(&self, code: &str, plot_prefix: &str) -> String {
-        let temp_dir_str = self.temp_dir.to_string_lossy();
+        let temp_dir_str = r_escape(&self.temp_dir.to_string_lossy());
 
         format!(
             r#"
@@ -644,6 +649,10 @@ quit(status = .reprod_exit_code, runLast = FALSE)
 
         (stdout, url)
     }
+}
+
+fn r_escape(s: &str) -> String {
+    s.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
 pub struct RExecutorBuilder {
