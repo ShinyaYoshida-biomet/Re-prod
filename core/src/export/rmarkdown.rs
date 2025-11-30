@@ -194,9 +194,13 @@ output:
     toc_depth: 2
     code_folding: {}
     theme: united
+geometry: "margin=1in"
+fontsize: 11pt
 header-includes:
   - |
     \usepackage{{xcolor}}
+    \usepackage{{helvet}}
+    \renewcommand{{\familydefault}}{{\sfdefault}}
     \newenvironment{{rpoutput}}{{\begin{{quote}}\colorbox{{gray!10}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
     \newenvironment{{rperror}}{{\begin{{quote}}\colorbox{{red!5}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
 ---
@@ -430,9 +434,13 @@ output:
   html_document:
     toc: true
     code_folding: {}
+geometry: "margin=1in"
+fontsize: 11pt
 header-includes:
   - |
     \usepackage{{xcolor}}
+    \usepackage{{helvet}}
+    \renewcommand{{\familydefault}}{{\sfdefault}}
     \newenvironment{{rpoutput}}{{\begin{{quote}}\colorbox{{gray!10}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
     \newenvironment{{rperror}}{{\begin{{quote}}\colorbox{{red!5}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
 ---
@@ -681,7 +689,9 @@ render_pdf <- function() {{
   knitr::opts_chunk$set(
     echo = {include_source},
     fig.width = {fig_width},
-    fig.height = {fig_height}
+    fig.height = {fig_height},
+    message = FALSE,
+    warning = FALSE
   )
 
   output_format <- rmarkdown::pdf_document(
