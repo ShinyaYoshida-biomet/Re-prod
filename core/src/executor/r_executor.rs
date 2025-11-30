@@ -186,7 +186,13 @@ impl RExecutor {
         } else if command_output.stderr.is_empty() {
             None
         } else {
-            Some(stderr)
+            Some(stderr.clone())
+        };
+        // Ensure console sees stderr as well as stdout.
+        let display_output = if command_output.stderr.is_empty() {
+            stdout.clone()
+        } else {
+            format!("{stdout}\n{stderr}")
         };
 
         let mut plots = Vec::with_capacity(captures.len());
@@ -227,7 +233,7 @@ impl RExecutor {
 
         let result = ExecutionResult {
             success: command_output.success && !command_output.interrupted,
-            output: stdout,
+            output: display_output,
             error: error_output,
             plots,
             execution_time_ms,
@@ -618,17 +624,14 @@ quit(status = .reprod_exit_code, runLast = FALSE)
 
     fn extract_httpgd_url(stdout: String) -> (String, Option<String>) {
         let mut url: Option<String> = None;
-        let mut cleaned = Vec::new();
 
         for line in stdout.lines() {
             if let Some(rest) = line.strip_prefix(HTTPGD_MARKER) {
                 url = Some(rest.trim().to_string());
-                continue;
             }
-            cleaned.push(line);
         }
 
-        (cleaned.join("\n"), url)
+        (stdout, url)
     }
 }
 
