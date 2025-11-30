@@ -344,8 +344,14 @@ if ({use_httpgd}) {{
   }})
 }}
 
+png_failed <- FALSE
 if (!{use_httpgd} || httpgd_failed) {{
-  .reprod_open_device(1)
+  tryCatch({{
+    .reprod_open_device(1)
+  }}, error = function(e) {{
+    png_failed <<- TRUE
+    message("REPROD_PNG_ERROR: ", conditionMessage(e))
+  }})
 }}
 
 tryCatch(
