@@ -205,7 +205,7 @@ header-includes:
     \definecolor{{darkblue}}{{RGB}}{{0,0,139}}
     \sectionfont{{\color{{darkblue}}}}
     \renewcommand{{\familydefault}}{{\sfdefault}}
-    \newenvironment{{rpoutput}}{{\def\FrameCommand{{\color{{gray!50}}\vrule width 3pt \hspace{{5pt}}}}\MakeFramed {{\advance\hsize-\width \FrameRestore}}}}{{\endMakeFramed}}
+    \newenvironment{{rpoutput}}{{\vspace{{0.5em}}\begin{{quote}}\colorbox{{gray!10}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
     \newenvironment{{rperror}}{{\begin{{quote}}\colorbox{{red!5}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
 ---
 
@@ -216,19 +216,22 @@ header-includes:
 
     fn generate_session_info(&self, bundle: &ReproductionBundle) -> String {
         let duration_sec = bundle.metadata.session.duration_ms as f64 / 1000.0;
+        let created_at_formatted = bundle
+            .metadata
+            .created_at
+            .split('T')
+            .next()
+            .unwrap_or("Unknown Date")
+            .to_string();
+
         format!(
             r#"# Session Information
 
-- **Bundle ID**: {}
 - **Created**: {}
-- **Total Events**: {}
 - **Duration**: {:.1} seconds
 
 "#,
-            bundle.metadata.bundle_id,
-            bundle.metadata.created_at,
-            bundle.metadata.session.total_events,
-            duration_sec
+            created_at_formatted, duration_sec
         )
     }
 
@@ -449,7 +452,7 @@ header-includes:
     \definecolor{{darkblue}}{{RGB}}{{0,0,139}}
     \sectionfont{{\color{{darkblue}}}}
     \renewcommand{{\familydefault}}{{\sfdefault}}
-    \newenvironment{{rpoutput}}{{\def\FrameCommand{{\color{{gray!50}}\vrule width 3pt \hspace{{5pt}}}}\MakeFramed {{\advance\hsize-\width \FrameRestore}}}}{{\endMakeFramed}}
+    \newenvironment{{rpoutput}}{{\vspace{{0.5em}}\begin{{quote}}\colorbox{{gray!10}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
     \newenvironment{{rperror}}{{\begin{{quote}}\colorbox{{red!5}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
 ---
 
@@ -679,6 +682,8 @@ render_pdf <- function() {{
   old_wd <- getwd()
   on.exit(setwd(old_wd), add = TRUE)
   setwd("{root_dir}")
+
+  options(width = 70) # Set output width for better PDF formatting
 
   if (!requireNamespace("rmarkdown", quietly = TRUE)) {{
     stop("PDF export requires the 'rmarkdown' package. Install it with install.packages('rmarkdown').")

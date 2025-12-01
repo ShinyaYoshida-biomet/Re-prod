@@ -168,8 +168,7 @@ fn test_rmarkdown_timeline_export_integration() {
 
     // Verify session info
     assert!(rmd_content.contains("# Session Information"));
-    assert!(rmd_content.contains("Bundle ID"));
-    assert!(rmd_content.contains("Total Events"));
+    assert!(rmd_content.contains("Created"));
     assert!(rmd_content.contains("Duration"));
 
     // Verify timeline export section
