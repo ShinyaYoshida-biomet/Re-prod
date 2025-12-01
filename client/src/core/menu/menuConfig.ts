@@ -47,12 +47,6 @@ export function buildMenuSections(snapshot: MenuStateSnapshot): MenuSection[] {
 					label: "Projects...",
 					action: () => menuActions.file.projects(),
 				},
-				{ type: "separator" },
-				{
-					id: "file:export-session",
-					label: "Export Reproducible Session...",
-					action: () => menuActions.file.exportSession(),
-				},
 			],
 		},
 		{
@@ -185,6 +179,12 @@ export function buildMenuSections(snapshot: MenuStateSnapshot): MenuSection[] {
 					id: "session:load",
 					label: "Load Session...",
 					action: () => menuActions.session.load(),
+				},
+				{ type: "separator" },
+				{
+					id: "session:export-reproducible",
+					label: "Export Reproducible Session...",
+					action: () => menuActions.session.exportReproducible(),
 				},
 				{ type: "separator" },
 				{
