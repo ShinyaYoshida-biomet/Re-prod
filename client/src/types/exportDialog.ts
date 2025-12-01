@@ -23,7 +23,9 @@ export type ExportPdfOptions = Required<
 
 export type ExportPdfOptionKey = keyof ExportPdfOptions;
 
-export type ExportFormat = "bundle" | "rmarkdown" | "pdf" | "both";
+// TODO: Reproduction Bundle export will be implemented as a separate feature
+// Future: Add "bundle" format with dedicated UI in File > Export > Reproduction Bundle
+export type ExportFormat = "rmarkdown" | "pdf" | "both";
 
 export interface ExportDialogState {
 	format: ExportFormat;

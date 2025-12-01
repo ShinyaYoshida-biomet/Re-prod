@@ -188,6 +188,7 @@ mod tests {
                     timestamp: Some(created_at_ms),
                     code: None,
                     storage_path: None,
+                    snapshot_path: None,
                 }],
                 execution_time_ms: 123,
             },

@@ -32,6 +32,7 @@ fn create_test_event(
             timestamp: Some(timestamp),
             code: Some(code.to_string()),
             storage_path: Some(format!(".reprod/plots/{}_plot.png", event_id)),
+            snapshot_path: None,
         }]
     } else {
         vec![]

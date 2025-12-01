@@ -27,6 +27,7 @@ use tokio::{
     task::JoinHandle,
     time::{timeout, Duration},
 };
+use tracing::info;
 use uuid::Uuid;
 
 use super::{segment_r_code, NoopTimeline, SegmentationInput, TimelineSink};
@@ -37,6 +38,7 @@ type SharedChild = Arc<AsyncMutex<Child>>;
 struct CapturedPlot {
     info: PlotInfo,
     data: Vec<u8>,
+    snapshot: Option<Vec<u8>>,
 }
 
 #[derive(Clone)]
@@ -46,7 +48,6 @@ struct ActiveChild {
 }
 
 const PERSISTENT_DELIMITER: &str = "---REPROD-PERSIST-END---";
-const HTTPGD_MARKER: &str = "__REPROD_HTTPGD_URL__";
 
 impl ActiveChild {
     fn new(child: Child) -> Self {
@@ -92,8 +93,6 @@ pub struct RExecutor {
     command_runner: Arc<dyn CommandRunner>,
     plot_history: Option<Arc<AsyncMutex<PlotHistoryManager>>>,
     persistent_mode: bool,
-    use_httpgd: bool,
-    httpgd_url: Arc<AsyncMutex<Option<String>>>,
 }
 
 impl RExecutor {
@@ -106,8 +105,6 @@ impl RExecutor {
             command_runner: Arc::new(ProcessCommandRunner::default()),
             plot_history: None,
             persistent_mode: false,
-            use_httpgd: false,
-            httpgd_url: Arc::new(AsyncMutex::new(None)),
         }
     }
 
@@ -146,12 +143,14 @@ impl RExecutor {
         let plot_prefix = format!("plot_{}", timestamp);
         let script_path = self.temp_dir.join(format!("script_{}.R", timestamp));
 
+        info!(
+            target: "reprod.r.exec",
+            persistent = self.persistent_mode,
+            "wrapping code for execution"
+        );
+
         let wrapped_code = if self.persistent_mode {
-            self.wrap_code_with_plot_capture_persistent(
-                &request.code,
-                &plot_prefix,
-                self.use_httpgd,
-            )
+            self.wrap_code_with_plot_capture_persistent(&request.code, &plot_prefix)
         } else {
             self.wrap_code_with_plot_capture(&request.code, &plot_prefix)
         };
@@ -162,31 +161,36 @@ impl RExecutor {
             .run(&self.r_path, &script_path, &self.working_dir)
             .await?;
 
-        let captures = if self.use_httpgd {
-            match self.collect_httpgd_plots().await {
-                Ok(Some(httpgd_captures)) => httpgd_captures,
-                _ => self.collect_plots(&plot_prefix).await?,
-            }
-        } else {
-            self.collect_plots(&plot_prefix).await?
-        };
+        let captures = self.collect_plots(&plot_prefix).await?;
         let _ = fs::remove_file(&script_path).await;
 
         let execution_time_ms = start.elapsed().as_millis() as u64;
         let stdout_raw = String::from_utf8_lossy(&command_output.stdout).to_string();
-        let (stdout, maybe_httpgd) = Self::extract_httpgd_url(stdout_raw);
-        if let Some(url) = maybe_httpgd {
-            let mut guard = self.httpgd_url.lock().await;
-            *guard = Some(url);
-        }
-        let stderr = String::from_utf8_lossy(&command_output.stderr).to_string();
+        let stderr_raw = String::from_utf8_lossy(&command_output.stderr).to_string();
+        info!(
+            target: "reprod.r.exec",
+            stdout = %stdout_raw,
+            stderr = %stderr_raw,
+            "R execution output (raw)"
+        );
+
+        let stdout = stdout_raw;
+        let stderr = stderr_raw;
+        let stdout_clean = Self::strip_internal_lines(&stdout);
+        let stderr_clean = Self::strip_internal_lines(&stderr);
 
         let error_output = if command_output.interrupted {
             Some("Execution interrupted by user.".to_string())
-        } else if command_output.stderr.is_empty() {
+        } else if stderr_clean.is_empty() {
             None
         } else {
-            Some(stderr)
+            Some(stderr_clean.clone())
+        };
+        // Ensure console sees stderr as well as stdout.
+        let display_output = if stderr_clean.is_empty() {
+            stdout_clean.clone()
+        } else {
+            format!("{stdout_clean}\n{stderr_clean}")
         };
 
         let mut plots = Vec::with_capacity(captures.len());
@@ -202,6 +206,7 @@ impl RExecutor {
                     capture.info.width.unwrap_or(DEFAULT_PLOT_WIDTH),
                     capture.info.height.unwrap_or(DEFAULT_PLOT_HEIGHT),
                     &capture.data,
+                    capture.snapshot.as_deref(),
                     Some(request.code.clone()),
                     capture.info.timestamp.map(|t| t as i64),
                 )?;
@@ -209,6 +214,10 @@ impl RExecutor {
                 let storage_relative = format!("{}/{}", PLOT_HISTORY_SUBDIR, meta.filename);
                 capture.info.filename = storage_relative.clone();
                 capture.info.storage_path = Some(storage_relative.clone());
+                if let Some(snapshot_filename) = meta.snapshot_filename {
+                    let snapshot_rel = format!("{}/{}", PLOT_HISTORY_SUBDIR, snapshot_filename);
+                    capture.info.snapshot_path = Some(snapshot_rel);
+                }
 
                 history_entries.push(PlotHistoryEntry {
                     id: meta.id.clone(),
@@ -219,6 +228,7 @@ impl RExecutor {
                     storage_path: storage_relative,
                     data: capture.info.base64_data.clone(),
                     code: meta.code.clone(),
+                    snapshot_path: capture.info.snapshot_path.clone(),
                 });
             }
 
@@ -227,7 +237,7 @@ impl RExecutor {
 
         let result = ExecutionResult {
             success: command_output.success && !command_output.interrupted,
-            output: stdout,
+            output: display_output,
             error: error_output,
             plots,
             execution_time_ms,
@@ -257,7 +267,6 @@ if (length(dev.list()) > 0) {
 }
 "#,
                 reset_prefix,
-                self.use_httpgd,
             );
             fs::write(&script_path, reset_code).await?;
             let _ = self
@@ -270,16 +279,13 @@ if (length(dev.list()) > 0) {
         Ok(())
     }
 
-    /// Kill and respawn the persistent process, clearing httpgd url.
+    /// Kill and respawn the persistent process.
     pub async fn restart(&self) -> Result<()> {
         if !self.persistent_mode {
             return Ok(());
         }
         // Interrupt existing process
         let _ = self.interrupt().await?;
-        // Clear stored httpgd url so next execute reinitializes
-        let mut url_guard = self.httpgd_url.lock().await;
-        *url_guard = None;
         Ok(())
     }
 
@@ -297,17 +303,13 @@ if (length(dev.list()) > 0) {
         Ok(())
     }
 
-    fn wrap_code_with_plot_capture_persistent(
-        &self,
-        code: &str,
-        plot_prefix: &str,
-        use_httpgd: bool,
-    ) -> String {
-        let temp_dir_str = self.temp_dir.to_str().unwrap_or("");
+    fn wrap_code_with_plot_capture_persistent(&self, code: &str, plot_prefix: &str) -> String {
+        let temp_dir_str = r_escape(&self.temp_dir.to_string_lossy());
 
         format!(
             r#"
 # Auto-generated plot capture wrapper (persistent session)
+cat("REPROD_WRAPPER_ENTER: persistent\n")
 .reprod_plot_dir <- "{temp_dir}"
 .reprod_plot_prefix <- "{plot_prefix}"
 
@@ -324,23 +326,39 @@ if (!dir.exists(.reprod_plot_dir)) {{
   )
 }}
 
-httpgd_failed <- FALSE
-if ({use_httpgd}) {{
+.reprod_capture_plot <- function(index) {{
+  if (length(dev.list()) == 0 || names(dev.cur()) == "null device") {{
+    return(FALSE)
+  }}
   tryCatch({{
-    if (!requireNamespace("httpgd", quietly = TRUE)) {{
-      install.packages("httpgd", repos = "https://cloud.r-project.org")
+    snapshot <- recordPlot()
+    if (is.null(snapshot)) {{
+      return(FALSE)
     }}
-    httpgd::hgd(silent = TRUE)
-    cat("{httpgd_marker} ", httpgd::hgd_url(), "\n")
+    snapshot_path <- file.path(.reprod_plot_dir, sprintf("%s_%d.rds", .reprod_plot_prefix, index))
+    saveRDS(snapshot, snapshot_path)
+    cat("__REPROD_PLOT__|",
+        sprintf("%s_%d", .reprod_plot_prefix, index), "|",
+        snapshot_path, "|",
+        file.path(.reprod_plot_dir, sprintf("%s_%d.png", .reprod_plot_prefix, index)),
+        "\n", sep = "")
+    TRUE
   }}, error = function(e) {{
-    httpgd_failed <<- TRUE
-    message("REPROD_HTTPGD_ERROR: ", conditionMessage(e))
+    cat("REPROD_PLOT_CAPTURE_ERROR: ", conditionMessage(e), "\n", file=stderr())
+    FALSE
   }})
 }}
 
-if (!{use_httpgd} || httpgd_failed) {{
+reprod_png_available <- FALSE
+tryCatch({{
   .reprod_open_device(1)
-}}
+  reprod_png_available <<- TRUE
+  cat("REPROD_PNG_DEVICE: ", file.path(.reprod_plot_dir, sprintf("%s_1.png", .reprod_plot_prefix)), "\n", file=stderr())
+  cat("REPROD_PNG_DEVICE: ", file.path(.reprod_plot_dir, sprintf("%s_1.png", .reprod_plot_prefix)), "\n") # stdout mirror
+}}, error = function(e) {{
+  cat("REPROD_PNG_ERROR: ", conditionMessage(e), "\n", file=stderr())
+  cat("REPROD_PNG_ERROR: ", conditionMessage(e), "\n") # stdout mirror
+}})
 
 tryCatch(
   {{
@@ -348,30 +366,53 @@ tryCatch(
   }},
   error = function(e) {{
     assign(".reprod_last_error", e, envir = .GlobalEnv)
-    message("REPROD_ERROR: ", conditionMessage(e))
+    cat("REPROD_ERROR: ", conditionMessage(e), "\n", file=stderr())
+    cat("REPROD_TRACEBACK: ", paste(utils::capture.output(traceback()), collapse = " | "), "\n", file=stderr())
+    cat("REPROD_DEVICES: ", paste(names(dev.list()), collapse = ","), "\n", file=stderr())
+    cat("REPROD_PLOT_DIR: ", .reprod_plot_dir, "\n", file=stderr())
+    cat("REPROD_GETWD: ", getwd(), "\n", file=stderr())
+    cat("REPROD_ERROR: ", conditionMessage(e), "\n") # stdout mirror
+    cat("REPROD_TRACEBACK: ", paste(utils::capture.output(traceback()), collapse = " | "), "\n") # stdout mirror
+    cat("REPROD_DEVICES: ", paste(names(dev.list()), collapse = ","), "\n") # stdout mirror
+    cat("REPROD_PLOT_DIR: ", .reprod_plot_dir, "\n") # stdout mirror
+    cat("REPROD_GETWD: ", getwd(), "\n") # stdout mirror
   }}
 )
 
-if (names(dev.cur()) != "null device") {{
-  dev.off()
+if (reprod_png_available && names(dev.cur()) != "null device") {{
+  tryCatch(.reprod_capture_plot(1), error = function(e) {{
+    cat("REPROD_PLOT_CAPTURE_ERROR: ", conditionMessage(e), "\n", file=stderr())
+  }})
+  tryCatch(dev.off(), error = function(e) message("REPROD_DEVICE_CLOSE_ERROR: ", conditionMessage(e)))
 }}
 
-try({{
-  existing_plots <- list.files(
-    .reprod_plot_dir,
-    pattern = sprintf("^%s_\\d+\\.png$", .reprod_plot_prefix)
-  )
-  if (length(existing_plots) == 0 &&
-      requireNamespace("ggplot2", quietly = TRUE)) {{
-    last_plot <- tryCatch(ggplot2::last_plot(), error = function(e) NULL)
-    if (inherits(last_plot, "ggplot")) {{
-      next_index <- length(existing_plots) + 1
-      .reprod_open_device(next_index)
-      print(last_plot)
-      dev.off()
+if (reprod_png_available) {{
+  tryCatch({{
+    existing_plots <- list.files(
+      .reprod_plot_dir,
+      pattern = sprintf("^%s_\\d+\\.png$", .reprod_plot_prefix)
+    )
+    if (length(existing_plots) == 0 &&
+        requireNamespace("ggplot2", quietly = TRUE)) {{
+      last_plot <- tryCatch(ggplot2::last_plot(), error = function(e) NULL)
+      if (inherits(last_plot, "ggplot")) {{
+        next_index <- length(existing_plots) + 1
+        .reprod_open_device(next_index)
+        print(last_plot)
+        dev.off()
+      }}
     }}
-  }}
-}}, silent = TRUE)
+  }}, error = function(e) {{
+    cat("REPROD_PNG_POST_ERROR: ", conditionMessage(e), "\n", file=stderr())
+    cat("REPROD_PNG_POST_ERROR: ", conditionMessage(e), "\n")
+  }})
+}}
+
+cat("REPROD_STATE: PNG_AVAILABLE=", reprod_png_available, " PLOT_DIR=", .reprod_plot_dir,
+    " GETWD=", getwd(), " DEVICES=", paste(names(dev.list()), collapse=","), "\n",
+    file=stderr())
+cat("REPROD_STATE: PNG_AVAILABLE=", reprod_png_available, " PLOT_DIR=", .reprod_plot_dir,
+    " GETWD=", getwd(), " DEVICES=", paste(names(dev.list()), collapse=","), "\n")
 
 cat("{delimiter}\n")
 "#,
@@ -380,18 +421,17 @@ cat("{delimiter}\n")
             plot_width = DEFAULT_PLOT_WIDTH,
             plot_height = DEFAULT_PLOT_HEIGHT,
             code = code,
-            use_httpgd = if use_httpgd { "TRUE" } else { "FALSE" },
-            httpgd_marker = HTTPGD_MARKER,
             delimiter = PERSISTENT_DELIMITER,
         )
     }
 
     fn wrap_code_with_plot_capture(&self, code: &str, plot_prefix: &str) -> String {
-        let temp_dir_str = self.temp_dir.to_str().unwrap_or("");
+        let temp_dir_str = r_escape(&self.temp_dir.to_string_lossy());
 
         format!(
             r#"
 # Auto-generated plot capture wrapper
+cat("REPROD_WRAPPER_ENTER: oneshot\n")
 .reprod_plot_dir <- "{temp_dir}"
 .reprod_state_path <- file.path(.reprod_plot_dir, ".reprod_state.RData")
 
@@ -424,6 +464,29 @@ if (file.exists(.reprod_state_path)) {{
   )
 }}
 
+.reprod_capture_plot <- function(index) {{
+  if (length(dev.list()) == 0 || names(dev.cur()) == "null device") {{
+    return(FALSE)
+  }}
+  tryCatch({{
+    snapshot <- recordPlot()
+    if (is.null(snapshot)) {{
+      return(FALSE)
+    }}
+    snapshot_path <- file.path(.reprod_plot_dir, sprintf("%s_%d.rds", .reprod_plot_prefix, index))
+    saveRDS(snapshot, snapshot_path)
+    cat("__REPROD_PLOT__|",
+        sprintf("%s_%d", .reprod_plot_prefix, index), "|",
+        snapshot_path, "|",
+        file.path(.reprod_plot_dir, sprintf("%s_%d.png", .reprod_plot_prefix, index)),
+        "\n", sep = "")
+    TRUE
+  }}, error = function(e) {{
+    message("REPROD_PLOT_CAPTURE_ERROR: ", conditionMessage(e))
+    FALSE
+  }})
+}}
+
 .reprod_open_device(1)
 
 # User code
@@ -440,6 +503,9 @@ tryCatch(
 
 # If a device is open, close it to flush the PNG
 if (names(dev.cur()) != "null device") {{
+  tryCatch(.reprod_capture_plot(1), error = function(e) {{
+    message("REPROD_PLOT_CAPTURE_ERROR: ", conditionMessage(e))
+  }})
   dev.off()
 }}
 
@@ -456,6 +522,9 @@ try({{
       next_index <- length(existing_plots) + 1
       .reprod_open_device(next_index)
       print(last_plot)
+      tryCatch(.reprod_capture_plot(next_index), error = function(e) {{
+        message("REPROD_PLOT_CAPTURE_ERROR: ", conditionMessage(e))
+      }})
       dev.off()
     }}
   }}
@@ -484,6 +553,7 @@ quit(status = .reprod_exit_code, runLast = FALSE)
         loop {
             let filename = format!("{}_{}.png", plot_prefix, index);
             let path = self.temp_dir.join(&filename);
+            let snapshot_path = self.temp_dir.join(format!("{}_{}.rds", plot_prefix, index));
 
             if !path.exists() {
                 break;
@@ -492,6 +562,16 @@ quit(status = .reprod_exit_code, runLast = FALSE)
             let data = fs::read(&path).await?;
             let base64_data = base64::engine::general_purpose::STANDARD.encode(&data);
             let timestamp = Self::now_ms();
+            let snapshot_bytes = if snapshot_path.exists() {
+                let bytes = fs::read(&snapshot_path).await.ok();
+                let _ = fs::remove_file(&snapshot_path).await;
+                bytes
+            } else {
+                None
+            };
+            let snapshot_path_str = snapshot_bytes
+                .as_ref()
+                .and_then(|_| snapshot_path.to_str().map(|s| s.to_string()));
 
             plots.push(CapturedPlot {
                 info: PlotInfo {
@@ -504,8 +584,10 @@ quit(status = .reprod_exit_code, runLast = FALSE)
                     timestamp: Some(timestamp),
                     code: None,
                     storage_path: None,
+                    snapshot_path: snapshot_path_str.clone(),
                 },
                 data,
+                snapshot: snapshot_bytes,
             });
 
             let _ = fs::remove_file(&path).await;
@@ -514,91 +596,6 @@ quit(status = .reprod_exit_code, runLast = FALSE)
         }
 
         Ok(plots)
-    }
-
-    async fn collect_httpgd_plots(&self) -> Result<Option<Vec<CapturedPlot>>> {
-        let url = {
-            let guard = self.httpgd_url.lock().await;
-            guard.clone()
-        };
-
-        if url.is_none() {
-            return Ok(None);
-        }
-        let base = url.unwrap();
-        let client = reqwest::Client::new();
-
-        // Try to list plot ids; fall back to single plot fetch if parsing fails.
-        let mut plots = Vec::new();
-        let plots_endpoint = format!("{}/plots?index=0&limit=50", base);
-        let ids: Option<Vec<String>> = match client.get(&plots_endpoint).send().await {
-            Ok(resp) => {
-                let val: serde_json::Value = resp.json().await.unwrap_or(serde_json::Value::Null);
-                if let Some(arr) = val.as_array() {
-                    Some(
-                        arr.iter()
-                            .filter_map(|v| {
-                                if v.is_string() {
-                                    v.as_str().map(|s| s.to_string())
-                                } else if v.is_number() {
-                                    Some(v.to_string())
-                                } else {
-                                    None
-                                }
-                            })
-                            .collect(),
-                    )
-                } else {
-                    None
-                }
-            }
-            Err(_) => None,
-        };
-
-        let target_ids: Vec<String> = ids.unwrap_or_else(|| vec!["latest".to_string()]);
-
-        for pid in target_ids {
-            let plot_url = if pid == "latest" {
-                format!(
-                    "{}/plot?renderer=png&width={}&height={}",
-                    base, DEFAULT_PLOT_WIDTH, DEFAULT_PLOT_HEIGHT
-                )
-            } else {
-                format!(
-                    "{}/plot?renderer=png&id={}&width={}&height={}",
-                    base, pid, DEFAULT_PLOT_WIDTH, DEFAULT_PLOT_HEIGHT
-                )
-            };
-
-            if let Ok(resp) = client.get(&plot_url).send().await {
-                if resp.status().is_success() {
-                    if let Ok(bytes) = resp.bytes().await {
-                        let base64_data = base64::engine::general_purpose::STANDARD.encode(&bytes);
-                        let timestamp = Self::now_ms();
-                        plots.push(CapturedPlot {
-                            info: PlotInfo {
-                                id: Uuid::new_v4().to_string(),
-                                filename: format!("httpgd_{}.png", pid),
-                                base64_data,
-                                index: plots.len() as u32 + 1,
-                                width: Some(DEFAULT_PLOT_WIDTH),
-                                height: Some(DEFAULT_PLOT_HEIGHT),
-                                timestamp: Some(timestamp),
-                                code: None,
-                                storage_path: None,
-                            },
-                            data: bytes.to_vec(),
-                        });
-                    }
-                }
-            }
-        }
-
-        if plots.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(plots))
-        }
     }
 
     fn environment_snapshot(&self) -> EnvironmentSnapshot {
@@ -615,20 +612,33 @@ quit(status = .reprod_exit_code, runLast = FALSE)
             .unwrap_or_default()
             .as_millis() as u64
     }
+}
 
-    fn extract_httpgd_url(stdout: String) -> (String, Option<String>) {
-        let mut url: Option<String> = None;
-        let mut cleaned = Vec::new();
+fn r_escape(s: &str) -> String {
+    s.replace('\\', "\\\\").replace('"', "\\\"")
+}
 
-        for line in stdout.lines() {
-            if let Some(rest) = line.strip_prefix(HTTPGD_MARKER) {
-                url = Some(rest.trim().to_string());
-                continue;
-            }
-            cleaned.push(line);
-        }
+fn is_internal_line(line: &str) -> bool {
+    const NOISE_PREFIXES: [&str; 5] = [
+        "REPROD_PNG_",
+        "REPROD_STATE",
+        "REPROD_WRAPPER_ENTER",
+        "REPROD_PLOT_CAPTURE_ERROR",
+        "__REPROD_PLOT__",
+    ];
+    NOISE_PREFIXES.iter().any(|p| line.starts_with(p))
+}
 
-        (cleaned.join("\n"), url)
+fn strip_lines_matching(s: &str, predicate: impl Fn(&str) -> bool) -> String {
+    s.lines()
+        .filter(|line| !predicate(line))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+impl RExecutor {
+    fn strip_internal_lines(s: &str) -> String {
+        strip_lines_matching(s, is_internal_line)
     }
 }
 
@@ -640,7 +650,6 @@ pub struct RExecutorBuilder {
     command_runner: Arc<dyn CommandRunner>,
     plot_history: Option<Arc<AsyncMutex<PlotHistoryManager>>>,
     persistent_mode: bool,
-    use_httpgd: bool,
 }
 
 impl RExecutorBuilder {
@@ -653,7 +662,6 @@ impl RExecutorBuilder {
             command_runner: Arc::new(ProcessCommandRunner::default()),
             plot_history: None,
             persistent_mode: false,
-            use_httpgd: false,
         }
     }
 
@@ -693,13 +701,6 @@ impl RExecutorBuilder {
 
     pub fn use_persistent_mode(mut self) -> Self {
         self.persistent_mode = true;
-        // default httpgd on when persistent unless overridden
-        self.use_httpgd = true;
-        self
-    }
-
-    pub fn with_httpgd(mut self, enabled: bool) -> Self {
-        self.use_httpgd = enabled;
         self
     }
 
@@ -721,8 +722,6 @@ impl RExecutorBuilder {
             command_runner,
             plot_history: self.plot_history,
             persistent_mode: self.persistent_mode,
-            use_httpgd: self.use_httpgd && self.persistent_mode,
-            httpgd_url: Arc::new(AsyncMutex::new(None)),
         }
     }
 }
@@ -777,6 +776,14 @@ impl PersistentProcessCommandRunner {
         }
     }
 
+    fn repl_command(&self) -> String {
+        if self.r_path.to_lowercase().contains("rscript") {
+            "R".to_string()
+        } else {
+            self.r_path.clone()
+        }
+    }
+
     async fn ensure_child(&self) -> Result<()> {
         let mut guard = self.child.lock().await;
         let needs_spawn = guard
@@ -789,8 +796,9 @@ impl PersistentProcessCommandRunner {
             .unwrap_or(true);
 
         if needs_spawn {
-            let mut process = Command::new(&self.r_path)
-                .args(["--interactive", "--no-save", "--no-restore", "--quiet"])
+            let repl = self.repl_command();
+            let mut process = Command::new(&repl)
+                .args(["--no-save", "--no-restore", "--quiet", "--slave"])
                 .current_dir(&self.working_dir)
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
@@ -977,8 +985,17 @@ impl CommandRunner for PersistentProcessCommandRunner {
             .as_mut()
             .ok_or_else(|| anyhow!("Persistent process missing"))?;
 
+        // Send the entire script as a single block to avoid line-by-line execution issues.
         let script_str = fs::read_to_string(script_path).await?;
-        child.stdin.write_all(script_str.as_bytes()).await?;
+        let mut block = String::with_capacity(script_str.len() + 4);
+        block.push_str("{\n");
+        block.push_str(&script_str);
+        if !block.ends_with('\n') {
+            block.push('\n');
+        }
+        block.push_str("}\n");
+
+        child.stdin.write_all(block.as_bytes()).await?;
         child.stdin.flush().await?;
 
         let (stdout_bytes, stderr_bytes, status_ok) =
@@ -1136,7 +1153,7 @@ mod tests {
             .use_persistent_mode()
             .build();
 
-        let wrapped = exec.wrap_code_with_plot_capture_persistent("x <- 1", "pfx", true);
+        let wrapped = exec.wrap_code_with_plot_capture_persistent("x <- 1", "pfx");
         assert!(
             !wrapped.contains("save.image"),
             "Persistent wrapper should not save image per call"

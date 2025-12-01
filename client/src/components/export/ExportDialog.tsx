@@ -48,7 +48,10 @@ export function ExportDialog({ open, onClose }: ExportDialogProps): JSX.Element 
 				aria-describedby="export-dialog-description"
 			>
 				<div className="export-dialog-header">
-					<h2 id="export-dialog-title">Export Analysis</h2>
+					<h2 id="export-dialog-title">Export Document</h2>
+					<p id="export-dialog-description" className="export-dialog-subtitle">
+						Generate RMarkdown or PDF from your analysis
+					</p>
 					<button
 						className="btn btn-icon"
 						onClick={onClose}
@@ -60,23 +63,12 @@ export function ExportDialog({ open, onClose }: ExportDialogProps): JSX.Element 
 				</div>
 
 				<div className={`export-dialog-content ${exporting ? "loading" : ""}`}>
+					{/* TODO: Reproduction Bundle export will be available in File > Export > Reproduction Bundle */}
 					<div className="export-section">
 						<label className="export-label" id="format-label">
-							Format
+							Output Format
 						</label>
 						<div className="export-radio-group" role="radiogroup" aria-labelledby="format-label">
-							<label className="export-radio">
-								<input
-									type="radio"
-									name="format"
-									value="bundle"
-									checked={format === "bundle"}
-									onChange={(e) => setFormat(e.target.value as typeof format)}
-									disabled={exporting}
-									aria-label="Reproduction Bundle"
-								/>
-								<span>Reproduction Bundle (.tar.gz)</span>
-							</label>
 							<label className="export-radio">
 								<input
 									type="radio"
@@ -87,7 +79,7 @@ export function ExportDialog({ open, onClose }: ExportDialogProps): JSX.Element 
 									disabled={exporting}
 									aria-label="RMarkdown Document"
 								/>
-								<span>RMarkdown Document (.Rmd)</span>
+								<span>RMarkdown (.Rmd)</span>
 							</label>
 							<label className="export-radio">
 								<input
@@ -99,7 +91,7 @@ export function ExportDialog({ open, onClose }: ExportDialogProps): JSX.Element 
 									disabled={exporting}
 									aria-label="PDF Document"
 								/>
-								<span>PDF Document (.pdf)</span>
+								<span>PDF (.pdf)</span>
 							</label>
 							<label className="export-radio">
 								<input
@@ -111,12 +103,12 @@ export function ExportDialog({ open, onClose }: ExportDialogProps): JSX.Element 
 									disabled={exporting}
 									aria-label="Both formats"
 								/>
-								<span>Both</span>
+								<span>Both (RMarkdown + PDF)</span>
 							</label>
 						</div>
 					</div>
 
-					{format !== "bundle" && (
+					{
 						<>
 							<div className="export-section">
 								<label className="export-label" id="mode-label">
@@ -183,7 +175,7 @@ export function ExportDialog({ open, onClose }: ExportDialogProps): JSX.Element 
 								</div>
 							)}
 
-							{format === "pdf" && (
+							{(format === "pdf" || format === "both") && (
 								<>
 									<div className="export-section">
 										<p className="export-hint">
@@ -340,7 +332,7 @@ export function ExportDialog({ open, onClose }: ExportDialogProps): JSX.Element 
 								</p>
 							</div>
 						</>
-					)}
+					}
 
 					{error && (
 						<div className="export-error" role="alert" aria-live="polite">

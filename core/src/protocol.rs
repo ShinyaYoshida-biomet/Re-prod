@@ -29,6 +29,8 @@ pub struct PlotInfo {
     pub code: Option<String>,
     #[serde(default)]
     pub storage_path: Option<String>,
+    #[serde(default)]
+    pub snapshot_path: Option<String>,
 }
 
 /// Chat message for AI communication
@@ -254,6 +256,7 @@ mod tests {
                     timestamp: Some(1_706_000_123_500),
                     code: Some("plot(1:10)".into()),
                     storage_path: Some(".reprod/plots/plot.png".into()),
+                    snapshot_path: None,
                 }],
                 execution_time_ms: 42,
             },

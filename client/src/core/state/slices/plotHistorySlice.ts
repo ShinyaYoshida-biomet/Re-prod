@@ -11,6 +11,7 @@ export interface PlotHistoryItem {
 	width: number;
 	height: number;
 	code?: string | null;
+	snapshotPath?: string | null;
 }
 
 export interface PlotHistorySlice {
@@ -50,6 +51,7 @@ const normalizePlot = (plot: PlotHistoryEntryPayload): PlotHistoryItem => ({
 	width: plot.width,
 	height: plot.height,
 	code: plot.code ?? null,
+	snapshotPath: plot.snapshotPath ?? null,
 });
 
 const sortPlots = (plots: PlotHistoryItem[]): PlotHistoryItem[] =>
