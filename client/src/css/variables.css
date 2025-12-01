@@ -1,5 +1,5 @@
-:root,
-:root[data-theme="default"] {
+/* Fallback CSS variables - These are overridden by the Phylo theme (design-phylo-rstudio.css) */
+:root {
 	/* Surface palette */
 	--bg-primary: #ffffff;
 	--bg-secondary: #f4f6fb;
