@@ -210,20 +210,6 @@ header-includes:
     \renewcommand{{\familydefault}}{{\sfdefault}}
     \newenvironment{{rpoutput}}{{\vspace{{0.5em}}\colorlet{{shadecolor}}{{rpoutputbg}}\begin{{snugshade}}}}{{\end{{snugshade}}}}
     \newenvironment{{rperror}}{{\begin{{quote}}\colorbox{{red!5}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
-    <style>
-      .rpoutput {{
-        background: #f5f7ff;
-        border-left: 3px solid #c7d7ff;
-        padding: 10px 12px;
-        margin: 0 0 1em 0;
-      }}
-      .rperror {{
-        background: #fff5f5;
-        border-left: 3px solid #f5b5b5;
-        padding: 10px 12px;
-        margin: 0 0 1em 0;
-      }}
-    </style>
 ---
 
 "#,
@@ -482,20 +468,6 @@ header-includes:
     \renewcommand{{\familydefault}}{{\sfdefault}}
     \newenvironment{{rpoutput}}{{\vspace{{0.5em}}\colorlet{{shadecolor}}{{rpoutputbg}}\begin{{snugshade}}}}{{\end{{snugshade}}}}
     \newenvironment{{rperror}}{{\begin{{quote}}\colorbox{{red!5}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
-    <style>
-      .rpoutput {{
-        background: #f5f7ff;
-        border-left: 3px solid #c7d7ff;
-        padding: 10px 12px;
-        margin: 0 0 1em 0;
-      }}
-      .rperror {{
-        background: #fff5f5;
-        border-left: 3px solid #f5b5b5;
-        padding: 10px 12px;
-        margin: 0 0 1em 0;
-      }}
-    </style>
 ---
 
 "#,
