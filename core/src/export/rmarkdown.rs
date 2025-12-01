@@ -700,6 +700,17 @@ render_pdf <- function() {{
     stop("PDF export requires LaTeX. Install TinyTeX by running: tinytex::install_tinytex()")
   }}
 
+  knitr::knit_hooks$set(output = function(x, options) {{
+    if (!is.null(options$results) && options$results == 'hide') {{
+      return(x)
+    }}
+    paste0(
+      "\\begin{{rpoutput}}\n",
+      x,
+      "\\end{{rpoutput}}\n"
+    )
+  }})
+
   knitr::opts_knit$set(root.dir = "{root_dir}")
   knitr::opts_chunk$set(
     echo = {include_source},
