@@ -40,7 +40,7 @@ describe("Zustand Store", () => {
 			},
 			settings: {
 				autoRun: false,
-				theme: "light",
+				theme: "phylo",
 				rPath: "Rscript",
 				fontSize: 13,
 				showCellDecorations: true,
