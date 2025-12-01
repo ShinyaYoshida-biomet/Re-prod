@@ -7,7 +7,8 @@ use reprod_core::{
 };
 use reprod_core::{
     project::{
-        default_registry_path, locate_config, ProjectDescriptor, ProjectRecord, ProjectRegistry,
+        default_config_path, default_registry_path, locate_config, ProjectConfig, ProjectDescriptor,
+        ProjectRecord, ProjectRegistry,
     },
     Config, RExecutor,
 };
@@ -315,7 +316,34 @@ impl ProjectController {
         drop(registry);
 
         let path = PathBuf::from(record.path);
-        ProjectDescriptor::load(&path)
+        match ProjectDescriptor::load(&path) {
+            Ok(descriptor) => Ok(descriptor),
+            Err(error) => {
+                tracing::warn!(
+                    "Project config missing for {}: {}. Recreating default config.",
+                    path.display(),
+                    error
+                );
+
+                ProjectDescriptor::ensure_layout(&path)?;
+
+                let mut config = ProjectConfig::new(&record.name, record.git_remote.clone());
+                config.id = record.id.clone();
+                if record.created_at > 0 {
+                    config.created_at = record.created_at;
+                }
+                config.last_opened_at = record.last_opened_at;
+
+                let config_path = default_config_path(&path);
+                config.save(&config_path)?;
+
+                Ok(ProjectDescriptor {
+                    config,
+                    root_path: path,
+                    config_path,
+                })
+            }
+        }
     }
     async fn refresh_registry(&self, descriptor: &ProjectDescriptor) -> Result<()> {
         let mut registry = self.registry.lock().await;

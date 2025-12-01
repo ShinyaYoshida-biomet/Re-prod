@@ -205,10 +205,25 @@ header-includes:
     \usepackage{{framed}}
     \definecolor{{darkblue}}{{RGB}}{{0,0,139}}
     \definecolor{{shadecolor}}{{RGB}}{{248,248,248}}
+    \definecolor{{rpoutputbg}}{{RGB}}{{245,248,255}}
     \sectionfont{{\color{{darkblue}}}}
     \renewcommand{{\familydefault}}{{\sfdefault}}
-    \newenvironment{{rpoutput}}{{\vspace{{0.5em}}\begin{{snugshade}}}}{{\end{{snugshade}}}}
+    \newenvironment{{rpoutput}}{{\vspace{{0.5em}}\colorlet{{shadecolor}}{{rpoutputbg}}\begin{{snugshade}}}}{{\end{{snugshade}}}}
     \newenvironment{{rperror}}{{\begin{{quote}}\colorbox{{red!5}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
+    <style>
+      .rpoutput {{
+        background: #f5f7ff;
+        border-left: 3px solid #c7d7ff;
+        padding: 10px 12px;
+        margin: 0 0 1em 0;
+      }}
+      .rperror {{
+        background: #fff5f5;
+        border-left: 3px solid #f5b5b5;
+        padding: 10px 12px;
+        margin: 0 0 1em 0;
+      }}
+    </style>
 ---
 
 "#,
@@ -288,44 +303,44 @@ header-includes:
                 section.push('\n');
             }
             section.push_str("```\n\n");
+        }
 
-            // Output
-            if self.options.include_outputs && !event.result.output.is_empty() {
-                let (trimmed, truncated) = self.trim_output(&event.result.output);
-                // Wrap output for both HTML (div) and PDF (raw LaTeX env)
-                section.push_str("::: {.rpoutput}\n");
-                section.push_str("```{=latex}\n\\begin{rpoutput}\n```\n");
+        // Output (once per event)
+        if self.options.include_outputs && !event.result.output.is_empty() {
+            let (trimmed, truncated) = self.trim_output(&event.result.output);
+            // Wrap output for both HTML (div) and PDF (raw LaTeX env)
+            section.push_str("::: {.rpoutput}\n");
+            section.push_str("```{=latex}\n\\begin{rpoutput}\n```\n");
+            section.push_str("```\n");
+            section.push_str(&trimmed);
+            if !trimmed.ends_with('\n') {
+                section.push('\n');
+            }
+            if truncated {
+                section.push_str("... (output truncated)\n");
+            }
+            section.push_str("```\n");
+            section.push_str("```{=latex}\n\\end{rpoutput}\n```\n");
+            section.push_str(":::\n\n");
+        }
+
+        // Error (once per event)
+        if self.options.include_errors {
+            if let Some(error) = &event.result.error {
+                let (trimmed, truncated) = self.trim_output(error);
+                section.push_str("::: {.rperror}\n");
+                section.push_str("```{=latex}\n\\begin{rperror}\n```\n");
                 section.push_str("```\n");
                 section.push_str(&trimmed);
                 if !trimmed.ends_with('\n') {
                     section.push('\n');
                 }
                 if truncated {
-                    section.push_str("... (output truncated)\n");
+                    section.push_str("... (error truncated)\n");
                 }
                 section.push_str("```\n");
-                section.push_str("```{=latex}\n\\end{rpoutput}\n```\n");
+                section.push_str("```{=latex}\n\\end{rperror}\n```\n");
                 section.push_str(":::\n\n");
-            }
-
-            // Error
-            if self.options.include_errors {
-                if let Some(error) = &event.result.error {
-                    let (trimmed, truncated) = self.trim_output(error);
-                    section.push_str("::: {.rperror}\n");
-                    section.push_str("```{=latex}\n\\begin{rperror}\n```\n");
-                    section.push_str("```\n");
-                    section.push_str(&trimmed);
-                    if !trimmed.ends_with('\n') {
-                        section.push('\n');
-                    }
-                    if truncated {
-                        section.push_str("... (error truncated)\n");
-                    }
-                    section.push_str("```\n");
-                    section.push_str("```{=latex}\n\\end{rperror}\n```\n");
-                    section.push_str(":::\n\n");
-                }
             }
         }
 
@@ -462,10 +477,25 @@ header-includes:
     \usepackage{{framed}}
     \definecolor{{darkblue}}{{RGB}}{{0,0,139}}
     \definecolor{{shadecolor}}{{RGB}}{{248,248,248}}
+    \definecolor{{rpoutputbg}}{{RGB}}{{245,248,255}}
     \sectionfont{{\color{{darkblue}}}}
     \renewcommand{{\familydefault}}{{\sfdefault}}
-    \newenvironment{{rpoutput}}{{\vspace{{0.5em}}\begin{{snugshade}}}}{{\end{{snugshade}}}}
+    \newenvironment{{rpoutput}}{{\vspace{{0.5em}}\colorlet{{shadecolor}}{{rpoutputbg}}\begin{{snugshade}}}}{{\end{{snugshade}}}}
     \newenvironment{{rperror}}{{\begin{{quote}}\colorbox{{red!5}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
+    <style>
+      .rpoutput {{
+        background: #f5f7ff;
+        border-left: 3px solid #c7d7ff;
+        padding: 10px 12px;
+        margin: 0 0 1em 0;
+      }}
+      .rperror {{
+        background: #fff5f5;
+        border-left: 3px solid #f5b5b5;
+        padding: 10px 12px;
+        margin: 0 0 1em 0;
+      }}
+    </style>
 ---
 
 "#,
