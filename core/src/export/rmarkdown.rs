@@ -171,9 +171,10 @@ impl RMarkdownGenerator {
 
     fn chunk_header(&self, chunk_id: &str) -> String {
         if self.options.show_code {
-            format!("```{{r {}}}\n", chunk_id)
+            // Do not re-run captured code when rendering exports; outputs are already embedded.
+            format!("```{{r {}, eval=FALSE}}\n", chunk_id)
         } else {
-            format!("```{{r {}, echo=FALSE}}\n", chunk_id)
+            format!("```{{r {}, echo=FALSE, eval=FALSE}}\n", chunk_id)
         }
     }
 
