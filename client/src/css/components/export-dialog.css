@@ -79,6 +79,64 @@
 	letter-spacing: var(--letter-spacing-base);
 }
 
+.export-radio-group {
+	display: flex;
+	flex-direction: column;
+	gap: 8px; /* Add a small gap between vertical radio buttons */
+}
+
+.export-radio {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	min-height: 24px;
+	cursor: pointer;
+	padding: 4px 0;
+	transition: opacity 0.15s ease;
+}
+
+.export-radio:hover {
+	opacity: 0.85;
+}
+
+.export-radio input[type="radio"] {
+	margin-top: 3px;
+	width: 16px;
+	height: 16px;
+	cursor: pointer;
+	accent-color: var(--accent-blue);
+}
+
+.export-radio input[type="radio"]:focus-visible {
+	outline: 2px solid var(--accent-blue);
+	outline-offset: 2px;
+}
+
+.export-radio span {
+	font-size: 13px;
+	color: var(--text-primary);
+	line-height: 1.5;
+}
+
+.export-radio-content {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.export-radio-title {
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--text-primary);
+	line-height: 1.5;
+}
+
+.export-radio-description {
+	font-size: 12px;
+	color: var(--text-muted);
+	line-height: 1.4;
+}
+
 /* Export Tab panels */
 .export-panel-tabs .tab {
 	padding: 8px 12px;
@@ -107,7 +165,8 @@
 .export-checkbox-group {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: 8px; /* Smaller gap between checkbox items */
+	margin-top: 12px; /* Larger top margin for the group */
 }
 
 .export-checkbox {
@@ -125,8 +184,8 @@
 }
 
 .export-checkbox input[type="checkbox"] {
-	width: 20px;
-	height: 20px;
+	width: 16px;
+	height: 16px;
 	cursor: pointer;
 	accent-color: var(--accent-blue);
 	border-radius: 4px;
