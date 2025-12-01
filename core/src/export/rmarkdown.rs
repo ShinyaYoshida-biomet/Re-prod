@@ -205,10 +205,9 @@ header-includes:
     \usepackage{{framed}}
     \definecolor{{darkblue}}{{RGB}}{{0,0,139}}
     \definecolor{{shadecolor}}{{RGB}}{{240,247,251}}
-    \definecolor{{rpoutputbg}}{{RGB}}{{245,248,255}}
     \sectionfont{{\color{{darkblue}}}}
     \renewcommand{{\familydefault}}{{\sfdefault}}
-    \newenvironment{{rpoutput}}{{\vspace{{0.5em}}\colorlet{{shadecolor}}{{rpoutputbg}}\begin{{snugshade}}}}{{\end{{snugshade}}}}
+    \newenvironment{{rpoutput}}{{\vspace{{0.5em}}\begin{{snugshade}}}}{{\end{{snugshade}}}}
     \newenvironment{{rperror}}{{\begin{{quote}}\colorbox{{red!5}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
 ---
 
@@ -463,10 +462,9 @@ header-includes:
     \usepackage{{framed}}
     \definecolor{{darkblue}}{{RGB}}{{0,0,139}}
     \definecolor{{shadecolor}}{{RGB}}{{240,247,251}}
-    \definecolor{{rpoutputbg}}{{RGB}}{{245,248,255}}
     \sectionfont{{\color{{darkblue}}}}
     \renewcommand{{\familydefault}}{{\sfdefault}}
-    \newenvironment{{rpoutput}}{{\vspace{{0.5em}}\colorlet{{shadecolor}}{{rpoutputbg}}\begin{{snugshade}}}}{{\end{{snugshade}}}}
+    \newenvironment{{rpoutput}}{{\vspace{{0.5em}}\begin{{snugshade}}}}{{\end{{snugshade}}}}
     \newenvironment{{rperror}}{{\begin{{quote}}\colorbox{{red!5}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
 ---
 

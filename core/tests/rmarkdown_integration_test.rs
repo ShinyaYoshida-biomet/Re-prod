@@ -183,7 +183,7 @@ fn test_rmarkdown_timeline_export_integration() {
     assert!(rmd_content.contains("## Event 5 - AI Assistant"));
 
     // Verify code chunks
-    assert!(rmd_content.contains("```{r event-1-block-0}"));
+    assert!(rmd_content.contains("```{r event-1-block-0, eval=FALSE}"));
     assert!(rmd_content.contains("library(ggplot2)"));
     assert!(rmd_content.contains("library(dplyr)"));
     assert!(rmd_content.contains("data <- read.csv('input.csv')"));
