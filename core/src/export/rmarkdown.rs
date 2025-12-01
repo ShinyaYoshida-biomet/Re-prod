@@ -204,7 +204,7 @@ header-includes:
     \usepackage{{sectsty}}
     \usepackage{{framed}}
     \definecolor{{darkblue}}{{RGB}}{{0,0,139}}
-    \definecolor{{shadecolor}}{{RGB}}{{248,248,248}}
+    \definecolor{{shadecolor}}{{RGB}}{{240,247,251}}
     \definecolor{{rpoutputbg}}{{RGB}}{{245,248,255}}
     \sectionfont{{\color{{darkblue}}}}
     \renewcommand{{\familydefault}}{{\sfdefault}}
@@ -462,7 +462,7 @@ header-includes:
     \usepackage{{sectsty}}
     \usepackage{{framed}}
     \definecolor{{darkblue}}{{RGB}}{{0,0,139}}
-    \definecolor{{shadecolor}}{{RGB}}{{248,248,248}}
+    \definecolor{{shadecolor}}{{RGB}}{{240,247,251}}
     \definecolor{{rpoutputbg}}{{RGB}}{{245,248,255}}
     \sectionfont{{\color{{darkblue}}}}
     \renewcommand{{\familydefault}}{{\sfdefault}}
