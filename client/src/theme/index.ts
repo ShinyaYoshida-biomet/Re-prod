@@ -1,7 +1,7 @@
 const THEME_ATTRIBUTE = "data-theme";
 const STORAGE_KEY = "reprod.theme";
 
-export type ThemeName = "default" | "phylo";
+export type ThemeName = "phylo";
 
 const DEFAULT_THEME: ThemeName = "phylo";
 
@@ -29,7 +29,7 @@ export function getStoredTheme(): ThemeName | null {
 
 	try {
 		const stored = window.localStorage.getItem(STORAGE_KEY);
-		return stored === "default" || stored === "phylo" ? stored : null;
+		return stored === "phylo" ? stored : null;
 	} catch {
 		return null;
 	}

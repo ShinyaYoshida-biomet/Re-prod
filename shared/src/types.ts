@@ -205,7 +205,7 @@ export interface AIMessage {
 
 export interface AppSettings {
 	autoRun: boolean;
-	theme: "light" | "dark" | "phylo";
+	theme: "phylo";
 	rPath: string;
 	fontSize: number;
 	// Cell execution features (easy to disable)

@@ -75,21 +75,6 @@ export function SettingsModal({ open, onClose }: SettingsModalProps): JSX.Elemen
 							onChange={(event) => handleChange("autoRun", event.target.checked)}
 						/>
 					</label>
-					<label className="settings-row">
-						<span>
-							Theme
-							<small>Experimental. Applies to supported components.</small>
-						</span>
-						<select
-							value={draft.theme}
-							onChange={(event) =>
-								handleChange("theme", event.target.value as AppSettings["theme"])
-							}
-						>
-							<option value="light">Light</option>
-							<option value="dark">Dark</option>
-						</select>
-					</label>
 				</section>
 
 				<section>
