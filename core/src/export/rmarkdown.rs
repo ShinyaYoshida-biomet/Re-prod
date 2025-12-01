@@ -203,9 +203,10 @@ header-includes:
     \usepackage{{sectsty}}
     \usepackage{{framed}}
     \definecolor{{darkblue}}{{RGB}}{{0,0,139}}
+    \definecolor{{shadecolor}}{{gray}}{{0.95}}
     \sectionfont{{\color{{darkblue}}}}
     \renewcommand{{\familydefault}}{{\sfdefault}}
-    \newenvironment{{rpoutput}}{{\vspace{{0.5em}}\begin{{quote}}\colorbox{{gray!10}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
+    \newenvironment{{rpoutput}}{{\vspace{{0.5em}}\def\FrameCommand{{\colorbox{{shadecolor}}}}\MakeFramed {{\FrameRestore}}}}{{\endMakeFramed}}
     \newenvironment{{rperror}}{{\begin{{quote}}\colorbox{{red!5}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
 ---
 
@@ -450,9 +451,10 @@ header-includes:
     \usepackage{{sectsty}}
     \usepackage{{framed}}
     \definecolor{{darkblue}}{{RGB}}{{0,0,139}}
+    \definecolor{{shadecolor}}{{gray}}{{0.95}}
     \sectionfont{{\color{{darkblue}}}}
     \renewcommand{{\familydefault}}{{\sfdefault}}
-    \newenvironment{{rpoutput}}{{\vspace{{0.5em}}\begin{{quote}}\colorbox{{gray!10}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
+    \newenvironment{{rpoutput}}{{\vspace{{0.5em}}\def\FrameCommand{{\colorbox{{shadecolor}}}}\MakeFramed {{\FrameRestore}}}}{{\endMakeFramed}}
     \newenvironment{{rperror}}{{\begin{{quote}}\colorbox{{red!5}}{{\begin{{minipage}}{{0.97\linewidth}}}}}}{{\end{{minipage}}\end{{quote}}}}
 ---
 
