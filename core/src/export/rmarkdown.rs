@@ -291,7 +291,10 @@ header-includes:
             // Output
             if self.options.include_outputs && !event.result.output.is_empty() {
                 let (trimmed, truncated) = self.trim_output(&event.result.output);
-                section.push_str("::: {.rp-output}\n```\n");
+                // Wrap output for both HTML (div) and PDF (raw LaTeX env)
+                section.push_str("::: {.rpoutput}\n");
+                section.push_str("```{=latex}\n\\begin{rpoutput}\n```\n");
+                section.push_str("```\n");
                 section.push_str(&trimmed);
                 if !trimmed.ends_with('\n') {
                     section.push('\n');
@@ -299,14 +302,18 @@ header-includes:
                 if truncated {
                     section.push_str("... (output truncated)\n");
                 }
-                section.push_str("```\n:::\n\n");
+                section.push_str("```\n");
+                section.push_str("```{=latex}\n\\end{rpoutput}\n```\n");
+                section.push_str(":::\n\n");
             }
 
             // Error
             if self.options.include_errors {
                 if let Some(error) = &event.result.error {
                     let (trimmed, truncated) = self.trim_output(error);
-                    section.push_str("::: {.rp-error}\n```\n");
+                    section.push_str("::: {.rperror}\n");
+                    section.push_str("```{=latex}\n\\begin{rperror}\n```\n");
+                    section.push_str("```\n");
                     section.push_str(&trimmed);
                     if !trimmed.ends_with('\n') {
                         section.push('\n');
@@ -314,7 +321,9 @@ header-includes:
                     if truncated {
                         section.push_str("... (error truncated)\n");
                     }
-                    section.push_str("```\n:::\n\n");
+                    section.push_str("```\n");
+                    section.push_str("```{=latex}\n\\end{rperror}\n```\n");
+                    section.push_str(":::\n\n");
                 }
             }
         }
@@ -929,7 +938,7 @@ mod tests {
         let bundle = ReproductionBundle::from_events(events);
         let rmd = generator.from_timeline(&bundle);
 
-        assert!(rmd.contains("::: {.rp-output}"));
+        assert!(rmd.contains("::: {.rpoutput}"));
         assert!(rmd.contains("[1] 1 2 3 4 5"));
     }
 
@@ -963,7 +972,7 @@ mod tests {
         let bundle = ReproductionBundle::from_events(vec![event]);
         let rmd = generator.from_timeline(&bundle);
 
-        assert!(rmd.contains("::: {.rp-error}"));
+        assert!(rmd.contains("::: {.rperror}"));
         assert!(rmd.contains("Error: object not found"));
     }
 
