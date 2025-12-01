@@ -29,6 +29,8 @@ pub struct PlotMetadata {
     pub filename: String,
     #[serde(default)]
     pub code: Option<String>,
+    #[serde(default)]
+    pub snapshot_filename: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -52,6 +54,8 @@ pub struct PlotHistoryEntry {
     pub data: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub snapshot_path: Option<String>,
 }
 
 /// Snapshot of the plot history for syncing with the UI.
@@ -129,12 +133,14 @@ impl PlotHistoryManager {
         width: u32,
         height: u32,
         data: &[u8],
+        snapshot: Option<&[u8]>,
         code: Option<String>,
         timestamp: Option<i64>,
     ) -> Result<PlotMetadata> {
         let id = id.unwrap_or_else(|| Uuid::new_v4().to_string());
         let filename = format!("{}.png", id);
         let path = self.storage_path.join(&filename);
+        let snapshot_filename = snapshot.map(|_| format!("{}.rds", id));
 
         fs::write(&path, data).with_context(|| {
             format!(
@@ -144,6 +150,19 @@ impl PlotHistoryManager {
             )
         })?;
 
+        if let Some(snapshot_bytes) = snapshot {
+            if let Some(ref name) = snapshot_filename {
+                let snapshot_path = self.storage_path.join(name);
+                fs::write(&snapshot_path, snapshot_bytes).with_context(|| {
+                    format!(
+                        "Failed to write plot snapshot {} to {}",
+                        id,
+                        snapshot_path.display()
+                    )
+                })?;
+            }
+        }
+
         let metadata = PlotMetadata {
             id,
             timestamp: timestamp.unwrap_or_else(now_ms),
@@ -151,6 +170,7 @@ impl PlotHistoryManager {
             height,
             filename,
             code,
+            snapshot_filename,
         };
 
         self.plots.push_back(metadata.clone());
@@ -325,6 +345,10 @@ impl PlotHistoryManager {
     fn remove_file(&self, plot: &PlotMetadata) {
         let path = self.storage_path.join(&plot.filename);
         let _ = fs::remove_file(path);
+        if let Some(snapshot) = &plot.snapshot_filename {
+            let snapshot_path = self.storage_path.join(snapshot);
+            let _ = fs::remove_file(snapshot_path);
+        }
     }
 
     fn load_entry(&self, plot: &PlotMetadata) -> Result<PlotHistoryEntry> {
@@ -347,6 +371,12 @@ impl PlotHistoryManager {
             storage_path: format!("{}/{}", PLOT_HISTORY_SUBDIR, plot.filename),
             data: base64,
             code: plot.code.clone(),
+            snapshot_path: plot.snapshot_filename.as_ref().and_then(|name| {
+                let snapshot_path = self.storage_path.join(name);
+                snapshot_path
+                    .exists()
+                    .then(|| format!("{}/{}", PLOT_HISTORY_SUBDIR, name))
+            }),
         })
     }
 
@@ -461,6 +491,7 @@ mod tests {
                 DEFAULT_PLOT_HEIGHT,
                 &png_bytes(),
                 None,
+                None,
                 Some(1),
             )
             .expect("add plot");
@@ -487,6 +518,7 @@ mod tests {
                 DEFAULT_PLOT_HEIGHT,
                 &png_bytes(),
                 None,
+                None,
                 Some(1),
             )
             .expect("p1");
@@ -497,6 +529,7 @@ mod tests {
                 DEFAULT_PLOT_HEIGHT,
                 &png_bytes(),
                 None,
+                None,
                 Some(2),
             )
             .expect("p2");
@@ -506,6 +539,7 @@ mod tests {
                 DEFAULT_PLOT_WIDTH,
                 DEFAULT_PLOT_HEIGHT,
                 &png_bytes(),
+                None,
                 None,
                 Some(3),
             )
@@ -528,6 +562,7 @@ mod tests {
                 DEFAULT_PLOT_WIDTH,
                 DEFAULT_PLOT_HEIGHT,
                 &png_bytes(),
+                None,
                 Some("plot(x)".into()),
                 Some(10),
             )

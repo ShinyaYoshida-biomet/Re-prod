@@ -47,6 +47,7 @@ export interface PlotInfo {
 	timestamp?: number | null;
 	code?: string | null;
 	storage_path?: string | null;
+	snapshot_path?: string | null;
 }
 
 export interface ExecutionResult {

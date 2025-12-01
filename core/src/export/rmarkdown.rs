@@ -779,6 +779,7 @@ mod tests {
                         timestamp: None,
                         code: None,
                         storage_path: None,
+                        snapshot_path: None,
                     }]
                 } else {
                     vec![]

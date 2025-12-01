@@ -54,6 +54,7 @@ export interface PlotHistoryEntryPayload {
 	storagePath: string;
 	data: string;
 	code?: string | null;
+	snapshotPath?: string | null;
 }
 
 export interface PlotHistoryStatePayload {
