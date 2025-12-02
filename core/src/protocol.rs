@@ -220,6 +220,8 @@ mod tests {
                 end_line: 3,
                 code: "# Setup ----\nprint('hello')".to_string(),
             }],
+            plot_width: None,
+            plot_height: None,
         };
 
         let json = serde_json::to_string(&request).expect("serialize");
