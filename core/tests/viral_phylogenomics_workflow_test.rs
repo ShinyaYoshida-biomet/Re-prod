@@ -55,6 +55,8 @@ fn create_request(
             end_line: code.lines().count() as u32,
             code: code.to_string(),
         }],
+        plot_width: None,
+        plot_height: None,
     }
 }
 

@@ -30,6 +30,8 @@ fn create_execution_request(code: &str, actor: ExecutionActor) -> ExecutionReque
             end_line: 1,
             code: code.to_string(),
         }],
+        plot_width: None,
+        plot_height: None,
     }
 }
 
