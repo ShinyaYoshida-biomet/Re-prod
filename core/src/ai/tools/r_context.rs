@@ -63,6 +63,8 @@ jsonlite::toJSON(info_list, auto_unbox = TRUE)
             code: code.to_string(),
             context: Default::default(),
             blocks: vec![],
+            plot_width: None,
+            plot_height: None,
         };
 
         let result = executor.execute(request).await?;
@@ -92,6 +94,8 @@ jsonlite::toJSON(info_list, auto_unbox = TRUE)
             code: code.to_string(),
             context: Default::default(),
             blocks: vec![],
+            plot_width: None,
+            plot_height: None,
         };
 
         let result = executor.execute(request).await?;
@@ -130,6 +134,8 @@ jsonlite::toJSON(pkgs, auto_unbox = TRUE)
             code: code.to_string(),
             context: Default::default(),
             blocks: vec![],
+            plot_width: None,
+            plot_height: None,
         };
 
         let result = executor.execute(request).await?;

@@ -149,10 +149,13 @@ impl RExecutor {
             "wrapping code for execution"
         );
 
+        let plot_width = request.plot_width.unwrap_or(DEFAULT_PLOT_WIDTH);
+        let plot_height = request.plot_height.unwrap_or(DEFAULT_PLOT_HEIGHT);
+
         let wrapped_code = if self.persistent_mode {
-            self.wrap_code_with_plot_capture_persistent(&request.code, &plot_prefix)
+            self.wrap_code_with_plot_capture_persistent(&request.code, &plot_prefix, plot_width, plot_height)
         } else {
-            self.wrap_code_with_plot_capture(&request.code, &plot_prefix)
+            self.wrap_code_with_plot_capture(&request.code, &plot_prefix, plot_width, plot_height)
         };
         fs::write(&script_path, wrapped_code).await?;
 
@@ -161,7 +164,7 @@ impl RExecutor {
             .run(&self.r_path, &script_path, &self.working_dir)
             .await?;
 
-        let captures = self.collect_plots(&plot_prefix).await?;
+        let captures = self.collect_plots(&plot_prefix, plot_width, plot_height).await?;
         let _ = fs::remove_file(&script_path).await;
 
         let execution_time_ms = start.elapsed().as_millis() as u64;
@@ -267,6 +270,8 @@ if (length(dev.list()) > 0) {
 }
 "#,
                 reset_prefix,
+                DEFAULT_PLOT_WIDTH,
+                DEFAULT_PLOT_HEIGHT,
             );
             fs::write(&script_path, reset_code).await?;
             let _ = self
@@ -303,7 +308,7 @@ if (length(dev.list()) > 0) {
         Ok(())
     }
 
-    fn wrap_code_with_plot_capture_persistent(&self, code: &str, plot_prefix: &str) -> String {
+    fn wrap_code_with_plot_capture_persistent(&self, code: &str, plot_prefix: &str, plot_width: u32, plot_height: u32) -> String {
         let temp_dir_str = r_escape(&self.temp_dir.to_string_lossy());
 
         format!(
@@ -418,14 +423,14 @@ cat("{delimiter}\n")
 "#,
             temp_dir = temp_dir_str,
             plot_prefix = plot_prefix,
-            plot_width = DEFAULT_PLOT_WIDTH,
-            plot_height = DEFAULT_PLOT_HEIGHT,
+            plot_width = plot_width,
+            plot_height = plot_height,
             code = code,
             delimiter = PERSISTENT_DELIMITER,
         )
     }
 
-    fn wrap_code_with_plot_capture(&self, code: &str, plot_prefix: &str) -> String {
+    fn wrap_code_with_plot_capture(&self, code: &str, plot_prefix: &str, plot_width: u32, plot_height: u32) -> String {
         let temp_dir_str = r_escape(&self.temp_dir.to_string_lossy());
 
         format!(
@@ -540,13 +545,13 @@ quit(status = .reprod_exit_code, runLast = FALSE)
 "#,
             temp_dir = temp_dir_str,
             plot_prefix = plot_prefix,
-            plot_width = DEFAULT_PLOT_WIDTH,
-            plot_height = DEFAULT_PLOT_HEIGHT,
+            plot_width = plot_width,
+            plot_height = plot_height,
             code = code
         )
     }
 
-    async fn collect_plots(&self, plot_prefix: &str) -> Result<Vec<CapturedPlot>> {
+    async fn collect_plots(&self, plot_prefix: &str, plot_width: u32, plot_height: u32) -> Result<Vec<CapturedPlot>> {
         let mut plots = Vec::new();
         let mut index = 1u32;
 
@@ -579,8 +584,8 @@ quit(status = .reprod_exit_code, runLast = FALSE)
                     filename,
                     base64_data,
                     index,
-                    width: Some(DEFAULT_PLOT_WIDTH),
-                    height: Some(DEFAULT_PLOT_HEIGHT),
+                    width: Some(plot_width),
+                    height: Some(plot_height),
                     timestamp: Some(timestamp),
                     code: None,
                     storage_path: None,
@@ -1153,7 +1158,7 @@ mod tests {
             .use_persistent_mode()
             .build();
 
-        let wrapped = exec.wrap_code_with_plot_capture_persistent("x <- 1", "pfx");
+        let wrapped = exec.wrap_code_with_plot_capture_persistent("x <- 1", "pfx", DEFAULT_PLOT_WIDTH, DEFAULT_PLOT_HEIGHT);
         assert!(
             !wrapped.contains("save.image"),
             "Persistent wrapper should not save image per call"

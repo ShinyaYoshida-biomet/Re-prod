@@ -139,6 +139,12 @@ pub struct ExecutionRequest {
     pub context: ExecutionContext,
     #[serde(default)]
     pub blocks: Vec<CodeBlockMetadata>,
+    /// Optional plot width in pixels (defaults to DEFAULT_PLOT_WIDTH if not specified)
+    #[serde(default)]
+    pub plot_width: Option<u32>,
+    /// Optional plot height in pixels (defaults to DEFAULT_PLOT_HEIGHT if not specified)
+    #[serde(default)]
+    pub plot_height: Option<u32>,
 }
 
 /// Snapshot of the environment used when executing R code.

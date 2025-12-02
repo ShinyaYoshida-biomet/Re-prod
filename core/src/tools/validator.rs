@@ -159,6 +159,8 @@ impl ToolValidator {
                 ..ExecutionContext::default()
             },
             blocks: Vec::new(),
+            plot_width: None,
+            plot_height: None,
         }
     }
 }
