@@ -40,6 +40,7 @@ Re-prod is a multi-package workspace that blends Rust, Tauri, and React/TypeScri
 - **pnpm** 9+ (installs via `corepack enable pnpm` or `npm install -g pnpm`)
 - **R** (4.0+) with `Rscript` in PATH
 - **AI API key** (optional, for AI features) - Anthropic or OpenAI
+- **Writable workspace**: the project root must be writable so `.reprod/` can store timeline/plot artifacts, and the OS temp dir (e.g., `/tmp/reprod`) must be writable for execution scratch files.
 
 ## Installation
 
