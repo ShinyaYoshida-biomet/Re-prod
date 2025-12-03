@@ -1,3 +1,10 @@
+<!--
+📋 IMPORTANT: Please fill out ALL sections of this template.
+✅ Check all applicable boxes with [x]
+❌ Do NOT remove sections or checklist items
+🚫 Do NOT add AI attribution (Co-Authored-By lines)
+-->
+
 ## Description
 
 <!-- Describe your changes in detail -->
