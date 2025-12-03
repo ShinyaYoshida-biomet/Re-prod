@@ -16,7 +16,7 @@ impl OpenAIProvider {
         Self {
             api_key,
             base_url: "https://api.openai.com/v1/chat/completions".to_string(),
-            model: "gpt-4o".to_string(),
+            model: "gpt-5.1".to_string(),
             client: Client::new(),
         }
     }
@@ -40,17 +40,19 @@ impl AIProvider for OpenAIProvider {
             .as_ref()
             .ok_or_else(|| ReprodError::AIError("OpenAI API key not configured".to_string()))?;
 
+        let request_body = json!({
+            "model": self.model,
+            "messages": messages,
+            "max_completion_tokens": 4096,
+            "temperature": 0.7,
+        });
+
         let response = self
             .client
             .post(&self.base_url)
             .header("Authorization", format!("Bearer {}", api_key))
             .header("Content-Type", "application/json")
-            .json(&json!({
-                "model": self.model,
-                "messages": messages,
-                "max_tokens": 4096,
-                "temperature": 0.7,
-            }))
+            .json(&request_body)
             .timeout(std::time::Duration::from_secs(120))
             .send()
             .await
@@ -100,7 +102,7 @@ impl AIProvider for OpenAIProvider {
         let mut request_body = json!({
             "model": self.model,
             "messages": messages,
-            "max_tokens": 4096,
+            "max_completion_tokens": 4096,
             "temperature": 0.7,
         });
 

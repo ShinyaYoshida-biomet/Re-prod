@@ -78,9 +78,9 @@
 }
 
 .console-code {
-	border-left: 4px solid var(--accent-blue);
-	background: #0b1021;
-	color: #e8ecf4;
+	border-left: 3px solid var(--accent-blue);
+	background: var(--bg-code);
+	color: var(--text-primary);
 }
 
 .console-stderr {
