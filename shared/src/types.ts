@@ -82,6 +82,7 @@ export interface ExecutionLogPlot {
 }
 
 export interface ExecutionLogEntry {
+	code: string;
 	stdout: string;
 	stderr: string;
 	plots: ExecutionLogPlot[];

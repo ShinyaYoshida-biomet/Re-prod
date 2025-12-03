@@ -53,12 +53,18 @@ export const createExecutionSlice: StateCreator<ExecutionState> = (set) => ({
 			},
 		})),
 	loadExecutionHistory: (history) =>
-		set(() => ({
-			execution: {
-				isRunning: false,
-				results: history.slice(-10),
-				history,
-				currentCell: undefined,
-			},
-		})),
+		set(() => {
+			const normalized = history.map((entry) => ({
+				code: entry.code ?? "",
+				...entry,
+			}));
+			return {
+				execution: {
+					isRunning: false,
+					results: normalized.slice(-10),
+					history: normalized,
+					currentCell: undefined,
+				},
+			};
+		}),
 });
