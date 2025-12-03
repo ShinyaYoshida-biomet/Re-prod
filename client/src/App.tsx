@@ -36,15 +36,8 @@ function App(): JSX.Element {
 	const [sessionInfoOpen, setSessionInfoOpen] = useState(false);
 	const [settingsOpen, setSettingsOpen] = useState(false);
 	const [projectManagerOpen, setProjectManagerOpen] = useState(false);
-	const {
-		fetchSettings,
-		hasAnyConfiguredProvider,
-		providers,
-		activeProvider,
-		isLoading: isSettingsLoading,
-	} = useSettingsStore();
+	const { fetchSettings, providers, activeProvider } = useSettingsStore();
 
-	const hasAnyProviderConfigured = hasAnyConfiguredProvider();
 	const activeProviderConfig = providers.find((provider) => provider.name === activeProvider);
 	const isActiveProviderConfigured = Boolean(activeProviderConfig?.isConfigured);
 	const activeProviderLabel = activeProviderConfig?.displayName || activeProvider || "AI provider";
