@@ -13,8 +13,8 @@ use tokio::sync::Mutex as AsyncMutex;
 use tracing::info;
 use uuid::Uuid;
 
-mod builder;
-pub use builder::RExecutorBuilder;
+mod r_executor_builder;
+pub use r_executor_builder::RExecutorBuilder;
 
 use super::execution_utils::{build_event, ensure_blocks};
 use super::{NoopTimeline, TimelineSink};
@@ -209,4 +209,4 @@ if (length(dev.list()) > 0) {
 }
 
 #[cfg(test)]
-mod tests;
+mod r_executor_tests;
