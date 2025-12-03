@@ -132,3 +132,30 @@ async fn segments_blocks_when_not_provided() {
     assert!(block.code.contains("print('x')"));
     assert!(event.environment.r_path.contains("Rscript"));
 }
+
+#[tokio::test]
+async fn builder_sets_persistent_and_working_dir() {
+    let temp_dir = tempfile::tempdir().expect("temp dir");
+    let timeline = InMemoryTimeline::new();
+    let runner = MockRunner {
+        output: Mutex::new(CommandOutput {
+            success: true,
+            stdout: b"ok".to_vec(),
+            stderr: Vec::new(),
+            interrupted: false,
+        }),
+    };
+
+    let working_dir = temp_dir.path().join("wd");
+    std::fs::create_dir_all(&working_dir).expect("mkdir");
+
+    let executor = RExecutor::builder(temp_dir.path().to_path_buf(), "Rscript".into())
+        .with_timeline(timeline)
+        .with_command_runner(runner)
+        .with_working_dir(&working_dir)
+        .use_persistent_mode()
+        .build();
+
+    assert!(executor.is_persistent_mode());
+    assert_eq!(executor.working_dir(), working_dir.as_path());
+}

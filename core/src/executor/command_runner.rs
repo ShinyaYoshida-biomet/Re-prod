@@ -384,3 +384,22 @@ where
         }
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn process_runner_interrupt_is_noop_without_child() {
+        let runner = ProcessCommandRunner::default();
+        let interrupted = runner.interrupt().await.expect("interrupt");
+        assert!(!interrupted);
+    }
+
+    #[tokio::test]
+    async fn persistent_runner_interrupt_is_noop_without_child() {
+        let runner = PersistentProcessCommandRunner::new("Rscript".into(), std::env::temp_dir());
+        let interrupted = runner.interrupt().await.expect("interrupt");
+        assert!(!interrupted);
+    }
+}

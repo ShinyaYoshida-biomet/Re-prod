@@ -48,6 +48,14 @@ impl RExecutor {
         RExecutorBuilder::new(temp_dir, r_path)
     }
 
+    pub fn is_persistent_mode(&self) -> bool {
+        self.persistent_mode
+    }
+
+    pub fn working_dir(&self) -> &std::path::Path {
+        &self.working_dir
+    }
+
     pub async fn execute(&self, request: ExecutionRequest) -> Result<ExecutionResult> {
         let (result, _, _) = self.execute_with_event_with_history(request).await?;
         Ok(result)
