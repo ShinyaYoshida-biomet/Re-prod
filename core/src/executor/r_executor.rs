@@ -1,8 +1,6 @@
 use std::{path::PathBuf, sync::Arc, time::Instant};
 
-use crate::executor::command_runner::{
-    CommandRunner, PersistentProcessCommandRunner, ProcessCommandRunner,
-};
+use crate::executor::command_runner::{CommandRunner, ProcessCommandRunner};
 use crate::executor::output_parser::parse_command_output;
 use crate::graphics::plot_capture::PlotCapture;
 use crate::plot_history::{

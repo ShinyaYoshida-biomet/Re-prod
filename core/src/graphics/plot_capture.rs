@@ -386,7 +386,7 @@ if (names(dev.cur()) != "null device") {{
 }}
 
 # If no plots were produced, try to render the last ggplot object automatically
-try{{
+try({{
   existing_plots <- list.files(
     .reprod_plot_dir,
     pattern = sprintf("^%s_\\d+\\.png$", .reprod_plot_prefix)
