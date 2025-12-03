@@ -13,20 +13,18 @@ use tokio::sync::Mutex as AsyncMutex;
 use tracing::info;
 use uuid::Uuid;
 
-mod r_executor_builder;
-pub use r_executor_builder::RExecutorBuilder;
-
 use super::execution_utils::{build_event, ensure_blocks};
+use super::RExecutorBuilder;
 use super::{NoopTimeline, TimelineSink};
 
 pub struct RExecutor {
-    temp_dir: PathBuf,
-    r_path: String,
-    working_dir: PathBuf,
-    timeline: Arc<dyn TimelineSink>,
-    command_runner: Arc<dyn CommandRunner>,
-    plot_history: Option<Arc<AsyncMutex<PlotHistoryManager>>>,
-    persistent_mode: bool,
+    pub(crate) temp_dir: PathBuf,
+    pub(crate) r_path: String,
+    pub(crate) working_dir: PathBuf,
+    pub(crate) timeline: Arc<dyn TimelineSink>,
+    pub(crate) command_runner: Arc<dyn CommandRunner>,
+    pub(crate) plot_history: Option<Arc<AsyncMutex<PlotHistoryManager>>>,
+    pub(crate) persistent_mode: bool,
 }
 
 impl RExecutor {
@@ -209,4 +207,5 @@ if (length(dev.list()) > 0) {
 }
 
 #[cfg(test)]
+#[path = "r_executor_tests.rs"]
 mod r_executor_tests;

@@ -616,7 +616,7 @@ pub async fn render_pdf_document(
         working_dir,
         &output_dir,
         pdf_options,
-        preamble_path.as_ref().map(|p| p.as_path()),
+        preamble_path.as_deref(),
     );
 
     fs::write(&script_path, script)

@@ -4,9 +4,10 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::ops::Not;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use base64::Engine;
 use image::io::Reader as ImageReader;
@@ -127,6 +128,7 @@ impl PlotHistoryManager {
     }
 
     /// Persist a new plot image and update history.
+    #[allow(clippy::too_many_arguments)]
     pub fn add_plot(
         &mut self,
         id: Option<String>,
@@ -249,7 +251,10 @@ impl PlotHistoryManager {
     /// Remove a plot from history and disk.
     pub fn delete_plot(&mut self, plot_id: &str) -> Result<Option<PlotHistorySnapshot>> {
         if let Some(pos) = self.plots.iter().position(|p| p.id == plot_id) {
-            let removed = self.plots.remove(pos).unwrap();
+            let removed = self
+                .plots
+                .remove(pos)
+                .ok_or_else(|| anyhow!("Plot not found for id {}", plot_id))?;
             self.remove_file(&removed);
 
             if let Some(active_idx) = self.active {
@@ -402,13 +407,6 @@ pub enum ExportFormat {
 }
 
 impl ExportFormat {
-    pub fn from_str(value: &str) -> Self {
-        match value.to_ascii_lowercase().as_str() {
-            "pdf" => ExportFormat::Pdf,
-            _ => ExportFormat::Png,
-        }
-    }
-
     pub fn from_path(path: &Path) -> Self {
         match path
             .extension()
@@ -423,8 +421,20 @@ impl ExportFormat {
 
     pub fn resolve(requested: Option<&str>, path: &Path) -> Self {
         requested
-            .map(ExportFormat::from_str)
+            .and_then(|value| value.parse::<ExportFormat>().ok())
             .unwrap_or_else(|| ExportFormat::from_path(path))
+    }
+}
+
+impl FromStr for ExportFormat {
+    type Err = anyhow::Error;
+
+    fn from_str(value: &str) -> Result<Self> {
+        let format = match value.to_ascii_lowercase().as_str() {
+            "pdf" => ExportFormat::Pdf,
+            _ => ExportFormat::Png,
+        };
+        Ok(format)
     }
 }
 
