@@ -9,6 +9,7 @@ pub mod error;
 pub mod executor;
 pub mod export;
 pub mod fs;
+pub mod graphics;
 pub mod plot_history;
 pub mod project;
 pub mod protocol;
