@@ -7,8 +7,8 @@ use reprod_core::{
 };
 use reprod_core::{
     project::{
-        default_config_path, default_registry_path, locate_config, ProjectConfig, ProjectDescriptor,
-        ProjectRecord, ProjectRegistry,
+        default_config_path, default_registry_path, locate_config, ProjectConfig,
+        ProjectDescriptor, ProjectRecord, ProjectRegistry,
     },
     Config, RExecutor,
 };
