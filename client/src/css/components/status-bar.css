@@ -33,7 +33,9 @@
 	cursor: pointer;
 	padding: 2px 8px;
 	border-radius: 8px;
-	transition: background-color 0.15s ease, color 0.15s ease;
+	transition:
+		background-color 0.15s ease,
+		color 0.15s ease;
 }
 
 .statusbar-ai .statusbar-dot {
