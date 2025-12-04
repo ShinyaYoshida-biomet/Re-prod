@@ -1,0 +1,132 @@
+.welcome-screen {
+	min-height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 48px 28px;
+	background: linear-gradient(135deg, #0f1f3d, #0f2d2f);
+}
+
+.welcome-surface {
+	width: min(1100px, 100%);
+	background: var(--bg-primary);
+	border: 1px solid #d5dae1;
+	border-radius: 14px;
+	box-shadow: 0 18px 35px rgba(5, 15, 44, 0.16);
+	padding: 36px;
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.welcome-header {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.welcome-header-top {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.welcome-header h1 {
+	font-size: 28px;
+	font-weight: 700;
+	color: #0d1a33;
+}
+
+.welcome-header p {
+	color: var(--text-muted);
+	max-width: 720px;
+}
+
+.welcome-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 12px;
+	border-radius: 999px;
+	background: linear-gradient(120deg, #25a18e, #2f65d9);
+	color: #ffffff;
+	font-size: 12px;
+	font-weight: 600;
+	width: fit-content;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.welcome-close {
+	border: 1px solid #c8d0de;
+	border-radius: 8px;
+	background: #f4f6fb;
+	color: #0d1a33;
+	padding: 8px 12px;
+	font-weight: 600;
+	transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.welcome-close:hover {
+	background: #e6ebf5;
+	border-color: #aeb8ca;
+}
+
+.welcome-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+	gap: 16px;
+}
+
+.welcome-card {
+	background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+	border: 1px solid #d5dae1;
+	border-radius: 10px;
+	padding: 18px 18px 14px;
+	box-shadow: 0 8px 22px rgba(13, 26, 51, 0.06);
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.welcome-card-header {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+}
+
+.welcome-card h2 {
+	margin: 0;
+	font-size: 18px;
+	color: #0d1a33;
+}
+
+.welcome-card p {
+	margin: 0;
+	color: var(--text-muted);
+}
+
+.welcome-actions {
+	display: grid;
+	gap: 10px;
+}
+
+.welcome-actions .btn {
+	justify-content: flex-start;
+	width: 100%;
+}
+
+.welcome-list {
+	margin: 8px 0 0;
+	padding-left: 18px;
+	color: var(--text-muted);
+	display: grid;
+	gap: 6px;
+}
+
+.welcome-list code {
+	background: #f2f5f9;
+	padding: 2px 6px;
+	border-radius: 4px;
+}

@@ -1,4 +1,4 @@
-use crate::projects::ProjectRuntime;
+use crate::projects::{ProjectRuntime, StartupAction};
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
@@ -8,9 +8,9 @@ use axum::{
 };
 use project_requests::handle_project_request;
 use reprod_core::{fs::FileSystemEvent, project::ProjectRecord, ExecutionRequest};
-use runtime_fs::{handle_fs_event, spawn_fs_watcher, FsWatcherHandle};
+use runtime_fs::{handle_fs_event, restart_fs_watcher, FsWatcherHandle};
 use serde_json::{self, json};
-use std::sync::Arc;
+use std::{future::Future, sync::Arc};
 use tokio::sync::mpsc as tokio_mpsc;
 
 mod ai_handler;
@@ -36,31 +36,17 @@ use plot_history_handler::{
 use session_handler::{handle_interrupt, handle_restart};
 use timeline_handler::{handle_timeline_query, handle_timeline_stats_query};
 use tool_handler::{handle_execute_tool, handle_list_tools};
+use common::single_response;
 
 pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> Response {
     ws.on_upgrade(|socket| handle_socket(socket, state))
 }
 
 async fn handle_socket(mut socket: WebSocket, state: AppState) {
-    let mut current_runtime = match state.projects.default_runtime().await {
-        Ok(runtime) => runtime,
-        Err(error) => {
-            let _ = send_responses(&mut socket, error_response(error.to_string())).await;
-            return;
-        }
-    };
     let (fs_event_tx, mut fs_event_rx) = tokio_mpsc::unbounded_channel::<FileSystemEvent>();
-    let mut fs_watcher = Some(spawn_fs_watcher(
-        current_runtime.descriptor.root_path.clone(),
-        fs_event_tx.clone(),
-    ));
-    let mut fs_events_closed = false;
-
-    let _ = send_responses(
-        &mut socket,
-        vec![build_project_opened_response(&state, &current_runtime).await],
-    )
-    .await;
+    let mut current_runtime: Option<Arc<ProjectRuntime>> = None;
+    let mut fs_watcher: Option<FsWatcherHandle> = None;
+    let mut fs_events_closed = true;
 
     'ws_loop: loop {
         tokio::select! {
@@ -97,7 +83,7 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
 async fn handle_ws_text(
     msg: Option<Result<Message, axum::Error>>,
     state: &AppState,
-    current_runtime: &mut Arc<ProjectRuntime>,
+    current_runtime: &mut Option<Arc<ProjectRuntime>>,
     fs_watcher: &mut Option<FsWatcherHandle>,
     fs_event_tx: &tokio_mpsc::UnboundedSender<FileSystemEvent>,
     fs_events_closed: &mut bool,
@@ -120,7 +106,16 @@ async fn handle_ws_text(
                     return continue_loop;
                 }
 
-                let responses = handle_ws_request(request, state, current_runtime).await;
+                let responses = handle_ws_request(
+                    request,
+                    state,
+                    current_runtime.as_ref(),
+                    fs_watcher,
+                    fs_event_tx,
+                    fs_events_closed,
+                    current_runtime,
+                )
+                .await;
                 send_responses(socket, responses).await
             }
             Err(error) => {
@@ -140,10 +135,16 @@ async fn handle_ws_text(
 async fn handle_ws_request(
     request: WSRequest,
     state: &AppState,
-    runtime: &Arc<ProjectRuntime>,
+    runtime: Option<&Arc<ProjectRuntime>>,
+    fs_watcher: &mut Option<FsWatcherHandle>,
+    fs_event_tx: &tokio_mpsc::UnboundedSender<FileSystemEvent>,
+    fs_events_closed: &mut bool,
+    current_runtime: &mut Option<Arc<ProjectRuntime>>,
 ) -> Vec<WSResponse> {
     match request {
-        WSRequest::Execute { request } => handle_execution_request(runtime, request).await,
+        WSRequest::Execute { request } => {
+            with_runtime(runtime, |rt| handle_execution_request(rt, request)).await
+        }
         WSRequest::AIMessage {
             messages,
             enable_tools,
@@ -151,15 +152,9 @@ async fn handle_ws_request(
             stream,
             mode,
         } => {
-            handle_ai_message(
-                state,
-                runtime,
-                messages,
-                enable_tools,
-                request_id,
-                stream,
-                mode,
-            )
+            with_runtime(runtime, |rt| {
+                handle_ai_message(state, rt, messages, enable_tools, request_id, stream, mode)
+            })
             .await
         }
         WSRequest::ListTools => handle_list_tools(state),
@@ -167,36 +162,110 @@ async fn handle_ws_request(
             tool_id,
             capability_id,
             parameters,
-        } => handle_execute_tool(state, runtime, tool_id, capability_id, parameters).await,
-        WSRequest::TimelineQuery { query } => handle_timeline_query(runtime, query),
-        WSRequest::TimelineStatsQuery => handle_timeline_stats_query(runtime),
-        WSRequest::ExportRMarkdown { request } => {
-            handle_export_request(state, runtime, request).await
+        } => with_runtime(runtime, |rt| {
+            handle_execute_tool(state, rt, tool_id, capability_id, parameters)
+        })
+        .await,
+        WSRequest::TimelineQuery { query } => {
+            with_runtime(runtime, |rt| handle_timeline_query(rt, query)).await
         }
-        WSRequest::InterruptExecution => handle_interrupt(runtime).await,
-        WSRequest::RestartSession => handle_restart(runtime).await,
+        WSRequest::TimelineStatsQuery => {
+            with_runtime(runtime, |rt| handle_timeline_stats_query(rt)).await
+        }
+        WSRequest::ExportRMarkdown { request } => {
+            with_runtime(runtime, |rt| handle_export_request(state, rt, request)).await
+        }
+        WSRequest::InterruptExecution => with_runtime(runtime, handle_interrupt).await,
+        WSRequest::RestartSession => with_runtime(runtime, handle_restart).await,
         WSRequest::FileSystemAction {
             action,
             path,
             content,
             to,
-        } => handle_fs_action(runtime, action, path, content, to),
-        WSRequest::PlotHistoryGet => handle_plot_history_get(runtime).await,
+        } => {
+            with_runtime(runtime, |rt| async move {
+                handle_fs_action(rt, action, path, content, to)
+            })
+            .await
+        }
+        WSRequest::PlotHistoryGet => with_runtime(runtime, handle_plot_history_get).await,
         WSRequest::PlotHistorySetActive { plot_id } => {
-            handle_plot_history_set_active(runtime, plot_id).await
+            with_runtime(runtime, |rt| handle_plot_history_set_active(rt, plot_id)).await
         }
         WSRequest::PlotHistoryExport {
             plot_id,
             path,
             format,
-        } => handle_plot_history_export(runtime, plot_id, path, format).await,
+        } => with_runtime(runtime, |rt| {
+            handle_plot_history_export(rt, plot_id, path, format)
+        })
+        .await,
         WSRequest::PlotHistoryDelete { plot_id } => {
-            handle_plot_history_delete(runtime, plot_id).await
+            with_runtime(runtime, |rt| handle_plot_history_delete(rt, plot_id)).await
         }
-        WSRequest::PlotHistorySave => handle_plot_history_save(runtime).await,
-        WSRequest::PlotHistoryRestore => handle_plot_history_restore(runtime).await,
-        WSRequest::PlotHistoryClear => handle_plot_history_clear(runtime).await,
+        WSRequest::PlotHistorySave => with_runtime(runtime, handle_plot_history_save).await,
+        WSRequest::PlotHistoryRestore => {
+            with_runtime(runtime, handle_plot_history_restore).await
+        }
+        WSRequest::PlotHistoryClear => with_runtime(runtime, handle_plot_history_clear).await,
+        WSRequest::StartupAction => {
+            handle_startup_action(
+                state,
+                current_runtime,
+                fs_watcher,
+                fs_event_tx,
+                fs_events_closed,
+            )
+            .await
+        }
         _ => Vec::new(),
+    }
+}
+
+async fn handle_startup_action(
+    state: &AppState,
+    current_runtime: &mut Option<Arc<ProjectRuntime>>,
+    fs_watcher: &mut Option<FsWatcherHandle>,
+    fs_event_tx: &tokio_mpsc::UnboundedSender<FileSystemEvent>,
+    fs_events_closed: &mut bool,
+) -> Vec<WSResponse> {
+    match state.projects.startup_behavior().await {
+        StartupAction::ShowWelcome => single_response(WSResponse::StartupAction {
+            action_type: "show_welcome".to_string(),
+            project_id: None,
+        }),
+        StartupAction::OpenProject(project_id) => match state.projects.runtime_for(&project_id).await {
+            Ok(runtime) => {
+                *current_runtime = Some(runtime);
+                if let Some(active_runtime) = current_runtime.as_ref() {
+                    restart_fs_watcher(active_runtime, fs_watcher, fs_event_tx, fs_events_closed);
+                    vec![
+                        WSResponse::StartupAction {
+                            action_type: "open_project".to_string(),
+                            project_id: Some(project_id),
+                        },
+                        build_project_opened_response(state, active_runtime).await,
+                    ]
+                } else {
+                    error_response("Failed to initialize project runtime")
+                }
+            }
+            Err(error) => error_response(error.to_string()),
+        },
+    }
+}
+
+async fn with_runtime<F, Fut>(
+    runtime: Option<&Arc<ProjectRuntime>>,
+    action: F,
+) -> Vec<WSResponse>
+where
+    F: FnOnce(&Arc<ProjectRuntime>) -> Fut,
+    Fut: Future<Output = Vec<WSResponse>>,
+{
+    match runtime {
+        Some(rt) => action(rt).await,
+        None => error_response("No project is open"),
     }
 }
 

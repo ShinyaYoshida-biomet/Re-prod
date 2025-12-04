@@ -86,6 +86,13 @@ export interface ExportRMarkdownResponsePayload {
 	error?: string | null;
 }
 
+export type StartupActionType = "open_project" | "show_welcome";
+
+export interface StartupActionPayload {
+	action_type: StartupActionType;
+	project_id?: string | null;
+}
+
 export type ClientMessage =
 	| { type: "execute"; request: ExecutionRequestPayload }
 	| {
@@ -118,6 +125,7 @@ export type ClientMessage =
 	| { type: "project_create"; name: string; path: string }
 	| { type: "project_add_existing"; path: string }
 	| { type: "project_clone"; remote: string; path: string; name?: string }
+	| { type: "get_startup_action" }
 	| { type: "project_state_load"; projectId: string }
 	| {
 			type: "project_state_save";
@@ -171,6 +179,7 @@ export type ServerMessage =
 	| { type: "project_opened"; project: ProjectRecord; state?: Record<string, unknown> | null }
 	| { type: "project_state"; project_id: string; state?: Record<string, unknown> | null }
 	| { type: "project_state_saved"; project_id: string }
+	| { type: "startup_action"; action_type: StartupActionType; project_id?: string | null }
 	| {
 			type: "plot_history_state";
 			activePlotId?: string | null;

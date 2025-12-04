@@ -256,6 +256,11 @@ export function buildMenuSections(snapshot: MenuStateSnapshot): MenuSection[] {
 					action: () => menuActions.help.docs(),
 				},
 				{
+					id: "help:welcome",
+					label: "Show Welcome",
+					action: () => menuActions.help.welcome(),
+				},
+				{
 					id: "help:shortcuts",
 					label: "Keyboard Shortcuts",
 					action: () => menuActions.help.shortcuts(),

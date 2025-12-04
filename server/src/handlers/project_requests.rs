@@ -15,7 +15,7 @@ use super::runtime_fs::FsWatcherHandle;
 pub async fn handle_project_request(
     request: &WSRequest,
     state: &AppState,
-    current_runtime: &mut Arc<ProjectRuntime>,
+    current_runtime: &mut Option<Arc<ProjectRuntime>>,
     fs_watcher: &mut Option<FsWatcherHandle>,
     fs_event_tx: &tokio_mpsc::UnboundedSender<FileSystemEvent>,
     fs_events_closed: &mut bool,
@@ -131,7 +131,7 @@ pub async fn handle_project_request(
 
 async fn switch_runtime(
     state: &AppState,
-    current_runtime: &mut Arc<ProjectRuntime>,
+    current_runtime: &mut Option<Arc<ProjectRuntime>>,
     fs_watcher: &mut Option<FsWatcherHandle>,
     fs_event_tx: &tokio_mpsc::UnboundedSender<FileSystemEvent>,
     fs_events_closed: &mut bool,
@@ -140,11 +140,15 @@ async fn switch_runtime(
 ) -> bool {
     match state.projects.runtime_for(project_id).await {
         Ok(runtime) => {
-            *current_runtime = runtime;
-            restart_fs_watcher(current_runtime, fs_watcher, fs_event_tx, fs_events_closed);
+            *current_runtime = Some(runtime);
+            if let Some(active_runtime) = current_runtime.as_ref() {
+                restart_fs_watcher(active_runtime, fs_watcher, fs_event_tx, fs_events_closed);
 
-            let responses = vec![build_project_opened_response(state, current_runtime).await];
-            send_responses(socket, responses).await
+                let responses = vec![build_project_opened_response(state, active_runtime).await];
+                send_responses(socket, responses).await
+            } else {
+                send_responses(socket, error_response("Failed to activate project runtime")).await
+            }
         }
         Err(error) => send_responses(socket, error_response(error.to_string())).await,
     }

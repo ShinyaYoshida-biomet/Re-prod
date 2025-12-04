@@ -78,6 +78,11 @@ impl ProjectRuntime {
     }
 }
 
+pub enum StartupAction {
+    OpenProject(String),
+    ShowWelcome,
+}
+
 pub struct ProjectController {
     registry: Mutex<ProjectRegistry>,
     runtimes: Mutex<HashMap<String, Arc<ProjectRuntime>>>,
@@ -99,13 +104,22 @@ impl ProjectController {
             base_temp_dir,
             config,
         };
-        controller.ensure_default_project().await?;
         Ok(controller)
     }
 
     pub async fn list_projects(&self) -> Vec<ProjectRecord> {
         let registry = self.registry.lock().await;
         registry.records().to_vec()
+    }
+
+    pub async fn startup_behavior(&self) -> StartupAction {
+        let registry = self.registry.lock().await;
+        registry
+            .records()
+            .iter()
+            .max_by_key(|record| record.last_opened_at.unwrap_or(0))
+            .map(|record| StartupAction::OpenProject(record.id.clone()))
+            .unwrap_or(StartupAction::ShowWelcome)
     }
 
     pub async fn default_runtime(&self) -> Result<Arc<ProjectRuntime>> {
@@ -276,29 +290,6 @@ impl ProjectController {
             serde_json::to_string_pretty(&payload).context("Failed to serialize project state")?;
         std::fs::write(&state_path, content)
             .with_context(|| format!("Failed to write {}", state_path.display()))
-    }
-
-    async fn ensure_default_project(&self) -> Result<()> {
-        let mut registry = self.registry.lock().await;
-        if registry.records().is_empty() {
-            let cwd =
-                std::env::current_dir().context("Failed to determine current working directory")?;
-            let mut descriptor = if locate_config(&cwd).is_ok() {
-                ProjectDescriptor::load(&cwd)?
-            } else {
-                let name = cwd
-                    .file_name()
-                    .and_then(|os| os.to_str())
-                    .unwrap_or("Re-prod Project");
-                ProjectDescriptor::create(&cwd, name, None)?
-            };
-            descriptor.config.touch_opened();
-            descriptor.update_config()?;
-            registry.upsert(ProjectRecord::from(&descriptor));
-            registry.save()?;
-        }
-        drop(registry);
-        Ok(())
     }
 
     async fn register_project(

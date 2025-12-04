@@ -414,6 +414,10 @@ export const menuActions = {
 			window.open(DOCS_URL, "_blank");
 		},
 
+		welcome: () => {
+			callGlobalHandler("openWelcomeScreen");
+		},
+
 		/**
 		 * Show keyboard shortcuts modal
 		 * TODO: Implement shortcuts modal

@@ -15,16 +15,20 @@ import {
 	SettingsModal,
 } from "@/components/modals";
 import { TimelineDialog, type TimelineDialogRef } from "@/components/timeline";
+import { WelcomeScreen } from "@/components/welcome";
 import { useStore } from "@/core";
 import { useSettingsStore } from "@/core/state/slices/settingsStore";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useProjectSession } from "@/hooks/useProjectSession";
+import { useStartup } from "@/hooks/useStartup";
 import { usePlotHistoryEvents } from "@/hooks/usePlotHistoryEvents";
 import { useSessionControlEvents } from "@/hooks/useSessionControlEvents";
 import { useSettingsPersistence } from "@/hooks/useSettingsPersistence";
 import { useSocketConnection } from "@/hooks/useSocketConnection";
+import type { ProjectManagerSection } from "@/components/modals/ProjectManagerModal";
 
 function App(): JSX.Element {
+	const project = useStore((state) => state.project);
 	const panes = useStore((state) => state.view.panes);
 	const theme = useStore((state) => state.settings.theme);
 	const setAIPanelRef = useStore((state) => state.setAIPanelRef);
@@ -36,13 +40,21 @@ function App(): JSX.Element {
 	const [sessionInfoOpen, setSessionInfoOpen] = useState(false);
 	const [settingsOpen, setSettingsOpen] = useState(false);
 	const [projectManagerOpen, setProjectManagerOpen] = useState(false);
+	const [projectManagerSection, setProjectManagerSection] = useState<ProjectManagerSection | null>(
+		null,
+	);
 	const { fetchSettings, providers, activeProvider } = useSettingsStore();
+	const { showWelcome, setShowWelcome } = useStartup();
 
 	const activeProviderConfig = providers.find((provider) => provider.name === activeProvider);
 	const isActiveProviderConfigured = Boolean(activeProviderConfig?.isConfigured);
 	const activeProviderLabel = activeProviderConfig?.displayName || activeProvider || "AI provider";
 
 	const openSettings = () => setSettingsOpen(true);
+	const openProjectsDialog = (section?: ProjectManagerSection) => {
+		setProjectManagerSection(section ?? null);
+		setProjectManagerOpen(true);
+	};
 
 	// Enable global keyboard shortcuts
 	useKeyboardShortcuts();
@@ -75,7 +87,8 @@ function App(): JSX.Element {
 		globalScope.openAboutDialog = () => setAboutOpen(true);
 		globalScope.openSessionInfoDialog = () => setSessionInfoOpen(true);
 		globalScope.openSettingsDialog = () => openSettings();
-		globalScope.openProjectsDialog = () => setProjectManagerOpen(true);
+		globalScope.openProjectsDialog = () => openProjectsDialog();
+		globalScope.openWelcomeScreen = () => setShowWelcome(true);
 
 		return () => {
 			delete globalScope.openExportDialog;
@@ -84,56 +97,79 @@ function App(): JSX.Element {
 			delete globalScope.openSessionInfoDialog;
 			delete globalScope.openSettingsDialog;
 			delete globalScope.openProjectsDialog;
+			delete globalScope.openWelcomeScreen;
 		};
-	}, []);
+	}, [setShowWelcome]);
+
+	const shouldShowWelcome = showWelcome || !project;
+	const appClassName = shouldShowWelcome ? "app app--welcome" : "app";
 
 	return (
-		<div className="app">
-			<MenuBar />
-			<div className="workspace-shell">
-				<Allotment>
-					{panes.files && (
-						<Allotment.Pane minSize={220} preferredSize={240}>
-							<FileBrowserPane />
-						</Allotment.Pane>
-					)}
-					{/* Left side: Editor + Bottom Pane */}
-					<Allotment.Pane minSize={400} preferredSize="75%">
-						<Allotment vertical>
-							{panes.editor && (
-								<Allotment.Pane minSize={300} preferredSize="65%">
-									<EditorPanel />
+		<div className={appClassName}>
+			{shouldShowWelcome ? (
+				<WelcomeScreen
+					onOpenFolder={() => openProjectsDialog("add_existing")}
+					onCreateProject={() => openProjectsDialog("create")}
+					onCloneProject={() => openProjectsDialog("clone")}
+					onSetupApiKeys={openSettings}
+					onClose={project ? () => setShowWelcome(false) : undefined}
+				/>
+			) : (
+				<>
+					<MenuBar />
+					<div className="workspace-shell">
+						<Allotment>
+							{panes.files && (
+								<Allotment.Pane minSize={220} preferredSize={240}>
+									<FileBrowserPane />
 								</Allotment.Pane>
 							)}
-							<Allotment.Pane minSize={150} preferredSize={panes.editor ? "35%" : "100%"}>
-								<BottomPane />
+							{/* Left side: Editor + Bottom Pane */}
+							<Allotment.Pane minSize={400} preferredSize="75%">
+								<Allotment vertical>
+									{panes.editor && (
+										<Allotment.Pane minSize={300} preferredSize="65%">
+											<EditorPanel />
+										</Allotment.Pane>
+									)}
+									<Allotment.Pane minSize={150} preferredSize={panes.editor ? "35%" : "100%"}>
+										<BottomPane />
+									</Allotment.Pane>
+								</Allotment>
 							</Allotment.Pane>
+							{/* Right side: AI Assistant (full height) */}
+							{panes.assistant && (
+								<Allotment.Pane minSize={260} preferredSize="25%">
+									<div className="ai-pane-wrapper">
+										<AIPanel
+											ref={setAIPanelRef}
+											onOpenSettings={openSettings}
+											onRequireApiKeys={handleRequireApiKeys}
+											hasConfiguredProvider={isActiveProviderConfigured}
+											activeProviderLabel={activeProviderLabel}
+										/>
+									</div>
+								</Allotment.Pane>
+							)}
 						</Allotment>
-					</Allotment.Pane>
-					{/* Right side: AI Assistant (full height) */}
-					{panes.assistant && (
-						<Allotment.Pane minSize={260} preferredSize="25%">
-							<div className="ai-pane-wrapper">
-								<AIPanel
-									ref={setAIPanelRef}
-									onOpenSettings={openSettings}
-									onRequireApiKeys={handleRequireApiKeys}
-									hasConfiguredProvider={isActiveProviderConfigured}
-									activeProviderLabel={activeProviderLabel}
-								/>
-							</div>
-						</Allotment.Pane>
-					)}
-				</Allotment>
-			</div>
-			<StatusBar onOpenSettings={openSettings} />
+					</div>
+					<StatusBar onOpenSettings={openSettings} />
+				</>
+			)}
 			<ExportDialog open={exportDialogOpen} onClose={() => setExportDialogOpen(false)} />
 			<TimelineDialog ref={timelineDialogRef} />
 			<KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 			<AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
 			<SessionInfoModal open={sessionInfoOpen} onClose={() => setSessionInfoOpen(false)} />
 			<SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-			<ProjectManagerModal open={projectManagerOpen} onClose={() => setProjectManagerOpen(false)} />
+			<ProjectManagerModal
+				open={projectManagerOpen}
+				onClose={() => {
+					setProjectManagerOpen(false);
+					setProjectManagerSection(null);
+				}}
+				initialSection={projectManagerSection ?? undefined}
+			/>
 		</div>
 	);
 }

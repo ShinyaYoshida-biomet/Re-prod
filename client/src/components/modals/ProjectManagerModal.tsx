@@ -1,18 +1,22 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useStore } from "@/core";
 import { persistCurrentProjectState } from "@/hooks/useProjectSession";
 import { projectService } from "@/services/projectService";
 import { ModalShell } from "./ModalShell";
 
+export type ProjectManagerSection = "create" | "clone" | "add_existing";
+
 interface ProjectManagerModalProps {
 	open: boolean;
 	onClose: () => void;
+	initialSection?: ProjectManagerSection;
 }
 
 export function ProjectManagerModal({
 	open,
 	onClose,
+	initialSection,
 }: ProjectManagerModalProps): JSX.Element | null {
 	const currentProject = useStore((state) => state.project);
 	const [newProjectName, setNewProjectName] = useState("New Project");
@@ -20,7 +24,14 @@ export function ProjectManagerModal({
 	const [cloneRemote, setCloneRemote] = useState("");
 	const [clonePath, setClonePath] = useState("");
 	const [cloneName, setCloneName] = useState("");
+	const [existingProjectPath, setExistingProjectPath] = useState("");
 	const [error, setError] = useState<string | null>(null);
+	const createSectionRef = useRef<HTMLDivElement | null>(null);
+	const cloneSectionRef = useRef<HTMLDivElement | null>(null);
+	const addExistingSectionRef = useRef<HTMLDivElement | null>(null);
+	const createPathRef = useRef<HTMLInputElement | null>(null);
+	const clonePathRef = useRef<HTMLInputElement | null>(null);
+	const addExistingInputRef = useRef<HTMLInputElement | null>(null);
 
 	if (!open) {
 		return null;
@@ -60,6 +71,38 @@ export function ProjectManagerModal({
 		});
 	};
 
+	const handleAddExisting = () => {
+		if (!existingProjectPath.trim()) {
+			setError("Folder path is required.");
+			return;
+		}
+		setError(null);
+		persistCurrentProjectState();
+		projectService.addExisting(existingProjectPath.trim());
+	};
+
+	useEffect(() => {
+		if (!open || !initialSection) return;
+
+		const targetRef =
+			initialSection === "create"
+				? createSectionRef
+				: initialSection === "clone"
+					? cloneSectionRef
+					: addExistingSectionRef;
+		targetRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+		if (initialSection === "create") {
+			createPathRef.current?.focus();
+		}
+		if (initialSection === "clone") {
+			clonePathRef.current?.focus();
+		}
+		if (initialSection === "add_existing") {
+			addExistingInputRef.current?.focus();
+		}
+	}, [initialSection, open]);
+
 	return (
 		<ModalShell
 			open={open}
@@ -91,7 +134,26 @@ export function ProjectManagerModal({
 					)}
 				</section>
 
-				<section className="project-manager-section">
+				<section ref={addExistingSectionRef} className="project-manager-section">
+					<h3>Open Existing Folder</h3>
+					<div className="form-grid">
+						<label>
+							Directory Path
+							<input
+								ref={addExistingInputRef}
+								type="text"
+								placeholder="/path/to/project"
+								value={existingProjectPath}
+								onChange={(event) => setExistingProjectPath(event.target.value)}
+							/>
+						</label>
+					</div>
+					<button type="button" className="btn btn-secondary" onClick={handleAddExisting}>
+						Open Folder
+					</button>
+				</section>
+
+				<section ref={createSectionRef} className="project-manager-section">
 					<h3>Create New Project</h3>
 					<div className="form-grid">
 						<label>
@@ -105,6 +167,7 @@ export function ProjectManagerModal({
 						<label>
 							Directory Path
 							<input
+								ref={createPathRef}
 								type="text"
 								placeholder="/path/to/project"
 								value={newProjectPath}
@@ -132,6 +195,7 @@ export function ProjectManagerModal({
 						<label>
 							Destination Path
 							<input
+								ref={clonePathRef}
 								type="text"
 								placeholder="/path/to/clone"
 								value={clonePath}

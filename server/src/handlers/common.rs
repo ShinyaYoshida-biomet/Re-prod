@@ -145,6 +145,8 @@ pub(super) enum WSRequest {
         #[serde(default)]
         to: Option<String>,
     },
+    #[serde(rename = "get_startup_action")]
+    StartupAction,
     #[serde(rename = "project_list")]
     ProjectList,
     #[serde(rename = "project_open")]
@@ -253,6 +255,12 @@ pub(super) enum WSResponse {
         data: Option<Value>,
         #[serde(skip_serializing_if = "Option::is_none")]
         error: Option<String>,
+    },
+    #[serde(rename = "startup_action")]
+    StartupAction {
+        action_type: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        project_id: Option<String>,
     },
     #[serde(rename = "project_list")]
     ProjectList { projects: Vec<ProjectRecord> },

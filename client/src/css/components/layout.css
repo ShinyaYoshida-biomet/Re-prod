@@ -9,6 +9,10 @@
 	overflow: hidden;
 }
 
+.app.app--welcome {
+	padding: 0;
+}
+
 .workspace-shell {
 	flex: 1;
 	min-height: 0;
