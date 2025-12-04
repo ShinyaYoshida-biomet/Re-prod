@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import {
-	API_CONFIG_PROVIDER_URL,
 	getApiKeyUrl,
 	getModelUrl,
+	getApiConfigProviderUrl,
 	getTestConnectionUrl,
 } from "@/constants/urls";
 import { DEFAULT_MODEL_BY_PROVIDER, LLM_MODELS } from "@/constants/llmModels";
@@ -59,7 +59,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 		set({ isLoading: true, error: null });
 		try {
 			// Fetch active provider
-			const providerRes = await fetch(API_CONFIG_PROVIDER_URL);
+			const providerRes = await fetch(getApiConfigProviderUrl());
 			if (!providerRes.ok) throw new Error("Failed to fetch active provider");
 			const { provider } = await providerRes.json();
 
@@ -114,7 +114,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 	setActiveProvider: async (provider: string) => {
 		set({ isLoading: true, error: null });
 		try {
-			const res = await fetch(API_CONFIG_PROVIDER_URL, {
+			const res = await fetch(getApiConfigProviderUrl(), {
 				method: "PUT",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ provider }),
