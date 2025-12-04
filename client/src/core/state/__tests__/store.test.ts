@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { useStore } from "../store";
 
 const createExecutionResult = () => ({
+	code: "x <- 1",
 	stdout: "output",
 	stderr: "",
 	plots: [],

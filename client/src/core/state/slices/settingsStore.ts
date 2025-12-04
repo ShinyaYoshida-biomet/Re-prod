@@ -21,12 +21,14 @@ interface SettingsState {
 	providers: Provider[];
 	isLoading: boolean;
 	error: string | null;
+	hasFetched: boolean;
 
 	fetchSettings: () => Promise<void>;
 	setActiveProvider: (provider: string) => Promise<void>;
 	setApiKey: (provider: string, apiKey: string) => Promise<void>;
 	testConnection: (provider: string) => Promise<boolean>;
 	setModel: (provider: string, model: string) => Promise<void>;
+	hasAnyConfiguredProvider: () => boolean;
 }
 
 const DEFAULT_PROVIDERS: Provider[] = [
@@ -40,7 +42,7 @@ const DEFAULT_PROVIDERS: Provider[] = [
 	{
 		name: "openai",
 		displayName: "OpenAI GPT",
-		models: LLM_MODELS.openai,
+		models: [...LLM_MODELS.openai, "gpt-4o-mini"],
 		activeModel: DEFAULT_MODEL_BY_PROVIDER.openai,
 		isConfigured: false,
 	},
@@ -51,6 +53,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 	providers: DEFAULT_PROVIDERS,
 	isLoading: false,
 	error: null,
+	hasFetched: false,
 
 	fetchSettings: async () => {
 		set({ isLoading: true, error: null });
@@ -101,9 +104,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 				activeProvider: provider,
 				providers: updatedProviders,
 				isLoading: false,
+				hasFetched: true,
 			});
 		} catch (err: any) {
-			set({ error: err.message, isLoading: false });
+			set({ error: err.message, isLoading: false, hasFetched: true });
 		}
 	},
 
@@ -184,5 +188,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 			set({ error: err.message, isLoading: false });
 			return false;
 		}
+	},
+
+	hasAnyConfiguredProvider: () => {
+		const { providers } = get();
+		return providers.some((provider) => provider.isConfigured);
 	},
 }));

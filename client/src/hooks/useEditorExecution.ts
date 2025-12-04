@@ -18,7 +18,8 @@ interface UseEditorExecutionProps {
 	cells: Cell[];
 }
 
-const normalizeResult = (result: ExecutionResultPayload): ExecutionLogEntry => ({
+const normalizeResult = (result: ExecutionResultPayload, code: string): ExecutionLogEntry => ({
+	code,
 	stdout: result.output,
 	stderr: result.error || "",
 	plots: result.plots.map((plot) => ({
@@ -38,7 +39,8 @@ const normalizeResult = (result: ExecutionResultPayload): ExecutionLogEntry => (
 	success: result.success,
 });
 
-const normalizeFailure = (message: string): ExecutionLogEntry => ({
+const normalizeFailure = (message: string, code: string): ExecutionLogEntry => ({
+	code,
 	stdout: "",
 	stderr: message,
 	plots: [],
@@ -72,13 +74,13 @@ export function useEditorExecution({ editorRef, cells }: UseEditorExecutionProps
 
 			try {
 				const { result } = await executeRequest(request);
-				addExecutionResult(normalizeResult(result));
+				addExecutionResult(normalizeResult(result, target.code));
 			} catch (error) {
 				const message =
 					error instanceof ExecutionServiceError
 						? error.message
 						: "Execution failed due to an unexpected error.";
-				addExecutionResult(normalizeFailure(message));
+				addExecutionResult(normalizeFailure(message, target.code));
 			} finally {
 				setExecutingCellIndex(null);
 				setIsRunning(false);

@@ -37,6 +37,11 @@ export function ConsolePanel({ view }: ConsolePanelProps): JSX.Element {
 											<span className="console-duration">({result.duration}ms)</span>
 											{!result.success && <span className="console-error-badge">Error</span>}
 										</div>
+										{result.code && (
+											<pre className="console-code">
+												{result.code.trim() ? result.code : "<empty selection>"}
+											</pre>
+										)}
 										{result.stdout && <pre className="console-stdout">{result.stdout}</pre>}
 										{result.stderr && <pre className="console-stderr">{result.stderr}</pre>}
 										{result.plots.length > 0 && (

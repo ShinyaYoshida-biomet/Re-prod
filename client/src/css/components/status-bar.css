@@ -26,6 +26,47 @@
 	gap: 6px;
 }
 
+.statusbar-ai {
+	border: none;
+	background: transparent;
+	color: var(--text-secondary);
+	cursor: pointer;
+	padding: 2px 8px;
+	border-radius: 8px;
+	transition:
+		background-color 0.15s ease,
+		color 0.15s ease;
+}
+
+.statusbar-ai .statusbar-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	display: inline-block;
+}
+
+.statusbar-ai .statusbar-dot.ok {
+	background: var(--success-color);
+}
+
+.statusbar-ai .statusbar-dot.warn {
+	background: var(--warning-color);
+	box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.1);
+}
+
+.statusbar-ai.configured {
+	color: var(--text-primary);
+}
+
+.statusbar-ai.warning {
+	color: var(--warning-color);
+	font-weight: 600;
+}
+
+.statusbar-ai:hover {
+	background: rgba(0, 0, 0, 0.04);
+}
+
 .statusbar-modified {
 	color: var(--warning-color);
 	font-weight: 600;

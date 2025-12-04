@@ -59,6 +59,7 @@
 }
 
 .console-stdout,
+.console-code,
 .console-stderr {
 	margin: 10px 0;
 	padding: 12px;
@@ -74,6 +75,12 @@
 
 .console-stdout {
 	border-left: 4px solid var(--success-color);
+}
+
+.console-code {
+	border-left: 3px solid var(--accent-blue);
+	background: var(--bg-code);
+	color: var(--text-primary);
 }
 
 .console-stderr {
