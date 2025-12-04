@@ -1,7 +1,10 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::PathBuf;
+use std::{collections::HashMap, env, fs, path::Path, path::PathBuf};
+
+pub const APP_DIR_ENV: &str = "REPROD_APP_DIR";
+const LEGACY_DIR_NAME: &str = ".reprod";
+const APP_DIR_NAME: &str = "Re-prod";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
@@ -12,6 +15,8 @@ pub struct Config {
     pub default_ai_provider: String,
     #[serde(default = "default_active_models")]
     pub active_models: HashMap<String, String>,
+    #[serde(skip)]
+    source_path: Option<PathBuf>,
 }
 
 fn default_ai_provider() -> String {
@@ -43,38 +48,69 @@ impl Config {
 }
 
 impl Config {
-    /// Load config from ~/.reprod/auth.json (Codex pattern)
-    pub fn load() -> Result<Self> {
-        let config_path = Self::config_path()?;
-
-        if !config_path.exists() {
-            return Ok(Self::default());
+    /// Load config with priority: project auth.json → global app config → legacy ~/.reprod → default.
+    pub fn load_with_project(project_root: Option<&Path>) -> Result<Self> {
+        if let Some(root) = project_root {
+            let project_auth = project_auth_path(root);
+            if project_auth.exists() {
+                return Self::load_from_path(project_auth);
+            }
         }
 
-        let content = std::fs::read_to_string(config_path)?;
-        let config = serde_json::from_str(&content)?;
+        let global_path = global_auth_path()?;
+        if global_path.exists() {
+            return Self::load_from_path(global_path);
+        }
+
+        if let Some(legacy) = legacy_auth_path() {
+            if legacy.exists() {
+                let config = Self::load_from_path(legacy.clone())?;
+                // Migrate legacy → global path for future reads.
+                if let Some(parent) = global_path.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+                let content = serde_json::to_string_pretty(&config)?;
+                fs::write(&global_path, content)?;
+                return Ok(Self {
+                    source_path: Some(global_path),
+                    ..config
+                });
+            }
+        }
+
+        Ok(Self {
+            source_path: Some(global_path),
+            ..Self::default()
+        })
+    }
+
+    /// Load config without a project context (global first, then legacy, then default).
+    pub fn load() -> Result<Self> {
+        Self::load_with_project(None)
+    }
+
+    fn load_from_path(path: PathBuf) -> Result<Self> {
+        let content = std::fs::read_to_string(&path)?;
+        let mut config: Self = serde_json::from_str(&content)?;
+        config.source_path = Some(path);
         Ok(config)
     }
 
-    /// Save config to ~/.reprod/auth.json
+    /// Save config to the path it was loaded from, or the global path if unset.
     pub fn save(&self) -> Result<()> {
-        let config_path = Self::config_path()?;
+        let path = self
+            .source_path
+            .clone()
+            .unwrap_or_else(|| global_auth_path().expect("Failed to resolve config path"));
 
         // Ensure parent directory exists
-        if let Some(parent) = config_path.parent() {
+        if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
 
         let content = serde_json::to_string_pretty(self)?;
-        std::fs::write(config_path, content)?;
+        std::fs::write(path, content)?;
         Ok(())
-    }
-
-    /// Get config path: ~/.reprod/auth.json
-    fn config_path() -> Result<PathBuf> {
-        let home =
-            dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Could not find home directory"))?;
-        Ok(home.join(".reprod").join("auth.json"))
     }
 }
 
@@ -86,14 +122,65 @@ impl Default for Config {
             openai_api_key: std::env::var("OPENAI_API_KEY").ok(),
             default_ai_provider: default_ai_provider(),
             active_models: default_active_models(),
+            source_path: Some(global_auth_path().unwrap_or_else(|_| PathBuf::from("auth.json"))),
         }
     }
+}
+
+pub fn app_config_dir() -> Result<PathBuf> {
+    if let Ok(path) = env::var(APP_DIR_ENV) {
+        return Ok(PathBuf::from(path));
+    }
+    dirs::config_dir()
+        .map(|p| p.join(APP_DIR_NAME))
+        .ok_or_else(|| anyhow::anyhow!("Could not find OS config directory"))
+}
+
+pub fn global_auth_path() -> Result<PathBuf> {
+    Ok(app_config_dir()?.join("auth.json"))
+}
+
+fn legacy_auth_path() -> Option<PathBuf> {
+    dirs::home_dir().map(|home| home.join(LEGACY_DIR_NAME).join("auth.json"))
+}
+
+fn project_auth_path(root: &Path) -> PathBuf {
+    root.join(".reprod").join("auth.json")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::env;
+    use std::{env, fs, sync::Mutex};
+    use tempfile::tempdir;
+
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    fn with_env_lock<T>(f: impl FnOnce() -> T) -> T {
+        let _guard = ENV_LOCK.lock().unwrap();
+        f()
+    }
+
+    fn write_config(path: &Path, cfg: &Config) {
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).unwrap();
+        }
+        let json = serde_json::to_string_pretty(cfg).unwrap();
+        fs::write(path, json).unwrap();
+    }
+
+    fn set_env_var(key: &str, value: &str) -> Option<String> {
+        let prev = env::var(key).ok();
+        env::set_var(key, value);
+        prev
+    }
+
+    fn restore_env_var(key: &str, prev: Option<String>) {
+        match prev {
+            Some(val) => env::set_var(key, val),
+            None => env::remove_var(key),
+        }
+    }
 
     #[test]
     fn test_default_config() {
@@ -122,6 +209,7 @@ mod tests {
                 ),
                 ("openai".to_string(), "gpt-4o".to_string()),
             ]),
+            source_path: None,
         };
 
         let json = serde_json::to_string(&config).unwrap();
@@ -195,6 +283,7 @@ mod tests {
                 "anthropic".to_string(),
                 "claude-3-5-sonnet-20240620".to_string(),
             )]),
+            source_path: None,
         };
 
         let json = serde_json::to_string(&original).unwrap();
@@ -225,6 +314,7 @@ mod tests {
             openai_api_key: None,
             default_ai_provider: "anthropic".to_string(),
             active_models: default_active_models(),
+            source_path: None,
         };
 
         // Manually save to temp location
@@ -251,6 +341,7 @@ mod tests {
             openai_api_key: Some("openai-key".to_string()),
             default_ai_provider: "openai".to_string(),
             active_models: default_active_models(),
+            source_path: None,
         };
 
         assert!(config.anthropic_api_key.is_some());
@@ -266,6 +357,7 @@ mod tests {
             openai_api_key: None,
             default_ai_provider: "openai".to_string(),
             active_models: default_active_models(),
+            source_path: None,
         };
 
         assert_eq!(config.r_path, "/opt/R/4.3.0/bin/Rscript");
@@ -285,5 +377,94 @@ mod tests {
         assert_eq!(config.r_path, cloned.r_path);
         assert_eq!(config.default_ai_provider, cloned.default_ai_provider);
         assert_eq!(config.model_for("openai"), cloned.model_for("openai"));
+    }
+
+    #[test]
+    fn test_project_auth_precedence_and_save_path() {
+        with_env_lock(|| {
+            let temp = tempdir().unwrap();
+            let app_dir = temp.path().join("appdata");
+            let project_dir = temp.path().join("project");
+            let project_auth = project_dir.join(".reprod").join("auth.json");
+            let global_auth = app_dir.join("auth.json");
+
+            let prev_app = set_env_var(APP_DIR_ENV, app_dir.to_string_lossy().as_ref());
+
+            let project_cfg = Config {
+                r_path: "project-R".to_string(),
+                anthropic_api_key: Some("proj-key".to_string()),
+                openai_api_key: None,
+                default_ai_provider: default_ai_provider(),
+                active_models: default_active_models(),
+                source_path: None,
+            };
+            write_config(&project_auth, &project_cfg);
+
+            let global_cfg = Config {
+                r_path: "global-R".to_string(),
+                anthropic_api_key: Some("global-key".to_string()),
+                openai_api_key: None,
+                default_ai_provider: default_ai_provider(),
+                active_models: default_active_models(),
+                source_path: None,
+            };
+            write_config(&global_auth, &global_cfg);
+
+            let mut loaded = Config::load_with_project(Some(project_dir.as_path())).unwrap();
+            assert_eq!(loaded.r_path, "project-R");
+            assert_eq!(loaded.anthropic_api_key.as_deref(), Some("proj-key"));
+
+            loaded.openai_api_key = Some("new-key".to_string());
+            loaded.save().unwrap();
+
+            let saved_project: Config =
+                serde_json::from_str(&fs::read_to_string(&project_auth).unwrap()).unwrap();
+            assert_eq!(saved_project.openai_api_key.as_deref(), Some("new-key"));
+
+            let saved_global: Config =
+                serde_json::from_str(&fs::read_to_string(&global_auth).unwrap()).unwrap();
+            assert_eq!(
+                saved_global.anthropic_api_key.as_deref(),
+                Some("global-key")
+            );
+
+            restore_env_var(APP_DIR_ENV, prev_app);
+        });
+    }
+
+    #[test]
+    fn test_legacy_migrates_to_app_dir() {
+        with_env_lock(|| {
+            let temp = tempdir().unwrap();
+            let app_dir = temp.path().join("appdata");
+            let home_dir = temp.path().join("home");
+            let legacy = home_dir.join(".reprod").join("auth.json");
+            let global = app_dir.join("auth.json");
+
+            let prev_app = set_env_var(APP_DIR_ENV, app_dir.to_string_lossy().as_ref());
+            let prev_home = set_env_var("HOME", home_dir.to_string_lossy().as_ref());
+
+            let legacy_cfg = Config {
+                r_path: "legacy-R".to_string(),
+                anthropic_api_key: Some("legacy-key".to_string()),
+                openai_api_key: None,
+                default_ai_provider: default_ai_provider(),
+                active_models: default_active_models(),
+                source_path: None,
+            };
+            write_config(&legacy, &legacy_cfg);
+
+            let loaded = Config::load_with_project(None).unwrap();
+            assert_eq!(loaded.r_path, "legacy-R");
+            assert_eq!(loaded.anthropic_api_key.as_deref(), Some("legacy-key"));
+            assert!(global.exists());
+
+            let migrated: Config =
+                serde_json::from_str(&fs::read_to_string(&global).unwrap()).unwrap();
+            assert_eq!(migrated.anthropic_api_key.as_deref(), Some("legacy-key"));
+
+            restore_env_var(APP_DIR_ENV, prev_app);
+            restore_env_var("HOME", prev_home);
+        });
     }
 }

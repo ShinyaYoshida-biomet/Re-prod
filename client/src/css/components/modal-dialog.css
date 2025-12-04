@@ -226,41 +226,49 @@
 .project-manager {
 	display: flex;
 	flex-direction: column;
-	gap: 24px;
+	gap: 16px;
 }
 
 .project-manager-section {
-	border: 1px solid rgba(255, 255, 255, 0.08);
-	border-radius: 12px;
+	border: 1px solid var(--border-color);
+	border-radius: var(--panel-radius, 4px);
 	padding: 16px;
-	background: rgba(0, 0, 0, 0.2);
+	background: var(--bg-secondary);
 }
 
 .project-manager-section h3 {
-	margin: 0 0 8px;
+	margin: 0 0 12px;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--text-primary);
 }
 
 .project-card {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: 12px 0;
+	padding: 12px;
 	gap: 16px;
-	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	background: var(--bg-primary);
+	border: 1px solid var(--border-color);
+	border-radius: var(--panel-radius, 4px);
 }
 
 .project-card:last-child {
-	border-bottom: none;
-	padding-bottom: 0;
+	border-bottom: 1px solid var(--border-color);
+	padding-bottom: 12px;
 }
 
 .project-card strong {
 	display: block;
+	font-size: 13px;
+	color: var(--text-primary);
 }
 
 .project-card .muted {
-	color: rgba(255, 255, 255, 0.65);
+	color: var(--text-secondary);
 	margin: 4px 0 0;
+	font-size: 11px;
 }
 
 .project-list {
@@ -272,8 +280,8 @@
 .form-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-	gap: 12px;
-	margin-bottom: 12px;
+	gap: 16px;
+	margin-bottom: 16px;
 }
 
 .form-grid label,
@@ -281,19 +289,24 @@
 	display: flex;
 	flex-direction: column;
 	gap: 6px;
-	font-size: 0.9rem;
+	font-size: 12px;
+	color: var(--text-secondary);
+	font-weight: 500;
 }
 
 .project-manager input {
-	padding: 8px 10px;
-	border-radius: 8px;
-	border: 1px solid rgba(255, 255, 255, 0.2);
-	background: rgba(0, 0, 0, 0.3);
-	color: inherit;
+	padding: 6px 10px;
+	border-radius: var(--panel-radius, 4px);
+	border: 1px solid var(--border-color);
+	background: var(--bg-primary);
+	color: var(--text-primary);
+	font-size: 12px;
+	height: 32px;
 }
 
 .project-manager input:focus {
-	outline: 2px solid var(--accent);
+	outline: 2px solid var(--accent-blue-light);
+	border-color: var(--accent-blue);
 }
 
 .project-manager .section-header {
@@ -304,20 +317,27 @@
 }
 
 .alert {
-	padding: 12px 16px;
-	border-radius: 10px;
-	margin-bottom: 8px;
+	padding: 10px 14px;
+	border-radius: var(--panel-radius, 4px);
+	margin-bottom: 12px;
+	font-size: 12px;
 }
 
 .alert-error {
-	border: 1px solid rgba(255, 99, 132, 0.4);
-	background: rgba(255, 99, 132, 0.1);
-	color: #ff6384;
+	border: 1px solid var(--error-color);
+	background: rgba(239, 68, 68, 0.1);
+	color: var(--error-color);
 }
 
 .project-manager .btn-link {
 	padding: 0;
-	font-size: 0.9rem;
+	font-size: 12px;
+	color: var(--accent-blue);
+	text-decoration: none;
+}
+
+.project-manager .btn-link:hover {
+	text-decoration: underline;
 }
 
 .session-info-grid {
@@ -816,64 +836,4 @@
 	accent-color: #3b82f6;
 }
 
-/* Project Manager Modal */
-[data-theme="phylo"] .project-manager-section {
-	background: #f5f5f5;
-	border: 1px solid #e0e0e0;
-	border-radius: 3px;
-	padding: 12px;
-}
-
-[data-theme="phylo"] .project-manager-section h3 {
-	color: #333333;
-	font-size: 12px;
-	font-weight: 700;
-}
-
-[data-theme="phylo"] .project-card {
-	border-bottom: 1px solid #e0e0e0;
-	padding: 8px 0;
-}
-
-[data-theme="phylo"] .project-card strong {
-	font-size: 12px;
-	color: #333333;
-}
-
-[data-theme="phylo"] .project-card .muted {
-	color: #666666;
-	font-size: 11px;
-}
-
-[data-theme="phylo"] .project-manager input {
-	background: var(--bg-primary);
-	border: 1px solid #cccccc;
-	border-radius: 3px;
-	color: #333333;
-	padding: 6px 8px;
-	font-size: 12px;
-}
-
-[data-theme="phylo"] .project-manager input:focus {
-	outline: 1px solid #3b82f6;
-	outline-offset: -1px;
-}
-
-[data-theme="phylo"] .alert-error {
-	background: #fee2e2;
-	border: 1px solid #ef4444;
-	color: #991b1b;
-	border-radius: 3px;
-	font-size: 12px;
-	padding: 8px 12px;
-}
-
-[data-theme="phylo"] .project-manager .btn-link {
-	color: #3b82f6;
-	font-size: 11px;
-	text-decoration: none;
-}
-
-[data-theme="phylo"] .project-manager .btn-link:hover {
-	text-decoration: underline;
-}
+/* Project Manager Modal overrides removed as they now use variables */

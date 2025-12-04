@@ -31,11 +31,7 @@ pub struct ProjectRuntime {
 }
 
 impl ProjectRuntime {
-    fn new(
-        mut descriptor: ProjectDescriptor,
-        config: &Config,
-        base_temp_dir: &Path,
-    ) -> Result<Self> {
+    fn new(mut descriptor: ProjectDescriptor, config: Config, base_temp_dir: &Path) -> Result<Self> {
         ProjectDescriptor::ensure_layout(&descriptor.root_path)?;
         descriptor.config.touch_opened();
         descriptor.update_config()?;
@@ -130,6 +126,12 @@ impl ProjectController {
                 let runtime = runtime.clone();
                 drop(runtimes);
 
+                let config = Config::load_with_project(Some(&runtime.descriptor.root_path))?;
+                {
+                    let mut global_cfg = self.config.lock().await;
+                    *global_cfg = config;
+                }
+
                 let mut descriptor = runtime.descriptor.clone();
                 descriptor.config.touch_opened();
                 descriptor.update_config()?;
@@ -140,20 +142,27 @@ impl ProjectController {
         }
 
         let descriptor = self.load_descriptor(project_id).await?;
-        let config = self.config.lock().await.clone();
+        let config = Config::load_with_project(Some(&descriptor.root_path))?;
         let mut runtimes = self.runtimes.lock().await;
         if let Some(existing) = runtimes.get(project_id) {
+            {
+                let mut global_cfg = self.config.lock().await;
+                *global_cfg = config;
+            }
             return Ok(existing.clone());
         }
 
-        let runtime = Arc::new(ProjectRuntime::new(
-            descriptor,
-            &config,
-            &self.base_temp_dir,
-        )?);
+        let runtime =
+            Arc::new(ProjectRuntime::new(descriptor, config.clone(), &self.base_temp_dir)?);
         self.refresh_registry(&runtime.descriptor).await?;
         runtimes.insert(project_id.to_string(), runtime.clone());
         drop(runtimes);
+
+        {
+            let mut global_cfg = self.config.lock().await;
+            *global_cfg = config;
+        }
+
         Ok(runtime)
     }
 
