@@ -45,3 +45,10 @@ export const getApiKeyUrl = (provider: string) => `${API_BASE_URL}/config/key/${
  * @returns Full API endpoint URL
  */
 export const getTestConnectionUrl = (provider: string) => `${API_BASE_URL}/config/test/${provider}`;
+
+/**
+ * Get API endpoint for provider model selection
+ * @param provider - The provider name (e.g., 'openai', 'anthropic')
+ * @returns Full API endpoint URL
+ */
+export const getModelUrl = (provider: string) => `${API_BASE_URL}/config/model/${provider}`;

@@ -6,10 +6,14 @@ use std::sync::Arc;
 
 /// Create an AI provider from a given name and configuration.
 pub fn from_name_and_config(name: &str, cfg: &Config) -> Arc<dyn AIProvider> {
+    let model = cfg.model_for(name);
+
     match name {
-        "openai" => Arc::new(OpenAIProvider::new(cfg.openai_api_key.clone())),
-        "anthropic" => Arc::new(AnthropicProvider::new(cfg.anthropic_api_key.clone())),
-        _ => Arc::new(AnthropicProvider::new(cfg.anthropic_api_key.clone())), // Fallback
+        "openai" => Arc::new(OpenAIProvider::new(cfg.openai_api_key.clone()).with_model(model)),
+        "anthropic" => {
+            Arc::new(AnthropicProvider::new(cfg.anthropic_api_key.clone()).with_model(model))
+        }
+        _ => Arc::new(AnthropicProvider::new(cfg.anthropic_api_key.clone()).with_model(model)), // Fallback
     }
 }
 

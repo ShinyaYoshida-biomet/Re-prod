@@ -206,7 +206,7 @@ impl AIProvider for OpenAIProvider {
             .header("Authorization", format!("Bearer {}", api_key))
             .header("Content-Type", "application/json")
             .json(&json!({
-                "model": "gpt-3.5-turbo", // Use a cheaper model for testing
+                "model": self.model,
                 "messages": test_messages,
                 "max_tokens": 1, // Request minimal tokens
             }))

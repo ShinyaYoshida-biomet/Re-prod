@@ -56,6 +56,15 @@ input[type="password"] {
 	color: var(--text-primary);
 }
 
+.model-select {
+	flex: 1;
+	padding: 4px 8px;
+	border: 1px solid var(--border-color);
+	border-radius: 4px;
+	background: var(--bg-primary);
+	color: var(--text-primary);
+}
+
 .masked-key {
 	font-family: monospace;
 	color: var(--text-secondary);
