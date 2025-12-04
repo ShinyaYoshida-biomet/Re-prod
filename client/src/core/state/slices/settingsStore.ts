@@ -5,6 +5,7 @@ import {
 	getModelUrl,
 	getTestConnectionUrl,
 } from "@/constants/urls";
+import { DEFAULT_MODEL_BY_PROVIDER, LLM_MODELS } from "@/constants/llmModels";
 
 interface Provider {
 	name: string;
@@ -32,15 +33,15 @@ const DEFAULT_PROVIDERS: Provider[] = [
 	{
 		name: "anthropic",
 		displayName: "Anthropic Claude",
-		models: ["claude-3-5-sonnet-20240620", "claude-3-opus-20240229", "claude-4.5-sonnet"],
-		activeModel: "claude-3-5-sonnet-20240620",
+		models: LLM_MODELS.anthropic,
+		activeModel: DEFAULT_MODEL_BY_PROVIDER.anthropic,
 		isConfigured: false,
 	},
 	{
 		name: "openai",
 		displayName: "OpenAI GPT",
-		models: ["gpt-5.1", "gpt-5", "gpt-4o", "o1-preview"],
-		activeModel: "gpt-4o",
+		models: LLM_MODELS.openai,
+		activeModel: DEFAULT_MODEL_BY_PROVIDER.openai,
 		isConfigured: false,
 	},
 ];
