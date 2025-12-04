@@ -1,5 +1,6 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -9,10 +10,36 @@ pub struct Config {
     pub openai_api_key: Option<String>,
     #[serde(default = "default_ai_provider")]
     pub default_ai_provider: String,
+    #[serde(default = "default_active_models")]
+    pub active_models: HashMap<String, String>,
 }
 
 fn default_ai_provider() -> String {
     "openai".to_string()
+}
+
+fn default_active_models() -> HashMap<String, String> {
+    HashMap::from([
+        ("openai".to_string(), "gpt-4o".to_string()),
+        (
+            "anthropic".to_string(),
+            "claude-3-5-sonnet-20240620".to_string(),
+        ),
+    ])
+}
+
+impl Config {
+    pub fn model_for(&self, provider: &str) -> String {
+        self.active_models
+            .get(provider)
+            .cloned()
+            .unwrap_or_else(|| {
+                default_active_models()
+                    .get(provider)
+                    .cloned()
+                    .unwrap_or_else(|| "gpt-4o".to_string())
+            })
+    }
 }
 
 impl Config {
@@ -58,6 +85,7 @@ impl Default for Config {
             anthropic_api_key: std::env::var("ANTHROPIC_API_KEY").ok(),
             openai_api_key: std::env::var("OPENAI_API_KEY").ok(),
             default_ai_provider: default_ai_provider(),
+            active_models: default_active_models(),
         }
     }
 }
@@ -72,6 +100,7 @@ mod tests {
         let config = Config::default();
         assert_eq!(config.r_path, "Rscript");
         assert_eq!(config.default_ai_provider, "openai");
+        assert_eq!(config.model_for("openai"), "gpt-4o".to_string());
     }
 
     #[test]
@@ -86,6 +115,13 @@ mod tests {
             anthropic_api_key: Some("test-anthropic-key".to_string()),
             openai_api_key: Some("test-openai-key".to_string()),
             default_ai_provider: "anthropic".to_string(),
+            active_models: HashMap::from([
+                (
+                    "anthropic".to_string(),
+                    "claude-3-5-sonnet-20240620".to_string(),
+                ),
+                ("openai".to_string(), "gpt-4o".to_string()),
+            ]),
         };
 
         let json = serde_json::to_string(&config).unwrap();
@@ -113,6 +149,7 @@ mod tests {
         assert_eq!(config.anthropic_api_key, Some("key123".to_string()));
         assert_eq!(config.openai_api_key, Some("key456".to_string()));
         assert_eq!(config.default_ai_provider, "anthropic");
+        assert_eq!(config.model_for("openai"), "gpt-4o".to_string());
     }
 
     #[test]
@@ -126,6 +163,10 @@ mod tests {
         assert_eq!(config.anthropic_api_key, None);
         assert_eq!(config.openai_api_key, None);
         assert_eq!(config.default_ai_provider, "openai"); // default value
+        assert_eq!(
+            config.model_for("anthropic"),
+            "claude-3-5-sonnet-20240620".to_string()
+        );
     }
 
     #[test]
@@ -140,6 +181,7 @@ mod tests {
         let config: Config = serde_json::from_str(json).unwrap();
         assert_eq!(config.anthropic_api_key, None);
         assert_eq!(config.openai_api_key, None);
+        assert_eq!(config.model_for("openai"), "gpt-4o".to_string());
     }
 
     #[test]
@@ -149,6 +191,10 @@ mod tests {
             anthropic_api_key: Some("anthropic123".to_string()),
             openai_api_key: None,
             default_ai_provider: "anthropic".to_string(),
+            active_models: HashMap::from([(
+                "anthropic".to_string(),
+                "claude-3-5-sonnet-20240620".to_string(),
+            )]),
         };
 
         let json = serde_json::to_string(&original).unwrap();
@@ -160,6 +206,10 @@ mod tests {
         assert_eq!(
             deserialized.default_ai_provider,
             original.default_ai_provider
+        );
+        assert_eq!(
+            deserialized.model_for("anthropic"),
+            "claude-3-5-sonnet-20240620".to_string()
         );
     }
 
@@ -174,6 +224,7 @@ mod tests {
             anthropic_api_key: Some("test-key".to_string()),
             openai_api_key: None,
             default_ai_provider: "anthropic".to_string(),
+            active_models: default_active_models(),
         };
 
         // Manually save to temp location
@@ -199,6 +250,7 @@ mod tests {
             anthropic_api_key: Some("anthropic-key".to_string()),
             openai_api_key: Some("openai-key".to_string()),
             default_ai_provider: "openai".to_string(),
+            active_models: default_active_models(),
         };
 
         assert!(config.anthropic_api_key.is_some());
@@ -213,6 +265,7 @@ mod tests {
             anthropic_api_key: None,
             openai_api_key: None,
             default_ai_provider: "openai".to_string(),
+            active_models: default_active_models(),
         };
 
         assert_eq!(config.r_path, "/opt/R/4.3.0/bin/Rscript");
@@ -231,5 +284,6 @@ mod tests {
 
         assert_eq!(config.r_path, cloned.r_path);
         assert_eq!(config.default_ai_provider, cloned.default_ai_provider);
+        assert_eq!(config.model_for("openai"), cloned.model_for("openai"));
     }
 }

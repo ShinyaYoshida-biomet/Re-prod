@@ -7,16 +7,20 @@ interface Props {
 	providerName: string;
 	displayName: string;
 	models: string[];
+	activeModel: string;
 	isConfigured: boolean;
 	apiKeyMasked?: string;
+	onModelChange: (model: string) => void;
 }
 
 export const LLMProviderConfig: React.FC<Props> = ({
 	providerName,
 	displayName,
 	models,
+	activeModel,
 	isConfigured,
 	apiKeyMasked,
+	onModelChange,
 }) => {
 	const { setApiKey, testConnection } = useSettingsStore();
 	const [apiKey, setLocalApiKey] = useState("");
@@ -71,10 +75,25 @@ export const LLMProviderConfig: React.FC<Props> = ({
 				)}
 			</div>
 
-			<div className="actions-row">
-				<div className="models-info">
-					<small>Models: {models.join(", ")}</small>
+			<div className="config-row">
+				<label>Model:</label>
+				<div className="input-group">
+					<select
+						value={activeModel}
+						disabled={!isConfigured || testStatus === "testing"}
+						onChange={(e) => onModelChange(e.target.value)}
+						className="model-select"
+					>
+						{models.map((model) => (
+							<option key={model} value={model}>
+								{model}
+							</option>
+						))}
+					</select>
 				</div>
+			</div>
+
+			<div className="actions-row">
 				<button
 					className={`test-button ${testStatus}`}
 					onClick={handleTest}

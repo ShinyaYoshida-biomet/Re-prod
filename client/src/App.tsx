@@ -16,6 +16,7 @@ import {
 } from "@/components/modals";
 import { TimelineDialog, type TimelineDialogRef } from "@/components/timeline";
 import { useStore } from "@/core";
+import { useSettingsStore } from "@/core/state/slices/settingsStore";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useProjectSession } from "@/hooks/useProjectSession";
 import { usePlotHistoryEvents } from "@/hooks/usePlotHistoryEvents";
@@ -35,6 +36,13 @@ function App(): JSX.Element {
 	const [sessionInfoOpen, setSessionInfoOpen] = useState(false);
 	const [settingsOpen, setSettingsOpen] = useState(false);
 	const [projectManagerOpen, setProjectManagerOpen] = useState(false);
+	const { fetchSettings, providers, activeProvider } = useSettingsStore();
+
+	const activeProviderConfig = providers.find((provider) => provider.name === activeProvider);
+	const isActiveProviderConfigured = Boolean(activeProviderConfig?.isConfigured);
+	const activeProviderLabel = activeProviderConfig?.displayName || activeProvider || "AI provider";
+
+	const openSettings = () => setSettingsOpen(true);
 
 	// Enable global keyboard shortcuts
 	useKeyboardShortcuts();
@@ -53,12 +61,20 @@ function App(): JSX.Element {
 	}, [setTimelinePanelRef]);
 
 	useEffect(() => {
+		void fetchSettings();
+	}, [fetchSettings]);
+
+	const handleRequireApiKeys = () => {
+		openSettings();
+	};
+
+	useEffect(() => {
 		const globalScope = window as typeof window & Record<string, () => void>;
 		globalScope.openExportDialog = () => setExportDialogOpen(true);
 		globalScope.openShortcutsDialog = () => setShortcutsOpen(true);
 		globalScope.openAboutDialog = () => setAboutOpen(true);
 		globalScope.openSessionInfoDialog = () => setSessionInfoOpen(true);
-		globalScope.openSettingsDialog = () => setSettingsOpen(true);
+		globalScope.openSettingsDialog = () => openSettings();
 		globalScope.openProjectsDialog = () => setProjectManagerOpen(true);
 
 		return () => {
@@ -98,13 +114,19 @@ function App(): JSX.Element {
 					{panes.assistant && (
 						<Allotment.Pane minSize={260} preferredSize="25%">
 							<div className="ai-pane-wrapper">
-								<AIPanel ref={setAIPanelRef} />
+								<AIPanel
+									ref={setAIPanelRef}
+									onOpenSettings={openSettings}
+									onRequireApiKeys={handleRequireApiKeys}
+									hasConfiguredProvider={isActiveProviderConfigured}
+									activeProviderLabel={activeProviderLabel}
+								/>
 							</div>
 						</Allotment.Pane>
 					)}
 				</Allotment>
 			</div>
-			<StatusBar />
+			<StatusBar onOpenSettings={openSettings} />
 			<ExportDialog open={exportDialogOpen} onClose={() => setExportDialogOpen(false)} />
 			<TimelineDialog ref={timelineDialogRef} />
 			<KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />

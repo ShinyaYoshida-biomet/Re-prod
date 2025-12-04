@@ -5,7 +5,7 @@ import { LLMProviderConfig } from "./LLMProviderConfig";
 import "./SettingsPanel.css";
 
 export const SettingsPanel: React.FC = () => {
-	const { providers, activeProvider, setActiveProvider, fetchSettings, isLoading } =
+	const { providers, activeProvider, setActiveProvider, fetchSettings, isLoading, setModel } =
 		useSettingsStore();
 
 	useEffect(() => {
@@ -41,8 +41,10 @@ export const SettingsPanel: React.FC = () => {
 						providerName={provider.name}
 						displayName={provider.displayName}
 						models={provider.models}
+						activeModel={provider.activeModel}
 						isConfigured={provider.isConfigured}
 						apiKeyMasked={provider.apiKeyMasked}
+						onModelChange={(model) => setModel(provider.name, model)}
 					/>
 				))}
 			</div>

@@ -7,6 +7,7 @@ use serde_json::{json, Value};
 pub struct AnthropicProvider {
     api_key: Option<String>,
     base_url: String,
+    model: String,
     client: Client,
 }
 
@@ -15,6 +16,7 @@ impl AnthropicProvider {
         Self {
             api_key,
             base_url: "https://api.anthropic.com/v1/messages".to_string(),
+            model: "claude-3-5-sonnet-20240620".to_string(),
             client: Client::new(),
         }
     }
@@ -22,6 +24,11 @@ impl AnthropicProvider {
     pub fn from_env() -> Self {
         let api_key = std::env::var("ANTHROPIC_API_KEY").ok();
         Self::new(api_key)
+    }
+
+    pub fn with_model(mut self, model: String) -> Self {
+        self.model = model;
+        self
     }
 }
 
@@ -40,7 +47,7 @@ impl AIProvider for AnthropicProvider {
             .header("anthropic-version", "2023-06-01")
             .header("content-type", "application/json")
             .json(&json!({
-                "model": "claude-sonnet-4-5-20250929",
+                "model": self.model,
                 "messages": messages,
                 "max_tokens": 4096,
             }))
@@ -79,7 +86,7 @@ impl AIProvider for AnthropicProvider {
             .ok_or_else(|| ReprodError::AIError("Anthropic API key not configured".to_string()))?;
 
         let mut request_body = json!({
-            "model": "claude-sonnet-4-5-20250929",
+            "model": self.model,
             "messages": messages,
             "max_tokens": 4096,
         });
@@ -176,7 +183,7 @@ impl AIProvider for AnthropicProvider {
             .header("anthropic-version", "2023-06-01")
             .header("content-type", "application/json")
             .json(&json!({
-                "model": "claude-3-haiku-20240307", // Use a cheaper model for testing
+                "model": self.model,
                 "messages": test_messages,
                 "max_tokens": 1, // Request minimal tokens
             }))

@@ -92,6 +92,43 @@ pub async fn set_api_key(
     config.save().map(|_| StatusCode::OK).map_err(err_500)
 }
 
+pub async fn get_model(
+    Path(provider): Path<String>,
+    State(state): State<AppState>,
+) -> Resp<GetModelResponse> {
+    if provider != ai::PROVIDER_ANTHROPIC && provider != ai::PROVIDER_OPENAI {
+        return Err(err_400(format!(
+            "Invalid provider: {}. Must be 'openai' or 'anthropic'",
+            provider
+        )));
+    }
+
+    let config = state.config.lock().await;
+    let model = config.model_for(&provider);
+    Ok(Json(GetModelResponse { model }))
+}
+
+pub async fn set_model(
+    Path(provider): Path<String>,
+    State(state): State<AppState>,
+    Json(payload): Json<SetModelRequest>,
+) -> Result<StatusCode, HttpError> {
+    if payload.model.trim().is_empty() {
+        return Err(err_400("Model must not be empty".to_string()));
+    }
+
+    if provider != ai::PROVIDER_ANTHROPIC && provider != ai::PROVIDER_OPENAI {
+        return Err(err_400(format!(
+            "Invalid provider: {}. Must be 'openai' or 'anthropic'",
+            provider
+        )));
+    }
+
+    let mut config = state.config.lock().await;
+    config.active_models.insert(provider, payload.model);
+    config.save().map(|_| StatusCode::OK).map_err(err_500)
+}
+
 pub async fn test_provider(
     Path(provider_name): Path<String>,
     State(state): State<AppState>,
@@ -187,6 +224,16 @@ pub struct SetProviderRequest {
 #[derive(serde::Serialize)]
 pub struct GetProviderResponse {
     pub provider: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct GetModelResponse {
+    pub model: String,
+}
+
+#[derive(serde::Deserialize)]
+pub struct SetModelRequest {
+    pub model: String,
 }
 
 #[derive(serde::Serialize)]

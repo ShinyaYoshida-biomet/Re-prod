@@ -51,12 +51,6 @@ jobs:
           - os: macos-latest
             target: x86_64-apple-darwin
             name: macOS (Intel)
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            name: Linux (x86_64)
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            name: Windows (x86_64)
 
     runs-on: ${{ matrix.platform.os }}
     steps:
@@ -102,6 +96,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          projectPath: desktop
           tagName: ${{ needs.create-release.outputs.version }}
           releaseName: 'Re-prod ${{ needs.create-release.outputs.version }}'
           releaseBody: |
@@ -117,5 +112,5 @@ jobs:
         with:
           name: reprod-${{ matrix.platform.target }}
           path: |
-            desktop/target/${{ matrix.platform.target }}/release/bundle/**/*
+            target/${{ matrix.platform.target }}/release/bundle/**/*
           retention-days: 7
