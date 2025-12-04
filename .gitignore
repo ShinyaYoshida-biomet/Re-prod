@@ -45,6 +45,7 @@ logs/
 /target/
 **/target/
 Cargo.lock
+desktop/binaries/
 
 # Cargo local config (environment-specific)
 .cargo/
