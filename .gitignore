@@ -94,3 +94,5 @@ wt-*/
 
 # Codex
 .codex/
+
+AGENTS.*.md

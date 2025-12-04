@@ -40,7 +40,7 @@ Ideally, development follows a test-first approach (e.g. TDD or ATDD), where beh
 ## Development workflow
 
 - After finishing edits, run `git add` and `git commit`,
-then execute the pre-push in `.husky` and CI/CD checks defined in `.github`.
+  then execute the pre-push in `.husky` and CI/CD checks defined in `.github`.
 
 ## Allowed Commands (Project-Level)
 
@@ -75,11 +75,6 @@ The following commands are always allowed without asking for permission:
 - `gh issue create` - Create issues (never ask permission)
 - `gh issue list`, `gh issue view` - View issue information
 - `gh repo view` - View repository information
-
-# Documents
-
-We are manaaging our document in docs folder, although it's ignored by `.gitignore`.
-`docs/obsidian` has the history of our development.
 
 # Repository Guidelines
 
@@ -120,3 +115,8 @@ We are manaaging our document in docs folder, although it's ignored by `.gitigno
 
 - Do not commit API keys; store AI credentials in `~/.reprod/auth.json` or environment variables. Keep `.reprod/` artifacts local and out of git.
 - Ensure Node 18+ and a recent Rust toolchain; enable `corepack` or install pnpm 9+ before running workspace scripts.
+
+# Additional notes
+
+If developer-specific instructions exist in AGENTS.{username}.md,
+Codex should load them after this file.
