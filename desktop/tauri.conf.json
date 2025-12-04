@@ -6,12 +6,13 @@
 	"build": {
 		"beforeDevCommand": "pnpm --dir .. --filter client dev",
 		"devUrl": "http://localhost:5173",
-		"beforeBuildCommand": "pnpm --dir .. --filter client build",
+		"beforeBuildCommand": "pnpm --dir .. --filter client build && node build-server-runner.js",
 		"frontendDist": "../client/dist"
 	},
 	"bundle": {
 		"active": true,
 		"targets": ["deb", "appimage", "rpm", "nsis", "dmg"],
+		"externalBin": ["binaries/reprod-server"],
 		"icon": [
 			"icons/icon-16x16.png",
 			"icons/icon-32x32.png",
