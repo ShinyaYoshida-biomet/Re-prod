@@ -3,13 +3,13 @@ import type { ProjectRecord } from "shared";
 
 import { useStore } from "@/core";
 import { DEFAULT_R_SCRIPT } from "@/core/state/slices/editorSlice";
+import { requestPlotHistory } from "@/services/plotHistoryService";
 import { projectService } from "@/services/projectService";
 import {
 	applySessionSnapshot,
 	getSessionSnapshot,
 	refreshTimelineData,
 } from "@/services/sessionPersistence";
-import { requestPlotHistory } from "@/services/plotHistoryService";
 import { socketService } from "@/services/socket";
 
 function resetWorkspace(options: { useSample?: boolean } = {}): void {

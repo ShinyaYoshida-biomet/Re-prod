@@ -1,8 +1,8 @@
 import { IconBarChart, IconCheckCircle, IconXCircle } from "@/components/shared";
 import { useConsolePanelState } from "@/hooks/useConsolePanelState";
 import { clearPlotHistory } from "@/services/plotHistoryService";
-import { formatClockTime } from "@/utils/time";
 import type { ConsoleTabId } from "@/types/panels";
+import { formatClockTime } from "@/utils/time";
 
 interface ConsolePanelProps {
 	view: ConsoleTabId;

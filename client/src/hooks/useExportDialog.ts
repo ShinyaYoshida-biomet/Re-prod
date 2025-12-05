@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useReducer } from "react";
-import { exportRMarkdown, ExportServiceError } from "@/services/exportService";
-import { adjustOutputPathForFormat, exportDialogInitialState } from "@/types/exportDialog";
+import type { CodeFolding, ExportRMarkdownRequestPayload } from "shared";
+import { ExportServiceError, exportRMarkdown } from "@/services/exportService";
 import type {
 	ExportDialogAction,
 	ExportDialogOptions,
@@ -10,7 +10,7 @@ import type {
 	ExportPdfOptionKey,
 	ExportPdfOptions,
 } from "@/types/exportDialog";
-import type { CodeFolding, ExportRMarkdownRequestPayload } from "shared";
+import { adjustOutputPathForFormat, exportDialogInitialState } from "@/types/exportDialog";
 
 function reducer(state: ExportDialogState, action: ExportDialogAction): ExportDialogState {
 	switch (action.type) {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
+import type { ServerMessage } from "shared";
 import { useStore } from "@/core";
 import { socketService } from "@/services/socket";
-import type { ServerMessage } from "shared";
 
 export function useStartup(): {
 	showWelcome: boolean;

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
-import { ExportDialog } from "../ExportDialog";
 import { socketService } from "@/services/socket";
+import { ExportDialog } from "../ExportDialog";
 
 describe("ExportDialog", () => {
 	afterEach(() => {

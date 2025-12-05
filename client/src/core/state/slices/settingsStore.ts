@@ -1,11 +1,11 @@
 import { create } from "zustand";
+import { DEFAULT_MODEL_BY_PROVIDER, LLM_MODELS } from "@/constants/llmModels";
 import {
+	getApiConfigProviderUrl,
 	getApiKeyUrl,
 	getModelUrl,
-	getApiConfigProviderUrl,
 	getTestConnectionUrl,
 } from "@/constants/urls";
-import { DEFAULT_MODEL_BY_PROVIDER, LLM_MODELS } from "@/constants/llmModels";
 
 interface Provider {
 	name: string;

@@ -1,5 +1,4 @@
-import type { PlotHistoryStatePayload } from "shared";
-import type { ServerMessage } from "shared";
+import type { PlotHistoryStatePayload, ServerMessage } from "shared";
 import { socketService } from "./socket";
 
 const historyMatcher = (message: ServerMessage): boolean =>

@@ -14,18 +14,18 @@ import {
 	SessionInfoModal,
 	SettingsModal,
 } from "@/components/modals";
+import type { ProjectManagerSection } from "@/components/modals/ProjectManagerModal";
 import { TimelineDialog, type TimelineDialogRef } from "@/components/timeline";
 import { WelcomeScreen } from "@/components/welcome";
 import { useStore } from "@/core";
 import { useSettingsStore } from "@/core/state/slices/settingsStore";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { useProjectSession } from "@/hooks/useProjectSession";
-import { useStartup } from "@/hooks/useStartup";
 import { usePlotHistoryEvents } from "@/hooks/usePlotHistoryEvents";
+import { useProjectSession } from "@/hooks/useProjectSession";
 import { useSessionControlEvents } from "@/hooks/useSessionControlEvents";
 import { useSettingsPersistence } from "@/hooks/useSettingsPersistence";
 import { useSocketConnection } from "@/hooks/useSocketConnection";
-import type { ProjectManagerSection } from "@/components/modals/ProjectManagerModal";
+import { useStartup } from "@/hooks/useStartup";
 
 function App(): JSX.Element {
 	const project = useStore((state) => state.project);

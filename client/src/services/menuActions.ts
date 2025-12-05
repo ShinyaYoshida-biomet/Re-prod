@@ -11,8 +11,8 @@
  * with cell metadata, use EditorPanel's buttons or shortcuts.
  */
 
-import { DOCS_URL, GITHUB_ISSUE_URL } from "@/constants/urls";
 import { DEFAULT_FILENAMES, UI_TIMING, ZOOM } from "@/constants/ui";
+import { DOCS_URL, GITHUB_ISSUE_URL } from "@/constants/urls";
 import { DEFAULT_R_SCRIPT } from "@/core/state/slices/editorSlice";
 import type { ViewPane } from "@/core/state/slices/viewSlice";
 import { useStore } from "@/core/state/store";
