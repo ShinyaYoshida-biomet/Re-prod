@@ -64,7 +64,7 @@ impl Config {
 
         if let Some(legacy) = legacy_auth_path() {
             if legacy.exists() {
-                let config = Self::load_from_path(legacy.clone())?;
+                let config = Self::load_from_path(legacy)?;
                 // Migrate legacy → global path for future reads.
                 if let Some(parent) = global_path.parent() {
                     fs::create_dir_all(parent)?;
