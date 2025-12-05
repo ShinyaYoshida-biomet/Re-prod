@@ -18,7 +18,7 @@ pub(super) async fn handle_execute_tool(
     capability_id: String,
     parameters: HashMap<String, Value>,
 ) -> Vec<WSResponse> {
-    let mut r_executor = runtime.r_executor.lock().await;
+    let r_executor = runtime.r_executor.lock().await;
     match state
         .tool_executor
         .execute(&tool_id, &capability_id, parameters, &r_executor)

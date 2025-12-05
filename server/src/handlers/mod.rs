@@ -10,7 +10,7 @@ use project_requests::handle_project_request;
 use reprod_core::{fs::FileSystemEvent, project::ProjectRecord, ExecutionRequest};
 use runtime_fs::{handle_fs_event, restart_fs_watcher, FsWatcherHandle};
 use serde_json::{self, json};
-use std::{future::Future, sync::Arc};
+use std::sync::Arc;
 use tokio::sync::mpsc as tokio_mpsc;
 
 mod ai_handler;
@@ -109,7 +109,7 @@ async fn handle_ws_text(
                 let responses = handle_ws_request(
                     request,
                     state,
-                    current_runtime.as_ref(),
+                    current_runtime.clone(),
                     fs_watcher,
                     fs_event_tx,
                     fs_events_closed,
@@ -135,79 +135,100 @@ async fn handle_ws_text(
 async fn handle_ws_request(
     request: WSRequest,
     state: &AppState,
-    runtime: Option<&Arc<ProjectRuntime>>,
+    runtime: Option<Arc<ProjectRuntime>>,
     fs_watcher: &mut Option<FsWatcherHandle>,
     fs_event_tx: &tokio_mpsc::UnboundedSender<FileSystemEvent>,
     fs_events_closed: &mut bool,
     current_runtime: &mut Option<Arc<ProjectRuntime>>,
 ) -> Vec<WSResponse> {
+    let runtime_ref = runtime.as_ref();
     match request {
-        WSRequest::Execute { request } => {
-            with_runtime(runtime, |rt| handle_execution_request(rt, request)).await
-        }
+        WSRequest::Execute { request } => match runtime_ref {
+            Some(rt) => handle_execution_request(rt, request).await,
+            None => error_response("No project is open"),
+        },
         WSRequest::AIMessage {
             messages,
             enable_tools,
             request_id,
             stream,
             mode,
-        } => {
-            with_runtime(runtime, |rt| {
-                handle_ai_message(state, rt, messages, enable_tools, request_id, stream, mode)
-            })
-            .await
-        }
+        } => match runtime_ref {
+            Some(rt) => {
+                handle_ai_message(state, rt, messages, enable_tools, request_id, stream, mode).await
+            }
+            None => error_response("No project is open"),
+        },
         WSRequest::ListTools => handle_list_tools(state),
         WSRequest::ExecuteTool {
             tool_id,
             capability_id,
             parameters,
-        } => with_runtime(runtime, |rt| {
-            handle_execute_tool(state, rt, tool_id, capability_id, parameters)
-        })
-        .await,
-        WSRequest::TimelineQuery { query } => {
-            with_runtime(runtime, |rt| handle_timeline_query(rt, query)).await
-        }
-        WSRequest::TimelineStatsQuery => {
-            with_runtime(runtime, |rt| handle_timeline_stats_query(rt)).await
-        }
-        WSRequest::ExportRMarkdown { request } => {
-            with_runtime(runtime, |rt| handle_export_request(state, rt, request)).await
-        }
-        WSRequest::InterruptExecution => with_runtime(runtime, handle_interrupt).await,
-        WSRequest::RestartSession => with_runtime(runtime, handle_restart).await,
+        } => match runtime_ref {
+            Some(rt) => handle_execute_tool(state, rt, tool_id, capability_id, parameters).await,
+            None => error_response("No project is open"),
+        },
+        WSRequest::TimelineQuery { query } => match runtime_ref {
+            Some(rt) => handle_timeline_query(rt, query),
+            None => error_response("No project is open"),
+        },
+        WSRequest::TimelineStatsQuery => match runtime_ref {
+            Some(rt) => handle_timeline_stats_query(rt),
+            None => error_response("No project is open"),
+        },
+        WSRequest::ExportRMarkdown { request } => match runtime_ref {
+            Some(rt) => handle_export_request(state, rt, request).await,
+            None => error_response("No project is open"),
+        },
+        WSRequest::InterruptExecution => match runtime_ref {
+            Some(rt) => handle_interrupt(rt).await,
+            None => error_response("No project is open"),
+        },
+        WSRequest::RestartSession => match runtime_ref {
+            Some(rt) => handle_restart(rt).await,
+            None => error_response("No project is open"),
+        },
         WSRequest::FileSystemAction {
             action,
             path,
             content,
             to,
-        } => {
-            with_runtime(runtime, |rt| async move {
-                handle_fs_action(rt, action, path, content, to)
-            })
-            .await
-        }
-        WSRequest::PlotHistoryGet => with_runtime(runtime, handle_plot_history_get).await,
-        WSRequest::PlotHistorySetActive { plot_id } => {
-            with_runtime(runtime, |rt| handle_plot_history_set_active(rt, plot_id)).await
-        }
+        } => match runtime_ref {
+            Some(rt) => handle_fs_action(rt, action, path, content, to),
+            None => error_response("No project is open"),
+        },
+        WSRequest::PlotHistoryGet => match runtime_ref {
+            Some(rt) => handle_plot_history_get(rt).await,
+            None => error_response("No project is open"),
+        },
+        WSRequest::PlotHistorySetActive { plot_id } => match runtime_ref {
+            Some(rt) => handle_plot_history_set_active(rt, plot_id).await,
+            None => error_response("No project is open"),
+        },
         WSRequest::PlotHistoryExport {
             plot_id,
             path,
             format,
-        } => with_runtime(runtime, |rt| {
-            handle_plot_history_export(rt, plot_id, path, format)
-        })
-        .await,
-        WSRequest::PlotHistoryDelete { plot_id } => {
-            with_runtime(runtime, |rt| handle_plot_history_delete(rt, plot_id)).await
-        }
-        WSRequest::PlotHistorySave => with_runtime(runtime, handle_plot_history_save).await,
-        WSRequest::PlotHistoryRestore => {
-            with_runtime(runtime, handle_plot_history_restore).await
-        }
-        WSRequest::PlotHistoryClear => with_runtime(runtime, handle_plot_history_clear).await,
+        } => match runtime_ref {
+            Some(rt) => handle_plot_history_export(rt, plot_id, path, format).await,
+            None => error_response("No project is open"),
+        },
+        WSRequest::PlotHistoryDelete { plot_id } => match runtime_ref {
+            Some(rt) => handle_plot_history_delete(rt, plot_id).await,
+            None => error_response("No project is open"),
+        },
+        WSRequest::PlotHistorySave => match runtime_ref {
+            Some(rt) => handle_plot_history_save(rt).await,
+            None => error_response("No project is open"),
+        },
+        WSRequest::PlotHistoryRestore => match runtime_ref {
+            Some(rt) => handle_plot_history_restore(rt).await,
+            None => error_response("No project is open"),
+        },
+        WSRequest::PlotHistoryClear => match runtime_ref {
+            Some(rt) => handle_plot_history_clear(rt).await,
+            None => error_response("No project is open"),
+        },
         WSRequest::StartupAction => {
             handle_startup_action(
                 state,
@@ -252,20 +273,6 @@ async fn handle_startup_action(
             }
             Err(error) => error_response(error.to_string()),
         },
-    }
-}
-
-async fn with_runtime<F, Fut>(
-    runtime: Option<&Arc<ProjectRuntime>>,
-    action: F,
-) -> Vec<WSResponse>
-where
-    F: FnOnce(&Arc<ProjectRuntime>) -> Fut,
-    Fut: Future<Output = Vec<WSResponse>>,
-{
-    match runtime {
-        Some(rt) => action(rt).await,
-        None => error_response("No project is open"),
     }
 }
 
