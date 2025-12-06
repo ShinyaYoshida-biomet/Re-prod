@@ -201,22 +201,20 @@ if (!dir.exists(.reprod_plot_dir)) {{
     return(FALSE)
   }}
   tryCatch({{
-    snapshot <- recordPlot()
+    png_path <- file.path(.reprod_plot_dir, sprintf("%s_%d.png", .reprod_plot_prefix, index))
+    snapshot_path <- NULL
+    snapshot <- tryCatch(recordPlot(), error = function(e) NULL)
     actions <- tryCatch(snapshot$actions, error = function(e) NULL)
-    if (is.null(snapshot)) {{
-      return(FALSE)
+    if (!is.null(snapshot) && (is.null(actions) || length(actions) > 0)) {{
+      snapshot_path <- file.path(.reprod_plot_dir, sprintf("%s_%d.rds", .reprod_plot_prefix, index))
+      saveRDS(snapshot, snapshot_path)
     }}
-    if (!is.null(actions) && length(actions) == 0) {{
-      return(FALSE)
-    }}
-    snapshot_path <- file.path(.reprod_plot_dir, sprintf("%s_%d.rds", .reprod_plot_prefix, index))
-    saveRDS(snapshot, snapshot_path)
     cat("__REPROD_PLOT__|",
         sprintf("%s_%d", .reprod_plot_prefix, index), "|",
-        snapshot_path, "|",
-        file.path(.reprod_plot_dir, sprintf("%s_%d.png", .reprod_plot_prefix, index)),
+        if (is.null(snapshot_path)) "" else snapshot_path, "|",
+        png_path,
         "\n", sep = "")
-    TRUE
+    file.exists(png_path)
   }}, error = function(e) {{
     cat("REPROD_PLOT_CAPTURE_ERROR: ", conditionMessage(e), "\n", file=stderr())
     FALSE
@@ -332,22 +330,20 @@ if (file.exists(.reprod_state_path)) {{
     return(FALSE)
   }}
   tryCatch({{
-    snapshot <- recordPlot()
+    png_path <- file.path(.reprod_plot_dir, sprintf("%s_%d.png", .reprod_plot_prefix, index))
+    snapshot_path <- NULL
+    snapshot <- tryCatch(recordPlot(), error = function(e) NULL)
     actions <- tryCatch(snapshot$actions, error = function(e) NULL)
-    if (is.null(snapshot)) {{
-      return(FALSE)
+    if (!is.null(snapshot) && (is.null(actions) || length(actions) > 0)) {{
+      snapshot_path <- file.path(.reprod_plot_dir, sprintf("%s_%d.rds", .reprod_plot_prefix, index))
+      saveRDS(snapshot, snapshot_path)
     }}
-    if (!is.null(actions) && length(actions) == 0) {{
-      return(FALSE)
-    }}
-    snapshot_path <- file.path(.reprod_plot_dir, sprintf("%s_%d.rds", .reprod_plot_prefix, index))
-    saveRDS(snapshot, snapshot_path)
     cat("__REPROD_PLOT__|",
         sprintf("%s_%d", .reprod_plot_prefix, index), "|",
-        snapshot_path, "|",
-        file.path(.reprod_plot_dir, sprintf("%s_%d.png", .reprod_plot_prefix, index)),
+        if (is.null(snapshot_path)) "" else snapshot_path, "|",
+        png_path,
         "\n", sep = "")
-    TRUE
+    file.exists(png_path)
   }}, error = function(e) {{
     message("REPROD_PLOT_CAPTURE_ERROR: ", conditionMessage(e))
     FALSE
