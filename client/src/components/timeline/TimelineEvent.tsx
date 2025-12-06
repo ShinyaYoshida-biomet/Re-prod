@@ -41,6 +41,37 @@ export function TimelineEvent({ event, onNavigate }: TimelineEventProps): JSX.El
 		}
 	};
 
+	const handlePlotClick = (e: React.MouseEvent) => {
+		e.stopPropagation();
+
+		// Navigate to first plot if available
+		if (result.plots.length > 0) {
+			const firstPlot = result.plots[0];
+			window.dispatchEvent(
+				new CustomEvent("focusPlot", {
+					detail: { plotId: firstPlot.id },
+				}),
+			);
+		}
+	};
+
+	const handlePlotKeyDown = (e: React.KeyboardEvent) => {
+		if (e.key === "Enter" || e.key === " ") {
+			e.stopPropagation();
+			e.preventDefault();
+
+			// Navigate to first plot if available
+			if (result.plots.length > 0) {
+				const firstPlot = result.plots[0];
+				window.dispatchEvent(
+					new CustomEvent("focusPlot", {
+						detail: { plotId: firstPlot.id },
+					}),
+				);
+			}
+		}
+	};
+
 	return (
 		<div className="timeline-event" onClick={handleClick}>
 			<div className="timeline-event-header">
@@ -62,7 +93,13 @@ export function TimelineEvent({ event, onNavigate }: TimelineEventProps): JSX.El
 				<span className="timeline-event-status">{statusLabel}</span>
 				<span className="timeline-event-duration">{executionTime}ms</span>
 				{plotCount > 0 && (
-					<span className="timeline-event-plots">
+					<span
+						className="timeline-event-plots timeline-event-plots-clickable"
+						onClick={handlePlotClick}
+						role="button"
+						tabIndex={0}
+						onKeyDown={handlePlotKeyDown}
+					>
 						{plotCount} plot{plotCount > 1 ? "s" : ""}
 					</span>
 				)}
