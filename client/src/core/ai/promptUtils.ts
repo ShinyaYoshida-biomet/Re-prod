@@ -1,11 +1,5 @@
 import type { ExecutionLogEntry } from "@shared/types";
 
-/**
- * Set of code change actions that should be applied to remote files
- * rather than the current editor buffer
- */
-export const REMOTE_FILE_ACTIONS = new Set(["create-file", "delete-range", "replace-range"]);
-
 const MAX_CONSOLE_ITEMS = 3;
 const MAX_CONSOLE_SNIPPET_LENGTH = 800;
 
