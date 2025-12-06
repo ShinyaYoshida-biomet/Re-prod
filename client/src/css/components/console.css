@@ -40,6 +40,16 @@
 	letter-spacing: 0.05em;
 }
 
+.console-pending-badge {
+	padding: 2px 8px;
+	border-radius: 999px;
+	background: rgba(47, 111, 237, 0.15);
+	color: var(--text-primary);
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.05em;
+}
+
 .console-time {
 	font-weight: 600;
 	color: var(--text-primary);
