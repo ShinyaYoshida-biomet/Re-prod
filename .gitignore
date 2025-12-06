@@ -45,6 +45,8 @@ logs/
 /target/
 **/target/
 Cargo.lock
+# Tauri sidecar outputs (placeholders generated at build time)
+desktop/binaries/
 
 # Cargo local config (environment-specific)
 .cargo/

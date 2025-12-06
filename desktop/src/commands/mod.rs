@@ -4,7 +4,10 @@ use std::sync::Arc;
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::{mpsc, Mutex};
 
-use crate::terminal::{TerminalEvent, TerminalManager};
+use crate::{
+    server_launcher::SharedServerHandle,
+    terminal::{TerminalEvent, TerminalManager},
+};
 
 #[derive(Serialize, Clone)]
 struct TerminalOutputPayload {
@@ -208,4 +211,12 @@ pub async fn close_terminal_session(
         .close(&session_id)
         .await
         .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn get_server_port(
+    server: State<'_, SharedServerHandle>,
+) -> Result<u16, String> {
+    let server = server.lock().await;
+    Ok(server.port())
 }

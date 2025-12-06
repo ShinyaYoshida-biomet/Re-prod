@@ -58,17 +58,17 @@ export const LLMProviderConfig: React.FC<Props> = ({
 							onChange={(e) => setLocalApiKey(e.target.value)}
 							placeholder="sk-..."
 						/>
-						<button onClick={handleSave} disabled={!apiKey}>
+						<button onClick={handleSave} disabled={!apiKey} className="btn btn-primary">
 							Save
 						</button>
-						<button onClick={() => setIsEditing(false)} className="secondary">
+						<button onClick={() => setIsEditing(false)} className="btn">
 							Cancel
 						</button>
 					</div>
 				) : (
 					<div className="display-group">
 						<span className="masked-key">{apiKeyMasked || "Not configured"}</span>
-						<button onClick={() => setIsEditing(true)} className="secondary">
+						<button onClick={() => setIsEditing(true)} className="btn">
 							Update
 						</button>
 					</div>
@@ -95,7 +95,7 @@ export const LLMProviderConfig: React.FC<Props> = ({
 
 			<div className="actions-row">
 				<button
-					className={`test-button ${testStatus}`}
+					className={`btn test-button ${testStatus}`}
 					onClick={handleTest}
 					disabled={!isConfigured || isEditing || testStatus === "testing"}
 				>

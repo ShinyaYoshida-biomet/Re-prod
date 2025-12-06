@@ -1,10 +1,11 @@
 import type { TimelineStatsProps } from "@/types/timeline";
+import { LoadingSpinner } from "@/components/shared";
 
 export function TimelineStats({ stats, loading }: TimelineStatsProps): JSX.Element {
 	if (loading || !stats) {
 		return (
 			<div className="timeline-stats">
-				<div className="timeline-stats-loading">Loading stats...</div>
+				<LoadingSpinner size="small" message="Loading stats..." />
 			</div>
 		);
 	}

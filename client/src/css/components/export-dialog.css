@@ -300,18 +300,21 @@
 /* Loading State Overlay */
 .export-dialog-content.loading {
 	pointer-events: none;
-	opacity: 0.6;
 	position: relative;
 }
 
-.export-dialog-content.loading::after {
-	content: "";
+.export-loading-overlay {
 	position: absolute;
 	top: 0;
 	left: 0;
 	right: 0;
 	bottom: 0;
-	background: rgba(255, 255, 255, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(255, 255, 255, 0.9);
+	z-index: 10;
+	pointer-events: all;
 	cursor: wait;
 }
 

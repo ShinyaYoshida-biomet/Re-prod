@@ -97,8 +97,12 @@ async fn main() {
             projects: projects.clone(),
         });
 
-    let addr = "127.0.0.1:3001";
-    let listener = tokio::net::TcpListener::bind(addr)
+    let port = std::env::var("REPROD_PORT")
+        .ok()
+        .and_then(|val| val.parse::<u16>().ok())
+        .unwrap_or(3001);
+    let addr = format!("127.0.0.1:{}", port);
+    let listener = tokio::net::TcpListener::bind(&addr)
         .await
         .unwrap_or_else(|e| panic!("Failed to bind to {}: {}", addr, e));
 

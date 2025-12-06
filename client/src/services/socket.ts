@@ -21,9 +21,14 @@ class SocketService {
 	private autoReconnectEnabled = true;
 	private intentionalDisconnect = false;
 	private url: string = "";
+	private port = 3001;
 	private connectionListeners: Set<(status: ConnectionStatus) => void> = new Set();
 
-	connect(url: string = "ws://localhost:3001/ws"): void {
+	setPort(port: number): void {
+		this.port = port;
+	}
+
+	connect(url?: string): void {
 		// Prevent duplicate connections
 		if (this.ws) {
 			if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
@@ -32,8 +37,9 @@ class SocketService {
 		}
 
 		this.intentionalDisconnect = false;
-		this.url = url;
-		this.ws = new WebSocket(url);
+		const target = url ?? `ws://127.0.0.1:${this.port}/ws`;
+		this.url = target;
+		this.ws = new WebSocket(target);
 
 		this.ws.onopen = () => {
 			this.clearReconnectTimer();
