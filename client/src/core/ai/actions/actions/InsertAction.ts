@@ -1,27 +1,17 @@
 import type { CodeBlock } from "@shared/types";
-import type {
-	CodeActionContext,
-	CodeActionValidation,
-	ICodeAction,
-} from "../ICodeAction";
+import type { CodeActionContext, CodeActionValidation } from "../ICodeAction";
+import { BaseCodeAction } from "../BaseCodeAction";
 
 /**
  * Action for inserting code at a specific position
  */
-export class InsertAction implements ICodeAction {
+export class InsertAction extends BaseCodeAction {
 	getLabel(codeBlock: CodeBlock): string {
-		const targetFile = codeBlock.filepath || "active editor";
-		return `Insert code in ${targetFile}`;
+		return `Insert code in ${this.getTargetFile(codeBlock)}`;
 	}
 
-	validate(codeBlock: CodeBlock): CodeActionValidation {
-		if (!codeBlock.code || codeBlock.code.trim().length === 0) {
-			return {
-				valid: false,
-				error: "Cannot insert empty content",
-			};
-		}
-
+	protected validateSpecific(_codeBlock: CodeBlock): CodeActionValidation {
+		// Base class already validates non-empty code
 		return { valid: true };
 	}
 

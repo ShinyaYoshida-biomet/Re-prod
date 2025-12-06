@@ -1,3 +1,4 @@
+export { BaseCodeAction } from "./BaseCodeAction";
 export { CodeActionFactory } from "./CodeActionFactory";
 export type {
 	CodeActionContext,
