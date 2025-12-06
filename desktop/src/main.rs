@@ -9,7 +9,7 @@ mod terminal;
 use crate::{server_launcher::launch_server, terminal::TerminalManager};
 use reprod_core::{Config, RExecutor};
 use std::sync::Arc;
-use tauri_plugin_pty;
+
 use tokio::sync::Mutex;
 
 #[tokio::main]
@@ -56,10 +56,13 @@ async fn main() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
-    let server_for_shutdown = server_state.clone();
+    let server_for_shutdown = server_state;
 
     app.run(move |_app_handle, event| {
-        if matches!(event, tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit) {
+        if matches!(
+            event,
+            tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit
+        ) {
             let server_for_shutdown = server_for_shutdown.clone();
             tauri::async_runtime::spawn(async move {
                 let mut guard = server_for_shutdown.lock().await;
