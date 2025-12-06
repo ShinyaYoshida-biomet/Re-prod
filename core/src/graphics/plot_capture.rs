@@ -250,32 +250,15 @@ tryCatch(
 )
 
 if (reprod_png_available && names(dev.cur()) != "null device") {{
-  tryCatch(.reprod_capture_plot(1), error = function(e) {{
+  captured <- isTRUE(tryCatch(.reprod_capture_plot(1), error = function(e) {{
     cat("REPROD_PLOT_CAPTURE_ERROR: ", conditionMessage(e), "\n", file=stderr())
-  }})
+    FALSE
+  }}))
   tryCatch(dev.off(), error = function(e) message("REPROD_DEVICE_CLOSE_ERROR: ", conditionMessage(e)))
-}}
-
-if (reprod_png_available) {{
-  tryCatch({{
-    existing_plots <- list.files(
-      .reprod_plot_dir,
-      pattern = sprintf("^%s_\\d+\\.png$", .reprod_plot_prefix)
-    )
-    if (length(existing_plots) == 0 &&
-        requireNamespace("ggplot2", quietly = TRUE)) {{
-      last_plot <- tryCatch(ggplot2::last_plot(), error = function(e) NULL)
-      if (inherits(last_plot, "ggplot")) {{
-        next_index <- length(existing_plots) + 1
-        .reprod_open_device(next_index)
-        print(last_plot)
-        dev.off()
-      }}
-    }}
-  }}, error = function(e) {{
-    cat("REPROD_PNG_POST_ERROR: ", conditionMessage(e), "\n", file=stderr())
-    cat("REPROD_PNG_POST_ERROR: ", conditionMessage(e), "\n")
-  }})
+  if (!isTRUE(captured)) {{
+    tryCatch(unlink(file.path(.reprod_plot_dir, sprintf("%s_1.png", .reprod_plot_prefix)), recursive = FALSE, force = TRUE), silent = TRUE)
+    tryCatch(unlink(file.path(.reprod_plot_dir, sprintf("%s_1.rds", .reprod_plot_prefix)), recursive = FALSE, force = TRUE), silent = TRUE)
+  }}
 }}
 
 cat("REPROD_STATE: PNG_AVAILABLE=", reprod_png_available, " PLOT_DIR=", .reprod_plot_dir,
@@ -379,32 +362,16 @@ tryCatch(
 
 # If a device is open, close it to flush the PNG
 if (names(dev.cur()) != "null device") {{
-  tryCatch(.reprod_capture_plot(1), error = function(e) {{
+  captured <- isTRUE(tryCatch(.reprod_capture_plot(1), error = function(e) {{
     message("REPROD_PLOT_CAPTURE_ERROR: ", conditionMessage(e))
-  }})
+    FALSE
+  }}))
   dev.off()
-}}
-
-# If no plots were produced, try to render the last ggplot object automatically
-try({{
-  existing_plots <- list.files(
-    .reprod_plot_dir,
-    pattern = sprintf("^%s_\\d+\\.png$", .reprod_plot_prefix)
-  )
-  if (length(existing_plots) == 0 &&
-      requireNamespace("ggplot2", quietly = TRUE)) {{
-    last_plot <- tryCatch(ggplot2::last_plot(), error = function(e) NULL)
-    if (inherits(last_plot, "ggplot")) {{
-      next_index <- length(existing_plots) + 1
-      .reprod_open_device(next_index)
-      print(last_plot)
-      tryCatch(.reprod_capture_plot(next_index), error = function(e) {{
-        message("REPROD_PLOT_CAPTURE_ERROR: ", conditionMessage(e))
-      }})
-      dev.off()
-    }}
+  if (!isTRUE(captured)) {{
+    unlink(file.path(.reprod_plot_dir, sprintf("%s_1.png", .reprod_plot_prefix)), recursive = FALSE, force = TRUE)
+    unlink(file.path(.reprod_plot_dir, sprintf("%s_1.rds", .reprod_plot_prefix)), recursive = FALSE, force = TRUE)
   }}
-}}, silent = TRUE)
+}}
 
 # Persist workspace for next run
 tryCatch(
