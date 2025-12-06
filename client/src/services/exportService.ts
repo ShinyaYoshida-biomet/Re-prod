@@ -3,6 +3,7 @@ import type {
 	ExportRMarkdownResponsePayload,
 	ServerMessage,
 } from "shared";
+import { exportMessages } from "@/services/messageBuilders";
 import { socketService } from "@/services/socket";
 
 const exportMatcher = (message: ServerMessage) =>
@@ -34,7 +35,7 @@ export async function exportRMarkdown(
 		}, timeoutMs);
 
 		const didSend = socketService.send(
-			{ type: "export_rmarkdown", request: payload },
+			exportMessages.exportRMarkdown(payload),
 			(message) => {
 				cleanup();
 

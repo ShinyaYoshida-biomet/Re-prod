@@ -5,7 +5,14 @@
  * expected schema, preventing runtime errors from field name mismatches.
  */
 
-import type { ClientMessage } from "shared";
+import type {
+	AIMode,
+	ChatMessagePayload,
+	ExecutionRequestPayload,
+	FileSystemAction,
+	ToolExecutionRequestPayload,
+} from "@shared/types";
+import type { ClientMessage, ExportRMarkdownRequestPayload, TimelineQuery } from "shared";
 
 // Project messages
 export const projectMessages = {
@@ -92,5 +99,92 @@ export const plotHistoryMessages = {
 
 	clear: (): Extract<ClientMessage, { type: "plot_history_clear" }> => ({
 		type: "plot_history_clear",
+	}),
+} as const;
+
+// AI messages
+export const aiMessages = {
+	send: (
+		messages: ChatMessagePayload[],
+		options?: {
+			enableTools?: boolean;
+			requestId?: string;
+			stream?: boolean;
+			mode?: AIMode;
+		},
+	): Extract<ClientMessage, { type: "ai_message" }> => ({
+		type: "ai_message",
+		messages,
+		enable_tools: options?.enableTools,
+		request_id: options?.requestId,
+		stream: options?.stream,
+		mode: options?.mode,
+	}),
+} as const;
+
+// Tool messages
+export const toolMessages = {
+	list: (): Extract<ClientMessage, { type: "list_tools" }> => ({
+		type: "list_tools",
+	}),
+
+	execute: (
+		request: ToolExecutionRequestPayload,
+	): Extract<ClientMessage, { type: "execute_tool" }> => ({
+		type: "execute_tool",
+		...request,
+	}),
+} as const;
+
+// Timeline messages
+export const timelineMessages = {
+	query: (query: TimelineQuery): Extract<ClientMessage, { type: "timeline_query" }> => ({
+		type: "timeline_query",
+		query,
+	}),
+
+	statsQuery: (): Extract<ClientMessage, { type: "timeline_stats_query" }> => ({
+		type: "timeline_stats_query",
+	}),
+} as const;
+
+// Execution messages
+export const executionMessages = {
+	execute: (request: ExecutionRequestPayload): Extract<ClientMessage, { type: "execute" }> => ({
+		type: "execute",
+		request,
+	}),
+
+	interrupt: (): Extract<ClientMessage, { type: "interrupt_execution" }> => ({
+		type: "interrupt_execution",
+	}),
+
+	restart: (): Extract<ClientMessage, { type: "restart_session" }> => ({
+		type: "restart_session",
+	}),
+} as const;
+
+// File System messages
+export const fsMessages = {
+	action: (
+		action: FileSystemAction,
+		path: string,
+		options?: { content?: string; to?: string },
+	): Extract<ClientMessage, { type: "fs_action" }> => ({
+		type: "fs_action",
+		action,
+		path,
+		content: options?.content,
+		to: options?.to,
+	}),
+} as const;
+
+// Export messages
+export const exportMessages = {
+	exportRMarkdown: (
+		request: ExportRMarkdownRequestPayload,
+	): Extract<ClientMessage, { type: "export_rmarkdown" }> => ({
+		type: "export_rmarkdown",
+		request,
 	}),
 } as const;

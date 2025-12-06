@@ -1,6 +1,7 @@
 import type { FileEntryPayload, FileSystemAction, FileSystemEventPayload } from "@shared/types";
 import type { ExtractServerMessage } from "shared";
 import { normalizePathInput, normalizeRelativePath, ROOT_PATH } from "@/core/pathUtils";
+import { fsMessages } from "@/services/messageBuilders";
 import { socketService } from "./socket";
 
 export type FileEntry = FileEntryPayload & {
@@ -41,13 +42,10 @@ const sendFsAction = async <TData>(
 	const normalizedPath = normalizePathInput(path);
 	const normalizedTo = options?.to ? normalizePathInput(options.to) : undefined;
 	const response = await socketService.request(
-		{
-			type: "fs_action",
-			action,
-			path: normalizedPath,
+		fsMessages.action(action, normalizedPath, {
 			content: options?.content,
 			to: normalizedTo,
-		},
+		}),
 		"fs_result",
 		(message) => {
 			if (message.action !== action) {
