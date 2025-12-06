@@ -49,6 +49,12 @@ export function ConsolePanel({ view }: ConsolePanelProps): JSX.Element {
 												? result.code
 												: "<empty selection>"}
 										</pre>
+										{result.pending && (
+											<div className="console-pending-hint">
+												<span className="spinner inline" aria-hidden />
+												<span>Execution in progress…</span>
+											</div>
+										)}
 										{result.stdout && <pre className="console-stdout">{result.stdout}</pre>}
 										{result.stderr && <pre className="console-stderr">{result.stderr}</pre>}
 										{result.plots.length > 0 && (
