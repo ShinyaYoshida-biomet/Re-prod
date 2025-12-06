@@ -114,14 +114,14 @@ export type ClientMessage =
 			to?: string;
 	  }
 	| { type: "project_list" }
-	| { type: "project_open"; projectId: string }
+	| { type: "project_open"; project_id: string }
 	| { type: "project_create"; name: string; path: string }
 	| { type: "project_add_existing"; path: string }
 	| { type: "project_clone"; remote: string; path: string; name?: string }
-	| { type: "project_state_load"; projectId: string }
+	| { type: "project_state_load"; project_id: string }
 	| {
 			type: "project_state_save";
-			projectId: string;
+			project_id: string;
 			state: Record<string, unknown>;
 	  }
 	| { type: "plot_history_get" }

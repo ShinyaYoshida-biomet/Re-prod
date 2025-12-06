@@ -19,7 +19,7 @@ export const projectService = {
 	},
 
 	open(projectId: string): void {
-		socketService.send({ type: "project_open", projectId });
+		socketService.send({ type: "project_open", project_id: projectId });
 	},
 
 	create(payload: CreateProjectPayload): void {
@@ -35,14 +35,14 @@ export const projectService = {
 	},
 
 	loadState(projectId: string): void {
-		socketService.send({ type: "project_state_load", projectId });
+		socketService.send({ type: "project_state_load", project_id: projectId });
 	},
 
 	saveState(projectId: string, snapshot?: SessionSnapshot): void {
 		const state = snapshot ?? getSessionSnapshot();
 		socketService.send({
 			type: "project_state_save",
-			projectId,
+			project_id: projectId,
 			state: state as unknown as Record<string, unknown>,
 		});
 	},

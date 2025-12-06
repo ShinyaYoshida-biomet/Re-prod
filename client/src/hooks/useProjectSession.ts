@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import type { ProjectRecord } from "shared";
 
 import { useStore } from "@/core";
+import { useFileSystemStore } from "@/core/fileSystemStore";
 import { DEFAULT_R_SCRIPT } from "@/core/state/slices/editorSlice";
 import { projectService } from "@/services/projectService";
 import {
@@ -37,11 +38,27 @@ export function useProjectSession(): void {
 			const isSameProject = previousProjectId.current === nextProjectId;
 			previousProjectId.current = nextProjectId;
 
+			console.log("[useProjectSession] Project opened:", {
+				projectId: nextProjectId,
+				projectName: message.project.name,
+				projectPath: message.project.path,
+				hasState,
+				isSameProject,
+			});
+
 			setProject(message.project);
 			resetPlotHistory();
 			void requestPlotHistory().catch((error) =>
 				console.warn("Failed to load plot history", error),
 			);
+
+			// Reset and refresh workspace file tree for the new project
+			console.log("[useProjectSession] Calling resetAndLoadRoot to refresh workspace");
+			const resetAndLoadRoot = useFileSystemStore.getState().resetAndLoadRoot;
+			void resetAndLoadRoot().catch((error) =>
+				console.error("[useProjectSession] Failed to refresh workspace tree:", error),
+			);
+
 			if (hasState) {
 				applySessionSnapshot(message.state as any);
 				setLastRestoredState(message.state as Record<string, unknown>);
