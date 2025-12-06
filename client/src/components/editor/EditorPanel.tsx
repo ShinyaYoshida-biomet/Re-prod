@@ -384,11 +384,6 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 			handleRunCurrentCell();
 		});
 
-		// Shift + Enter: Run current cell and move to next
-		monacoEditor.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.Enter, () => {
-			handleRunCellAndMoveNext();
-		});
-
 		// Cmd/Ctrl + Shift + Enter: Run all
 		monacoEditor.addCommand(
 			monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
