@@ -13,10 +13,28 @@ use serde_json::json;
 use super::{
     common::{
         build_streaming_payload, error_response, now_millis, tool_log_from_call,
-        with_system_prompts, AIMode, AppState, ToolLogStatus, WSResponse,
+        with_system_prompts, AIMode, AppState, PlanStepPayload, PlanStepStatus, ToolLogStatus,
+        WSResponse,
     },
     tool_handler::execute_ai_tool_call,
 };
+
+const PLAN_STEP_ID: &str = "process-request";
+
+fn build_initial_plan() -> Vec<PlanStepPayload> {
+    vec![PlanStepPayload::new(
+        PLAN_STEP_ID,
+        "Process request",
+        Some("exec".to_string()),
+    )]
+}
+
+fn push_plan_update(responses: &mut Vec<WSResponse>, request_id: &str, plan: &[PlanStepPayload]) {
+    responses.push(WSResponse::AIPlanUpdated {
+        id: request_id.to_string(),
+        plan: plan.to_vec(),
+    });
+}
 
 pub(super) async fn handle_ai_message(
     state: &AppState,
@@ -35,11 +53,19 @@ pub(super) async fn handle_ai_message(
     });
     let messages_with_prompts = with_system_prompts(&messages, mode);
 
-    if enable_tools {
+    let mut plan = build_initial_plan();
+    let mut outbound = Vec::new();
+    push_plan_update(&mut outbound, &stream_id, &plan);
+    if let Some(step) = plan.iter_mut().find(|step| step.id == PLAN_STEP_ID) {
+        step.mark_status(PlanStepStatus::Running);
+    }
+    push_plan_update(&mut outbound, &stream_id, &plan);
+
+    let responses = if enable_tools {
         let mut tools = get_filesystem_tools();
         tools.extend(get_r_context_tools());
         tools.extend(get_console_tools());
-        let mut outbound = Vec::new();
+        let mut responses = Vec::new();
 
         match provider
             .send_message_with_tools(messages_with_prompts.clone(), tools.clone())
@@ -51,7 +77,7 @@ pub(super) async fn handle_ai_message(
 
                     for tool_call in tool_calls {
                         let mut log = tool_log_from_call(tool_call);
-                        outbound.push(WSResponse::AIToolStarted {
+                        responses.push(WSResponse::AIToolStarted {
                             id: stream_id.clone(),
                             tool: log.clone(),
                         });
@@ -71,7 +97,7 @@ pub(super) async fn handle_ai_message(
                             }
                         }
                         log.finished_at = Some(now_millis());
-                        outbound.push(WSResponse::AIToolFinished {
+                        responses.push(WSResponse::AIToolFinished {
                             id: stream_id.clone(),
                             tool: log,
                         });
@@ -93,18 +119,18 @@ pub(super) async fn handle_ai_message(
                     let follow_up_with_prompts = with_system_prompts(&follow_up_messages, mode);
                     match provider.send_message(follow_up_with_prompts).await {
                         Ok(final_response) => {
-                            outbound.extend(build_streaming_payload(
+                            responses.extend(build_streaming_payload(
                                 stream,
                                 &stream_id,
                                 final_response,
                             ));
-                            outbound
+                            responses
                         }
                         Err(e) => {
-                            outbound.push(WSResponse::Error {
+                            responses.push(WSResponse::Error {
                                 message: format!("Failed to get final response: {}", e),
                             });
-                            outbound
+                            responses
                         }
                     }
                 } else {
@@ -121,5 +147,26 @@ pub(super) async fn handle_ai_message(
             Ok(response) => build_streaming_payload(stream, &stream_id, response),
             Err(e) => error_response(e.to_string()),
         }
+    };
+
+    let first_error_message = responses.iter().find_map(|response| {
+        if let WSResponse::Error { message } = response {
+            Some(message.clone())
+        } else {
+            None
+        }
+    });
+
+    if let Some(step) = plan.iter_mut().find(|step| step.id == PLAN_STEP_ID) {
+        if let Some(error_message) = first_error_message {
+            step.error = Some(error_message);
+            step.mark_status(PlanStepStatus::Error);
+        } else {
+            step.mark_status(PlanStepStatus::Done);
+        }
     }
+    outbound.extend(responses);
+    push_plan_update(&mut outbound, &stream_id, &plan);
+
+    outbound
 }

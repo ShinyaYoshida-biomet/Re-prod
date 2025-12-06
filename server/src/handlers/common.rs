@@ -322,11 +322,19 @@ pub(super) enum WSResponse {
 }
 
 #[allow(dead_code)] // Reserved for future AI planning feature
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, Clone)]
 pub(super) struct PlanStepPayload {
     id: String,
     title: String,
     status: PlanStepStatus,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    kind: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
+    #[serde(rename = "startedAt", skip_serializing_if = "Option::is_none")]
+    started_at: Option<i64>,
+    #[serde(rename = "finishedAt", skip_serializing_if = "Option::is_none")]
+    finished_at: Option<i64>,
 }
 
 #[allow(dead_code)] // Reserved for future AI planning feature
@@ -337,6 +345,38 @@ pub(super) enum PlanStepStatus {
     Running,
     Done,
     Error,
+}
+
+impl PlanStepPayload {
+    pub(super) fn new(id: impl Into<String>, title: impl Into<String>, kind: Option<String>) -> Self {
+        Self {
+            id: id.into(),
+            title: title.into(),
+            status: PlanStepStatus::Pending,
+            kind,
+            error: None,
+            started_at: None,
+            finished_at: None,
+        }
+    }
+
+    pub(super) fn mark_status(&mut self, status: PlanStepStatus) {
+        self.status = status;
+        match status {
+            PlanStepStatus::Running => {
+                if self.started_at.is_none() {
+                    self.started_at = Some(now_millis());
+                }
+            }
+            PlanStepStatus::Done | PlanStepStatus::Error => {
+                if self.started_at.is_none() {
+                    self.started_at = Some(now_millis());
+                }
+                self.finished_at = Some(now_millis());
+            }
+            PlanStepStatus::Pending => {}
+        }
+    }
 }
 
 #[derive(serde::Serialize, Clone)]
