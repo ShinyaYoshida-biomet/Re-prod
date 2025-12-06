@@ -66,14 +66,20 @@
 	--settings-number-hint-font: ui-monospace, "SF Mono", Consolas, monospace;
 }
 
+.settings-form {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
 .settings-form section {
+	display: flex;
+	flex-direction: column;
+	gap: var(--settings-section-gap);
 	border: 1px solid var(--settings-section-border);
 	border-radius: var(--settings-section-radius);
 	padding: var(--settings-section-padding);
 	background: var(--settings-section-bg);
-	display: flex;
-	flex-direction: column;
-	gap: var(--settings-section-gap);
 }
 
 .settings-form section h3 {
