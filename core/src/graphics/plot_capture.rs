@@ -203,7 +203,10 @@ if (!dir.exists(.reprod_plot_dir)) {{
   tryCatch({{
     snapshot <- recordPlot()
     actions <- tryCatch(snapshot$actions, error = function(e) NULL)
-    if (is.null(snapshot) || is.null(actions) || length(actions) == 0) {{
+    if (is.null(snapshot)) {{
+      return(FALSE)
+    }}
+    if (!is.null(actions) && length(actions) == 0) {{
       return(FALSE)
     }}
     snapshot_path <- file.path(.reprod_plot_dir, sprintf("%s_%d.rds", .reprod_plot_prefix, index))
@@ -331,7 +334,10 @@ if (file.exists(.reprod_state_path)) {{
   tryCatch({{
     snapshot <- recordPlot()
     actions <- tryCatch(snapshot$actions, error = function(e) NULL)
-    if (is.null(snapshot) || is.null(actions) || length(actions) == 0) {{
+    if (is.null(snapshot)) {{
+      return(FALSE)
+    }}
+    if (!is.null(actions) && length(actions) == 0) {{
       return(FALSE)
     }}
     snapshot_path <- file.path(.reprod_plot_dir, sprintf("%s_%d.rds", .reprod_plot_prefix, index))
