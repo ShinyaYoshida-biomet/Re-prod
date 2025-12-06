@@ -2,7 +2,6 @@ import type { AIMessage, CodeBlock } from "@shared/types";
 import { useCallback } from "react";
 import { useStore } from "@/core";
 import { CodeActionFactory, type CodeActionContext } from "@/core/ai/actions";
-import { REMOTE_FILE_ACTIONS } from "@/core/ai/promptUtils";
 import { applyCodeChangeFile } from "@/services/fileService";
 
 type PostAssistantMessage = (content: string, extras?: Partial<AIMessage>) => void;
@@ -26,10 +25,14 @@ export function useAICodeApplication(postAssistantMessage: PostAssistantMessage)
 
 			// Build context for action execution
 			const context: CodeActionContext = {
-				applyToEditor: applyCodeChange,
+				applyToEditor: applyCodeChange
+					? async (codeBlock: CodeBlock) => {
+							applyCodeChange(codeBlock);
+						}
+					: undefined,
 				applyToFile: applyCodeChangeFile,
 				editorFilepath,
-				postMessage: postAssistantMessage,
+				postMessage: (message: string) => postAssistantMessage(message),
 			};
 
 			try {

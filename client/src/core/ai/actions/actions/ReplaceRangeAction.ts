@@ -1,9 +1,5 @@
 import type { CodeBlock } from "@shared/types";
-import type {
-	CodeActionContext,
-	CodeActionValidation,
-	ICodeAction,
-} from "../ICodeAction";
+import type { CodeActionContext, CodeActionValidation, ICodeAction } from "../ICodeAction";
 
 /**
  * Action for replacing a specific range of code
@@ -52,8 +48,6 @@ export class ReplaceRangeAction implements ICodeAction {
 		if (!validation.valid) {
 			throw new Error(validation.error || "Invalid replace-range action");
 		}
-
-		const targetFile = codeBlock.filepath || "active editor";
 
 		if (context.applyToEditor) {
 			await context.applyToEditor(codeBlock);
