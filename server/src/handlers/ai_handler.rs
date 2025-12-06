@@ -53,10 +53,6 @@ fn build_initial_plan() -> Vec<PlanStepPayload> {
         ),
     ];
 
-    if let Some(dispatch) = steps.iter_mut().find(|s| s.id == PLAN_STEP_DISPATCH) {
-        dispatch.mark_status(PlanStepStatus::Running);
-    }
-
     steps
 }
 
@@ -86,6 +82,9 @@ pub(super) async fn handle_ai_message(
 
     let mut plan = build_initial_plan();
     let mut outbound = Vec::new();
+    if let Some(dispatch) = plan.iter_mut().find(|s| s.id == PLAN_STEP_DISPATCH) {
+        dispatch.mark_status(PlanStepStatus::Running);
+    }
     push_plan_update(&mut outbound, &stream_id, &plan);
 
     let responses = if enable_tools {
@@ -93,6 +92,19 @@ pub(super) async fn handle_ai_message(
         tools.extend(get_r_context_tools());
         tools.extend(get_console_tools());
         let mut responses = Vec::new();
+
+        // Mark fetch/inspect/execute phases as running in order as we start tool processing.
+        if let Some(fetch) = plan.iter_mut().find(|s| s.id == PLAN_STEP_FETCH) {
+            fetch.mark_status(PlanStepStatus::Running);
+        }
+        if let Some(inspect) = plan.iter_mut().find(|s| s.id == PLAN_STEP_INSPECT) {
+            inspect.mark_status(PlanStepStatus::Running);
+            inspect.waiting_reason = None;
+        }
+        if let Some(exec) = plan.iter_mut().find(|s| s.id == PLAN_STEP_EXECUTE) {
+            exec.mark_status(PlanStepStatus::Running);
+        }
+        push_plan_update(&mut responses, &stream_id, &plan);
 
         match provider
             .send_message_with_tools(messages_with_prompts.clone(), tools.clone())
@@ -130,6 +142,15 @@ pub(super) async fn handle_ai_message(
                         });
                     }
 
+                    // Mark fetch/inspect done after tool calls finish.
+                    if let Some(fetch) = plan.iter_mut().find(|s| s.id == PLAN_STEP_FETCH) {
+                        fetch.mark_status(PlanStepStatus::Done);
+                    }
+                    if let Some(inspect) = plan.iter_mut().find(|s| s.id == PLAN_STEP_INSPECT) {
+                        inspect.mark_status(PlanStepStatus::Done);
+                    }
+                    push_plan_update(&mut responses, &stream_id, &plan);
+
                     let mut follow_up_messages = messages.clone();
                     follow_up_messages.push(ChatMessage {
                         role: "assistant".to_string(),
@@ -151,12 +172,23 @@ pub(super) async fn handle_ai_message(
                                 &stream_id,
                                 final_response,
                             ));
+                            if let Some(exec) = plan.iter_mut().find(|s| s.id == PLAN_STEP_EXECUTE) {
+                                exec.mark_status(PlanStepStatus::Done);
+                            }
+                            if let Some(sum) = plan.iter_mut().find(|s| s.id == PLAN_STEP_SUMMARIZE) {
+                                sum.mark_status(PlanStepStatus::Done);
+                            }
+                            push_plan_update(&mut responses, &stream_id, &plan);
                             responses
                         }
                         Err(e) => {
                             responses.push(WSResponse::Error {
                                 message: format!("Failed to get final response: {}", e),
                             });
+                            if let Some(exec) = plan.iter_mut().find(|s| s.id == PLAN_STEP_EXECUTE) {
+                                exec.error = Some(format!("Failed to get final response: {}", e));
+                                exec.mark_status(PlanStepStatus::Error);
+                            }
                             responses
                         }
                     }
@@ -164,6 +196,13 @@ pub(super) async fn handle_ai_message(
                     let mut responses =
                         build_streaming_payload(stream, &stream_id, response.content.clone());
                     responses.push(WSResponse::AIResponseWithTools { response });
+                    if let Some(exec) = plan.iter_mut().find(|s| s.id == PLAN_STEP_EXECUTE) {
+                        exec.mark_status(PlanStepStatus::Done);
+                    }
+                    if let Some(sum) = plan.iter_mut().find(|s| s.id == PLAN_STEP_SUMMARIZE) {
+                        sum.mark_status(PlanStepStatus::Done);
+                    }
+                    push_plan_update(&mut responses, &stream_id, &plan);
                     responses
                 }
             }

@@ -6,9 +6,17 @@ import type { ExecutionLogEntry } from "@shared/types";
  */
 export const REMOTE_FILE_ACTIONS = new Set(["create-file", "delete-range", "replace-range"]);
 
-const MAX_CONSOLE_ITEMS = 3;
-const MAX_CONSOLE_SNIPPET_LENGTH = 800;
-const MAX_CONSOLE_LINES = 20;
+export const CONSOLE_CONTEXT_LIMITS = {
+	maxItems: 3,
+	maxSnippetLength: 800,
+	maxLines: 20,
+} as const;
+
+const {
+	maxItems: MAX_CONSOLE_ITEMS,
+	maxSnippetLength: MAX_CONSOLE_SNIPPET_LENGTH,
+	maxLines: MAX_CONSOLE_LINES,
+} = CONSOLE_CONTEXT_LIMITS;
 
 const truncateLines = (value: string, maxLines: number): string => {
 	const lines = value.split(/\r?\n/);
