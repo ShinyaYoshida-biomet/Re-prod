@@ -30,8 +30,10 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	const { dialogState, showConfirm, handleConfirm, handleCancel } = useConfirmDialog();
 
 	const cells = useEditorCells(editor.content, editor.filepath);
-	const { executingCellIndex, handleRunAll, handleRunCurrentCell, handleRunCellAndMoveNext } =
-		useEditorExecution({ editorRef: monacoEditorRef, cells });
+	const { executingCellIndex, handleRunAll, handleRunCurrentCell } = useEditorExecution({
+		editorRef: monacoEditorRef,
+		cells,
+	});
 
 	useEditorDecorations(monacoEditorRef, cells, {
 		showCellDecorations: settings.showCellDecorations,
