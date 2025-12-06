@@ -5,6 +5,7 @@ import type {
 	TimelineResponse,
 	TimelineStats,
 } from "shared";
+import { timelineMessages } from "@/services/messageBuilders";
 import { socketService } from "./socket";
 
 const timelineMatcher = (message: ServerMessage): boolean =>
@@ -13,7 +14,7 @@ const timelineMatcher = (message: ServerMessage): boolean =>
 export async function queryTimeline(query: TimelineQuery): Promise<TimelineResponse> {
 	return new Promise((resolve, reject) => {
 		const didSend = socketService.send(
-			{ type: "timeline_query", query },
+			timelineMessages.query(query),
 			(message) => {
 				if (message.type === "timeline_response") {
 					resolve(message.data);
@@ -39,7 +40,7 @@ export async function queryTimeline(query: TimelineQuery): Promise<TimelineRespo
 export async function getTimelineStats(): Promise<TimelineStats> {
 	return new Promise((resolve, reject) => {
 		const didSend = socketService.send(
-			{ type: "timeline_stats_query" },
+			timelineMessages.statsQuery(),
 			(message) => {
 				if (message.type === "timeline_stats_response") {
 					resolve(message.stats);

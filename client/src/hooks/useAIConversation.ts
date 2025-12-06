@@ -2,6 +2,7 @@ import type { AIMessage, AIMode } from "@shared/types";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useStore } from "@/core";
 import { buildPromptWithContext, createRequestId } from "@/core/ai/promptUtils";
+import { aiMessages } from "@/services/messageBuilders";
 import { socketService } from "@/services/socket";
 import { useAICodeApplication } from "./useAICodeApplication";
 import { useAIStreaming } from "./useAIStreaming";
@@ -131,14 +132,14 @@ export function useAIConversation() {
 
 			const enableTools = mode === "agent";
 
-			const sent = socketService.send({
-				type: "ai_message",
-				request_id: requestId,
-				stream: true,
-				messages: requestMessages,
-				enable_tools: enableTools,
-				mode,
-			});
+			const sent = socketService.send(
+				aiMessages.send(requestMessages, {
+					requestId,
+					stream: true,
+					enableTools,
+					mode,
+				}),
+			);
 
 			if (!sent) {
 				cleanup();
