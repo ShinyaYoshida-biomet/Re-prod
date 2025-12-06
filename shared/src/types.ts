@@ -89,6 +89,8 @@ export interface ExecutionLogEntry {
 	timestamp: number;
 	duration: number;
 	success: boolean;
+	/** Optional flag for UI to show a pending/running entry before results arrive. */
+	pending?: boolean;
 }
 
 export type CodeChangeAction =
