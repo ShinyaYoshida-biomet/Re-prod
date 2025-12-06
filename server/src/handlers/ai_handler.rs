@@ -19,14 +19,45 @@ use super::{
     tool_handler::execute_ai_tool_call,
 };
 
-const PLAN_STEP_ID: &str = "process-request";
+const PLAN_STEP_DISPATCH: &str = "plan-dispatch";
+const PLAN_STEP_FETCH: &str = "locate-data";
+const PLAN_STEP_INSPECT: &str = "inspect-data";
+const PLAN_STEP_EXECUTE: &str = "execute-task";
+const PLAN_STEP_SUMMARIZE: &str = "summarize";
 
 fn build_initial_plan() -> Vec<PlanStepPayload> {
-    vec![PlanStepPayload::new(
-        PLAN_STEP_ID,
-        "Process request",
-        Some("exec".to_string()),
-    )]
+    let mut steps = vec![
+        PlanStepPayload::new(PLAN_STEP_DISPATCH, "Plan request", Some("plan".to_string())),
+        PlanStepPayload::new(
+            PLAN_STEP_FETCH,
+            "Fetch or locate data (download/path check)",
+            Some("exec".to_string()),
+        ),
+        PlanStepPayload {
+            waiting_reason: Some("Waiting for data or permission; resume once available".into()),
+            ..PlanStepPayload::new(
+                PLAN_STEP_INSPECT,
+                "Inspect data structure (head/sample)",
+                Some("peek".to_string()),
+            )
+        },
+        PlanStepPayload::new(
+            PLAN_STEP_EXECUTE,
+            "Execute requested task (analysis/plots)",
+            Some("exec".to_string()),
+        ),
+        PlanStepPayload::new(
+            PLAN_STEP_SUMMARIZE,
+            "Summarize results and next steps",
+            Some("exec".to_string()),
+        ),
+    ];
+
+    if let Some(dispatch) = steps.iter_mut().find(|s| s.id == PLAN_STEP_DISPATCH) {
+        dispatch.mark_status(PlanStepStatus::Running);
+    }
+
+    steps
 }
 
 fn push_plan_update(responses: &mut Vec<WSResponse>, request_id: &str, plan: &[PlanStepPayload]) {
@@ -55,10 +86,6 @@ pub(super) async fn handle_ai_message(
 
     let mut plan = build_initial_plan();
     let mut outbound = Vec::new();
-    push_plan_update(&mut outbound, &stream_id, &plan);
-    if let Some(step) = plan.iter_mut().find(|step| step.id == PLAN_STEP_ID) {
-        step.mark_status(PlanStepStatus::Running);
-    }
     push_plan_update(&mut outbound, &stream_id, &plan);
 
     let responses = if enable_tools {
@@ -157,7 +184,7 @@ pub(super) async fn handle_ai_message(
         }
     });
 
-    if let Some(step) = plan.iter_mut().find(|step| step.id == PLAN_STEP_ID) {
+    if let Some(step) = plan.iter_mut().find(|step| step.id == PLAN_STEP_DISPATCH) {
         if let Some(error_message) = first_error_message {
             step.error = Some(error_message);
             step.mark_status(PlanStepStatus::Error);

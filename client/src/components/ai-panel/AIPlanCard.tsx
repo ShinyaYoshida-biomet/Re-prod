@@ -32,6 +32,9 @@ export function AIPlanCard({ steps }: Props): JSX.Element | null {
 						<span className="ai-plan-card__status">{STATUS_LABEL[step.status]}</span>
 						{step.kind && <span className="ai-plan-card__kind">{KIND_LABEL[step.kind]}</span>}
 						<span className="ai-plan-card__text">{step.title}</span>
+						{step.waitingReason && (
+							<span className="ai-plan-card__waiting">Waiting: {step.waitingReason}</span>
+						)}
 						{step.error && <span className="ai-plan-card__error">{step.error}</span>}
 					</li>
 				))}

@@ -8,6 +8,15 @@ export const REMOTE_FILE_ACTIONS = new Set(["create-file", "delete-range", "repl
 
 const MAX_CONSOLE_ITEMS = 3;
 const MAX_CONSOLE_SNIPPET_LENGTH = 800;
+const MAX_CONSOLE_LINES = 20;
+
+const truncateLines = (value: string, maxLines: number): string => {
+	const lines = value.split(/\r?\n/);
+	if (lines.length <= maxLines) {
+		return value;
+	}
+	return lines.slice(-maxLines).join("\n");
+};
 
 const truncateText = (value: string, maxLength: number): string =>
 	value.length > maxLength ? `${value.slice(0, maxLength)}... (truncated)` : value;
@@ -18,11 +27,13 @@ const formatConsoleEntry = (entry: ExecutionLogEntry): string => {
 	];
 
 	if (entry.stdout?.trim()) {
-		lines.push(`stdout: ${truncateText(entry.stdout.trim(), MAX_CONSOLE_SNIPPET_LENGTH)}`);
+		const trimmed = truncateLines(entry.stdout.trim(), MAX_CONSOLE_LINES);
+		lines.push(`stdout: ${truncateText(trimmed, MAX_CONSOLE_SNIPPET_LENGTH)}`);
 	}
 
 	if (entry.stderr?.trim()) {
-		lines.push(`stderr: ${truncateText(entry.stderr.trim(), MAX_CONSOLE_SNIPPET_LENGTH)}`);
+		const trimmed = truncateLines(entry.stderr.trim(), MAX_CONSOLE_LINES);
+		lines.push(`stderr: ${truncateText(trimmed, MAX_CONSOLE_SNIPPET_LENGTH)}`);
 	}
 
 	if (entry.plots.length > 0) {

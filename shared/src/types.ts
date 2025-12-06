@@ -146,6 +146,7 @@ export interface PlanStep {
 	error?: string;
 	startedAt?: number;
 	finishedAt?: number;
+	waitingReason?: string;
 }
 
 export type ToolCallStatus = "pending" | "running" | "done" | "error";
