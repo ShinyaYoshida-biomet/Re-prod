@@ -34,8 +34,15 @@ export function ConsolePanel({ view }: ConsolePanelProps): JSX.Element {
 									<div key={index} className="console-entry">
 										<div className="console-meta">
 											<span className="console-time">{formatClockTime(result.timestamp)}</span>
-											<span className="console-duration">({result.duration}ms)</span>
-											{!result.success && <span className="console-error-badge">Error</span>}
+											{result.pending ? (
+												<span className="console-duration">Running…</span>
+											) : (
+												<span className="console-duration">({result.duration}ms)</span>
+											)}
+											{result.pending && <span className="console-pending-badge">Pending</span>}
+											{!result.pending && !result.success && (
+												<span className="console-error-badge">Error</span>
+											)}
 										</div>
 										{result.code && (
 											<pre className="console-code">
