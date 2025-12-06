@@ -49,12 +49,6 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
 				scope: "Editor",
 			},
 			{
-				id: "run-next",
-				keys: ["Shift+Enter"],
-				description: "Run cell and move to next",
-				scope: "Editor",
-			},
-			{
 				id: "run-all",
 				keys: ["⌘⇧↵", "Ctrl+Shift+Enter"],
 				description: "Run entire document",
