@@ -433,6 +433,13 @@
 	line-height: 1.45;
 }
 
+/* Settings Modal */
+.settings-form {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
 .settings-form section {
 	border: 1px solid rgba(255, 255, 255, 0.06);
 	border-radius: 12px;
@@ -778,32 +785,143 @@
 }
 
 /* Settings Modal */
-[data-theme="phylo"] .settings-form section {
-	border: 1px solid #e0e0e0;
-	border-radius: 3px;
-	padding: 12px;
-	background: #f5f5f5;
+.settings-form {
+	display: flex;
+	flex-direction: column;
 	gap: 20px;
 }
-[data-theme="phylo"] .settings-form section h3 {
-	font-size: 12px;
-	font-weight: 700;
-	color: #333333;
+
+.settings-form section {
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 12px;
+	padding: 16px;
+	background: rgba(255, 255, 255, 0.02);
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+.settings-form section h3 {
 	margin: 0 0 4px;
+	font-size: 1rem;
 }
 
-[data-theme="phylo"] .settings-row {
+.settings-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	font-size: 0.95rem;
+}
+
+.settings-row span {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.settings-row small {
+	font-size: 0.75rem;
+	color: rgba(255, 255, 255, 0.6);
+}
+
+.settings-row input[type="text"],
+.settings-row select {
+	min-width: 160px;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	padding: 8px 10px;
+	color: inherit;
+}
+
+.settings-row input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+}
+
+.settings-number-input {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.settings-number-input input[type="range"] {
+	accent-color: #8ab4ff;
+}
+
+.settings-footer-spacer {
+	flex: 1;
+}
+
+@media (max-width: 640px) {
+	.modal-body {
+		max-height: 80vh;
+	}
+
+	.settings-row {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.modal-footer-actions {
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+}
+
+/* ============================================================
+   Phylo Theme Overrides - RStudio-inspired flat design
+   ============================================================ */
+
+[data-theme="phylo"] .modal-overlay {
+	background: rgba(0, 0, 0, 0.25);
+	backdrop-filter: none;
+}
+
+[data-theme="phylo"] .modal-dialog {
+	background: var(--bg-primary);
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	color: #333333;
+}
+
+[data-theme="phylo"] .modal-header {
+	padding: 12px 16px;
+	border-bottom: 1px solid #e0e0e0;
+}
+
+[data-theme="phylo"] .modal-title h2 {
 	font-size: 12px;
-	gap: 12px;
+	font-weight: 600;
+	color: #333333;
 }
 
-[data-theme="phylo"] .settings-row small {
-	font-size: 10px;
+[data-theme="phylo"] .modal-subtitle {
+	font-size: 11px;
 	color: #666666;
 }
 
-[data-theme="phylo"] .settings-row input[type="text"],
-[data-theme="phylo"] .settings-row select {
+[data-theme="phylo"] .modal-title-icon svg,
+[data-theme="phylo"] .modal-title-icon {
+	width: 16px;
+	height: 16px;
+	color: #3b82f6;
+}
+
+[data-theme="phylo"] .modal-body {
+	padding: 16px;
+	font-size: 12px;
+}
+
+[data-theme="phylo"] .modal-footer {
+	padding: 12px 16px;
+	border-top: 1px solid #e0e0e0;
+	background: #f5f5f5;
+}
+
+/* Shortcuts Modal */
+[data-theme="phylo"] .shortcuts-search input {
 	background: var(--bg-primary);
 	border: 1px solid #cccccc;
 	border-radius: 3px;
@@ -812,26 +930,3717 @@
 	color: #333333;
 }
 
-[data-theme="phylo"] .settings-row input[type="text"]:focus,
-[data-theme="phylo"] .settings-row select:focus {
+[data-theme="phylo"] .shortcuts-search input:focus {
 	outline: 1px solid #3b82f6;
 	outline-offset: -1px;
 }
 
-[data-theme="phylo"] .settings-row input[type="checkbox"] {
-	width: 14px;
-	height: 14px;
-	accent-color: #3b82f6;
+[data-theme="phylo"] .shortcuts-grid {
+	gap: 12px;
 }
 
-[data-theme="phylo"] .settings-number-input span {
-	font-size: 11px;
+[data-theme="phylo"] .shortcut-group {
+	background: var(--bg-primary);
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	padding: 10px;
+	gap: 8px;
+}
+
+[data-theme="phylo"] .shortcut-group-header {
+	font-size: 10px;
+	font-weight: 700;
 	color: #666666;
+	letter-spacing: 0.02em;
+}
+
+[data-theme="phylo"] .shortcut-card {
+	background: #f5f5f5;
+	border: 1px solid #e8e8e8;
+	border-radius: 3px;
+	padding: 8px;
+}
+
+[data-theme="phylo"] .shortcut-description {
+	font-size: 12px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .shortcut-scope {
+	font-size: 10px;
+	color: #999999;
+}
+
+[data-theme="phylo"] .keycap {
+	border: 1px solid #cccccc;
+	background: var(--bg-primary);
+	border-radius: 3px;
+	padding: 2px 6px;
+	font-size: 11px;
+	color: #333333;
 	font-family: ui-monospace, "SF Mono", Consolas, monospace;
 }
 
-[data-theme="phylo"] .settings-number-input input[type="range"] {
-	accent-color: #3b82f6;
+[data-theme="phylo"] .shortcuts-empty {
+	background: #f5f5f5;
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	color: #999999;
+	font-size: 12px;
 }
 
-/* Project Manager Modal overrides removed as they now use variables */
+/* About Modal */
+[data-theme="phylo"] .about-grid {
+	gap: 12px;
+}
+
+[data-theme="phylo"] .about-card {
+	padding: 12px;
+	border-radius: 3px;
+	border: 1px solid #e0e0e0;
+	background: #f5f5f5;
+}
+
+[data-theme="phylo"] .about-card h3 {
+	font-size: 12px;
+	font-weight: 700;
+	color: #333333;
+	margin: 0 0 6px;
+}
+
+[data-theme="phylo"] .about-metric {
+	font-size: 14px;
+	font-weight: 600;
+	color: #333333;
+	margin: 0 0 6px;
+}
+
+[data-theme="phylo"] .about-card dl {
+	font-size: 11px;
+	gap: 4px 10px;
+}
+
+[data-theme="phylo"] .about-card dt {
+	color: #666666;
+	font-weight: 500;
+}
+
+[data-theme="phylo"] .about-card dd {
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .about-note {
+	font-size: 11px;
+	color: #666666;
+	line-height: 1.4;
+}
+
+[data-theme="phylo"] .about-tech-list li strong {
+	font-size: 11px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .about-tech-list li span {
+	font-size: 10px;
+	color: #666666;
+}
+
+[data-theme="phylo"] .about-links a {
+	color: #3b82f6;
+	font-size: 12px;
+	text-decoration: none;
+	border-bottom: 1px solid transparent;
+}
+
+[data-theme="phylo"] .about-links a:hover {
+	border-bottom-color: #3b82f6;
+}
+
+/* Session Info Modal */
+[data-theme="phylo"] .session-info-card {
+	border-radius: 3px;
+	border: 1px solid #e0e0e0;
+	padding: 12px;
+	background: #f5f5f5;
+}
+
+[data-theme="phylo"] .session-info-card dl {
+	font-size: 11px;
+	gap: 6px 10px;
+}
+
+[data-theme="phylo"] .session-info-card dt {
+	color: #666666;
+	font-weight: 500;
+}
+
+[data-theme="phylo"] .session-info-card dd {
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .package-list li {
+	background: rgba(59, 130, 246, 0.08);
+	color: #3b82f6;
+	padding: 4px 8px;
+	border-radius: 3px;
+	font-size: 10px;
+	border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="phylo"] .package-version {
+	color: #666666;
+}
+
+[data-theme="phylo"] .package-more {
+	background: transparent;
+	border: 1px dashed #cccccc;
+	color: #999999;
+}
+
+[data-theme="phylo"] .session-info-empty {
+	color: #999999;
+	font-size: 11px;
+}
+
+[data-theme="phylo"] .session-info-error {
+	padding: 10px;
+	border-radius: 3px;
+	border: 1px solid #ef4444;
+	color: #991b1b;
+	background: #fee2e2;
+	font-size: 12px;
+}
+
+[data-theme="phylo"] .session-info-output {
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	background: var(--bg-primary);
+}
+
+[data-theme="phylo"] .session-info-output-header {
+	border-bottom: 1px solid #e0e0e0;
+	padding: 8px 12px;
+	font-weight: 600;
+	font-size: 11px;
+	background: #f5f5f5;
+	color: #333333;
+}
+
+[data-theme="phylo"] .session-info-output pre {
+	padding: 12px;
+	font-size: 11px;
+	color: #333333;
+	line-height: 1.4;
+}
+
+/* Settings Modal */
+.settings-form {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.settings-form section {
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 12px;
+	padding: 16px;
+	background: rgba(255, 255, 255, 0.02);
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+.settings-form section h3 {
+	margin: 0 0 4px;
+	font-size: 1rem;
+}
+
+.settings-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	font-size: 0.95rem;
+}
+
+.settings-row span {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.settings-row small {
+	font-size: 0.75rem;
+	color: rgba(255, 255, 255, 0.6);
+}
+
+.settings-row input[type="text"],
+.settings-row select {
+	min-width: 160px;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	padding: 8px 10px;
+	color: inherit;
+}
+
+.settings-row input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+}
+
+.settings-number-input {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.settings-number-input input[type="range"] {
+	accent-color: #8ab4ff;
+}
+
+.settings-footer-spacer {
+	flex: 1;
+}
+
+@media (max-width: 640px) {
+	.modal-body {
+		max-height: 80vh;
+	}
+
+	.settings-row {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.modal-footer-actions {
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+}
+
+/* ============================================================
+   Phylo Theme Overrides - RStudio-inspired flat design
+   ============================================================ */
+
+[data-theme="phylo"] .modal-overlay {
+	background: rgba(0, 0, 0, 0.25);
+	backdrop-filter: none;
+}
+
+[data-theme="phylo"] .modal-dialog {
+	background: var(--bg-primary);
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	color: #333333;
+}
+
+[data-theme="phylo"] .modal-header {
+	padding: 12px 16px;
+	border-bottom: 1px solid #e0e0e0;
+}
+
+[data-theme="phylo"] .modal-title h2 {
+	font-size: 12px;
+	font-weight: 600;
+	color: #333333;
+}
+
+[data-theme="phylo"] .modal-subtitle {
+	font-size: 11px;
+	color: #666666;
+}
+
+[data-theme="phylo"] .modal-title-icon svg,
+[data-theme="phylo"] .modal-title-icon {
+	width: 16px;
+	height: 16px;
+	color: #3b82f6;
+}
+
+[data-theme="phylo"] .modal-body {
+	padding: 16px;
+	font-size: 12px;
+}
+
+[data-theme="phylo"] .modal-footer {
+	padding: 12px 16px;
+	border-top: 1px solid #e0e0e0;
+	background: #f5f5f5;
+}
+
+/* Shortcuts Modal */
+[data-theme="phylo"] .shortcuts-search input {
+	background: var(--bg-primary);
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	padding: 6px 8px;
+	font-size: 12px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .shortcuts-search input:focus {
+	outline: 1px solid #3b82f6;
+	outline-offset: -1px;
+}
+
+[data-theme="phylo"] .shortcuts-grid {
+	gap: 12px;
+}
+
+[data-theme="phylo"] .shortcut-group {
+	background: var(--bg-primary);
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	padding: 10px;
+	gap: 8px;
+}
+
+[data-theme="phylo"] .shortcut-group-header {
+	font-size: 10px;
+	font-weight: 700;
+	color: #666666;
+	letter-spacing: 0.02em;
+}
+
+[data-theme="phylo"] .shortcut-card {
+	background: #f5f5f5;
+	border: 1px solid #e8e8e8;
+	border-radius: 3px;
+	padding: 8px;
+}
+
+[data-theme="phylo"] .shortcut-description {
+	font-size: 12px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .shortcut-scope {
+	font-size: 10px;
+	color: #999999;
+}
+
+[data-theme="phylo"] .keycap {
+	border: 1px solid #cccccc;
+	background: var(--bg-primary);
+	border-radius: 3px;
+	padding: 2px 6px;
+	font-size: 11px;
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .shortcuts-empty {
+	background: #f5f5f5;
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	color: #999999;
+	font-size: 12px;
+}
+
+/* About Modal */
+[data-theme="phylo"] .about-grid {
+	gap: 12px;
+}
+
+[data-theme="phylo"] .about-card {
+	padding: 12px;
+	border-radius: 3px;
+	border: 1px solid #e0e0e0;
+	background: #f5f5f5;
+}
+
+[data-theme="phylo"] .about-card h3 {
+	font-size: 12px;
+	font-weight: 700;
+	color: #333333;
+	margin: 0 0 6px;
+}
+
+[data-theme="phylo"] .about-metric {
+	font-size: 14px;
+	font-weight: 600;
+	color: #333333;
+	margin: 0 0 6px;
+}
+
+[data-theme="phylo"] .about-card dl {
+	font-size: 11px;
+	gap: 4px 10px;
+}
+
+[data-theme="phylo"] .about-card dt {
+	color: #666666;
+	font-weight: 500;
+}
+
+[data-theme="phylo"] .about-card dd {
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .about-note {
+	font-size: 11px;
+	color: #666666;
+	line-height: 1.4;
+}
+
+[data-theme="phylo"] .about-tech-list li strong {
+	font-size: 11px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .about-tech-list li span {
+	font-size: 10px;
+	color: #666666;
+}
+
+[data-theme="phylo"] .about-links a {
+	color: #3b82f6;
+	font-size: 12px;
+	text-decoration: none;
+	border-bottom: 1px solid transparent;
+}
+
+[data-theme="phylo"] .about-links a:hover {
+	border-bottom-color: #3b82f6;
+}
+
+/* Session Info Modal */
+[data-theme="phylo"] .session-info-card {
+	border-radius: 3px;
+	border: 1px solid #e0e0e0;
+	padding: 12px;
+	background: #f5f5f5;
+}
+
+[data-theme="phylo"] .session-info-card dl {
+	font-size: 11px;
+	gap: 6px 10px;
+}
+
+[data-theme="phylo"] .session-info-card dt {
+	color: #666666;
+	font-weight: 500;
+}
+
+[data-theme="phylo"] .session-info-card dd {
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .package-list li {
+	background: rgba(59, 130, 246, 0.08);
+	color: #3b82f6;
+	padding: 4px 8px;
+	border-radius: 3px;
+	font-size: 10px;
+	border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="phylo"] .package-version {
+	color: #666666;
+}
+
+[data-theme="phylo"] .package-more {
+	background: transparent;
+	border: 1px dashed #cccccc;
+	color: #999999;
+}
+
+[data-theme="phylo"] .session-info-empty {
+	color: #999999;
+	font-size: 11px;
+}
+
+[data-theme="phylo"] .session-info-error {
+	padding: 10px;
+	border-radius: 3px;
+	border: 1px solid #ef4444;
+	color: #991b1b;
+	background: #fee2e2;
+	font-size: 12px;
+}
+
+[data-theme="phylo"] .session-info-output {
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	background: var(--bg-primary);
+}
+
+[data-theme="phylo"] .session-info-output-header {
+	border-bottom: 1px solid #e0e0e0;
+	padding: 8px 12px;
+	font-weight: 600;
+	font-size: 11px;
+	background: #f5f5f5;
+	color: #333333;
+}
+
+[data-theme="phylo"] .session-info-output pre {
+	padding: 12px;
+	font-size: 11px;
+	color: #333333;
+	line-height: 1.4;
+}
+
+/* Settings Modal */
+.settings-form {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.settings-form section {
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 12px;
+	padding: 16px;
+	background: rgba(255, 255, 255, 0.02);
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+.settings-form section h3 {
+	margin: 0 0 4px;
+	font-size: 1rem;
+}
+
+.settings-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	font-size: 0.95rem;
+}
+
+.settings-row span {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.settings-row small {
+	font-size: 0.75rem;
+	color: rgba(255, 255, 255, 0.6);
+}
+
+.settings-row input[type="text"],
+.settings-row select {
+	min-width: 160px;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	padding: 8px 10px;
+	color: inherit;
+}
+
+.settings-row input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+}
+
+.settings-number-input {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.settings-number-input input[type="range"] {
+	accent-color: #8ab4ff;
+}
+
+.settings-footer-spacer {
+	flex: 1;
+}
+
+@media (max-width: 640px) {
+	.modal-body {
+		max-height: 80vh;
+	}
+
+	.settings-row {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.modal-footer-actions {
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+}
+
+/* ============================================================
+   Phylo Theme Overrides - RStudio-inspired flat design
+   ============================================================ */
+
+[data-theme="phylo"] .modal-overlay {
+	background: rgba(0, 0, 0, 0.25);
+	backdrop-filter: none;
+}
+
+[data-theme="phylo"] .modal-dialog {
+	background: var(--bg-primary);
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	color: #333333;
+}
+
+[data-theme="phylo"] .modal-header {
+	padding: 12px 16px;
+	border-bottom: 1px solid #e0e0e0;
+}
+
+[data-theme="phylo"] .modal-title h2 {
+	font-size: 12px;
+	font-weight: 600;
+	color: #333333;
+}
+
+[data-theme="phylo"] .modal-subtitle {
+	font-size: 11px;
+	color: #666666;
+}
+
+[data-theme="phylo"] .modal-title-icon svg,
+[data-theme="phylo"] .modal-title-icon {
+	width: 16px;
+	height: 16px;
+	color: #3b82f6;
+}
+
+[data-theme="phylo"] .modal-body {
+	padding: 16px;
+	font-size: 12px;
+}
+
+[data-theme="phylo"] .modal-footer {
+	padding: 12px 16px;
+	border-top: 1px solid #e0e0e0;
+	background: #f5f5f5;
+}
+
+/* Shortcuts Modal */
+[data-theme="phylo"] .shortcuts-search input {
+	background: var(--bg-primary);
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	padding: 6px 8px;
+	font-size: 12px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .shortcuts-search input:focus {
+	outline: 1px solid #3b82f6;
+	outline-offset: -1px;
+}
+
+[data-theme="phylo"] .shortcuts-grid {
+	gap: 12px;
+}
+
+[data-theme="phylo"] .shortcut-group {
+	background: var(--bg-primary);
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	padding: 10px;
+	gap: 8px;
+}
+
+[data-theme="phylo"] .shortcut-group-header {
+	font-size: 10px;
+	font-weight: 700;
+	color: #666666;
+	letter-spacing: 0.02em;
+}
+
+[data-theme="phylo"] .shortcut-card {
+	background: #f5f5f5;
+	border: 1px solid #e8e8e8;
+	border-radius: 3px;
+	padding: 8px;
+}
+
+[data-theme="phylo"] .shortcut-description {
+	font-size: 12px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .shortcut-scope {
+	font-size: 10px;
+	color: #999999;
+}
+
+[data-theme="phylo"] .keycap {
+	border: 1px solid #cccccc;
+	background: var(--bg-primary);
+	border-radius: 3px;
+	padding: 2px 6px;
+	font-size: 11px;
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .shortcuts-empty {
+	background: #f5f5f5;
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	color: #999999;
+	font-size: 12px;
+}
+
+/* About Modal */
+[data-theme="phylo"] .about-grid {
+	gap: 12px;
+}
+
+[data-theme="phylo"] .about-card {
+	padding: 12px;
+	border-radius: 3px;
+	border: 1px solid #e0e0e0;
+	background: #f5f5f5;
+}
+
+[data-theme="phylo"] .about-card h3 {
+	font-size: 12px;
+	font-weight: 700;
+	color: #333333;
+	margin: 0 0 6px;
+}
+
+[data-theme="phylo"] .about-metric {
+	font-size: 14px;
+	font-weight: 600;
+	color: #333333;
+	margin: 0 0 6px;
+}
+
+[data-theme="phylo"] .about-card dl {
+	font-size: 11px;
+	gap: 4px 10px;
+}
+
+[data-theme="phylo"] .about-card dt {
+	color: #666666;
+	font-weight: 500;
+}
+
+[data-theme="phylo"] .about-card dd {
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .about-note {
+	font-size: 11px;
+	color: #666666;
+	line-height: 1.4;
+}
+
+[data-theme="phylo"] .about-tech-list li strong {
+	font-size: 11px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .about-tech-list li span {
+	font-size: 10px;
+	color: #666666;
+}
+
+[data-theme="phylo"] .about-links a {
+	color: #3b82f6;
+	font-size: 12px;
+	text-decoration: none;
+	border-bottom: 1px solid transparent;
+}
+
+[data-theme="phylo"] .about-links a:hover {
+	border-bottom-color: #3b82f6;
+}
+
+/* Session Info Modal */
+[data-theme="phylo"] .session-info-card {
+	border-radius: 3px;
+	border: 1px solid #e0e0e0;
+	padding: 12px;
+	background: #f5f5f5;
+}
+
+[data-theme="phylo"] .session-info-card dl {
+	font-size: 11px;
+	gap: 6px 10px;
+}
+
+[data-theme="phylo"] .session-info-card dt {
+	color: #666666;
+	font-weight: 500;
+}
+
+[data-theme="phylo"] .session-info-card dd {
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .package-list li {
+	background: rgba(59, 130, 246, 0.08);
+	color: #3b82f6;
+	padding: 4px 8px;
+	border-radius: 3px;
+	font-size: 10px;
+	border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="phylo"] .package-version {
+	color: #666666;
+}
+
+[data-theme="phylo"] .package-more {
+	background: transparent;
+	border: 1px dashed #cccccc;
+	color: #999999;
+}
+
+[data-theme="phylo"] .session-info-empty {
+	color: #999999;
+	font-size: 11px;
+}
+
+[data-theme="phylo"] .session-info-error {
+	padding: 10px;
+	border-radius: 3px;
+	border: 1px solid #ef4444;
+	color: #991b1b;
+	background: #fee2e2;
+	font-size: 12px;
+}
+
+[data-theme="phylo"] .session-info-output {
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	background: var(--bg-primary);
+}
+
+[data-theme="phylo"] .session-info-output-header {
+	border-bottom: 1px solid #e0e0e0;
+	padding: 8px 12px;
+	font-weight: 600;
+	font-size: 11px;
+	background: #f5f5f5;
+	color: #333333;
+}
+
+[data-theme="phylo"] .session-info-output pre {
+	padding: 12px;
+	font-size: 11px;
+	color: #333333;
+	line-height: 1.4;
+}
+
+/* Settings Modal */
+.settings-form {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.settings-form section {
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 12px;
+	padding: 16px;
+	background: rgba(255, 255, 255, 0.02);
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+.settings-form section h3 {
+	margin: 0 0 4px;
+	font-size: 1rem;
+}
+
+.settings-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	font-size: 0.95rem;
+}
+
+.settings-row span {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.settings-row small {
+	font-size: 0.75rem;
+	color: rgba(255, 255, 255, 0.6);
+}
+
+.settings-row input[type="text"],
+.settings-row select {
+	min-width: 160px;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	padding: 8px 10px;
+	color: inherit;
+}
+
+.settings-row input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+}
+
+.settings-number-input {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.settings-number-input input[type="range"] {
+	accent-color: #8ab4ff;
+}
+
+.settings-footer-spacer {
+	flex: 1;
+}
+
+@media (max-width: 640px) {
+	.modal-body {
+		max-height: 80vh;
+	}
+
+	.settings-row {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.modal-footer-actions {
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+}
+
+/* ============================================================
+   Phylo Theme Overrides - RStudio-inspired flat design
+   ============================================================ */
+
+[data-theme="phylo"] .modal-overlay {
+	background: rgba(0, 0, 0, 0.25);
+	backdrop-filter: none;
+}
+
+[data-theme="phylo"] .modal-dialog {
+	background: var(--bg-primary);
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	color: #333333;
+}
+
+[data-theme="phylo"] .modal-header {
+	padding: 12px 16px;
+	border-bottom: 1px solid #e0e0e0;
+}
+
+[data-theme="phylo"] .modal-title h2 {
+	font-size: 12px;
+	font-weight: 600;
+	color: #333333;
+}
+
+[data-theme="phylo"] .modal-subtitle {
+	font-size: 11px;
+	color: #666666;
+}
+
+[data-theme="phylo"] .modal-title-icon svg,
+[data-theme="phylo"] .modal-title-icon {
+	width: 16px;
+	height: 16px;
+	color: #3b82f6;
+}
+
+[data-theme="phylo"] .modal-body {
+	padding: 16px;
+	font-size: 12px;
+}
+
+[data-theme="phylo"] .modal-footer {
+	padding: 12px 16px;
+	border-top: 1px solid #e0e0e0;
+	background: #f5f5f5;
+}
+
+/* Shortcuts Modal */
+[data-theme="phylo"] .shortcuts-search input {
+	background: var(--bg-primary);
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	padding: 6px 8px;
+	font-size: 12px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .shortcuts-search input:focus {
+	outline: 1px solid #3b82f6;
+	outline-offset: -1px;
+}
+
+[data-theme="phylo"] .shortcuts-grid {
+	gap: 12px;
+}
+
+[data-theme="phylo"] .shortcut-group {
+	background: var(--bg-primary);
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	padding: 10px;
+	gap: 8px;
+}
+
+[data-theme="phylo"] .shortcut-group-header {
+	font-size: 10px;
+	font-weight: 700;
+	color: #666666;
+	letter-spacing: 0.02em;
+}
+
+[data-theme="phylo"] .shortcut-card {
+	background: #f5f5f5;
+	border: 1px solid #e8e8e8;
+	border-radius: 3px;
+	padding: 8px;
+}
+
+[data-theme="phylo"] .shortcut-description {
+	font-size: 12px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .shortcut-scope {
+	font-size: 10px;
+	color: #999999;
+}
+
+[data-theme="phylo"] .keycap {
+	border: 1px solid #cccccc;
+	background: var(--bg-primary);
+	border-radius: 3px;
+	padding: 2px 6px;
+	font-size: 11px;
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .shortcuts-empty {
+	background: #f5f5f5;
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	color: #999999;
+	font-size: 12px;
+}
+
+/* About Modal */
+[data-theme="phylo"] .about-grid {
+	gap: 12px;
+}
+
+[data-theme="phylo"] .about-card {
+	padding: 12px;
+	border-radius: 3px;
+	border: 1px solid #e0e0e0;
+	background: #f5f5f5;
+}
+
+[data-theme="phylo"] .about-card h3 {
+	font-size: 12px;
+	font-weight: 700;
+	color: #333333;
+	margin: 0 0 6px;
+}
+
+[data-theme="phylo"] .about-metric {
+	font-size: 14px;
+	font-weight: 600;
+	color: #333333;
+	margin: 0 0 6px;
+}
+
+[data-theme="phylo"] .about-card dl {
+	font-size: 11px;
+	gap: 4px 10px;
+}
+
+[data-theme="phylo"] .about-card dt {
+	color: #666666;
+	font-weight: 500;
+}
+
+[data-theme="phylo"] .about-card dd {
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .about-note {
+	font-size: 11px;
+	color: #666666;
+	line-height: 1.4;
+}
+
+[data-theme="phylo"] .about-tech-list li strong {
+	font-size: 11px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .about-tech-list li span {
+	font-size: 10px;
+	color: #666666;
+}
+
+[data-theme="phylo"] .about-links a {
+	color: #3b82f6;
+	font-size: 12px;
+	text-decoration: none;
+	border-bottom: 1px solid transparent;
+}
+
+[data-theme="phylo"] .about-links a:hover {
+	border-bottom-color: #3b82f6;
+}
+
+/* Session Info Modal */
+[data-theme="phylo"] .session-info-card {
+	border-radius: 3px;
+	border: 1px solid #e0e0e0;
+	padding: 12px;
+	background: #f5f5f5;
+}
+
+[data-theme="phylo"] .session-info-card dl {
+	font-size: 11px;
+	gap: 6px 10px;
+}
+
+[data-theme="phylo"] .session-info-card dt {
+	color: #666666;
+	font-weight: 500;
+}
+
+[data-theme="phylo"] .session-info-card dd {
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .package-list li {
+	background: rgba(59, 130, 246, 0.08);
+	color: #3b82f6;
+	padding: 4px 8px;
+	border-radius: 3px;
+	font-size: 10px;
+	border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="phylo"] .package-version {
+	color: #666666;
+}
+
+[data-theme="phylo"] .package-more {
+	background: transparent;
+	border: 1px dashed #cccccc;
+	color: #999999;
+}
+
+[data-theme="phylo"] .session-info-empty {
+	color: #999999;
+	font-size: 11px;
+}
+
+[data-theme="phylo"] .session-info-error {
+	padding: 10px;
+	border-radius: 3px;
+	border: 1px solid #ef4444;
+	color: #991b1b;
+	background: #fee2e2;
+	font-size: 12px;
+}
+
+[data-theme="phylo"] .session-info-output {
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	background: var(--bg-primary);
+}
+
+[data-theme="phylo"] .session-info-output-header {
+	border-bottom: 1px solid #e0e0e0;
+	padding: 8px 12px;
+	font-weight: 600;
+	font-size: 11px;
+	background: #f5f5f5;
+	color: #333333;
+}
+
+[data-theme="phylo"] .session-info-output pre {
+	padding: 12px;
+	font-size: 11px;
+	color: #333333;
+	line-height: 1.4;
+}
+
+/* Settings Modal */
+.settings-form {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.settings-form section {
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 12px;
+	padding: 16px;
+	background: rgba(255, 255, 255, 0.02);
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+.settings-form section h3 {
+	margin: 0 0 4px;
+	font-size: 1rem;
+}
+
+.settings-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	font-size: 0.95rem;
+}
+
+.settings-row span {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.settings-row small {
+	font-size: 0.75rem;
+	color: rgba(255, 255, 255, 0.6);
+}
+
+.settings-row input[type="text"],
+.settings-row select {
+	min-width: 160px;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	padding: 8px 10px;
+	color: inherit;
+}
+
+.settings-row input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+}
+
+.settings-number-input {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.settings-number-input input[type="range"] {
+	accent-color: #8ab4ff;
+}
+
+.settings-footer-spacer {
+	flex: 1;
+}
+
+@media (max-width: 640px) {
+	.modal-body {
+		max-height: 80vh;
+	}
+
+	.settings-row {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.modal-footer-actions {
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+}
+
+/* ============================================================
+   Phylo Theme Overrides - RStudio-inspired flat design
+   ============================================================ */
+
+[data-theme="phylo"] .modal-overlay {
+	background: rgba(0, 0, 0, 0.25);
+	backdrop-filter: none;
+}
+
+[data-theme="phylo"] .modal-dialog {
+	background: var(--bg-primary);
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	color: #333333;
+}
+
+[data-theme="phylo"] .modal-header {
+	padding: 12px 16px;
+	border-bottom: 1px solid #e0e0e0;
+}
+
+[data-theme="phylo"] .modal-title h2 {
+	font-size: 12px;
+	font-weight: 600;
+	color: #333333;
+}
+
+[data-theme="phylo"] .modal-subtitle {
+	font-size: 11px;
+	color: #666666;
+}
+
+[data-theme="phylo"] .modal-title-icon svg,
+[data-theme="phylo"] .modal-title-icon {
+	width: 16px;
+	height: 16px;
+	color: #3b82f6;
+}
+
+[data-theme="phylo"] .modal-body {
+	padding: 16px;
+	font-size: 12px;
+}
+
+[data-theme="phylo"] .modal-footer {
+	padding: 12px 16px;
+	border-top: 1px solid #e0e0e0;
+	background: #f5f5f5;
+}
+
+/* Shortcuts Modal */
+[data-theme="phylo"] .shortcuts-search input {
+	background: var(--bg-primary);
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	padding: 6px 8px;
+	font-size: 12px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .shortcuts-search input:focus {
+	outline: 1px solid #3b82f6;
+	outline-offset: -1px;
+}
+
+[data-theme="phylo"] .shortcuts-grid {
+	gap: 12px;
+}
+
+[data-theme="phylo"] .shortcut-group {
+	background: var(--bg-primary);
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	padding: 10px;
+	gap: 8px;
+}
+
+[data-theme="phylo"] .shortcut-group-header {
+	font-size: 10px;
+	font-weight: 700;
+	color: #666666;
+	letter-spacing: 0.02em;
+}
+
+[data-theme="phylo"] .shortcut-card {
+	background: #f5f5f5;
+	border: 1px solid #e8e8e8;
+	border-radius: 3px;
+	padding: 8px;
+}
+
+[data-theme="phylo"] .shortcut-description {
+	font-size: 12px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .shortcut-scope {
+	font-size: 10px;
+	color: #999999;
+}
+
+[data-theme="phylo"] .keycap {
+	border: 1px solid #cccccc;
+	background: var(--bg-primary);
+	border-radius: 3px;
+	padding: 2px 6px;
+	font-size: 11px;
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .shortcuts-empty {
+	background: #f5f5f5;
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	color: #999999;
+	font-size: 12px;
+}
+
+/* About Modal */
+[data-theme="phylo"] .about-grid {
+	gap: 12px;
+}
+
+[data-theme="phylo"] .about-card {
+	padding: 12px;
+	border-radius: 3px;
+	border: 1px solid #e0e0e0;
+	background: #f5f5f5;
+}
+
+[data-theme="phylo"] .about-card h3 {
+	font-size: 12px;
+	font-weight: 700;
+	color: #333333;
+	margin: 0 0 6px;
+}
+
+[data-theme="phylo"] .about-metric {
+	font-size: 14px;
+	font-weight: 600;
+	color: #333333;
+	margin: 0 0 6px;
+}
+
+[data-theme="phylo"] .about-card dl {
+	font-size: 11px;
+	gap: 4px 10px;
+}
+
+[data-theme="phylo"] .about-card dt {
+	color: #666666;
+	font-weight: 500;
+}
+
+[data-theme="phylo"] .about-card dd {
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .about-note {
+	font-size: 11px;
+	color: #666666;
+	line-height: 1.4;
+}
+
+[data-theme="phylo"] .about-tech-list li strong {
+	font-size: 11px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .about-tech-list li span {
+	font-size: 10px;
+	color: #666666;
+}
+
+[data-theme="phylo"] .about-links a {
+	color: #3b82f6;
+	font-size: 12px;
+	text-decoration: none;
+	border-bottom: 1px solid transparent;
+}
+
+[data-theme="phylo"] .about-links a:hover {
+	border-bottom-color: #3b82f6;
+}
+
+/* Session Info Modal */
+[data-theme="phylo"] .session-info-card {
+	border-radius: 3px;
+	border: 1px solid #e0e0e0;
+	padding: 12px;
+	background: #f5f5f5;
+}
+
+[data-theme="phylo"] .session-info-card dl {
+	font-size: 11px;
+	gap: 6px 10px;
+}
+
+[data-theme="phylo"] .session-info-card dt {
+	color: #666666;
+	font-weight: 500;
+}
+
+[data-theme="phylo"] .session-info-card dd {
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .package-list li {
+	background: rgba(59, 130, 246, 0.08);
+	color: #3b82f6;
+	padding: 4px 8px;
+	border-radius: 3px;
+	font-size: 10px;
+	border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="phylo"] .package-version {
+	color: #666666;
+}
+
+[data-theme="phylo"] .package-more {
+	background: transparent;
+	border: 1px dashed #cccccc;
+	color: #999999;
+}
+
+[data-theme="phylo"] .session-info-empty {
+	color: #999999;
+	font-size: 11px;
+}
+
+[data-theme="phylo"] .session-info-error {
+	padding: 10px;
+	border-radius: 3px;
+	border: 1px solid #ef4444;
+	color: #991b1b;
+	background: #fee2e2;
+	font-size: 12px;
+}
+
+[data-theme="phylo"] .session-info-output {
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	background: var(--bg-primary);
+}
+
+[data-theme="phylo"] .session-info-output-header {
+	border-bottom: 1px solid #e0e0e0;
+	padding: 8px 12px;
+	font-weight: 600;
+	font-size: 11px;
+	background: #f5f5f5;
+	color: #333333;
+}
+
+[data-theme="phylo"] .session-info-output pre {
+	padding: 12px;
+	font-size: 11px;
+	color: #333333;
+	line-height: 1.4;
+}
+
+/* Settings Modal */
+.settings-form {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.settings-form section {
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 12px;
+	padding: 16px;
+	background: rgba(255, 255, 255, 0.02);
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+.settings-form section h3 {
+	margin: 0 0 4px;
+	font-size: 1rem;
+}
+
+.settings-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	font-size: 0.95rem;
+}
+
+.settings-row span {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.settings-row small {
+	font-size: 0.75rem;
+	color: rgba(255, 255, 255, 0.6);
+}
+
+.settings-row input[type="text"],
+.settings-row select {
+	min-width: 160px;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	padding: 8px 10px;
+	color: inherit;
+}
+
+.settings-row input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+}
+
+.settings-number-input {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.settings-number-input input[type="range"] {
+	accent-color: #8ab4ff;
+}
+
+.settings-footer-spacer {
+	flex: 1;
+}
+
+@media (max-width: 640px) {
+	.modal-body {
+		max-height: 80vh;
+	}
+
+	.settings-row {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.modal-footer-actions {
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+}
+
+/* ============================================================
+   Phylo Theme Overrides - RStudio-inspired flat design
+   ============================================================ */
+
+[data-theme="phylo"] .modal-overlay {
+	background: rgba(0, 0, 0, 0.25);
+	backdrop-filter: none;
+}
+
+[data-theme="phylo"] .modal-dialog {
+	background: var(--bg-primary);
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	color: #333333;
+}
+
+[data-theme="phylo"] .modal-header {
+	padding: 12px 16px;
+	border-bottom: 1px solid #e0e0e0;
+}
+
+[data-theme="phylo"] .modal-title h2 {
+	font-size: 12px;
+	font-weight: 600;
+	color: #333333;
+}
+
+[data-theme="phylo"] .modal-subtitle {
+	font-size: 11px;
+	color: #666666;
+}
+
+[data-theme="phylo"] .modal-title-icon svg,
+[data-theme="phylo"] .modal-title-icon {
+	width: 16px;
+	height: 16px;
+	color: #3b82f6;
+}
+
+[data-theme="phylo"] .modal-body {
+	padding: 16px;
+	font-size: 12px;
+}
+
+[data-theme="phylo"] .modal-footer {
+	padding: 12px 16px;
+	border-top: 1px solid #e0e0e0;
+	background: #f5f5f5;
+}
+
+/* Shortcuts Modal */
+[data-theme="phylo"] .shortcuts-search input {
+	background: var(--bg-primary);
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	padding: 6px 8px;
+	font-size: 12px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .shortcuts-search input:focus {
+	outline: 1px solid #3b82f6;
+	outline-offset: -1px;
+}
+
+[data-theme="phylo"] .shortcuts-grid {
+	gap: 12px;
+}
+
+[data-theme="phylo"] .shortcut-group {
+	background: var(--bg-primary);
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	padding: 10px;
+	gap: 8px;
+}
+
+[data-theme="phylo"] .shortcut-group-header {
+	font-size: 10px;
+	font-weight: 700;
+	color: #666666;
+	letter-spacing: 0.02em;
+}
+
+[data-theme="phylo"] .shortcut-card {
+	background: #f5f5f5;
+	border: 1px solid #e8e8e8;
+	border-radius: 3px;
+	padding: 8px;
+}
+
+[data-theme="phylo"] .shortcut-description {
+	font-size: 12px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .shortcut-scope {
+	font-size: 10px;
+	color: #999999;
+}
+
+[data-theme="phylo"] .keycap {
+	border: 1px solid #cccccc;
+	background: var(--bg-primary);
+	border-radius: 3px;
+	padding: 2px 6px;
+	font-size: 11px;
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .shortcuts-empty {
+	background: #f5f5f5;
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	color: #999999;
+	font-size: 12px;
+}
+
+/* About Modal */
+[data-theme="phylo"] .about-grid {
+	gap: 12px;
+}
+
+[data-theme="phylo"] .about-card {
+	padding: 12px;
+	border-radius: 3px;
+	border: 1px solid #e0e0e0;
+	background: #f5f5f5;
+}
+
+[data-theme="phylo"] .about-card h3 {
+	font-size: 12px;
+	font-weight: 700;
+	color: #333333;
+	margin: 0 0 6px;
+}
+
+[data-theme="phylo"] .about-metric {
+	font-size: 14px;
+	font-weight: 600;
+	color: #333333;
+	margin: 0 0 6px;
+}
+
+[data-theme="phylo"] .about-card dl {
+	font-size: 11px;
+	gap: 4px 10px;
+}
+
+[data-theme="phylo"] .about-card dt {
+	color: #666666;
+	font-weight: 500;
+}
+
+[data-theme="phylo"] .about-card dd {
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .about-note {
+	font-size: 11px;
+	color: #666666;
+	line-height: 1.4;
+}
+
+[data-theme="phylo"] .about-tech-list li strong {
+	font-size: 11px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .about-tech-list li span {
+	font-size: 10px;
+	color: #666666;
+}
+
+[data-theme="phylo"] .about-links a {
+	color: #3b82f6;
+	font-size: 12px;
+	text-decoration: none;
+	border-bottom: 1px solid transparent;
+}
+
+[data-theme="phylo"] .about-links a:hover {
+	border-bottom-color: #3b82f6;
+}
+
+/* Session Info Modal */
+[data-theme="phylo"] .session-info-card {
+	border-radius: 3px;
+	border: 1px solid #e0e0e0;
+	padding: 12px;
+	background: #f5f5f5;
+}
+
+[data-theme="phylo"] .session-info-card dl {
+	font-size: 11px;
+	gap: 6px 10px;
+}
+
+[data-theme="phylo"] .session-info-card dt {
+	color: #666666;
+	font-weight: 500;
+}
+
+[data-theme="phylo"] .session-info-card dd {
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .package-list li {
+	background: rgba(59, 130, 246, 0.08);
+	color: #3b82f6;
+	padding: 4px 8px;
+	border-radius: 3px;
+	font-size: 10px;
+	border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="phylo"] .package-version {
+	color: #666666;
+}
+
+[data-theme="phylo"] .package-more {
+	background: transparent;
+	border: 1px dashed #cccccc;
+	color: #999999;
+}
+
+[data-theme="phylo"] .session-info-empty {
+	color: #999999;
+	font-size: 11px;
+}
+
+[data-theme="phylo"] .session-info-error {
+	padding: 10px;
+	border-radius: 3px;
+	border: 1px solid #ef4444;
+	color: #991b1b;
+	background: #fee2e2;
+	font-size: 12px;
+}
+
+[data-theme="phylo"] .session-info-output {
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	background: var(--bg-primary);
+}
+
+[data-theme="phylo"] .session-info-output-header {
+	border-bottom: 1px solid #e0e0e0;
+	padding: 8px 12px;
+	font-weight: 600;
+	font-size: 11px;
+	background: #f5f5f5;
+	color: #333333;
+}
+
+[data-theme="phylo"] .session-info-output pre {
+	padding: 12px;
+	font-size: 11px;
+	color: #333333;
+	line-height: 1.4;
+}
+
+/* Settings Modal */
+.settings-form {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.settings-form section {
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 12px;
+	padding: 16px;
+	background: rgba(255, 255, 255, 0.02);
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+.settings-form section h3 {
+	margin: 0 0 4px;
+	font-size: 1rem;
+}
+
+.settings-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	font-size: 0.95rem;
+}
+
+.settings-row span {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.settings-row small {
+	font-size: 0.75rem;
+	color: rgba(255, 255, 255, 0.6);
+}
+
+.settings-row input[type="text"],
+.settings-row select {
+	min-width: 160px;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	padding: 8px 10px;
+	color: inherit;
+}
+
+.settings-row input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+}
+
+.settings-number-input {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.settings-number-input input[type="range"] {
+	accent-color: #8ab4ff;
+}
+
+.settings-footer-spacer {
+	flex: 1;
+}
+
+@media (max-width: 640px) {
+	.modal-body {
+		max-height: 80vh;
+	}
+
+	.settings-row {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.modal-footer-actions {
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+}
+
+/* ============================================================
+   Phylo Theme Overrides - RStudio-inspired flat design
+   ============================================================ */
+
+[data-theme="phylo"] .modal-overlay {
+	background: rgba(0, 0, 0, 0.25);
+	backdrop-filter: none;
+}
+
+[data-theme="phylo"] .modal-dialog {
+	background: var(--bg-primary);
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	color: #333333;
+}
+
+[data-theme="phylo"] .modal-header {
+	padding: 12px 16px;
+	border-bottom: 1px solid #e0e0e0;
+}
+
+[data-theme="phylo"] .modal-title h2 {
+	font-size: 12px;
+	font-weight: 600;
+	color: #333333;
+}
+
+[data-theme="phylo"] .modal-subtitle {
+	font-size: 11px;
+	color: #666666;
+}
+
+[data-theme="phylo"] .modal-title-icon svg,
+[data-theme="phylo"] .modal-title-icon {
+	width: 16px;
+	height: 16px;
+	color: #3b82f6;
+}
+
+[data-theme="phylo"] .modal-body {
+	padding: 16px;
+	font-size: 12px;
+}
+
+[data-theme="phylo"] .modal-footer {
+	padding: 12px 16px;
+	border-top: 1px solid #e0e0e0;
+	background: #f5f5f5;
+}
+
+/* Shortcuts Modal */
+[data-theme="phylo"] .shortcuts-search input {
+	background: var(--bg-primary);
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	padding: 6px 8px;
+	font-size: 12px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .shortcuts-search input:focus {
+	outline: 1px solid #3b82f6;
+	outline-offset: -1px;
+}
+
+[data-theme="phylo"] .shortcuts-grid {
+	gap: 12px;
+}
+
+[data-theme="phylo"] .shortcut-group {
+	background: var(--bg-primary);
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	padding: 10px;
+	gap: 8px;
+}
+
+[data-theme="phylo"] .shortcut-group-header {
+	font-size: 10px;
+	font-weight: 700;
+	color: #666666;
+	letter-spacing: 0.02em;
+}
+
+[data-theme="phylo"] .shortcut-card {
+	background: #f5f5f5;
+	border: 1px solid #e8e8e8;
+	border-radius: 3px;
+	padding: 8px;
+}
+
+[data-theme="phylo"] .shortcut-description {
+	font-size: 12px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .shortcut-scope {
+	font-size: 10px;
+	color: #999999;
+}
+
+[data-theme="phylo"] .keycap {
+	border: 1px solid #cccccc;
+	background: var(--bg-primary);
+	border-radius: 3px;
+	padding: 2px 6px;
+	font-size: 11px;
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .shortcuts-empty {
+	background: #f5f5f5;
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	color: #999999;
+	font-size: 12px;
+}
+
+/* About Modal */
+[data-theme="phylo"] .about-grid {
+	gap: 12px;
+}
+
+[data-theme="phylo"] .about-card {
+	padding: 12px;
+	border-radius: 3px;
+	border: 1px solid #e0e0e0;
+	background: #f5f5f5;
+}
+
+[data-theme="phylo"] .about-card h3 {
+	font-size: 12px;
+	font-weight: 700;
+	color: #333333;
+	margin: 0 0 6px;
+}
+
+[data-theme="phylo"] .about-metric {
+	font-size: 14px;
+	font-weight: 600;
+	color: #333333;
+	margin: 0 0 6px;
+}
+
+[data-theme="phylo"] .about-card dl {
+	font-size: 11px;
+	gap: 4px 10px;
+}
+
+[data-theme="phylo"] .about-card dt {
+	color: #666666;
+	font-weight: 500;
+}
+
+[data-theme="phylo"] .about-card dd {
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .about-note {
+	font-size: 11px;
+	color: #666666;
+	line-height: 1.4;
+}
+
+[data-theme="phylo"] .about-tech-list li strong {
+	font-size: 11px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .about-tech-list li span {
+	font-size: 10px;
+	color: #666666;
+}
+
+[data-theme="phylo"] .about-links a {
+	color: #3b82f6;
+	font-size: 12px;
+	text-decoration: none;
+	border-bottom: 1px solid transparent;
+}
+
+[data-theme="phylo"] .about-links a:hover {
+	border-bottom-color: #3b82f6;
+}
+
+/* Session Info Modal */
+[data-theme="phylo"] .session-info-card {
+	border-radius: 3px;
+	border: 1px solid #e0e0e0;
+	padding: 12px;
+	background: #f5f5f5;
+}
+
+[data-theme="phylo"] .session-info-card dl {
+	font-size: 11px;
+	gap: 6px 10px;
+}
+
+[data-theme="phylo"] .session-info-card dt {
+	color: #666666;
+	font-weight: 500;
+}
+
+[data-theme="phylo"] .session-info-card dd {
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .package-list li {
+	background: rgba(59, 130, 246, 0.08);
+	color: #3b82f6;
+	padding: 4px 8px;
+	border-radius: 3px;
+	font-size: 10px;
+	border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="phylo"] .package-version {
+	color: #666666;
+}
+
+[data-theme="phylo"] .package-more {
+	background: transparent;
+	border: 1px dashed #cccccc;
+	color: #999999;
+}
+
+[data-theme="phylo"] .session-info-empty {
+	color: #999999;
+	font-size: 11px;
+}
+
+[data-theme="phylo"] .session-info-error {
+	padding: 10px;
+	border-radius: 3px;
+	border: 1px solid #ef4444;
+	color: #991b1b;
+	background: #fee2e2;
+	font-size: 12px;
+}
+
+[data-theme="phylo"] .session-info-output {
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	background: var(--bg-primary);
+}
+
+[data-theme="phylo"] .session-info-output-header {
+	border-bottom: 1px solid #e0e0e0;
+	padding: 8px 12px;
+	font-weight: 600;
+	font-size: 11px;
+	background: #f5f5f5;
+	color: #333333;
+}
+
+[data-theme="phylo"] .session-info-output pre {
+	padding: 12px;
+	font-size: 11px;
+	color: #333333;
+	line-height: 1.4;
+}
+
+/* Settings Modal */
+.settings-form {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.settings-form section {
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 12px;
+	padding: 16px;
+	background: rgba(255, 255, 255, 0.02);
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+.settings-form section h3 {
+	margin: 0 0 4px;
+	font-size: 1rem;
+}
+
+.settings-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	font-size: 0.95rem;
+}
+
+.settings-row span {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.settings-row small {
+	font-size: 0.75rem;
+	color: rgba(255, 255, 255, 0.6);
+}
+
+.settings-row input[type="text"],
+.settings-row select {
+	min-width: 160px;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	padding: 8px 10px;
+	color: inherit;
+}
+
+.settings-row input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+}
+
+.settings-number-input {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.settings-number-input input[type="range"] {
+	accent-color: #8ab4ff;
+}
+
+.settings-footer-spacer {
+	flex: 1;
+}
+
+@media (max-width: 640px) {
+	.modal-body {
+		max-height: 80vh;
+	}
+
+	.settings-row {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.modal-footer-actions {
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+}
+
+/* ============================================================
+   Phylo Theme Overrides - RStudio-inspired flat design
+   ============================================================ */
+
+[data-theme="phylo"] .modal-overlay {
+	background: rgba(0, 0, 0, 0.25);
+	backdrop-filter: none;
+}
+
+[data-theme="phylo"] .modal-dialog {
+	background: var(--bg-primary);
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	color: #333333;
+}
+
+[data-theme="phylo"] .modal-header {
+	padding: 12px 16px;
+	border-bottom: 1px solid #e0e0e0;
+}
+
+[data-theme="phylo"] .modal-title h2 {
+	font-size: 12px;
+	font-weight: 600;
+	color: #333333;
+}
+
+[data-theme="phylo"] .modal-subtitle {
+	font-size: 11px;
+	color: #666666;
+}
+
+[data-theme="phylo"] .modal-title-icon svg,
+[data-theme="phylo"] .modal-title-icon {
+	width: 16px;
+	height: 16px;
+	color: #3b82f6;
+}
+
+[data-theme="phylo"] .modal-body {
+	padding: 16px;
+	font-size: 12px;
+}
+
+[data-theme="phylo"] .modal-footer {
+	padding: 12px 16px;
+	border-top: 1px solid #e0e0e0;
+	background: #f5f5f5;
+}
+
+/* Shortcuts Modal */
+[data-theme="phylo"] .shortcuts-search input {
+	background: var(--bg-primary);
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	padding: 6px 8px;
+	font-size: 12px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .shortcuts-search input:focus {
+	outline: 1px solid #3b82f6;
+	outline-offset: -1px;
+}
+
+[data-theme="phylo"] .shortcuts-grid {
+	gap: 12px;
+}
+
+[data-theme="phylo"] .shortcut-group {
+	background: var(--bg-primary);
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	padding: 10px;
+	gap: 8px;
+}
+
+[data-theme="phylo"] .shortcut-group-header {
+	font-size: 10px;
+	font-weight: 700;
+	color: #666666;
+	letter-spacing: 0.02em;
+}
+
+[data-theme="phylo"] .shortcut-card {
+	background: #f5f5f5;
+	border: 1px solid #e8e8e8;
+	border-radius: 3px;
+	padding: 8px;
+}
+
+[data-theme="phylo"] .shortcut-description {
+	font-size: 12px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .shortcut-scope {
+	font-size: 10px;
+	color: #999999;
+}
+
+[data-theme="phylo"] .keycap {
+	border: 1px solid #cccccc;
+	background: var(--bg-primary);
+	border-radius: 3px;
+	padding: 2px 6px;
+	font-size: 11px;
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .shortcuts-empty {
+	background: #f5f5f5;
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	color: #999999;
+	font-size: 12px;
+}
+
+/* About Modal */
+[data-theme="phylo"] .about-grid {
+	gap: 12px;
+}
+
+[data-theme="phylo"] .about-card {
+	padding: 12px;
+	border-radius: 3px;
+	border: 1px solid #e0e0e0;
+	background: #f5f5f5;
+}
+
+[data-theme="phylo"] .about-card h3 {
+	font-size: 12px;
+	font-weight: 700;
+	color: #333333;
+	margin: 0 0 6px;
+}
+
+[data-theme="phylo"] .about-metric {
+	font-size: 14px;
+	font-weight: 600;
+	color: #333333;
+	margin: 0 0 6px;
+}
+
+[data-theme="phylo"] .about-card dl {
+	font-size: 11px;
+	gap: 4px 10px;
+}
+
+[data-theme="phylo"] .about-card dt {
+	color: #666666;
+	font-weight: 500;
+}
+
+[data-theme="phylo"] .about-card dd {
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .about-note {
+	font-size: 11px;
+	color: #666666;
+	line-height: 1.4;
+}
+
+[data-theme="phylo"] .about-tech-list li strong {
+	font-size: 11px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .about-tech-list li span {
+	font-size: 10px;
+	color: #666666;
+}
+
+[data-theme="phylo"] .about-links a {
+	color: #3b82f6;
+	font-size: 12px;
+	text-decoration: none;
+	border-bottom: 1px solid transparent;
+}
+
+[data-theme="phylo"] .about-links a:hover {
+	border-bottom-color: #3b82f6;
+}
+
+/* Session Info Modal */
+[data-theme="phylo"] .session-info-card {
+	border-radius: 3px;
+	border: 1px solid #e0e0e0;
+	padding: 12px;
+	background: #f5f5f5;
+}
+
+[data-theme="phylo"] .session-info-card dl {
+	font-size: 11px;
+	gap: 6px 10px;
+}
+
+[data-theme="phylo"] .session-info-card dt {
+	color: #666666;
+	font-weight: 500;
+}
+
+[data-theme="phylo"] .session-info-card dd {
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .package-list li {
+	background: rgba(59, 130, 246, 0.08);
+	color: #3b82f6;
+	padding: 4px 8px;
+	border-radius: 3px;
+	font-size: 10px;
+	border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="phylo"] .package-version {
+	color: #666666;
+}
+
+[data-theme="phylo"] .package-more {
+	background: transparent;
+	border: 1px dashed #cccccc;
+	color: #999999;
+}
+
+[data-theme="phylo"] .session-info-empty {
+	color: #999999;
+	font-size: 11px;
+}
+
+[data-theme="phylo"] .session-info-error {
+	padding: 10px;
+	border-radius: 3px;
+	border: 1px solid #ef4444;
+	color: #991b1b;
+	background: #fee2e2;
+	font-size: 12px;
+}
+
+[data-theme="phylo"] .session-info-output {
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	background: var(--bg-primary);
+}
+
+[data-theme="phylo"] .session-info-output-header {
+	border-bottom: 1px solid #e0e0e0;
+	padding: 8px 12px;
+	font-weight: 600;
+	font-size: 11px;
+	background: #f5f5f5;
+	color: #333333;
+}
+
+[data-theme="phylo"] .session-info-output pre {
+	padding: 12px;
+	font-size: 11px;
+	color: #333333;
+	line-height: 1.4;
+}
+
+/* Settings Modal */
+.settings-form {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.settings-form section {
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 12px;
+	padding: 16px;
+	background: rgba(255, 255, 255, 0.02);
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+.settings-form section h3 {
+	margin: 0 0 4px;
+	font-size: 1rem;
+}
+
+.settings-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	font-size: 0.95rem;
+}
+
+.settings-row span {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.settings-row small {
+	font-size: 0.75rem;
+	color: rgba(255, 255, 255, 0.6);
+}
+
+.settings-row input[type="text"],
+.settings-row select {
+	min-width: 160px;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	padding: 8px 10px;
+	color: inherit;
+}
+
+.settings-row input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+}
+
+.settings-number-input {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.settings-number-input input[type="range"] {
+	accent-color: #8ab4ff;
+}
+
+.settings-footer-spacer {
+	flex: 1;
+}
+
+@media (max-width: 640px) {
+	.modal-body {
+		max-height: 80vh;
+	}
+
+	.settings-row {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.modal-footer-actions {
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+}
+
+/* ============================================================
+   Phylo Theme Overrides - RStudio-inspired flat design
+   ============================================================ */
+
+[data-theme="phylo"] .modal-overlay {
+	background: rgba(0, 0, 0, 0.25);
+	backdrop-filter: none;
+}
+
+[data-theme="phylo"] .modal-dialog {
+	background: var(--bg-primary);
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	color: #333333;
+}
+
+[data-theme="phylo"] .modal-header {
+	padding: 12px 16px;
+	border-bottom: 1px solid #e0e0e0;
+}
+
+[data-theme="phylo"] .modal-title h2 {
+	font-size: 12px;
+	font-weight: 600;
+	color: #333333;
+}
+
+[data-theme="phylo"] .modal-subtitle {
+	font-size: 11px;
+	color: #666666;
+}
+
+[data-theme="phylo"] .modal-title-icon svg,
+[data-theme="phylo"] .modal-title-icon {
+	width: 16px;
+	height: 16px;
+	color: #3b82f6;
+}
+
+[data-theme="phylo"] .modal-body {
+	padding: 16px;
+	font-size: 12px;
+}
+
+[data-theme="phylo"] .modal-footer {
+	padding: 12px 16px;
+	border-top: 1px solid #e0e0e0;
+	background: #f5f5f5;
+}
+
+/* Shortcuts Modal */
+[data-theme="phylo"] .shortcuts-search input {
+	background: var(--bg-primary);
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	padding: 6px 8px;
+	font-size: 12px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .shortcuts-search input:focus {
+	outline: 1px solid #3b82f6;
+	outline-offset: -1px;
+}
+
+[data-theme="phylo"] .shortcuts-grid {
+	gap: 12px;
+}
+
+[data-theme="phylo"] .shortcut-group {
+	background: var(--bg-primary);
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	padding: 10px;
+	gap: 8px;
+}
+
+[data-theme="phylo"] .shortcut-group-header {
+	font-size: 10px;
+	font-weight: 700;
+	color: #666666;
+	letter-spacing: 0.02em;
+}
+
+[data-theme="phylo"] .shortcut-card {
+	background: #f5f5f5;
+	border: 1px solid #e8e8e8;
+	border-radius: 3px;
+	padding: 8px;
+}
+
+[data-theme="phylo"] .shortcut-description {
+	font-size: 12px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .shortcut-scope {
+	font-size: 10px;
+	color: #999999;
+}
+
+[data-theme="phylo"] .keycap {
+	border: 1px solid #cccccc;
+	background: var(--bg-primary);
+	border-radius: 3px;
+	padding: 2px 6px;
+	font-size: 11px;
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .shortcuts-empty {
+	background: #f5f5f5;
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	color: #999999;
+	font-size: 12px;
+}
+
+/* About Modal */
+[data-theme="phylo"] .about-grid {
+	gap: 12px;
+}
+
+[data-theme="phylo"] .about-card {
+	padding: 12px;
+	border-radius: 3px;
+	border: 1px solid #e0e0e0;
+	background: #f5f5f5;
+}
+
+[data-theme="phylo"] .about-card h3 {
+	font-size: 12px;
+	font-weight: 700;
+	color: #333333;
+	margin: 0 0 6px;
+}
+
+[data-theme="phylo"] .about-metric {
+	font-size: 14px;
+	font-weight: 600;
+	color: #333333;
+	margin: 0 0 6px;
+}
+
+[data-theme="phylo"] .about-card dl {
+	font-size: 11px;
+	gap: 4px 10px;
+}
+
+[data-theme="phylo"] .about-card dt {
+	color: #666666;
+	font-weight: 500;
+}
+
+[data-theme="phylo"] .about-card dd {
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .about-note {
+	font-size: 11px;
+	color: #666666;
+	line-height: 1.4;
+}
+
+[data-theme="phylo"] .about-tech-list li strong {
+	font-size: 11px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .about-tech-list li span {
+	font-size: 10px;
+	color: #666666;
+}
+
+[data-theme="phylo"] .about-links a {
+	color: #3b82f6;
+	font-size: 12px;
+	text-decoration: none;
+	border-bottom: 1px solid transparent;
+}
+
+[data-theme="phylo"] .about-links a:hover {
+	border-bottom-color: #3b82f6;
+}
+
+/* Session Info Modal */
+[data-theme="phylo"] .session-info-card {
+	border-radius: 3px;
+	border: 1px solid #e0e0e0;
+	padding: 12px;
+	background: #f5f5f5;
+}
+
+[data-theme="phylo"] .session-info-card dl {
+	font-size: 11px;
+	gap: 6px 10px;
+}
+
+[data-theme="phylo"] .session-info-card dt {
+	color: #666666;
+	font-weight: 500;
+}
+
+[data-theme="phylo"] .session-info-card dd {
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .package-list li {
+	background: rgba(59, 130, 246, 0.08);
+	color: #3b82f6;
+	padding: 4px 8px;
+	border-radius: 3px;
+	font-size: 10px;
+	border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="phylo"] .package-version {
+	color: #666666;
+}
+
+[data-theme="phylo"] .package-more {
+	background: transparent;
+	border: 1px dashed #cccccc;
+	color: #999999;
+}
+
+[data-theme="phylo"] .session-info-empty {
+	color: #999999;
+	font-size: 11px;
+}
+
+[data-theme="phylo"] .session-info-error {
+	padding: 10px;
+	border-radius: 3px;
+	border: 1px solid #ef4444;
+	color: #991b1b;
+	background: #fee2e2;
+	font-size: 12px;
+}
+
+[data-theme="phylo"] .session-info-output {
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	background: var(--bg-primary);
+}
+
+[data-theme="phylo"] .session-info-output-header {
+	border-bottom: 1px solid #e0e0e0;
+	padding: 8px 12px;
+	font-weight: 600;
+	font-size: 11px;
+	background: #f5f5f5;
+	color: #333333;
+}
+
+[data-theme="phylo"] .session-info-output pre {
+	padding: 12px;
+	font-size: 11px;
+	color: #333333;
+	line-height: 1.4;
+}
+
+/* Settings Modal */
+.settings-form {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.settings-form section {
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 12px;
+	padding: 16px;
+	background: rgba(255, 255, 255, 0.02);
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+.settings-form section h3 {
+	margin: 0 0 4px;
+	font-size: 1rem;
+}
+
+.settings-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	font-size: 0.95rem;
+}
+
+.settings-row span {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.settings-row small {
+	font-size: 0.75rem;
+	color: rgba(255, 255, 255, 0.6);
+}
+
+.settings-row input[type="text"],
+.settings-row select {
+	min-width: 160px;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	padding: 8px 10px;
+	color: inherit;
+}
+
+.settings-row input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+}
+
+.settings-number-input {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.settings-number-input input[type="range"] {
+	accent-color: #8ab4ff;
+}
+
+.settings-footer-spacer {
+	flex: 1;
+}
+
+@media (max-width: 640px) {
+	.modal-body {
+		max-height: 80vh;
+	}
+
+	.settings-row {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.modal-footer-actions {
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+}
+
+/* ============================================================
+   Phylo Theme Overrides - RStudio-inspired flat design
+   ============================================================ */
+
+[data-theme="phylo"] .modal-overlay {
+	background: rgba(0, 0, 0, 0.25);
+	backdrop-filter: none;
+}
+
+[data-theme="phylo"] .modal-dialog {
+	background: var(--bg-primary);
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	color: #333333;
+}
+
+[data-theme="phylo"] .modal-header {
+	padding: 12px 16px;
+	border-bottom: 1px solid #e0e0e0;
+}
+
+[data-theme="phylo"] .modal-title h2 {
+	font-size: 12px;
+	font-weight: 600;
+	color: #333333;
+}
+
+[data-theme="phylo"] .modal-subtitle {
+	font-size: 11px;
+	color: #666666;
+}
+
+[data-theme="phylo"] .modal-title-icon svg,
+[data-theme="phylo"] .modal-title-icon {
+	width: 16px;
+	height: 16px;
+	color: #3b82f6;
+}
+
+[data-theme="phylo"] .modal-body {
+	padding: 16px;
+	font-size: 12px;
+}
+
+[data-theme="phylo"] .modal-footer {
+	padding: 12px 16px;
+	border-top: 1px solid #e0e0e0;
+	background: #f5f5f5;
+}
+
+/* Shortcuts Modal */
+[data-theme="phylo"] .shortcuts-search input {
+	background: var(--bg-primary);
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	padding: 6px 8px;
+	font-size: 12px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .shortcuts-search input:focus {
+	outline: 1px solid #3b82f6;
+	outline-offset: -1px;
+}
+
+[data-theme="phylo"] .shortcuts-grid {
+	gap: 12px;
+}
+
+[data-theme="phylo"] .shortcut-group {
+	background: var(--bg-primary);
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	padding: 10px;
+	gap: 8px;
+}
+
+[data-theme="phylo"] .shortcut-group-header {
+	font-size: 10px;
+	font-weight: 700;
+	color: #666666;
+	letter-spacing: 0.02em;
+}
+
+[data-theme="phylo"] .shortcut-card {
+	background: #f5f5f5;
+	border: 1px solid #e8e8e8;
+	border-radius: 3px;
+	padding: 8px;
+}
+
+[data-theme="phylo"] .shortcut-description {
+	font-size: 12px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .shortcut-scope {
+	font-size: 10px;
+	color: #999999;
+}
+
+[data-theme="phylo"] .keycap {
+	border: 1px solid #cccccc;
+	background: var(--bg-primary);
+	border-radius: 3px;
+	padding: 2px 6px;
+	font-size: 11px;
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .shortcuts-empty {
+	background: #f5f5f5;
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	color: #999999;
+	font-size: 12px;
+}
+
+/* About Modal */
+[data-theme="phylo"] .about-grid {
+	gap: 12px;
+}
+
+[data-theme="phylo"] .about-card {
+	padding: 12px;
+	border-radius: 3px;
+	border: 1px solid #e0e0e0;
+	background: #f5f5f5;
+}
+
+[data-theme="phylo"] .about-card h3 {
+	font-size: 12px;
+	font-weight: 700;
+	color: #333333;
+	margin: 0 0 6px;
+}
+
+[data-theme="phylo"] .about-metric {
+	font-size: 14px;
+	font-weight: 600;
+	color: #333333;
+	margin: 0 0 6px;
+}
+
+[data-theme="phylo"] .about-card dl {
+	font-size: 11px;
+	gap: 4px 10px;
+}
+
+[data-theme="phylo"] .about-card dt {
+	color: #666666;
+	font-weight: 500;
+}
+
+[data-theme="phylo"] .about-card dd {
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .about-note {
+	font-size: 11px;
+	color: #666666;
+	line-height: 1.4;
+}
+
+[data-theme="phylo"] .about-tech-list li strong {
+	font-size: 11px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .about-tech-list li span {
+	font-size: 10px;
+	color: #666666;
+}
+
+[data-theme="phylo"] .about-links a {
+	color: #3b82f6;
+	font-size: 12px;
+	text-decoration: none;
+	border-bottom: 1px solid transparent;
+}
+
+[data-theme="phylo"] .about-links a:hover {
+	border-bottom-color: #3b82f6;
+}
+
+/* Session Info Modal */
+[data-theme="phylo"] .session-info-card {
+	border-radius: 3px;
+	border: 1px solid #e0e0e0;
+	padding: 12px;
+	background: #f5f5f5;
+}
+
+[data-theme="phylo"] .session-info-card dl {
+	font-size: 11px;
+	gap: 6px 10px;
+}
+
+[data-theme="phylo"] .session-info-card dt {
+	color: #666666;
+	font-weight: 500;
+}
+
+[data-theme="phylo"] .session-info-card dd {
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .package-list li {
+	background: rgba(59, 130, 246, 0.08);
+	color: #3b82f6;
+	padding: 4px 8px;
+	border-radius: 3px;
+	font-size: 10px;
+	border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="phylo"] .package-version {
+	color: #666666;
+}
+
+[data-theme="phylo"] .package-more {
+	background: transparent;
+	border: 1px dashed #cccccc;
+	color: #999999;
+}
+
+[data-theme="phylo"] .session-info-empty {
+	color: #999999;
+	font-size: 11px;
+}
+
+[data-theme="phylo"] .session-info-error {
+	padding: 10px;
+	border-radius: 3px;
+	border: 1px solid #ef4444;
+	color: #991b1b;
+	background: #fee2e2;
+	font-size: 12px;
+}
+
+[data-theme="phylo"] .session-info-output {
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	background: var(--bg-primary);
+}
+
+[data-theme="phylo"] .session-info-output-header {
+	border-bottom: 1px solid #e0e0e0;
+	padding: 8px 12px;
+	font-weight: 600;
+	font-size: 11px;
+	background: #f5f5f5;
+	color: #333333;
+}
+
+[data-theme="phylo"] .session-info-output pre {
+	padding: 12px;
+	font-size: 11px;
+	color: #333333;
+	line-height: 1.4;
+}
+
+/* Settings Modal */
+.settings-form {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.settings-form section {
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 12px;
+	padding: 16px;
+	background: rgba(255, 255, 255, 0.02);
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+.settings-form section h3 {
+	margin: 0 0 4px;
+	font-size: 1rem;
+}
+
+.settings-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	font-size: 0.95rem;
+}
+
+.settings-row span {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.settings-row small {
+	font-size: 0.75rem;
+	color: rgba(255, 255, 255, 0.6);
+}
+
+.settings-row input[type="text"],
+.settings-row select {
+	min-width: 160px;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	padding: 8px 10px;
+	color: inherit;
+}
+
+.settings-row input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+}
+
+.settings-number-input {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.settings-number-input input[type="range"] {
+	accent-color: #8ab4ff;
+}
+
+.settings-footer-spacer {
+	flex: 1;
+}
+
+@media (max-width: 640px) {
+	.modal-body {
+		max-height: 80vh;
+	}
+
+	.settings-row {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.modal-footer-actions {
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+}
+
+/* ============================================================
+   Phylo Theme Overrides - RStudio-inspired flat design
+   ============================================================ */
+
+[data-theme="phylo"] .modal-overlay {
+	background: rgba(0, 0, 0, 0.25);
+	backdrop-filter: none;
+}
+
+[data-theme="phylo"] .modal-dialog {
+	background: var(--bg-primary);
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	color: #333333;
+}
+
+[data-theme="phylo"] .modal-header {
+	padding: 12px 16px;
+	border-bottom: 1px solid #e0e0e0;
+}
+
+[data-theme="phylo"] .modal-title h2 {
+	font-size: 12px;
+	font-weight: 600;
+	color: #333333;
+}
+
+[data-theme="phylo"] .modal-subtitle {
+	font-size: 11px;
+	color: #666666;
+}
+
+[data-theme="phylo"] .modal-title-icon svg,
+[data-theme="phylo"] .modal-title-icon {
+	width: 16px;
+	height: 16px;
+	color: #3b82f6;
+}
+
+[data-theme="phylo"] .modal-body {
+	padding: 16px;
+	font-size: 12px;
+}
+
+[data-theme="phylo"] .modal-footer {
+	padding: 12px 16px;
+	border-top: 1px solid #e0e0e0;
+	background: #f5f5f5;
+}
+
+/* Shortcuts Modal */
+[data-theme="phylo"] .shortcuts-search input {
+	background: var(--bg-primary);
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	padding: 6px 8px;
+	font-size: 12px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .shortcuts-search input:focus {
+	outline: 1px solid #3b82f6;
+	outline-offset: -1px;
+}
+
+[data-theme="phylo"] .shortcuts-grid {
+	gap: 12px;
+}
+
+[data-theme="phylo"] .shortcut-group {
+	background: var(--bg-primary);
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	padding: 10px;
+	gap: 8px;
+}
+
+[data-theme="phylo"] .shortcut-group-header {
+	font-size: 10px;
+	font-weight: 700;
+	color: #666666;
+	letter-spacing: 0.02em;
+}
+
+[data-theme="phylo"] .shortcut-card {
+	background: #f5f5f5;
+	border: 1px solid #e8e8e8;
+	border-radius: 3px;
+	padding: 8px;
+}
+
+[data-theme="phylo"] .shortcut-description {
+	font-size: 12px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .shortcut-scope {
+	font-size: 10px;
+	color: #999999;
+}
+
+[data-theme="phylo"] .keycap {
+	border: 1px solid #cccccc;
+	background: var(--bg-primary);
+	border-radius: 3px;
+	padding: 2px 6px;
+	font-size: 11px;
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .shortcuts-empty {
+	background: #f5f5f5;
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	color: #999999;
+	font-size: 12px;
+}
+
+/* About Modal */
+[data-theme="phylo"] .about-grid {
+	gap: 12px;
+}
+
+[data-theme="phylo"] .about-card {
+	padding: 12px;
+	border-radius: 3px;
+	border: 1px solid #e0e0e0;
+	background: #f5f5f5;
+}
+
+[data-theme="phylo"] .about-card h3 {
+	font-size: 12px;
+	font-weight: 700;
+	color: #333333;
+	margin: 0 0 6px;
+}
+
+[data-theme="phylo"] .about-metric {
+	font-size: 14px;
+	font-weight: 600;
+	color: #333333;
+	margin: 0 0 6px;
+}
+
+[data-theme="phylo"] .about-card dl {
+	font-size: 11px;
+	gap: 4px 10px;
+}
+
+[data-theme="phylo"] .about-card dt {
+	color: #666666;
+	font-weight: 500;
+}
+
+[data-theme="phylo"] .about-card dd {
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .about-note {
+	font-size: 11px;
+	color: #666666;
+	line-height: 1.4;
+}
+
+[data-theme="phylo"] .about-tech-list li strong {
+	font-size: 11px;
+	color: #333333;
+}
+
+[data-theme="phylo"] .about-tech-list li span {
+	font-size: 10px;
+	color: #666666;
+}
+
+[data-theme="phylo"] .about-links a {
+	color: #3b82f6;
+	font-size: 12px;
+	text-decoration: none;
+	border-bottom: 1px solid transparent;
+}
+
+[data-theme="phylo"] .about-links a:hover {
+	border-bottom-color: #3b82f6;
+}
+
+/* Session Info Modal */
+[data-theme="phylo"] .session-info-card {
+	border-radius: 3px;
+	border: 1px solid #e0e0e0;
+	padding: 12px;
+	background: #f5f5f5;
+}
+
+[data-theme="phylo"] .session-info-card dl {
+	font-size: 11px;
+	gap: 6px 10px;
+}
+
+[data-theme="phylo"] .session-info-card dt {
+	color: #666666;
+	font-weight: 500;
+}
+
+[data-theme="phylo"] .session-info-card dd {
+	color: #333333;
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+[data-theme="phylo"] .package-list li {
+	background: rgba(59, 130, 246, 0.08);
+	color: #3b82f6;
+	padding: 4px 8px;
+	border-radius: 3px;
+	font-size: 10px;
+	border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="phylo"] .package-version {
+	color: #666666;
+}
+
+[data-theme="phylo"] .package-more {
+	background: transparent;
+	border: 1px dashed #cccccc;
+	color: #999999;
+}
+
+[data-theme="phylo"] .session-info-empty {
+	color: #999999;
+	font-size: 11px;
+}
+
+[data-theme="phylo"] .session-info-error {
+	padding: 10px;
+	border-radius: 3px;
+	border: 1px solid #ef4444;
+	color: #991b1b;
+	background: #fee2e2;
+	font-size: 12px;
+}
+
+[data-theme="phylo"] .session-info-output {
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	background: var(--bg-primary);
+}
+
+[data-theme="phylo"] .session-info-output-header {
+	border-bottom: 1px solid #e0e0e0;
+	padding: 8px 12px;
+	font-weight: 600;
+	font-size: 11px;
+	background: #f5f5f5;
+	color: #333333;
+}
+
+[data-theme="phylo"] .session-info-output pre {
+	padding: 12px;
+	font-size: 11px;
+	color: #333333;
+	line-height: 1.4;
+}
