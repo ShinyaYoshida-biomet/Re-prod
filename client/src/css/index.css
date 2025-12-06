@@ -16,7 +16,7 @@
 @import "./components/file-browser.css";
 @import "./components/export-dialog.css";
 @import "./components/confirm-dialog.css";
-@import "./components/modal-dialog.css";
+@import "./components/modals/index.css";
 @import "./components/loading-spinner.css";
 
 /* Design themes */
