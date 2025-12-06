@@ -40,6 +40,28 @@
 	letter-spacing: 0.05em;
 }
 
+.console-pending-badge {
+	padding: 2px 8px;
+	border-radius: 999px;
+	background: rgba(47, 111, 237, 0.15);
+	color: var(--text-primary);
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.05em;
+}
+
+.console-pending-hint {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 10px;
+	border-radius: 8px;
+	background: rgba(47, 111, 237, 0.08);
+	color: var(--text-secondary);
+	font-size: 12px;
+	margin: 6px 0;
+}
+
 .console-time {
 	font-weight: 600;
 	color: var(--text-primary);

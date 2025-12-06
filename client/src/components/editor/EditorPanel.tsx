@@ -30,8 +30,10 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	const { dialogState, showConfirm, handleConfirm, handleCancel } = useConfirmDialog();
 
 	const cells = useEditorCells(editor.content, editor.filepath);
-	const { executingCellIndex, handleRunAll, handleRunCurrentCell, handleRunCellAndMoveNext } =
-		useEditorExecution({ editorRef: monacoEditorRef, cells });
+	const { executingCellIndex, handleRunAll, handleRunCurrentCell } = useEditorExecution({
+		editorRef: monacoEditorRef,
+		cells,
+	});
 
 	useEditorDecorations(monacoEditorRef, cells, {
 		showCellDecorations: settings.showCellDecorations,
@@ -382,11 +384,6 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		// Cmd/Ctrl + Enter: Run current cell
 		monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
 			handleRunCurrentCell();
-		});
-
-		// Shift + Enter: Run current cell and move to next
-		monacoEditor.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.Enter, () => {
-			handleRunCellAndMoveNext();
 		});
 
 		// Cmd/Ctrl + Shift + Enter: Run all

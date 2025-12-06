@@ -9,7 +9,9 @@ export interface ExecutionState {
 		currentCell: number | undefined;
 	};
 	setIsRunning: (isRunning: boolean) => void;
+	addPendingExecution: (code: string) => void;
 	addExecutionResult: (result: ExecutionLogEntry) => void;
+	replacePendingExecution: (result: ExecutionLogEntry) => void;
 	clearExecutionResults: () => void;
 	setCurrentCell: (cellIndex: number | undefined) => void;
 	resetExecutionState: () => void;
@@ -27,6 +29,26 @@ export const createExecutionSlice: StateCreator<ExecutionState> = (set) => ({
 		set((state) => ({
 			execution: { ...state.execution, isRunning },
 		})),
+	addPendingExecution: (code) =>
+		set((state) => {
+			const entry: ExecutionLogEntry = {
+				code,
+				stdout: "",
+				stderr: "",
+				plots: [],
+				timestamp: Date.now(),
+				duration: 0,
+				success: true,
+				pending: true,
+			};
+			return {
+				execution: {
+					...state.execution,
+					results: [...state.execution.results, entry],
+					history: [...state.execution.history, entry],
+				},
+			};
+		}),
 	addExecutionResult: (result) =>
 		set((state) => ({
 			execution: {
@@ -35,6 +57,25 @@ export const createExecutionSlice: StateCreator<ExecutionState> = (set) => ({
 				history: [...state.execution.history, result],
 			},
 		})),
+	replacePendingExecution: (result) =>
+		set((state) => {
+			const replace = (list: ExecutionLogEntry[]): ExecutionLogEntry[] => {
+				const idx = list.findIndex((entry) => entry.pending);
+				if (idx === -1) {
+					return [...list, result];
+				}
+				const next = [...list];
+				next[idx] = { ...result, pending: false };
+				return next;
+			};
+			return {
+				execution: {
+					...state.execution,
+					results: replace(state.execution.results),
+					history: replace(state.execution.history),
+				},
+			};
+		}),
 	clearExecutionResults: () =>
 		set((state) => ({
 			execution: { ...state.execution, results: [] },

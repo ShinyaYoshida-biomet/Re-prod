@@ -6,7 +6,6 @@ import type { EditorRef } from "@/components/editor/editorRef";
 export const DEFAULT_R_SCRIPT = `# Welcome to Re-prod ----
 # AI-Powered R Analysis IDE
 # Try Cmd/Ctrl+Enter to run current section
-# Try Shift+Enter to run and move to next section
 
 # Load Data ----
 data(mtcars)

@@ -54,7 +54,8 @@ export function useEditorExecution({ editorRef, cells }: UseEditorExecutionProps
 	const editorFilepath = useStore((state) => state.editor.filepath);
 	const cursorLine = useStore((state) => state.editor.cursorPosition.line);
 	const setIsRunning = useStore((state) => state.setIsRunning);
-	const addExecutionResult = useStore((state) => state.addExecutionResult);
+	const addPendingExecution = useStore((state) => state.addPendingExecution);
+	const replacePendingExecution = useStore((state) => state.replacePendingExecution);
 
 	const [executingCellIndex, setExecutingCellIndex] = useState<number | null>(null);
 
@@ -65,6 +66,7 @@ export function useEditorExecution({ editorRef, cells }: UseEditorExecutionProps
 				setExecutingCellIndex(cellIndex);
 			}
 
+			addPendingExecution(target.code);
 			const request = buildExecutionRequest({
 				target,
 				cells,
@@ -74,19 +76,26 @@ export function useEditorExecution({ editorRef, cells }: UseEditorExecutionProps
 
 			try {
 				const { result } = await executeRequest(request);
-				addExecutionResult(normalizeResult(result, target.code));
+				replacePendingExecution(normalizeResult(result, target.code));
 			} catch (error) {
 				const message =
 					error instanceof ExecutionServiceError
 						? error.message
 						: "Execution failed due to an unexpected error.";
-				addExecutionResult(normalizeFailure(message, target.code));
+				replacePendingExecution(normalizeFailure(message, target.code));
 			} finally {
 				setExecutingCellIndex(null);
 				setIsRunning(false);
 			}
 		},
-		[addExecutionResult, cells, editorContent, editorFilepath, setIsRunning],
+		[
+			addPendingExecution,
+			replacePendingExecution,
+			cells,
+			editorContent,
+			editorFilepath,
+			setIsRunning,
+		],
 	);
 
 	const handleRunAll = useCallback(() => {

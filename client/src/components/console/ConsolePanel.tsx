@@ -34,13 +34,26 @@ export function ConsolePanel({ view }: ConsolePanelProps): JSX.Element {
 									<div key={index} className="console-entry">
 										<div className="console-meta">
 											<span className="console-time">{formatClockTime(result.timestamp)}</span>
-											<span className="console-duration">({result.duration}ms)</span>
-											{!result.success && <span className="console-error-badge">Error</span>}
+											{result.pending ? (
+												<span className="console-duration">Running…</span>
+											) : (
+												<span className="console-duration">({result.duration}ms)</span>
+											)}
+											{result.pending && <span className="console-pending-badge">Pending</span>}
+											{!result.pending && !result.success && (
+												<span className="console-error-badge">Error</span>
+											)}
 										</div>
-										{result.code && (
-											<pre className="console-code">
-												{result.code.trim() ? result.code : "<empty selection>"}
-											</pre>
+										<pre className="console-code">
+											{result.code && result.code.trim().length > 0
+												? result.code
+												: "<empty selection>"}
+										</pre>
+										{result.pending && (
+											<div className="console-pending-hint">
+												<span className="spinner inline" aria-hidden />
+												<span>Execution in progress…</span>
+											</div>
 										)}
 										{result.stdout && <pre className="console-stdout">{result.stdout}</pre>}
 										{result.stderr && <pre className="console-stderr">{result.stderr}</pre>}
