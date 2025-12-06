@@ -1,4 +1,5 @@
 import type { ServerMessage } from "shared";
+import { executionMessages } from "@/services/messageBuilders";
 import { socketService } from "./socket";
 
 const interruptMatcher = (message: ServerMessage): boolean =>
@@ -10,7 +11,7 @@ const restartMatcher = (message: ServerMessage): boolean =>
 export async function interruptExecution(): Promise<boolean> {
 	return new Promise((resolve, reject) => {
 		const didSend = socketService.send(
-			{ type: "interrupt_execution" },
+			executionMessages.interrupt(),
 			(message) => {
 				if (message.type === "execution_interrupted") {
 					resolve(message.success);
@@ -33,7 +34,7 @@ export async function interruptExecution(): Promise<boolean> {
 export async function restartSession(): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const didSend = socketService.send(
-			{ type: "restart_session" },
+			executionMessages.restart(),
 			(message) => {
 				if (message.type === "session_restarted") {
 					resolve();

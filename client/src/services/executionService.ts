@@ -1,5 +1,6 @@
 import type { ExecutionRequestPayload, ExecutionResultPayload } from "@shared/types";
 import type { ServerMessage } from "shared";
+import { executionMessages } from "@/services/messageBuilders";
 import { socketService } from "./socket";
 
 type ExecutionSuccessMessage = Extract<ServerMessage, { type: "execution_result" }>;
@@ -27,7 +28,7 @@ export interface ExecuteResponse {
 export async function executeRequest(request: ExecutionRequestPayload): Promise<ExecuteResponse> {
 	return new Promise<ExecuteResponse>((resolve, reject) => {
 		const didSend = socketService.send(
-			{ type: "execute", request },
+			executionMessages.execute(request),
 			(message) => {
 				if (message.type === "execution_result") {
 					resolve({ raw: message, result: message.result });

@@ -1,5 +1,6 @@
 import type { SessionSnapshot } from "@/services/sessionPersistence";
 import { getSessionSnapshot } from "@/services/sessionPersistence";
+import { projectMessages } from "@/services/messageBuilders";
 import { socketService } from "@/services/socket";
 
 interface CreateProjectPayload {
@@ -15,35 +16,33 @@ interface CloneProjectPayload {
 
 export const projectService = {
 	requestList(): void {
-		socketService.send({ type: "project_list" });
+		socketService.send(projectMessages.list());
 	},
 
 	open(projectId: string): void {
-		socketService.send({ type: "project_open", projectId });
+		socketService.send(projectMessages.open(projectId));
 	},
 
 	create(payload: CreateProjectPayload): void {
-		socketService.send({ type: "project_create", ...payload });
+		socketService.send(projectMessages.create(payload.name, payload.path));
 	},
 
 	addExisting(path: string): void {
-		socketService.send({ type: "project_add_existing", path });
+		socketService.send(projectMessages.addExisting(path));
 	},
 
 	clone(payload: CloneProjectPayload): void {
-		socketService.send({ type: "project_clone", ...payload });
+		socketService.send(projectMessages.clone(payload.remote, payload.path, payload.name));
 	},
 
 	loadState(projectId: string): void {
-		socketService.send({ type: "project_state_load", projectId });
+		socketService.send(projectMessages.loadState(projectId));
 	},
 
 	saveState(projectId: string, snapshot?: SessionSnapshot): void {
 		const state = snapshot ?? getSessionSnapshot();
-		socketService.send({
-			type: "project_state_save",
-			projectId,
-			state: state as unknown as Record<string, unknown>,
-		});
+		socketService.send(
+			projectMessages.saveState(projectId, state as unknown as Record<string, unknown>),
+		);
 	},
 };
