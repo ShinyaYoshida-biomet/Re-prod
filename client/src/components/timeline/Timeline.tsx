@@ -1,4 +1,5 @@
 import type { TimelineListProps } from "@/types/timeline";
+import { LoadingSpinner } from "@/components/shared";
 import { TimelineEvent } from "./TimelineEvent";
 
 export function Timeline({
@@ -28,8 +29,7 @@ export function Timeline({
 
 			{loading && (
 				<div className="timeline-loading">
-					<div className="timeline-spinner" />
-					<span>Loading events...</span>
+					<LoadingSpinner size="small" message="Loading events..." />
 				</div>
 			)}
 

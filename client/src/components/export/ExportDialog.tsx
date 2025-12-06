@@ -1,4 +1,5 @@
 import { useExportDialog } from "@/hooks/useExportDialog";
+import { LoadingSpinner } from "@/components/shared";
 
 interface ExportDialogProps {
 	open: boolean;
@@ -63,6 +64,11 @@ export function ExportDialog({ open, onClose }: ExportDialogProps): JSX.Element 
 				</div>
 
 				<div className={`export-dialog-content ${exporting ? "loading" : ""}`}>
+					{exporting && (
+						<div className="export-loading-overlay">
+							<LoadingSpinner size="large" message="Exporting..." />
+						</div>
+					)}
 					{/* TODO: Reproduction Bundle export will be available in File > Export > Reproduction Bundle */}
 					<div className="export-section">
 						<label className="export-label" id="format-label">
