@@ -40,6 +40,20 @@ const upsertToolLog = (logs: ToolCallLog[] | undefined, incoming: ToolCallLog): 
 	return next;
 };
 
+const mergePlanSteps = (current: PlanStep[] | undefined, incoming: PlanStep[]): PlanStep[] => {
+	if (!current || current.length === 0) {
+		return incoming;
+	}
+
+	const byId = new Map(current.map((step) => [step.id, step]));
+	for (const step of incoming) {
+		const existing = byId.get(step.id);
+		byId.set(step.id, existing ? { ...existing, ...step } : step);
+	}
+
+	return Array.from(byId.values());
+};
+
 export interface PatchMatchStatus {
 	lastFailureId: string | null;
 	lastFailureReason: string | null;
@@ -155,7 +169,7 @@ export const createAISlice: StateCreator<AIState> = (set) => ({
 				...state.ai,
 				messages: updateStreamingMessage(state.ai.messages, streamingId, (message) => ({
 					...message,
-					planSteps: plan,
+					planSteps: mergePlanSteps(message.planSteps, plan),
 				})),
 			},
 		})),
@@ -178,7 +192,9 @@ export const createAISlice: StateCreator<AIState> = (set) => ({
 					content: finalContent ?? message.content,
 					isComplete: true,
 					codeBlocks: extras?.codeBlocks ?? message.codeBlocks,
-					planSteps: extras?.planSteps ?? message.planSteps,
+					planSteps: extras?.planSteps
+						? mergePlanSteps(message.planSteps, extras.planSteps)
+						: message.planSteps,
 					toolLogs: extras?.toolLogs ?? message.toolLogs,
 				})),
 			},
