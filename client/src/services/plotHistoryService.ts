@@ -1,5 +1,6 @@
 import type { PlotHistoryStatePayload } from "shared";
 import type { ServerMessage } from "shared";
+import { plotHistoryMessages } from "@/services/messageBuilders";
 import { socketService } from "./socket";
 
 const historyMatcher = (message: ServerMessage): boolean =>
@@ -8,7 +9,7 @@ const historyMatcher = (message: ServerMessage): boolean =>
 export async function requestPlotHistory(): Promise<PlotHistoryStatePayload> {
 	return new Promise((resolve, reject) => {
 		const didSend = socketService.send(
-			{ type: "plot_history_get" },
+			plotHistoryMessages.get(),
 			(message) => {
 				if (message.type === "plot_history_state") {
 					resolve({
@@ -37,7 +38,7 @@ export async function requestPlotHistory(): Promise<PlotHistoryStatePayload> {
 export async function setActivePlot(plotId: string): Promise<PlotHistoryStatePayload> {
 	return new Promise((resolve, reject) => {
 		const didSend = socketService.send(
-			{ type: "plot_history_set_active", plotId },
+			plotHistoryMessages.setActive(plotId),
 			(message) => {
 				if (message.type === "plot_history_state") {
 					resolve({
@@ -70,7 +71,7 @@ export async function exportPlot(
 ): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const didSend = socketService.send(
-			{ type: "plot_history_export", plotId, path, format },
+			plotHistoryMessages.export(plotId, path, format),
 			(message) => {
 				if (message.type === "plot_history_exported") {
 					if (message.success) {
@@ -100,7 +101,7 @@ export async function exportPlot(
 export async function deletePlot(plotId: string): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const didSend = socketService.send(
-			{ type: "plot_history_delete", plotId },
+			plotHistoryMessages.delete(plotId),
 			(message) => {
 				if (message.type === "plot_history_deleted") {
 					if (message.error) {
@@ -130,7 +131,7 @@ export async function deletePlot(plotId: string): Promise<void> {
 export async function clearPlotHistory(): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const didSend = socketService.send(
-			{ type: "plot_history_clear" },
+			plotHistoryMessages.clear(),
 			(message) => {
 				if (message.type === "plot_history_cleared") {
 					if (message.error) {

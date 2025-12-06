@@ -125,9 +125,9 @@ export type ClientMessage =
 			state: Record<string, unknown>;
 	  }
 	| { type: "plot_history_get" }
-	| { type: "plot_history_set_active"; plotId: string }
-	| { type: "plot_history_export"; plotId: string; path: string; format?: PlotHistoryExportFormat }
-	| { type: "plot_history_delete"; plotId: string }
+	| { type: "plot_history_set_active"; plot_id: string }
+	| { type: "plot_history_export"; plot_id: string; path: string; format?: PlotHistoryExportFormat }
+	| { type: "plot_history_delete"; plot_id: string }
 	| { type: "plot_history_save" }
 	| { type: "plot_history_restore" }
 	| { type: "plot_history_clear" };
