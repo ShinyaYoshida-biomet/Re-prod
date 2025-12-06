@@ -420,7 +420,7 @@
 	background: rgba(255, 255, 255, 0.02);
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: 20px;
 }
 
 .settings-form section h3 {
@@ -759,12 +759,10 @@
 }
 
 /* Settings Modal */
-[data-theme="phylo"] .settings-form section {
-	border: 1px solid #e0e0e0;
-	border-radius: 3px;
-	padding: 12px;
-	background: #f5f5f5;
-	gap: 10px;
+[data-theme="phylo"] .settings-form {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
 }
 
 [data-theme="phylo"] .settings-form section h3 {
