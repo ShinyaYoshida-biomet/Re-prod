@@ -1,0 +1,200 @@
+:root {
+	--session-grid-gap: 16px;
+	--session-card-radius: 12px;
+	--session-card-border: rgba(255, 255, 255, 0.07);
+	--session-card-padding: 16px;
+	--session-card-bg: rgba(255, 255, 255, 0.02);
+
+	--session-dl-font-size: 0.85rem;
+	--session-dt-color: rgba(255, 255, 255, 0.6);
+	--session-dt-weight: inherit;
+	--session-dd-color: inherit;
+	--session-dd-font: inherit;
+	--session-dd-weight: 600;
+
+	--session-package-bg: rgba(138, 180, 255, 0.12);
+	--session-package-color: #e5edff;
+	--session-package-padding: 6px 10px;
+	--session-package-radius: 999px;
+	--session-package-font-size: 0.78rem;
+	--session-package-border: 1px solid transparent;
+	--session-package-version-color: rgba(255, 255, 255, 0.8);
+	--session-more-bg: transparent;
+	--session-more-border: 1px dashed rgba(255, 255, 255, 0.2);
+	--session-more-color: inherit;
+
+	--session-empty-color: rgba(255, 255, 255, 0.6);
+	--session-empty-font-size: 0.85rem;
+
+	--session-error-padding: 12px;
+	--session-error-radius: 8px;
+	--session-error-border: 1px solid rgba(255, 99, 132, 0.4);
+	--session-error-color: #ffc9d4;
+	--session-error-bg: rgba(255, 99, 132, 0.08);
+	--session-error-font-size: inherit;
+
+	--session-output-border: 1px solid rgba(255, 255, 255, 0.08);
+	--session-output-radius: 12px;
+	--session-output-bg: rgba(0, 0, 0, 0.35);
+	--session-output-header-border: 1px solid rgba(255, 255, 255, 0.05);
+	--session-output-header-padding: 10px 14px;
+	--session-output-header-weight: 600;
+	--session-output-header-size: 0.9rem;
+	--session-output-header-bg: transparent;
+	--session-output-header-color: inherit;
+
+	--session-output-pre-padding: 14px;
+	--session-output-pre-font-size: 0.82rem;
+	--session-output-pre-color: inherit;
+	--session-output-pre-line-height: 1.45;
+	--session-output-pre-max-height: 220px;
+}
+
+[data-theme="phylo"] {
+	--session-card-radius: 3px;
+	--session-card-border: #e0e0e0;
+	--session-card-padding: 12px;
+	--session-card-bg: #f5f5f5;
+
+	--session-dl-font-size: 11px;
+	--session-dt-color: #666666;
+	--session-dt-weight: 500;
+	--session-dd-color: #333333;
+	--session-dd-font: ui-monospace, "SF Mono", Consolas, monospace;
+
+	--session-package-bg: rgba(59, 130, 246, 0.08);
+	--session-package-color: #3b82f6;
+	--session-package-padding: 4px 8px;
+	--session-package-radius: 3px;
+	--session-package-font-size: 10px;
+	--session-package-border: 1px solid rgba(59, 130, 246, 0.2);
+	--session-package-version-color: #666666;
+	--session-more-border: 1px dashed #cccccc;
+	--session-more-color: #999999;
+
+	--session-empty-color: #999999;
+	--session-empty-font-size: 11px;
+
+	--session-error-padding: 10px;
+	--session-error-radius: 3px;
+	--session-error-border: 1px solid #ef4444;
+	--session-error-color: #991b1b;
+	--session-error-bg: #fee2e2;
+	--session-error-font-size: 12px;
+
+	--session-output-border: 1px solid #cccccc;
+	--session-output-radius: 3px;
+	--session-output-bg: var(--bg-primary);
+	--session-output-header-border: 1px solid #e0e0e0;
+	--session-output-header-padding: 8px 12px;
+	--session-output-header-size: 11px;
+	--session-output-header-bg: #f5f5f5;
+	--session-output-header-color: #333333;
+
+	--session-output-pre-padding: 12px;
+	--session-output-pre-font-size: 11px;
+	--session-output-pre-color: #333333;
+	--session-output-pre-line-height: 1.4;
+}
+
+.session-info-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	gap: var(--session-grid-gap);
+}
+
+.session-info-card {
+	border-radius: var(--session-card-radius);
+	border: 1px solid var(--session-card-border);
+	padding: var(--session-card-padding);
+	background: var(--session-card-bg);
+}
+
+.session-info-card dl {
+	margin: 0;
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 8px 12px;
+	font-size: var(--session-dl-font-size);
+}
+
+.session-info-card dt {
+	color: var(--session-dt-color);
+	font-weight: var(--session-dt-weight);
+}
+
+.session-info-card dd {
+	margin: 0;
+	font-weight: var(--session-dd-weight);
+	color: var(--session-dd-color);
+	font-family: var(--session-dd-font);
+}
+
+.package-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.package-list li {
+	background: var(--session-package-bg);
+	color: var(--session-package-color);
+	padding: var(--session-package-padding);
+	border-radius: var(--session-package-radius);
+	font-size: var(--session-package-font-size);
+	border: var(--session-package-border);
+}
+
+.package-version {
+	margin-left: 4px;
+	color: var(--session-package-version-color);
+}
+
+.package-more {
+	background: var(--session-more-bg);
+	border: var(--session-more-border);
+	color: var(--session-more-color);
+}
+
+.session-info-empty {
+	margin: 8px 0 0;
+	color: var(--session-empty-color);
+	font-size: var(--session-empty-font-size);
+}
+
+.session-info-error {
+	padding: var(--session-error-padding);
+	border-radius: var(--session-error-radius);
+	border: var(--session-error-border);
+	color: var(--session-error-color);
+	background: var(--session-error-bg);
+	font-size: var(--session-error-font-size);
+}
+
+.session-info-output {
+	border: var(--session-output-border);
+	border-radius: var(--session-output-radius);
+	background: var(--session-output-bg);
+}
+
+.session-info-output-header {
+	border-bottom: var(--session-output-header-border);
+	padding: var(--session-output-header-padding);
+	font-weight: var(--session-output-header-weight);
+	font-size: var(--session-output-header-size);
+	background: var(--session-output-header-bg);
+	color: var(--session-output-header-color);
+}
+
+.session-info-output pre {
+	margin: 0;
+	padding: var(--session-output-pre-padding);
+	max-height: var(--session-output-pre-max-height);
+	overflow: auto;
+	font-size: var(--session-output-pre-font-size);
+	line-height: var(--session-output-pre-line-height);
+	color: var(--session-output-pre-color);
+}

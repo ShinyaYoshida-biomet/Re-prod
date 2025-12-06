@@ -1,0 +1,184 @@
+:root {
+	--shortcuts-input-bg: rgba(255, 255, 255, 0.04);
+	--shortcuts-input-border: rgba(255, 255, 255, 0.08);
+	--shortcuts-input-radius: 8px;
+	--shortcuts-input-padding: 10px 12px;
+	--shortcuts-input-color: inherit;
+	--shortcuts-input-font-size: 1rem;
+	--shortcuts-input-outline: auto;
+	--shortcuts-input-outline-offset: 0;
+
+	--shortcuts-grid-gap: 16px;
+
+	--shortcut-group-bg: rgba(255, 255, 255, 0.02);
+	--shortcut-group-border: rgba(255, 255, 255, 0.05);
+	--shortcut-group-radius: 10px;
+	--shortcut-group-padding: 12px;
+	--shortcut-group-gap: 10px;
+	--shortcut-group-header-size: 0.75rem;
+	--shortcut-group-header-color: rgba(255, 255, 255, 0.58);
+	--shortcut-group-header-weight: 600;
+	--shortcut-group-header-spacing: 0;
+
+	--shortcut-card-bg: rgba(255, 255, 255, 0.02);
+	--shortcut-card-border: rgba(255, 255, 255, 0.04);
+	--shortcut-card-radius: 8px;
+	--shortcut-card-padding: 10px;
+
+	--shortcut-description-size: 0.9rem;
+	--shortcut-description-color: inherit;
+
+	--shortcut-scope-size: 0.75rem;
+	--shortcut-scope-color: rgba(255, 255, 255, 0.6);
+
+	--shortcut-keycap-border: rgba(255, 255, 255, 0.2);
+	--shortcut-keycap-bg: rgba(255, 255, 255, 0.05);
+	--shortcut-keycap-radius: 6px;
+	--shortcut-keycap-padding: 4px 8px;
+	--shortcut-keycap-size: 0.85rem;
+	--shortcut-keycap-color: inherit;
+	--shortcut-keycap-font: inherit;
+
+	--shortcuts-empty-bg: rgba(255, 255, 255, 0.04);
+	--shortcuts-empty-border: none;
+	--shortcuts-empty-radius: 0;
+	--shortcuts-empty-color: inherit;
+	--shortcuts-empty-font-size: inherit;
+}
+
+[data-theme="phylo"] {
+	--shortcuts-input-bg: var(--bg-primary);
+	--shortcuts-input-border: #cccccc;
+	--shortcuts-input-radius: 3px;
+	--shortcuts-input-padding: 6px 8px;
+	--shortcuts-input-color: #333333;
+	--shortcuts-input-font-size: 12px;
+	--shortcuts-input-outline: 1px solid #3b82f6;
+	--shortcuts-input-outline-offset: -1px;
+
+	--shortcuts-grid-gap: 12px;
+
+	--shortcut-group-bg: var(--bg-primary);
+	--shortcut-group-border: #e0e0e0;
+	--shortcut-group-radius: 3px;
+	--shortcut-group-padding: 10px;
+	--shortcut-group-gap: 8px;
+	--shortcut-group-header-size: 10px;
+	--shortcut-group-header-color: #666666;
+	--shortcut-group-header-weight: 700;
+	--shortcut-group-header-spacing: 0.02em;
+
+	--shortcut-card-bg: #f5f5f5;
+	--shortcut-card-border: #e8e8e8;
+	--shortcut-card-radius: 3px;
+	--shortcut-card-padding: 8px;
+
+	--shortcut-description-size: 12px;
+	--shortcut-description-color: #333333;
+
+	--shortcut-scope-size: 10px;
+	--shortcut-scope-color: #999999;
+
+	--shortcut-keycap-border: #cccccc;
+	--shortcut-keycap-bg: var(--bg-primary);
+	--shortcut-keycap-radius: 3px;
+	--shortcut-keycap-padding: 2px 6px;
+	--shortcut-keycap-size: 11px;
+	--shortcut-keycap-color: #333333;
+	--shortcut-keycap-font: ui-monospace, "SF Mono", Consolas, monospace;
+
+	--shortcuts-empty-bg: #f5f5f5;
+	--shortcuts-empty-border: 1px solid #e0e0e0;
+	--shortcuts-empty-radius: 3px;
+	--shortcuts-empty-color: #999999;
+	--shortcuts-empty-font-size: 12px;
+}
+
+.shortcuts-search input {
+	width: 100%;
+	background: var(--shortcuts-input-bg);
+	border: 1px solid var(--shortcuts-input-border);
+	border-radius: var(--shortcuts-input-radius);
+	padding: var(--shortcuts-input-padding);
+	color: var(--shortcuts-input-color);
+	font-size: var(--shortcuts-input-font-size);
+}
+
+.shortcuts-search input:focus {
+	outline: var(--shortcuts-input-outline);
+	outline-offset: var(--shortcuts-input-outline-offset);
+}
+
+.shortcuts-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: var(--shortcuts-grid-gap);
+}
+
+.shortcut-group {
+	background: var(--shortcut-group-bg);
+	border: 1px solid var(--shortcut-group-border);
+	border-radius: var(--shortcut-group-radius);
+	padding: var(--shortcut-group-padding);
+	display: flex;
+	flex-direction: column;
+	gap: var(--shortcut-group-gap);
+}
+
+.shortcut-group-header {
+	font-weight: var(--shortcut-group-header-weight);
+	text-transform: uppercase;
+	font-size: var(--shortcut-group-header-size);
+	color: var(--shortcut-group-header-color);
+	letter-spacing: var(--shortcut-group-header-spacing);
+}
+
+.shortcut-card {
+	background: var(--shortcut-card-bg);
+	border: 1px solid var(--shortcut-card-border);
+	border-radius: var(--shortcut-card-radius);
+	padding: var(--shortcut-card-padding);
+}
+
+.shortcut-keys {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.shortcut-details {
+	margin-top: 6px;
+}
+
+.shortcut-description {
+	font-size: var(--shortcut-description-size);
+	color: var(--shortcut-description-color);
+}
+
+.shortcut-scope {
+	display: inline-block;
+	margin-top: 2px;
+	font-size: var(--shortcut-scope-size);
+	color: var(--shortcut-scope-color);
+}
+
+.keycap {
+	border: 1px solid var(--shortcut-keycap-border);
+	background: var(--shortcut-keycap-bg);
+	border-radius: var(--shortcut-keycap-radius);
+	padding: var(--shortcut-keycap-padding);
+	font-size: var(--shortcut-keycap-size);
+	color: var(--shortcut-keycap-color);
+	font-family: var(--shortcut-keycap-font);
+}
+
+.shortcuts-empty {
+	grid-column: 1 / -1;
+	text-align: center;
+	padding: 16px;
+	border-radius: var(--shortcuts-empty-radius);
+	background: var(--shortcuts-empty-bg);
+	border: var(--shortcuts-empty-border);
+	color: var(--shortcuts-empty-color);
+	font-size: var(--shortcuts-empty-font-size);
+}

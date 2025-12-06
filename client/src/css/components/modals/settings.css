@@ -1,0 +1,153 @@
+:root {
+	--settings-section-border: rgba(255, 255, 255, 0.06);
+	--settings-section-radius: 12px;
+	--settings-section-padding: 16px;
+	--settings-section-bg: rgba(255, 255, 255, 0.02);
+	--settings-section-gap: 12px;
+
+	--settings-heading-size: 1rem;
+	--settings-heading-weight: 700;
+	--settings-heading-color: inherit;
+
+	--settings-row-gap: 16px;
+	--settings-row-font-size: 0.95rem;
+	--settings-hint-size: 0.75rem;
+	--settings-hint-color: rgba(255, 255, 255, 0.6);
+
+	--settings-input-bg: rgba(255, 255, 255, 0.05);
+	--settings-input-border: rgba(255, 255, 255, 0.1);
+	--settings-input-radius: 8px;
+	--settings-input-padding: 8px 10px;
+	--settings-input-color: inherit;
+	--settings-input-font-size: inherit;
+	--settings-input-outline: auto;
+	--settings-input-outline-offset: 0;
+
+	--settings-checkbox-size: 18px;
+	--settings-checkbox-accent: auto;
+	--settings-range-accent: #8ab4ff;
+
+	--settings-number-hint-size: inherit;
+	--settings-number-hint-color: inherit;
+	--settings-number-hint-font: inherit;
+}
+
+[data-theme="phylo"] {
+	--settings-section-border: #e0e0e0;
+	--settings-section-radius: 3px;
+	--settings-section-padding: 12px;
+	--settings-section-bg: #f5f5f5;
+	--settings-section-gap: 10px;
+
+	--settings-heading-size: 12px;
+	--settings-heading-weight: 700;
+	--settings-heading-color: #333333;
+
+	--settings-row-gap: 12px;
+	--settings-row-font-size: 12px;
+	--settings-hint-size: 10px;
+	--settings-hint-color: #666666;
+
+	--settings-input-bg: var(--bg-primary);
+	--settings-input-border: #cccccc;
+	--settings-input-radius: 3px;
+	--settings-input-padding: 6px 8px;
+	--settings-input-color: #333333;
+	--settings-input-font-size: 12px;
+	--settings-input-outline: 1px solid #3b82f6;
+	--settings-input-outline-offset: -1px;
+
+	--settings-checkbox-size: 14px;
+	--settings-checkbox-accent: #3b82f6;
+	--settings-range-accent: #3b82f6;
+
+	--settings-number-hint-size: 11px;
+	--settings-number-hint-color: #666666;
+	--settings-number-hint-font: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+.settings-form section {
+	border: 1px solid var(--settings-section-border);
+	border-radius: var(--settings-section-radius);
+	padding: var(--settings-section-padding);
+	background: var(--settings-section-bg);
+	display: flex;
+	flex-direction: column;
+	gap: var(--settings-section-gap);
+}
+
+.settings-form section h3 {
+	margin: 0 0 4px;
+	font-size: var(--settings-heading-size);
+	font-weight: var(--settings-heading-weight);
+	color: var(--settings-heading-color);
+}
+
+.settings-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--settings-row-gap);
+	font-size: var(--settings-row-font-size);
+}
+
+.settings-row span {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.settings-row small {
+	font-size: var(--settings-hint-size);
+	color: var(--settings-hint-color);
+}
+
+.settings-row input[type="text"],
+.settings-row select {
+	min-width: 160px;
+	background: var(--settings-input-bg);
+	border: 1px solid var(--settings-input-border);
+	border-radius: var(--settings-input-radius);
+	padding: var(--settings-input-padding);
+	color: var(--settings-input-color);
+	font-size: var(--settings-input-font-size);
+}
+
+.settings-row input[type="text"]:focus,
+.settings-row select:focus {
+	outline: var(--settings-input-outline);
+	outline-offset: var(--settings-input-outline-offset);
+}
+
+.settings-row input[type="checkbox"] {
+	width: var(--settings-checkbox-size);
+	height: var(--settings-checkbox-size);
+	accent-color: var(--settings-checkbox-accent);
+}
+
+.settings-number-input {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.settings-number-input input[type="range"] {
+	accent-color: var(--settings-range-accent);
+}
+
+.settings-number-input span {
+	font-size: var(--settings-number-hint-size);
+	color: var(--settings-number-hint-color);
+	font-family: var(--settings-number-hint-font);
+}
+
+.settings-footer-spacer {
+	flex: 1;
+}
+
+@media (max-width: 640px) {
+	.settings-row {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+}
