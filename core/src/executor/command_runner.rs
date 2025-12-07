@@ -19,6 +19,8 @@ use tokio::{
     time::{timeout, Duration},
 };
 
+use super::constants::PERSISTENT_EXECUTION_TIMEOUT;
+
 #[derive(Clone)]
 struct ActiveChild {
     child: SharedChild,
@@ -334,7 +336,7 @@ impl CommandRunner for PersistentProcessCommandRunner {
         child.stdin.flush().await?;
 
         let (stdout_bytes, stderr_bytes, status_ok) =
-            Self::read_until_delimiter(child, Duration::from_secs(30)).await?;
+            Self::read_until_delimiter(child, PERSISTENT_EXECUTION_TIMEOUT).await?;
         let was_interrupted = self.interrupted.swap(false, Ordering::SeqCst);
 
         Ok(CommandOutput {

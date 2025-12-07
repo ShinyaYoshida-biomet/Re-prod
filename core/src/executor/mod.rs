@@ -1,5 +1,6 @@
 mod block_segmenter;
 mod command_runner;
+pub mod constants;
 mod execution_utils;
 mod output_parser;
 mod r_executor;
