@@ -12,9 +12,8 @@
  */
 
 import { DOCS_URL, GITHUB_ISSUE_URL } from "@/constants/urls";
-import { DEFAULT_FILENAMES, UI_TIMING, ZOOM } from "@/constants/ui";
+import { DEFAULT_FILENAMES } from "@/constants/ui";
 import { DEFAULT_R_SCRIPT } from "@/core/state/slices/editorSlice";
-import type { ViewPane } from "@/core/state/slices/viewSlice";
 import { useStore } from "@/core/state/store";
 import { downloadFile, openFile } from "@/utils/fileOperations";
 import { interruptExecution, restartSession as restartSessionRequest } from "./sessionControl";
@@ -30,14 +29,6 @@ const callGlobalHandler = (name: string) => {
 	} else {
 		console.error(`${name} handler not available`);
 	}
-};
-
-const dispatchTerminalEvent = (name: string) => {
-	if (typeof window === "undefined") {
-		return;
-	}
-
-	window.dispatchEvent(new Event(name));
 };
 
 /**
@@ -194,20 +185,6 @@ export const menuActions = {
 				editor.trigger("menu", "editor.action.startFindReplaceAction", null);
 			}
 		},
-
-		/**
-		 * Focus AI Assistant panel
-		 * Most important menu action - Cmd+K
-		 */
-		aiAssist: () => {
-			// Focus AI panel input
-			setTimeout(() => {
-				const { aiPanelRef } = useStore.getState();
-				if (aiPanelRef) {
-					aiPanelRef.focusInput();
-				}
-			}, UI_TIMING.AI_INPUT_FOCUS_DELAY_MS);
-		},
 	},
 
 	// ===== CODE MENU =====
@@ -351,57 +328,6 @@ export const menuActions = {
 		 */
 		settings: () => {
 			callGlobalHandler("openSettingsDialog");
-		},
-	},
-
-	// ===== VIEW MENU =====
-	view: {
-		/**
-		 * Toggle pane visibility
-		 */
-		togglePane: (paneId: string) => {
-			const pane = paneId as ViewPane;
-			const { togglePaneVisibility } = useStore.getState();
-			togglePaneVisibility(pane);
-		},
-
-		/**
-		 * Zoom in
-		 */
-		zoomIn: () => {
-			const { adjustZoom } = useStore.getState();
-			adjustZoom(ZOOM.STEP);
-		},
-
-		/**
-		 * Zoom out
-		 */
-		zoomOut: () => {
-			const { adjustZoom } = useStore.getState();
-			adjustZoom(-ZOOM.STEP);
-		},
-
-		/**
-		 * Reset zoom to 100%
-		 */
-		zoomReset: () => {
-			const { resetZoom } = useStore.getState();
-			resetZoom();
-		},
-
-		/**
-		 * Focus the terminal tab in the bottom pane
-		 */
-		focusTerminal: () => {
-			dispatchTerminalEvent("terminal:focus");
-		},
-
-		/**
-		 * Create a new terminal session and show the terminal tab
-		 */
-		newTerminalSession: () => {
-			dispatchTerminalEvent("terminal:focus");
-			dispatchTerminalEvent("terminal:new");
 		},
 	},
 

@@ -70,7 +70,7 @@ export function useKeyboardShortcuts() {
 			"Mod+,": () => menuActions.session.settings(),
 
 			// View menu - Extra mappings not in registry yet
-			"Mod+=": () => menuActions.view.zoomIn(), // Also handle = key (no shift)
+			"Mod+=": () => commandRegistry.execute("view.zoomIn"), // Also handle = key (no shift)
 		};
 
 		// Register commands from registry
