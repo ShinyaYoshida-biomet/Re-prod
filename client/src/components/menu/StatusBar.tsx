@@ -1,11 +1,13 @@
 import { useStore } from "@/core";
 import { useSettingsStore } from "@/core/state/slices/settingsStore";
+import { commandRegistry } from "@/core/commands/registry";
 
-interface StatusBarProps {
-	onOpenSettings: () => void;
-}
+// Removed StatusBarProps interface as it's now empty/unused
+// interface StatusBarProps {
+// 	onOpenSettings: () => void;
+// }
 
-export function StatusBar({ onOpenSettings }: StatusBarProps): JSX.Element {
+export function StatusBar(): JSX.Element {
 	const editor = useStore((state) => state.editor);
 	const settings = useStore((state) => state.settings);
 	const execution = useStore((state) => state.execution);
@@ -21,6 +23,10 @@ export function StatusBar({ onOpenSettings }: StatusBarProps): JSX.Element {
 			? `${activeProviderLabel} ready`
 			: "Add API key";
 
+	const handleOpenSettings = () => {
+		commandRegistry.execute("session.settings");
+	};
+
 	return (
 		<div className="statusbar">
 			<div className="statusbar-left">
@@ -35,7 +41,7 @@ export function StatusBar({ onOpenSettings }: StatusBarProps): JSX.Element {
 				<button
 					type="button"
 					className={`statusbar-item statusbar-ai ${isActiveProviderConfigured ? "configured" : "warning"}`}
-					onClick={onOpenSettings}
+					onClick={handleOpenSettings}
 				>
 					<span className={`statusbar-dot ${isActiveProviderConfigured ? "ok" : "warn"}`} />
 					<span>{providerStatusLabel}</span>

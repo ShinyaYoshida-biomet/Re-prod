@@ -4,20 +4,19 @@ import { IconSend, IconSquare } from "@/components/shared";
 import { useAIConversation } from "@/hooks/useAIConversation";
 import { ProviderSwitcher } from "./ProviderSwitcher";
 import { StreamingMessage } from "./StreamingMessage";
+import { commandRegistry } from "@/core/commands/registry";
 
 export interface AIPanelRef {
 	focusInput: () => void;
 }
 
 interface AIPanelProps {
-	onOpenSettings: () => void;
-	onRequireApiKeys: () => void;
 	hasConfiguredProvider: boolean;
 	activeProviderLabel: string;
 }
 
 export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(
-	({ onOpenSettings, onRequireApiKeys, hasConfiguredProvider, activeProviderLabel }, ref) => {
+	({ hasConfiguredProvider, activeProviderLabel }, ref) => {
 		const { input, setInput, messages, isLoading, handleAsk, handleStop, handleApplyCode } =
 			useAIConversation();
 
@@ -59,10 +58,14 @@ export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(
 			}
 		}, [hasConfiguredProvider, showApiKeyError]);
 
+		const handleOpenSettings = () => {
+			commandRegistry.execute("session.settings");
+		};
+
 		const handleSend = (selectedMode: AIMode) => {
 			if (!hasConfiguredProvider) {
 				setShowApiKeyError(true);
-				onRequireApiKeys();
+				handleOpenSettings();
 				return;
 			}
 
@@ -95,7 +98,7 @@ export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(
 									</span>
 								</div>
 								<div className="ai-inline-warning-actions">
-									<button type="button" className="btn btn-primary" onClick={onOpenSettings}>
+									<button type="button" className="btn btn-primary" onClick={handleOpenSettings}>
 										Open Settings
 									</button>
 									<button type="button" className="btn" onClick={() => setShowApiKeyError(false)}>

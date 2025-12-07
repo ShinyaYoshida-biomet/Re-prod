@@ -23,7 +23,6 @@ import { usePlotHistoryEvents } from "@/hooks/usePlotHistoryEvents";
 import { useSessionControlEvents } from "@/hooks/useSessionControlEvents";
 import { useSettingsPersistence } from "@/hooks/useSettingsPersistence";
 import { useSocketConnection } from "@/hooks/useSocketConnection";
-import { commandRegistry } from "@/core/commands/registry";
 
 function App(): JSX.Element {
 	const panes = useStore((state) => state.view.panes);
@@ -89,8 +88,6 @@ function App(): JSX.Element {
 							<div className="ai-pane-wrapper">
 								<AIPanel
 									ref={setAIPanelRef}
-									onOpenSettings={() => commandRegistry.execute("session.settings")}
-									onRequireApiKeys={() => commandRegistry.execute("session.settings")}
 									hasConfiguredProvider={isActiveProviderConfigured}
 									activeProviderLabel={activeProviderLabel}
 								/>
@@ -99,7 +96,7 @@ function App(): JSX.Element {
 					)}
 				</Allotment>
 			</div>
-			<StatusBar onOpenSettings={() => commandRegistry.execute("session.settings")} />
+			<StatusBar />
 			<ExportDialog open={modals.export} onClose={() => setModalOpen("export", false)} />
 			<TimelineDialog ref={timelineDialogRef} />
 			<KeyboardShortcutsModal
