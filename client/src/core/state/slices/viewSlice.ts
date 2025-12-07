@@ -1,9 +1,11 @@
 import type { StateCreator } from "zustand";
 
 export type ViewPane = "files" | "editor" | "assistant";
+export type ModalType = "export" | "shortcuts" | "about" | "sessionInfo" | "settings" | "projects";
 
 interface ViewData {
 	panes: Record<ViewPane, boolean>;
+	modals: Record<ModalType, boolean>;
 	zoom: number;
 }
 
@@ -11,6 +13,8 @@ export interface ViewState {
 	view: ViewData;
 	togglePaneVisibility: (pane: ViewPane) => void;
 	setPaneVisibility: (pane: ViewPane, visible: boolean) => void;
+	setModalOpen: (modal: ModalType, open: boolean) => void;
+	toggleModal: (modal: ModalType) => void;
 	setZoomLevel: (zoom: number) => void;
 	adjustZoom: (delta: number) => void;
 	resetZoom: () => void;
@@ -46,6 +50,14 @@ export const createViewSlice: StateCreator<ViewState> = (set, get) => ({
 			editor: true,
 			assistant: true,
 		},
+		modals: {
+			export: false,
+			shortcuts: false,
+			about: false,
+			sessionInfo: false,
+			settings: false,
+			projects: false,
+		},
 		zoom: 1,
 	},
 	togglePaneVisibility: (pane) => {
@@ -67,6 +79,29 @@ export const createViewSlice: StateCreator<ViewState> = (set, get) => ({
 				panes: {
 					...state.view.panes,
 					[pane]: visible,
+				},
+			},
+		}));
+	},
+	setModalOpen: (modal, open) => {
+		set((state) => ({
+			view: {
+				...state.view,
+				modals: {
+					...state.view.modals,
+					[modal]: open,
+				},
+			},
+		}));
+	},
+	toggleModal: (modal) => {
+		const current = get().view.modals[modal];
+		set((state) => ({
+			view: {
+				...state.view,
+				modals: {
+					...state.view.modals,
+					[modal]: !current,
 				},
 			},
 		}));

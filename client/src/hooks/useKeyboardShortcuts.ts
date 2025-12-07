@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { menuActions } from "@/services/menuActions";
 import { commandRegistry } from "@/core/commands/registry";
 
 /**
@@ -47,31 +46,13 @@ function isMonacoHandled(e: KeyboardEvent): boolean {
  */
 export function useKeyboardShortcuts() {
 	useEffect(() => {
-		const shortcuts: Record<string, () => void> = {
-			// File menu
-			"Mod+N": () => menuActions.file.new(),
-			"Mod+O": () => menuActions.file.open(),
-			"Mod+S": () => menuActions.file.save(),
-			"Mod+Shift+S": () => menuActions.file.saveAs(),
+		// Initial shortcuts from registry
+		const shortcuts: Record<string, () => void> = {};
 
-			// Edit menu
-			// "Mod+K" handled by command registry
-
-			// Code menu
-			// NOTE: Cmd+Enter, Cmd+Shift+Enter handled by EditorPanel's Monaco shortcuts
-			// to avoid conflicts and ensure proper cell execution with metadata
-			Esc: () => menuActions.code.interrupt(),
-			"Mod+Shift+0": () => menuActions.code.restartSession(),
-			"Mod+/": () => menuActions.code.comment(),
-
-			// Session menu
-			"Mod+T": () => menuActions.session.showTimeline(),
-			"Mod+Shift+N": () => menuActions.session.new(),
-			"Mod+,": () => menuActions.session.settings(),
-
-			// View menu - Extra mappings not in registry yet
-			"Mod+=": () => commandRegistry.execute("view.zoomIn"), // Also handle = key (no shift)
-		};
+		// View menu - Extra mappings not in registry yet (or ensure they are)
+		// "Mod+=": () => commandRegistry.execute("view.zoomIn"), // Moved to registry in view.ts if I update it?
+		// view.ts has "Mod++". "Mod+=" is often same key. Let's add it here explicitly or update view.ts.
+		shortcuts["Mod+="] = () => commandRegistry.execute("view.zoomIn");
 
 		// Register commands from registry
 		const registeredCommands = commandRegistry.getAll();
