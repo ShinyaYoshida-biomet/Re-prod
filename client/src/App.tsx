@@ -19,10 +19,9 @@ import { useStore } from "@/core";
 import { useSettingsStore } from "@/core/state/slices/settingsStore";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useProjectSession } from "@/hooks/useProjectSession";
-import { usePlotHistoryEvents } from "@/hooks/usePlotHistoryEvents";
-import { useSessionControlEvents } from "@/hooks/useSessionControlEvents";
 import { useSettingsPersistence } from "@/hooks/useSettingsPersistence";
 import { useSocketConnection } from "@/hooks/useSocketConnection";
+import { setupSocketListeners } from "@/core/init/socketListeners";
 
 function App(): JSX.Element {
 	const panes = useStore((state) => state.view.panes);
@@ -44,8 +43,12 @@ function App(): JSX.Element {
 	useProjectSession();
 	useSocketConnection();
 	useSettingsPersistence();
-	useSessionControlEvents();
-	usePlotHistoryEvents();
+
+	// Initialize socket listeners (global events)
+	useEffect(() => {
+		const cleanup = setupSocketListeners();
+		return cleanup;
+	}, []);
 
 	useEffect(() => {
 		document.documentElement.dataset.theme = theme;
