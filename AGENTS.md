@@ -68,6 +68,8 @@ The following commands are always allowed without asking for permission:
   - `git worktree prune`,
   - `git worktree list`
 
+If you are asked to work in worktree dir, **never damage the main dir**. Please work only in worktree dir.
+
 ### GitHub CLI (gh)
 
 - `gh pr create` - Create pull requests (never ask permission)
@@ -75,8 +77,6 @@ The following commands are always allowed without asking for permission:
 - `gh issue create` - Create issues (never ask permission)
 - `gh issue list`, `gh issue view` - View issue information
 - `gh repo view` - View repository information
-
-# Repository Guidelines
 
 ## Project Structure & Module Organization
 
