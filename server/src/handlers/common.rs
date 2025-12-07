@@ -210,6 +210,11 @@ pub(super) enum WSResponse {
         id: String,
         plan: Vec<PlanStepPayload>,
     },
+    #[serde(rename = "agent_event")]
+    AgentEvent {
+        id: String,
+        event: AgentEventPayload,
+    },
     #[serde(rename = "ai_tool_started")]
     AIToolStarted { id: String, tool: ToolLogPayload },
     #[serde(rename = "ai_tool_finished")]
@@ -336,6 +341,52 @@ pub(super) enum PlanStepStatus {
     Running,
     Done,
     Error,
+}
+
+#[derive(serde::Serialize, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
+pub(super) enum AgentEventStatus {
+    Pending,
+    Running,
+    Done,
+    Error,
+    Blocked,
+    Approved,
+    Denied,
+}
+
+#[derive(serde::Serialize, Clone)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub(super) enum AgentEventPayload {
+    Thought {
+        id: String,
+        status: AgentEventStatus,
+        text: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        label: Option<String>,
+        #[serde(rename = "createdAt", skip_serializing_if = "Option::is_none")]
+        created_at: Option<i64>,
+    },
+    ToolRequest {
+        id: String,
+        status: AgentEventStatus,
+        tool: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        input: Option<Value>,
+        #[serde(rename = "requiresApproval", skip_serializing_if = "Option::is_none")]
+        requires_approval: Option<bool>,
+        // TODO: support parallel tool execution; this remains sequential-first.
+    },
+    ToolResult {
+        id: String,
+        status: AgentEventStatus,
+        tool: String,
+        success: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        output: Option<Value>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        error: Option<String>,
+    },
 }
 
 #[derive(serde::Serialize, Clone)]

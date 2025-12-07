@@ -13,7 +13,8 @@ use serde_json::json;
 use super::{
     common::{
         build_streaming_payload, error_response, now_millis, tool_log_from_call,
-        with_system_prompts, AIMode, AppState, ToolLogStatus, WSResponse,
+        with_system_prompts, AIMode, AgentEventPayload, AgentEventStatus, AppState, ToolLogStatus,
+        WSResponse,
     },
     tool_handler::execute_ai_tool_call,
 };
@@ -41,6 +42,18 @@ pub(super) async fn handle_ai_message(
         tools.extend(get_console_tools());
         let mut outbound = Vec::new();
 
+        // Thought: initial analysis (sequential-first; TODO: support parallel fan-out later)
+        outbound.push(WSResponse::AgentEvent {
+            id: stream_id.clone(),
+            event: AgentEventPayload::Thought {
+                id: format!("{}-thought-start", stream_id),
+                status: AgentEventStatus::Running,
+                text: "Analyzing request and preparing actions".into(),
+                label: Some("Analyze request".into()),
+                created_at: Some(now_millis()),
+            },
+        });
+
         match provider
             .send_message_with_tools(messages_with_prompts.clone(), tools.clone())
             .await
@@ -50,6 +63,17 @@ pub(super) async fn handle_ai_message(
                     let mut tool_results = Vec::new();
 
                     for tool_call in tool_calls {
+                        outbound.push(WSResponse::AgentEvent {
+                            id: stream_id.clone(),
+                            event: AgentEventPayload::ToolRequest {
+                                id: format!("tool-{}", tool_call.id),
+                                status: AgentEventStatus::Running,
+                                tool: tool_call.name.clone(),
+                                input: Some(tool_call.input.clone()),
+                                requires_approval: Some(false),
+                            },
+                        });
+
                         let mut log = tool_log_from_call(tool_call);
                         outbound.push(WSResponse::AIToolStarted {
                             id: stream_id.clone(),
@@ -62,12 +86,34 @@ pub(super) async fn handle_ai_message(
                                 log.status = ToolLogStatus::Done;
                                 log.output = Some(json!({ "result": content }));
                                 tool_results.push((tool_call.id.clone(), content));
+                                outbound.push(WSResponse::AgentEvent {
+                                    id: stream_id.clone(),
+                                    event: AgentEventPayload::ToolResult {
+                                        id: format!("tool-{}", tool_call.id),
+                                        status: AgentEventStatus::Done,
+                                        tool: tool_call.name.clone(),
+                                        success: true,
+                                        output: Some(json!({ "result": content })),
+                                        error: None,
+                                    },
+                                });
                             }
                             Err(err) => {
                                 log.status = ToolLogStatus::Error;
                                 log.error = Some(err.clone());
                                 tool_results
                                     .push((tool_call.id.clone(), format!("Error: {}", err)));
+                                outbound.push(WSResponse::AgentEvent {
+                                    id: stream_id.clone(),
+                                    event: AgentEventPayload::ToolResult {
+                                        id: format!("tool-{}", tool_call.id),
+                                        status: AgentEventStatus::Error,
+                                        tool: tool_call.name.clone(),
+                                        success: false,
+                                        output: None,
+                                        error: Some(err.clone()),
+                                    },
+                                });
                             }
                         }
                         log.finished_at = Some(now_millis());
