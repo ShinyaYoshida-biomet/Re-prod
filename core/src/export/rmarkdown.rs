@@ -123,9 +123,10 @@ impl Default for RMarkdownOptions {
             include_outputs: true,
             include_errors: false,
             include_summary: true,
-            output_head_lines: 20,
-            output_tail_lines: 8,
-            output_max_lines: 200,
+            // Abbreviate outputs beyond 6 lines: keep first 3, last 2.
+            output_head_lines: 3,
+            output_tail_lines: 2,
+            output_max_lines: 6,
         }
     }
 }
@@ -204,7 +205,7 @@ header-includes:
     \usepackage{{sectsty}}
     \usepackage{{framed}}
     \definecolor{{darkblue}}{{RGB}}{{0,0,139}}
-    \definecolor{{shadecolor}}{{RGB}}{{240,247,251}}
+    \definecolor{{shadecolor}}{{RGB}}{{245,248,255}}
     \sectionfont{{\color{{darkblue}}}}
     \renewcommand{{\familydefault}}{{\sfdefault}}
     \newenvironment{{rpoutput}}{{\vspace{{0.5em}}\begin{{snugshade}}}}{{\end{{snugshade}}}}
@@ -461,7 +462,7 @@ header-includes:
     \usepackage{{sectsty}}
     \usepackage{{framed}}
     \definecolor{{darkblue}}{{RGB}}{{0,0,139}}
-    \definecolor{{shadecolor}}{{RGB}}{{240,247,251}}
+    \definecolor{{shadecolor}}{{RGB}}{{245,248,255}}
     \sectionfont{{\color{{darkblue}}}}
     \renewcommand{{\familydefault}}{{\sfdefault}}
     \newenvironment{{rpoutput}}{{\vspace{{0.5em}}\begin{{snugshade}}}}{{\end{{snugshade}}}}
@@ -722,15 +723,15 @@ render_pdf <- function() {{
   }})
 
   knitr::opts_knit$set(root.dir = "{root_dir}")
-  knitr::opts_chunk$set(
-    echo = {include_source},
-    fig.width = {fig_width},
-    fig.height = {fig_height},
-    message = FALSE,
-    warning = FALSE,
-    comment = NA,
-    background = '#F5F5F5'
-  )
+    knitr::opts_chunk$set(
+        echo = {include_source},
+        fig.width = {fig_width},
+        fig.height = {fig_height},
+        message = FALSE,
+        warning = FALSE,
+        comment = NA,
+        background = '#f2f2f2'
+    )
 
   output_format <- rmarkdown::pdf_document(
     toc = {toc},
