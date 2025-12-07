@@ -145,6 +145,10 @@ impl FileSystem {
         &self.canonical_root
     }
 
+    pub fn resolve_checked(&self, path: &str) -> Result<PathBuf> {
+        self.resolve_path(path)
+    }
+
     fn resolve_path(&self, path: &str) -> Result<PathBuf> {
         let sanitized = self.sanitize_relative(path)?;
         let full_path = if sanitized.as_os_str().is_empty() {

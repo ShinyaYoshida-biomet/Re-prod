@@ -36,6 +36,7 @@ use plot_history_handler::{
 use session_handler::{handle_interrupt, handle_restart};
 use timeline_handler::{handle_timeline_query, handle_timeline_stats_query};
 use tool_handler::{handle_execute_tool, handle_list_tools};
+use std::process::Command;
 
 pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> Response {
     ws.on_upgrade(|socket| handle_socket(socket, state))
@@ -274,6 +275,19 @@ fn handle_fs_action(
             .copy_path(&path, to.as_deref().unwrap_or(""))
             .map(|_| json!(null))
             .map_err(|e| e.to_string()),
+        "open_external" => {
+            let resolved = runtime.file_system.resolve_checked(&path);
+            match resolved {
+                Ok(target) => {
+                    let outcome = open_in_system(&target);
+                    match outcome {
+                        Ok(_) => Ok(json!(null)),
+                        Err(e) => Err(e.to_string()),
+                    }
+                }
+                Err(e) => Err(e.to_string()),
+            }
+        }
         _ => Err(format!("Unknown FS action: {}", action)),
     };
 
@@ -295,6 +309,22 @@ fn handle_fs_action(
             error: Some(e),
         }],
     }
+}
+
+fn open_in_system(path: &std::path::Path) -> Result<(), anyhow::Error> {
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open").arg(path).status()?;
+    }
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("cmd").args(["/C", "start", "", path.to_string_lossy().as_ref()]).status()?;
+    }
+    #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
+    {
+        Command::new("xdg-open").arg(path).status()?;
+    }
+    Ok(())
 }
 
 pub(in crate::handlers) async fn send_responses(

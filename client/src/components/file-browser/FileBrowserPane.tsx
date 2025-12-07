@@ -297,8 +297,14 @@ export function FileBrowserPane(): JSX.Element {
 			}
 			const ext = getExtension(node.name);
 			if (ext === "pdf") {
-				await openInSystemViewer(node.path);
-				return;
+				try {
+					await fileSystem.openExternal(node.path);
+					return;
+				} catch (error) {
+					console.error("Failed to open via backend; falling back", error);
+					await openInSystemViewer(node.path);
+					return;
+				}
 			}
 			try {
 				const content = await fileSystem.readFile(node.path);

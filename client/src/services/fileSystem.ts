@@ -128,4 +128,10 @@ export const fileSystem = {
 			transform: (message) => (typeof message.data === "string" ? message.data : ""),
 		});
 	},
+
+	openExternal: async (path: string): Promise<void> => {
+		await sendFsAction("open_external", path, {
+			transform: () => undefined,
+		});
+	},
 };

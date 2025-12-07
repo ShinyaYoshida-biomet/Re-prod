@@ -67,7 +67,8 @@ export type FileSystemAction =
 	| "rename"
 	| "create_dir"
 	| "copy"
-	| "root";
+	| "root"
+	| "open_external";
 
 // UI-facing execution log structures
 export interface ExecutionLogPlot {
