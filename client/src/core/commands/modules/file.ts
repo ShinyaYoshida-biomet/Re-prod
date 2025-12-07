@@ -94,13 +94,5 @@ export function setupFileCommands() {
 				useStore.getState().setModalOpen("projects", true);
 			},
 		},
-		{
-			id: "file.exportSession",
-			title: "Export Reproducible Session...",
-			category: "File",
-			execute: () => {
-				useStore.getState().setModalOpen("export", true);
-			},
-		},
 	]);
 }
