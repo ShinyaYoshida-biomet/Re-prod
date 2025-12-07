@@ -11,6 +11,7 @@ import { useEditorCells } from "@/hooks/useEditorCells";
 import { useEditorDecorations } from "@/hooks/useEditorDecorations";
 import { useEditorExecution } from "@/hooks/useEditorExecution";
 import type { EditorRef } from "./editorRef";
+import { commandRegistry } from "@/core/commands/registry";
 
 function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Element {
 	const editor = useStore((state) => state.editor);
@@ -383,14 +384,14 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		// Keyboard shortcuts
 		// Cmd/Ctrl + Enter: Run current cell
 		monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
-			handleRunCurrentCell();
+			commandRegistry.execute("code.runSelection");
 		});
 
 		// Cmd/Ctrl + Shift + Enter: Run all
 		monacoEditor.addCommand(
 			monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
 			() => {
-				handleRunAll();
+				commandRegistry.execute("code.runAll");
 			},
 		);
 	};
@@ -406,7 +407,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 					<div className="panel-actions">
 						<button
 							className="btn"
-							onClick={handleRunCurrentCell}
+							onClick={() => commandRegistry.execute("code.runSelection")}
 							disabled={execution.isRunning}
 							title="Run Current Cell (Cmd/Ctrl+Enter)"
 						>
@@ -415,7 +416,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 						</button>
 						<button
 							className="btn btn-primary"
-							onClick={handleRunAll}
+							onClick={() => commandRegistry.execute("code.runAll")}
 							disabled={execution.isRunning}
 							title="Run All (Cmd/Ctrl+Shift+Enter)"
 						>
