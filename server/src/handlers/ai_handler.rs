@@ -97,6 +97,17 @@ pub(super) async fn handle_ai_message(
                                         error: None,
                                     },
                                 });
+                                outbound.push(WSResponse::AgentEvent {
+                                    id: stream_id.clone(),
+                                    event: AgentEventPayload::Artifact {
+                                        id: format!("artifact-{}", tool_call.id),
+                                        status: AgentEventStatus::Done,
+                                        kind: "tool_result".into(),
+                                        path: None,
+                                        summary: format!("{} completed", tool_call.name),
+                                        details: Some(json!({ "result": content })),
+                                    },
+                                });
                             }
                             Err(err) => {
                                 log.status = ToolLogStatus::Error;

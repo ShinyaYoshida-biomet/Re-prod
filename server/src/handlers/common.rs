@@ -387,6 +387,16 @@ pub(super) enum AgentEventPayload {
         #[serde(skip_serializing_if = "Option::is_none")]
         error: Option<String>,
     },
+    Artifact {
+        id: String,
+        status: AgentEventStatus,
+        kind: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        path: Option<String>,
+        summary: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        details: Option<Value>,
+    },
 }
 
 #[derive(serde::Serialize, Clone)]
