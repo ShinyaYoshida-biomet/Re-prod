@@ -1,4 +1,4 @@
-import type { PlanStep, PlanStepKind, PlanStepStatus } from "@shared/types";
+import type { PlanStep, PlanStepStatus } from "@shared/types";
 
 interface Props {
 	steps?: PlanStep[];
@@ -11,26 +11,21 @@ const STATUS_LABEL: Record<PlanStepStatus, string> = {
 	error: "[!] Error",
 };
 
-const KIND_LABEL: Record<PlanStepKind, string> = {
-	todo: "TODO",
-	peek: "PEEK",
-	exec: "EXEC",
-	plan: "PLAN",
-};
-
 export function AIPlanCard({ steps }: Props): JSX.Element | null {
 	if (!steps || steps.length === 0) {
 		return null;
 	}
 
+	const visibleSteps = steps.slice(0, 3);
+	const extraCount = Math.max(steps.length - visibleSteps.length, 0);
+
 	return (
 		<div className="ai-plan-card">
 			<div className="ai-plan-card__title">Plan</div>
 			<ol className="ai-plan-card__list">
-				{steps.map((step) => (
+				{visibleSteps.map((step) => (
 					<li key={step.id} data-status={step.status} data-kind={step.kind}>
 						<span className="ai-plan-card__status">{STATUS_LABEL[step.status]}</span>
-						{step.kind && <span className="ai-plan-card__kind">{KIND_LABEL[step.kind]}</span>}
 						<span className="ai-plan-card__text">{step.title}</span>
 						{step.waitingReason && (
 							<span className="ai-plan-card__waiting">waiting: {step.waitingReason}</span>
@@ -38,6 +33,7 @@ export function AIPlanCard({ steps }: Props): JSX.Element | null {
 						{step.error && <span className="ai-plan-card__error">{step.error}</span>}
 					</li>
 				))}
+				{extraCount > 0 && <li className="ai-plan-card__more">… {extraCount} more steps</li>}
 			</ol>
 		</div>
 	);
