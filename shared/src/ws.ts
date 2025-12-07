@@ -2,6 +2,7 @@ import type { TimelineMessage, TimelineQuery, TimelineResponse, TimelineStats } 
 import type { ToolManifest } from "./tools";
 import type {
 	AIMode,
+	AgentEvent,
 	ChatMessagePayload,
 	CodeBlock,
 	ExecutionRequestPayload,
@@ -147,6 +148,7 @@ export type ServerMessage =
 	| { type: "ai_response_chunk"; id: string; chunk: string }
 	| { type: "ai_response_complete"; id: string; final: string; codeBlocks?: CodeBlock[] }
 	| { type: "ai_plan_updated"; id: string; plan: PlanStep[] }
+	| { type: "agent_event"; id: string; event: AgentEvent }
 	| { type: "ai_tool_started"; id: string; tool: ToolCallLog }
 	| { type: "ai_tool_finished"; id: string; tool: ToolCallLog }
 	| { type: "error"; message: string }

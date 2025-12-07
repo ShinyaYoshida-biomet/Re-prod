@@ -100,6 +100,103 @@ export type CodeChangeAction =
 	| "create-file"
 	| "delete-range";
 
+// Agent event stream (sequential-first; TODO: support parallel fan-out when ready)
+export type AgentEventType =
+	| "thought"
+	| "tool_request"
+	| "tool_result"
+	| "task"
+	| "artifact"
+	| "error";
+
+export type AgentEventStatus =
+	| "pending"
+	| "running"
+	| "done"
+	| "error"
+	| "blocked"
+	| "approved"
+	| "denied";
+
+export type ApprovalOption = "approve_once" | "approve_session" | "edit" | "deny";
+
+export interface ToolPreview {
+	kind: "diff" | "command" | "read";
+	filepath?: string;
+	diff?: string;
+	command?: string;
+}
+
+export interface ApprovalRequest {
+	eventId: string;
+	tool: string;
+	preview: ToolPreview;
+	options: ApprovalOption[];
+}
+
+export interface AgentEventBase {
+	id: string;
+	type: AgentEventType;
+	status: AgentEventStatus;
+	label?: string;
+	createdAt?: number;
+}
+
+export interface ThoughtEvent extends AgentEventBase {
+	type: "thought";
+	text: string;
+}
+
+export interface ToolRequestEvent extends AgentEventBase {
+	type: "tool_request";
+	tool: string;
+	input?: Record<string, unknown>;
+	requiresApproval?: boolean;
+	approvalOptions?: ApprovalOption[];
+	preview?: ToolPreview;
+}
+
+export interface ToolResultEvent extends AgentEventBase {
+	type: "tool_result";
+	tool: string;
+	success: boolean;
+	output?: Record<string, unknown> | string | null;
+	error?: string | null;
+}
+
+export interface TaskEvent extends AgentEventBase {
+	type: "task";
+	label: string;
+	deps: string[];
+}
+
+export interface ArtifactEvent extends AgentEventBase {
+	type: "artifact";
+	kind: "file_read" | "file_write" | "command" | "test_result";
+	path?: string;
+	summary: string;
+	details?: {
+		diff?: string;
+		exitCode?: number;
+		stdout?: string;
+		stderr?: string;
+	};
+}
+
+export interface ErrorEvent extends AgentEventBase {
+	type: "error";
+	error: string;
+	context?: Record<string, unknown>;
+}
+
+export type AgentEvent =
+	| ThoughtEvent
+	| ToolRequestEvent
+	| ToolResultEvent
+	| TaskEvent
+	| ArtifactEvent
+	| ErrorEvent;
+
 export interface PatchChunk {
 	context?: string;
 	oldLines: string[];
