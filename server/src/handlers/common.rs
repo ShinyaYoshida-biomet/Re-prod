@@ -50,10 +50,12 @@ context_after_line
 
 Each diff block should match the actual code exactly and avoid re-sending entire files."#;
 
-const CHAT_SYSTEM_PROMPT: &str = r#"You are the Re-prod chat assistant. Focus on providing explanations, guidance, and high-level suggestions.
+const CHAT_SYSTEM_PROMPT: &str = r##"You are the Re-prod chat assistant. Focus on providing explanations, guidance, and high-level suggestions.
 - Keep responses conversational and concise
 - Avoid emitting structured patches or code diffs unless explicitly asked
-- When referencing code, quote only the relevant snippets"#;
+- When referencing code, quote only the relevant snippets
+- When presenting plans, keep them flat but simulate hierarchy with indentation in titles (e.g., \"  - Subtask\")
+- For life_expectancy inference, you may use the public CSV at https://ourworldindata.org/grapher/life-expectancy.csv if helpful. If you need World Bank data, prefer the wbstats package (not wbdata). The OWID CSV loads via read_csv into ~21,565 rows with raw columns: Entity, Code, Year, `Period life expectancy at birth` (numeric). Column names are case-sensitive: there is no `life_expectancy`; the raw field is `Period life expectancy at birth`, and `Year` is capitalized. Example cleaning: `life <- life_raw %>% rename(country = Entity, code = Code, life_expectancy = \`Period life expectancy at birth\`) %>% select(country, code, year = Year, life_expectancy) %>% filter(!is.na(life_expectancy))`. When using ggplot in Rscript mode, assign to an object (e.g., `p <- ggplot(...) + ...`) and call `print(p)` to ensure the plot is rendered and captured. Use generous fonts (e.g., `theme_minimal(base_size = 18+)`) and large PNG outputs (e.g., `png(\"life_plot.png\", width = 4800, height = 3200, res = 300)`) for demos."##;
 
 #[derive(Clone, Copy, Debug, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -321,21 +323,64 @@ pub(super) enum WSResponse {
 }
 
 #[allow(dead_code)] // Reserved for future AI planning feature
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, Clone)]
 pub(super) struct PlanStepPayload {
-    id: String,
-    title: String,
-    status: PlanStepStatus,
+    pub(super) id: String,
+    pub(super) title: String,
+    pub(super) status: PlanStepStatus,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(super) kind: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(super) error: Option<String>,
+    #[serde(rename = "startedAt", skip_serializing_if = "Option::is_none")]
+    pub(super) started_at: Option<i64>,
+    #[serde(rename = "finishedAt", skip_serializing_if = "Option::is_none")]
+    pub(super) finished_at: Option<i64>,
+    #[serde(rename = "waitingReason", skip_serializing_if = "Option::is_none")]
+    pub(super) waiting_reason: Option<String>,
 }
 
 #[allow(dead_code)] // Reserved for future AI planning feature
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub(super) enum PlanStepStatus {
     Pending,
     Running,
     Done,
     Error,
+}
+
+impl PlanStepPayload {
+    pub(super) fn new(id: impl Into<String>, title: impl Into<String>, kind: Option<String>) -> Self {
+        Self {
+            id: id.into(),
+            title: title.into(),
+            status: PlanStepStatus::Pending,
+            kind,
+            error: None,
+            started_at: None,
+            finished_at: None,
+            waiting_reason: None,
+        }
+    }
+
+    pub(super) fn mark_status(&mut self, status: PlanStepStatus) {
+        self.status = status;
+        match status {
+            PlanStepStatus::Running => {
+                if self.started_at.is_none() {
+                    self.started_at = Some(now_millis());
+                }
+            }
+            PlanStepStatus::Done | PlanStepStatus::Error => {
+                if self.started_at.is_none() {
+                    self.started_at = Some(now_millis());
+                }
+                self.finished_at = Some(now_millis());
+            }
+            PlanStepStatus::Pending => {}
+        }
+    }
 }
 
 #[derive(serde::Serialize, Clone)]

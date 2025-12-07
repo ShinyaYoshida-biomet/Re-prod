@@ -17,11 +17,22 @@ export class DeleteRangeAction implements ICodeAction {
 	}
 
 	validate(codeBlock: CodeBlock): CodeActionValidation {
-		if (!codeBlock.targetRange) {
+		const hasRange = Boolean(codeBlock.targetRange);
+		const hasStructuredContext = Boolean(
+			codeBlock.patchChunks?.length ||
+				codeBlock.simpleChanges?.length ||
+				(codeBlock.originalCode && codeBlock.originalCode.trim().length > 0),
+		);
+
+		if (!hasRange && !hasStructuredContext) {
 			return {
 				valid: false,
-				error: "Delete range requires targetRange specification",
+				error: "Delete range requires targetRange or contextual diff data",
 			};
+		}
+
+		if (!codeBlock.targetRange) {
+			return { valid: true };
 		}
 
 		const { startLine, endLine } = codeBlock.targetRange;

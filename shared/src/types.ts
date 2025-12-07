@@ -136,11 +136,17 @@ export interface CodeBlock {
 }
 
 export type PlanStepStatus = "pending" | "running" | "done" | "error";
+export type PlanStepKind = "todo" | "peek" | "exec" | "plan";
 
 export interface PlanStep {
 	id: string;
 	title: string;
 	status: PlanStepStatus;
+	kind?: PlanStepKind;
+	error?: string;
+	startedAt?: number;
+	finishedAt?: number;
+	waitingReason?: string;
 }
 
 export type ToolCallStatus = "pending" | "running" | "done" | "error";

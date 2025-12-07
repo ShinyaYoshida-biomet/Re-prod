@@ -1,7 +1,30 @@
 import type { ExecutionLogEntry } from "@shared/types";
 
-const MAX_CONSOLE_ITEMS = 3;
-const MAX_CONSOLE_SNIPPET_LENGTH = 800;
+/**
+ * Set of code change actions that should be applied to remote files
+ * rather than the current editor buffer
+ */
+export const REMOTE_FILE_ACTIONS = new Set(["create-file", "delete-range", "replace-range"]);
+
+export const CONSOLE_CONTEXT_LIMITS = {
+	maxItems: 3,
+	maxSnippetLength: 800,
+	maxLines: 20,
+} as const;
+
+const {
+	maxItems: MAX_CONSOLE_ITEMS,
+	maxSnippetLength: MAX_CONSOLE_SNIPPET_LENGTH,
+	maxLines: MAX_CONSOLE_LINES,
+} = CONSOLE_CONTEXT_LIMITS;
+
+const truncateLines = (value: string, maxLines: number): string => {
+	const lines = value.split(/\r?\n/);
+	if (lines.length <= maxLines) {
+		return value;
+	}
+	return lines.slice(-maxLines).join("\n");
+};
 
 const truncateText = (value: string, maxLength: number): string =>
 	value.length > maxLength ? `${value.slice(0, maxLength)}... (truncated)` : value;
@@ -12,11 +35,13 @@ const formatConsoleEntry = (entry: ExecutionLogEntry): string => {
 	];
 
 	if (entry.stdout?.trim()) {
-		lines.push(`stdout: ${truncateText(entry.stdout.trim(), MAX_CONSOLE_SNIPPET_LENGTH)}`);
+		const trimmed = truncateLines(entry.stdout.trim(), MAX_CONSOLE_LINES);
+		lines.push(`stdout: ${truncateText(trimmed, MAX_CONSOLE_SNIPPET_LENGTH)}`);
 	}
 
 	if (entry.stderr?.trim()) {
-		lines.push(`stderr: ${truncateText(entry.stderr.trim(), MAX_CONSOLE_SNIPPET_LENGTH)}`);
+		const trimmed = truncateLines(entry.stderr.trim(), MAX_CONSOLE_LINES);
+		lines.push(`stderr: ${truncateText(trimmed, MAX_CONSOLE_SNIPPET_LENGTH)}`);
 	}
 
 	if (entry.plots.length > 0) {

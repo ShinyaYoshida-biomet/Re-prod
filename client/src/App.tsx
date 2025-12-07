@@ -36,7 +36,6 @@ function App(): JSX.Element {
 
 	const activeProviderConfig = providers.find((provider) => provider.name === activeProvider);
 	const isActiveProviderConfigured = Boolean(activeProviderConfig?.isConfigured);
-	const activeProviderLabel = activeProviderConfig?.displayName || activeProvider || "AI provider";
 
 	// Enable global keyboard shortcuts
 	useKeyboardShortcuts();
@@ -92,7 +91,6 @@ function App(): JSX.Element {
 								<AIPanel
 									ref={setAIPanelRef}
 									hasConfiguredProvider={isActiveProviderConfigured}
-									activeProviderLabel={activeProviderLabel}
 								/>
 							</div>
 						</Allotment.Pane>

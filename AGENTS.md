@@ -68,6 +68,8 @@ The following commands are always allowed without asking for permission:
   - `git worktree prune`,
   - `git worktree list`
 
+If you are asked to work in worktree dir, **never damage the main dir**. Please work only in worktree dir.
+
 ### GitHub CLI (gh)
 
 - `gh pr create` - Create pull requests (never ask permission)
@@ -75,8 +77,6 @@ The following commands are always allowed without asking for permission:
 - `gh issue create` - Create issues (never ask permission)
 - `gh issue list`, `gh issue view` - View issue information
 - `gh repo view` - View repository information
-
-# Repository Guidelines
 
 ## Project Structure & Module Organization
 
@@ -109,11 +109,12 @@ The following commands are always allowed without asking for permission:
 ## Commit & Pull Request Guidelines
 
 - Commit messages: short, present tense, start with an action (e.g., “Add model selection constants”). Keep the summary under ~72 chars; include scope prefixes only when they add clarity.
+- After committing, please eusure that you pass both of pre-push hook in .husky dir and Ci/CD workflow in .github dir
 - PRs: include a crisp summary, linked issue/ID, and before/after notes. Add screenshots or clips for UI changes; list test commands run (cargo tests, Vitest, lint/format). Request review when checks pass and TODOs are cleared.
 
 ## Security & Configuration Tips
 
-- Do not commit API keys; store AI credentials in `~/.reprod/auth.json` or environment variables. Keep `.reprod/` artifacts local and out of git.
+- Do not commit API keys; variables. Keep `.reprod/` artifacts local and out of git.
 - Ensure Node 18+ and a recent Rust toolchain; enable `corepack` or install pnpm 9+ before running workspace scripts.
 
 # Additional notes

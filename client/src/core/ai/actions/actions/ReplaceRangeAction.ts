@@ -17,11 +17,22 @@ export class ReplaceRangeAction implements ICodeAction {
 	}
 
 	validate(codeBlock: CodeBlock): CodeActionValidation {
-		if (!codeBlock.targetRange) {
+		const hasRange = Boolean(codeBlock.targetRange);
+		const hasStructuredContext = Boolean(
+			codeBlock.patchChunks?.length ||
+				codeBlock.simpleChanges?.length ||
+				(codeBlock.originalCode && codeBlock.originalCode.trim().length > 0),
+		);
+
+		if (!hasRange && !hasStructuredContext) {
 			return {
 				valid: false,
-				error: "Replace range requires targetRange specification",
+				error: "Replace range requires targetRange or contextual diff data",
 			};
+		}
+
+		if (!codeBlock.targetRange) {
+			return { valid: true };
 		}
 
 		const { startLine, startColumn, endLine, endColumn } = codeBlock.targetRange;

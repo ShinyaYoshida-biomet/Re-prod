@@ -33,4 +33,23 @@ describe("aiSlice streaming helpers", () => {
 		expect(message?.isComplete).toBe(true);
 		expect(message?.content).toBe("Hello world!");
 	});
+
+	it("merges plan updates by id", () => {
+		const store = createTestStore();
+		store.getState().startStreamingMessage("msg-2", "agent");
+
+		store
+			.getState()
+			.updateStreamingPlan("msg-2", [{ id: "step-1", title: "Inspect data", status: "pending" }]);
+
+		store.getState().updateStreamingPlan("msg-2", [
+			{ id: "step-1", title: "Inspect data", status: "running", error: "optional" },
+			{ id: "step-2", title: "Compute", status: "pending" },
+		]);
+
+		const plan = store.getState().ai.messages.at(-1)?.planSteps;
+		expect(plan).toHaveLength(2);
+		expect(plan?.find((step) => step.id === "step-1")?.status).toBe("running");
+		expect(plan?.find((step) => step.id === "step-1")?.title).toBe("Inspect data");
+	});
 });
