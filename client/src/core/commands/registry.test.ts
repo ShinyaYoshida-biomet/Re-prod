@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { commandRegistry } from "./registry";
 
 describe("CommandRegistry", () => {
@@ -50,5 +50,24 @@ describe("CommandRegistry", () => {
 	it("should handle missing command gracefully", () => {
 		// Should not throw
 		commandRegistry.execute("non.existent.command");
+	});
+
+	it("should register multiple commands at once", () => {
+		const cmd1 = { id: "cmd1", title: "Cmd 1", execute: vi.fn() };
+		const cmd2 = { id: "cmd2", title: "Cmd 2", execute: vi.fn() };
+
+		commandRegistry.registerMany([cmd1, cmd2]);
+
+		expect(commandRegistry.get("cmd1")).toBeDefined();
+		expect(commandRegistry.get("cmd2")).toBeDefined();
+	});
+
+	it("should unregister a command", () => {
+		const cmd = { id: "cmdToUnregister", title: "Temp", execute: vi.fn() };
+		commandRegistry.register(cmd);
+		expect(commandRegistry.get("cmdToUnregister")).toBeDefined();
+
+		commandRegistry.unregister("cmdToUnregister");
+		expect(commandRegistry.get("cmdToUnregister")).toBeUndefined();
 	});
 });
