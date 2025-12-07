@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { IconFile } from "@/components/icons/IconFile";
 import { IconChevronDown, IconChevronRight, IconFolder, IconPlus } from "@/components/shared";
 import { useFileSystemStore, useStore } from "@/core";
 import { normalizeRelativePath, normalizeSeparators, ROOT_PATH } from "@/core/pathUtils";
@@ -31,25 +32,6 @@ type TauriWindow = typeof window & {
 			open: (target: string) => Promise<void>;
 		};
 	};
-};
-
-const extensionColors: Record<string, string> = {
-	r: "#F38BA3",
-	rmd: "#9D8CE0",
-	rs: "#E37933",
-	rproj: "#5B8DEF",
-	md: "#4FD1C5",
-	json: "#56C4C4",
-	ts: "#2F6FED",
-	tsx: "#5A67D8",
-	js: "#F6C343",
-	jsx: "#EC7063",
-	py: "#2D9CDB",
-	rsx: "#E85858",
-	txt: "#94A3B8",
-	toml: "#FFA94D",
-	yaml: "#FFB347",
-	yml: "#FFB347",
 };
 
 const joinPath = (parent: string, name: string): string => {
@@ -325,7 +307,7 @@ export function FileBrowserPane(): JSX.Element {
 				console.error("Failed to open file", error);
 			}
 		},
-		[openInSystemViewer, setEditorContent, setEditorFilepath, setEditorIsDirty, toggleFolder],
+		[openInSystemViewer, setEditorContent, setEditorFilepath, setEditorIsDirty],
 	);
 
 	const handleContextMenu = useCallback(
@@ -739,9 +721,6 @@ export function FileBrowserPane(): JSX.Element {
 	const renderNode = (node: TreeNode) => {
 		const isSelected = selectedFiles.has(node.path);
 		const isFocused = focusedPath === node.path;
-		const ext = getExtension(node.name);
-		const color =
-			ext && extensionColors[ext] ? extensionColors[ext] : node.is_dir ? "#60A5FA" : "#CBD5F5";
 
 		return (
 			<div
@@ -789,14 +768,11 @@ export function FileBrowserPane(): JSX.Element {
 						<span className="file-tree-placeholder" />
 					)}
 				</button>
-				<span
-					className="file-type-icon"
-					style={{ backgroundColor: node.is_dir ? "transparent" : color }}
-				>
+				<span className="file-type-icon">
 					{node.is_dir ? (
-						<IconFolder width={14} height={14} />
+						<IconFolder width={14} height={14} style={{ color: "#6B7280" }} />
 					) : (
-						(ext ?? "file").slice(0, 3).toUpperCase()
+						<IconFile width={14} height={14} color="#9CA3AF" />
 					)}
 				</span>
 				<span className="file-tree-label">{node.name}</span>

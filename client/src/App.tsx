@@ -88,10 +88,7 @@ function App(): JSX.Element {
 					{panes.assistant && (
 						<Allotment.Pane minSize={260} preferredSize="25%">
 							<div className="ai-pane-wrapper">
-								<AIPanel
-									ref={setAIPanelRef}
-									hasConfiguredProvider={isActiveProviderConfigured}
-								/>
+								<AIPanel ref={setAIPanelRef} hasConfiguredProvider={isActiveProviderConfigured} />
 							</div>
 						</Allotment.Pane>
 					)}
