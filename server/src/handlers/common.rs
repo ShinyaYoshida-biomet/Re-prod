@@ -325,23 +325,23 @@ pub(super) enum WSResponse {
 #[allow(dead_code)] // Reserved for future AI planning feature
 #[derive(serde::Serialize, Clone)]
 pub(super) struct PlanStepPayload {
-    id: String,
-    title: String,
-    status: PlanStepStatus,
+    pub(super) id: String,
+    pub(super) title: String,
+    pub(super) status: PlanStepStatus,
     #[serde(skip_serializing_if = "Option::is_none")]
-    kind: Option<String>,
+    pub(super) kind: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    error: Option<String>,
+    pub(super) error: Option<String>,
     #[serde(rename = "startedAt", skip_serializing_if = "Option::is_none")]
-    started_at: Option<i64>,
+    pub(super) started_at: Option<i64>,
     #[serde(rename = "finishedAt", skip_serializing_if = "Option::is_none")]
-    finished_at: Option<i64>,
+    pub(super) finished_at: Option<i64>,
     #[serde(rename = "waitingReason", skip_serializing_if = "Option::is_none")]
-    waiting_reason: Option<String>,
+    pub(super) waiting_reason: Option<String>,
 }
 
 #[allow(dead_code)] // Reserved for future AI planning feature
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub(super) enum PlanStepStatus {
     Pending,
