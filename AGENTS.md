@@ -99,6 +99,8 @@ The following commands are always allowed without asking for permission:
 - TypeScript: strict mode, explicit return types, two-space indent. React components in PascalCase; hooks/utils in camelCase; env vars in SCREAMING_SNAKE_CASE. Group imports as external → shared → local.
 - Rust: favor `anyhow::Result` + `?`; avoid `unwrap`/`expect` (clippy is configured to deny them). Keep modules small and focused.
 - Formatting: use Biome for TS (`pnpm format`), `cargo fmt` for Rust. Prefer functional React components and extracted custom hooks for side effects.
+- UI(HTML/CSS): Re-prod prefers modest styles with grey , black and white colors.
+  - We should be friendly to the users who are familiar with RStudio or Native R.
 
 ## Testing Guidelines
 
