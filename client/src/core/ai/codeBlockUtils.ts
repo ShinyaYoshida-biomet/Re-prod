@@ -1,18 +1,11 @@
 import type { CodeBlock, CodeChangeAction, CodeRange, SimpleCodeChange } from "@shared/types";
+import { CodeActionFactory } from "./actions";
 import type { PatchHunk } from "./patchParser";
 import { parsePatchFormat } from "./patchParser";
 import { parseSimpleChanges } from "./simpleChangeParser";
 
 const R_CODE_BLOCK_REGEX = /```(?:r|R)\n([\s\S]*?)\n```/g;
 const JSON_BLOCK_REGEX = /```json\n([\s\S]*?)\n```/g;
-
-const codeChangeActions: CodeChangeAction[] = [
-	"replace-all",
-	"replace-range",
-	"insert",
-	"create-file",
-	"delete-range",
-];
 
 const makeCodeRange = (raw?: Partial<CodeRange>): CodeRange | undefined => {
 	if (!raw) {
@@ -129,7 +122,7 @@ const buildCodeBlockFromPatch = (hunk: PatchHunk): CodeBlock | null => {
 
 const normalizeCodeBlock = (raw: Record<string, unknown>): CodeBlock | null => {
 	const action =
-		typeof raw.action === "string" && codeChangeActions.includes(raw.action as CodeChangeAction)
+		typeof raw.action === "string" && CodeActionFactory.isSupported(raw.action)
 			? (raw.action as CodeChangeAction)
 			: "replace-all";
 

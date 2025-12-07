@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -12,6 +12,9 @@ use base64::Engine;
 use tokio::fs;
 use tokio::sync::Mutex as AsyncMutex;
 use uuid::Uuid;
+
+const PERSISTENT_WRAPPER_TEMPLATE: &str = include_str!("../r_scripts/persistent_wrapper.R");
+const ONESHOT_WRAPPER_TEMPLATE: &str = include_str!("../r_scripts/oneshot_wrapper.R");
 
 pub const PERSISTENT_DELIMITER: &str = "---REPROD-PERSIST-END---";
 
@@ -46,16 +49,25 @@ impl PlotCapture {
         plot_height: u32,
         persistent: bool,
     ) -> String {
+        let temp_dir_str = r_escape(&self.temp_dir.to_string_lossy());
+        let plot_width_str = plot_width.to_string();
+        let plot_height_str = plot_height.to_string();
+
         if persistent {
-            wrap_code_with_plot_capture_persistent(
-                &self.temp_dir,
-                code,
-                plot_prefix,
-                plot_width,
-                plot_height,
-            )
+            PERSISTENT_WRAPPER_TEMPLATE
+                .replace("__TEMP_DIR__", &temp_dir_str)
+                .replace("__PLOT_PREFIX__", plot_prefix)
+                .replace("__PLOT_WIDTH__", &plot_width_str)
+                .replace("__PLOT_HEIGHT__", &plot_height_str)
+                .replace("__CODE__", code)
+                .replace("__DELIMITER__", PERSISTENT_DELIMITER)
         } else {
-            wrap_code_with_plot_capture(&self.temp_dir, code, plot_prefix, plot_width, plot_height)
+            ONESHOT_WRAPPER_TEMPLATE
+                .replace("__TEMP_DIR__", &temp_dir_str)
+                .replace("__PLOT_PREFIX__", plot_prefix)
+                .replace("__PLOT_WIDTH__", &plot_width_str)
+                .replace("__PLOT_HEIGHT__", &plot_height_str)
+                .replace("__CODE__", code)
         }
     }
 
@@ -165,232 +177,6 @@ impl PlotCapture {
 
         Ok((plots, history_entries))
     }
-}
-
-fn wrap_code_with_plot_capture_persistent(
-    temp_dir: &Path,
-    code: &str,
-    plot_prefix: &str,
-    plot_width: u32,
-    plot_height: u32,
-) -> String {
-    let temp_dir_str = r_escape(&temp_dir.to_string_lossy());
-
-    format!(
-        r#"
-# Auto-generated plot capture wrapper (persistent session)
-cat("REPROD_WRAPPER_ENTER: persistent\n")
-.reprod_plot_dir <- "{temp_dir}"
-.reprod_plot_prefix <- "{plot_prefix}"
-
-if (!dir.exists(.reprod_plot_dir)) {{
-  dir.create(.reprod_plot_dir, recursive = TRUE, showWarnings = FALSE)
-}}
-
-.reprod_open_device <- function(index) {{
-  filename <- sprintf("%s_%d.png", .reprod_plot_prefix, index)
-  png(
-    file.path(.reprod_plot_dir, filename),
-    width = {plot_width}, height = {plot_height},
-    type = "cairo"
-  )
-}}
-
-.reprod_capture_plot <- function(index) {{
-  if (length(dev.list()) == 0 || names(dev.cur()) == "null device") {{
-    return(FALSE)
-  }}
-  tryCatch({{
-    png_path <- file.path(.reprod_plot_dir, sprintf("%s_%d.png", .reprod_plot_prefix, index))
-    snapshot_path <- NULL
-    snapshot <- tryCatch(recordPlot(), error = function(e) NULL)
-    actions <- tryCatch(snapshot$actions, error = function(e) NULL)
-    if (!is.null(snapshot) && (is.null(actions) || length(actions) > 0)) {{
-      snapshot_path <- file.path(.reprod_plot_dir, sprintf("%s_%d.rds", .reprod_plot_prefix, index))
-      saveRDS(snapshot, snapshot_path)
-    }}
-    cat("__REPROD_PLOT__|",
-        sprintf("%s_%d", .reprod_plot_prefix, index), "|",
-        if (is.null(snapshot_path)) "" else snapshot_path, "|",
-        png_path,
-        "\n", sep = "")
-    file.exists(png_path)
-  }}, error = function(e) {{
-    cat("REPROD_PLOT_CAPTURE_ERROR: ", conditionMessage(e), "\n", file=stderr())
-    FALSE
-  }})
-}}
-
-reprod_png_available <- FALSE
-tryCatch({{
-  .reprod_open_device(1)
-  reprod_png_available <<- TRUE
-  cat("REPROD_PNG_DEVICE: ", file.path(.reprod_plot_dir, sprintf("%s_1.png", .reprod_plot_prefix)), "\n", file=stderr())
-  cat("REPROD_PNG_DEVICE: ", file.path(.reprod_plot_dir, sprintf("%s_1.png", .reprod_plot_prefix)), "\n") # stdout mirror
-}}, error = function(e) {{
-  cat("REPROD_PNG_ERROR: ", conditionMessage(e), "\n", file=stderr())
-  cat("REPROD_PNG_ERROR: ", conditionMessage(e), "\n") # stdout mirror
-}})
-
-tryCatch(
-  {{
-    {code}
-  }},
-  error = function(e) {{
-    assign(".reprod_last_error", e, envir = .GlobalEnv)
-    cat("REPROD_ERROR: ", conditionMessage(e), "\n", file=stderr())
-    cat("REPROD_TRACEBACK: ", paste(utils::capture.output(traceback()), collapse = " | "), "\n", file=stderr())
-    cat("REPROD_DEVICES: ", paste(names(dev.list()), collapse = ","), "\n", file=stderr())
-    cat("REPROD_PLOT_DIR: ", .reprod_plot_dir, "\n", file=stderr())
-    cat("REPROD_GETWD: ", getwd(), "\n", file=stderr())
-    cat("REPROD_ERROR: ", conditionMessage(e), "\n") # stdout mirror
-    cat("REPROD_TRACEBACK: ", paste(utils::capture.output(traceback()), collapse = " | "), "\n") # stdout mirror
-    cat("REPROD_DEVICES: ", paste(names(dev.list()), collapse = ","), "\n") # stdout mirror
-    cat("REPROD_PLOT_DIR: ", .reprod_plot_dir, "\n") # stdout mirror
-    cat("REPROD_GETWD: ", getwd(), "\n") # stdout mirror
-  }}
-)
-
-if (reprod_png_available && names(dev.cur()) != "null device") {{
-  captured <- isTRUE(tryCatch(.reprod_capture_plot(1), error = function(e) {{
-    cat("REPROD_PLOT_CAPTURE_ERROR: ", conditionMessage(e), "\n", file=stderr())
-    FALSE
-  }}))
-  tryCatch(dev.off(), error = function(e) message("REPROD_DEVICE_CLOSE_ERROR: ", conditionMessage(e)))
-  if (!isTRUE(captured)) {{
-    tryCatch(unlink(file.path(.reprod_plot_dir, sprintf("%s_1.png", .reprod_plot_prefix)), recursive = FALSE, force = TRUE), silent = TRUE)
-    tryCatch(unlink(file.path(.reprod_plot_dir, sprintf("%s_1.rds", .reprod_plot_prefix)), recursive = FALSE, force = TRUE), silent = TRUE)
-  }}
-}}
-
-cat("REPROD_STATE: PNG_AVAILABLE=", reprod_png_available, " PLOT_DIR=", .reprod_plot_dir,
-    " GETWD=", getwd(), " DEVICES=", paste(names(dev.list()), collapse=","), "\n",
-    file=stderr())
-cat("REPROD_STATE: PNG_AVAILABLE=", reprod_png_available, " PLOT_DIR=", .reprod_plot_dir,
-    " GETWD=", getwd(), " DEVICES=", paste(names(dev.list()), collapse=","), "\n")
-
-cat("{delimiter}\n")
-"#,
-        temp_dir = temp_dir_str,
-        plot_prefix = plot_prefix,
-        plot_width = plot_width,
-        plot_height = plot_height,
-        code = code,
-        delimiter = PERSISTENT_DELIMITER,
-    )
-}
-
-fn wrap_code_with_plot_capture(
-    temp_dir: &Path,
-    code: &str,
-    plot_prefix: &str,
-    plot_width: u32,
-    plot_height: u32,
-) -> String {
-    let temp_dir_str = r_escape(&temp_dir.to_string_lossy());
-
-    format!(
-        r#"
-# Auto-generated plot capture wrapper
-cat("REPROD_WRAPPER_ENTER: oneshot\n")
-.reprod_plot_dir <- "{temp_dir}"
-.reprod_state_path <- file.path(.reprod_plot_dir, ".reprod_state.RData")
-
-# Ensure plot directory exists
-if (!dir.exists(.reprod_plot_dir)) {{
-  dir.create(.reprod_plot_dir, recursive = TRUE, showWarnings = FALSE)
-}}
-
-# Restore workspace if it exists
-if (file.exists(.reprod_state_path)) {{
-  tryCatch(
-    load(.reprod_state_path, envir = .GlobalEnv),
-    error = function(e) message("Failed to restore workspace: ", e)
-  )
-}}
-
-# Reset run-scoped state to avoid stale values from previous sessions
-.reprod_plot_dir <- "{temp_dir}"
-.reprod_plot_prefix <- "{plot_prefix}"
-.reprod_state_path <- file.path(.reprod_plot_dir, ".reprod_state.RData")
-.reprod_exit_code <- 0
-
-# Open PNG device
-.reprod_open_device <- function(index) {{
-  filename <- sprintf("%s_%d.png", .reprod_plot_prefix, index)
-  png(
-    file.path(.reprod_plot_dir, filename),
-    width = {plot_width}, height = {plot_height},
-    type = "cairo"
-  )
-}}
-
-.reprod_capture_plot <- function(index) {{
-  if (length(dev.list()) == 0 || names(dev.cur()) == "null device") {{
-    return(FALSE)
-  }}
-  tryCatch({{
-    png_path <- file.path(.reprod_plot_dir, sprintf("%s_%d.png", .reprod_plot_prefix, index))
-    snapshot_path <- NULL
-    snapshot <- tryCatch(recordPlot(), error = function(e) NULL)
-    actions <- tryCatch(snapshot$actions, error = function(e) NULL)
-    if (!is.null(snapshot) && (is.null(actions) || length(actions) > 0)) {{
-      snapshot_path <- file.path(.reprod_plot_dir, sprintf("%s_%d.rds", .reprod_plot_prefix, index))
-      saveRDS(snapshot, snapshot_path)
-    }}
-    cat("__REPROD_PLOT__|",
-        sprintf("%s_%d", .reprod_plot_prefix, index), "|",
-        if (is.null(snapshot_path)) "" else snapshot_path, "|",
-        png_path,
-        "\n", sep = "")
-    file.exists(png_path)
-  }}, error = function(e) {{
-    message("REPROD_PLOT_CAPTURE_ERROR: ", conditionMessage(e))
-    FALSE
-  }})
-}}
-
-.reprod_open_device(1)
-
-# User code
-tryCatch(
-  {{
-    {code}
-  }},
-  error = function(e) {{
-    .reprod_exit_code <<- 1
-    assign(".reprod_last_error", e, envir = .GlobalEnv)
-    message("REPROD_ERROR: ", conditionMessage(e))
-  }}
-)
-
-# If a device is open, close it to flush the PNG
-if (names(dev.cur()) != "null device") {{
-  captured <- isTRUE(tryCatch(.reprod_capture_plot(1), error = function(e) {{
-    message("REPROD_PLOT_CAPTURE_ERROR: ", conditionMessage(e))
-    FALSE
-  }}))
-  dev.off()
-  if (!isTRUE(captured)) {{
-    unlink(file.path(.reprod_plot_dir, sprintf("%s_1.png", .reprod_plot_prefix)), recursive = FALSE, force = TRUE)
-    unlink(file.path(.reprod_plot_dir, sprintf("%s_1.rds", .reprod_plot_prefix)), recursive = FALSE, force = TRUE)
-  }}
-}}
-
-# Persist workspace for next run
-tryCatch(
-  save.image(file = .reprod_state_path),
-  error = function(e) message("Failed to save workspace: ", e)
-)
-
-quit(status = .reprod_exit_code, runLast = FALSE)
-"#,
-        temp_dir = temp_dir_str,
-        plot_prefix = plot_prefix,
-        plot_width = plot_width,
-        plot_height = plot_height,
-        code = code
-    )
 }
 
 fn r_escape(s: &str) -> String {

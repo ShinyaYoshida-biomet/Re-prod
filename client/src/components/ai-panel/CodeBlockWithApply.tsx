@@ -1,7 +1,7 @@
 import type { CodeBlock } from "@shared/types";
 import { useEffect, useState } from "react";
 import { IconCheck, IconClipboard, IconLightbulb } from "@/components/shared";
-import { getCodeActionLabel } from "@/core/ai/codeBlockActions";
+import { CodeActionFactory } from "@/core/ai/actions";
 import { CodeBlockDiffPreview } from "./CodeBlockDiffPreview";
 
 interface Props {
@@ -64,7 +64,7 @@ export function CodeBlockWithApply({ codeBlock, onApply, showDiffPreview }: Prop
 					<span className="code-language">R</span>
 					<span className="code-target">
 						{codeBlock.filepath ? `${codeBlock.filepath}` : "Current file"} •{" "}
-						{getCodeActionLabel(codeBlock)}
+						{CodeActionFactory.getLabel(codeBlock)}
 					</span>
 				</div>
 

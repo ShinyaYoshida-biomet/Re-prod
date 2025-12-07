@@ -31,7 +31,11 @@ pub struct ProjectRuntime {
 }
 
 impl ProjectRuntime {
-    fn new(mut descriptor: ProjectDescriptor, config: Config, base_temp_dir: &Path) -> Result<Self> {
+    fn new(
+        mut descriptor: ProjectDescriptor,
+        config: Config,
+        base_temp_dir: &Path,
+    ) -> Result<Self> {
         ProjectDescriptor::ensure_layout(&descriptor.root_path)?;
         descriptor.config.touch_opened();
         descriptor.update_config()?;
@@ -58,7 +62,7 @@ impl ProjectRuntime {
             )
         })?;
 
-        let r_executor = RExecutor::builder(temp_dir, config.r_path.clone())
+        let r_executor = RExecutor::builder(temp_dir, config.r_path)
             .with_shared_timeline(timeline.clone())
             .with_plot_history(plot_history.clone())
             .with_working_dir(descriptor.root_path.clone())
@@ -152,8 +156,11 @@ impl ProjectController {
             return Ok(existing.clone());
         }
 
-        let runtime =
-            Arc::new(ProjectRuntime::new(descriptor, config.clone(), &self.base_temp_dir)?);
+        let runtime = Arc::new(ProjectRuntime::new(
+            descriptor,
+            config.clone(),
+            &self.base_temp_dir,
+        )?);
         self.refresh_registry(&runtime.descriptor).await?;
         runtimes.insert(project_id.to_string(), runtime.clone());
         drop(runtimes);

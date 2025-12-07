@@ -1,7 +1,7 @@
 import type { AIMessage, CodeBlock } from "@shared/types";
 import { useCallback } from "react";
 import { useStore } from "@/core";
-import { REMOTE_FILE_ACTIONS } from "@/core/ai/promptUtils";
+import { CodeActionFactory, type CodeActionContext } from "@/core/ai/actions";
 import { applyCodeChangeFile } from "@/services/fileService";
 
 type PostAssistantMessage = (content: string, extras?: Partial<AIMessage>) => void;
@@ -12,41 +12,37 @@ export function useAICodeApplication(postAssistantMessage: PostAssistantMessage)
 
 	const handleApplyCode = useCallback(
 		async (codeBlock: CodeBlock): Promise<void> => {
-			const targetFile = codeBlock.filepath;
-
-			const isCurrentEditor =
-				!targetFile ||
-				targetFile === "<current editor buffer>" ||
-				targetFile === "current editor buffer" ||
-				targetFile.includes("current_editor_buffer") ||
-				targetFile.includes("current editor buffer") ||
-				targetFile.startsWith("<") ||
-				(!editorFilepath && targetFile);
-
-			const shouldUseRemote =
-				Boolean(targetFile) &&
-				!isCurrentEditor &&
-				targetFile !== editorFilepath &&
-				REMOTE_FILE_ACTIONS.has(codeBlock.action);
-
-			if (shouldUseRemote) {
-				try {
-					await applyCodeChangeFile(codeBlock);
-					postAssistantMessage(`Applied ${codeBlock.action} to ${targetFile}`);
-				} catch (error) {
-					const message = error instanceof Error ? error.message : "unknown error";
-					postAssistantMessage(`Failed to apply remote change: ${message}`);
-					console.error("Remote code change failed", error);
-				}
+			// Validate the action first
+			const validation = CodeActionFactory.validate(codeBlock);
+			if (!validation.valid) {
+				postAssistantMessage(`Invalid code action: ${validation.error}`);
+				console.error("Code action validation failed:", validation.error);
 				return;
 			}
 
-			if (applyCodeChange) {
-				await applyCodeChange(codeBlock);
-				return;
-			}
+			// Get the action handler from factory
+			const action = CodeActionFactory.getAction(codeBlock);
 
-			console.warn("applyCodeChange not available, falling back to append mode");
+			// Build context for action execution
+			const context: CodeActionContext = {
+				applyToEditor: applyCodeChange
+					? async (codeBlock: CodeBlock) => {
+							applyCodeChange(codeBlock);
+						}
+					: undefined,
+				applyToFile: applyCodeChangeFile,
+				editorFilepath,
+				postMessage: (message: string) => postAssistantMessage(message),
+			};
+
+			try {
+				// Delegate to the action implementation
+				await action.apply(codeBlock, context);
+			} catch (error) {
+				const message = error instanceof Error ? error.message : "unknown error";
+				postAssistantMessage(`Failed to apply code change: ${message}`);
+				console.error("Code action execution failed:", error);
+			}
 		},
 		[applyCodeChange, editorFilepath, postAssistantMessage],
 	);
