@@ -26,7 +26,7 @@ const PLAN_STEP_EXECUTE: &str = "execute-task";
 const PLAN_STEP_SUMMARIZE: &str = "summarize";
 
 fn build_initial_plan() -> Vec<PlanStepPayload> {
-    let mut steps = vec![
+    let steps = vec![
         PlanStepPayload::new(PLAN_STEP_DISPATCH, "Plan request", Some("plan".to_string())),
         PlanStepPayload::new(
             PLAN_STEP_FETCH,

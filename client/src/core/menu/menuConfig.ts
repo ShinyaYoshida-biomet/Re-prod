@@ -1,6 +1,7 @@
 import type { ViewPane } from "@/core/state/slices/viewSlice";
 import { menuActions } from "@/services/menuActions";
 import type { MenuSection } from "@/types/menu";
+import { commandRegistry } from "@/core/commands/registry";
 
 export interface MenuStateSnapshot {
 	isEditorDirty: boolean;
@@ -102,7 +103,7 @@ export function buildMenuSections(snapshot: MenuStateSnapshot): MenuSection[] {
 					id: "edit:ai-assist",
 					label: "Ask AI Assistant...",
 					shortcut: "⌘K",
-					action: () => menuActions.edit.aiAssist(),
+					action: () => commandRegistry.execute("ai.assist"),
 					prominent: true,
 				},
 			],
@@ -208,21 +209,21 @@ export function buildMenuSections(snapshot: MenuStateSnapshot): MenuSection[] {
 					id: "view:toggle-files",
 					label: "Show/Hide Files Pane",
 					shortcut: "Cmd/Ctrl+Shift+E",
-					action: () => menuActions.view.togglePane("files"),
+					action: () => commandRegistry.execute("view.toggleFiles"),
 					checked: () => viewPanes.files,
 				},
 				{
 					id: "view:toggle-editor",
 					label: "Show/Hide Editor",
 					shortcut: "⌘1",
-					action: () => menuActions.view.togglePane("editor"),
+					action: () => commandRegistry.execute("view.toggleEditor"),
 					checked: () => viewPanes.editor,
 				},
 				{
 					id: "view:toggle-ai-assistant",
 					label: "Show/Hide AI Assistant",
 					shortcut: "⌘2",
-					action: () => menuActions.view.togglePane("assistant"),
+					action: () => commandRegistry.execute("view.toggleAssistant"),
 					checked: () => viewPanes.assistant,
 				},
 				{ type: "separator" },
@@ -230,19 +231,19 @@ export function buildMenuSections(snapshot: MenuStateSnapshot): MenuSection[] {
 					id: "view:zoom-in",
 					label: "Zoom In",
 					shortcut: "⌘+",
-					action: () => menuActions.view.zoomIn(),
+					action: () => commandRegistry.execute("view.zoomIn"),
 				},
 				{
 					id: "view:zoom-out",
 					label: "Zoom Out",
 					shortcut: "⌘-",
-					action: () => menuActions.view.zoomOut(),
+					action: () => commandRegistry.execute("view.zoomOut"),
 				},
 				{
 					id: "view:zoom-reset",
 					label: "Reset Zoom",
 					shortcut: "⌘0",
-					action: () => menuActions.view.zoomReset(),
+					action: () => commandRegistry.execute("view.zoomReset"),
 				},
 			],
 		},
