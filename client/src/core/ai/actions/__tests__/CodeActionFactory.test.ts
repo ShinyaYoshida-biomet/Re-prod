@@ -140,6 +140,18 @@ describe("CodeActionFactory", () => {
 			expect(result.error).toContain("targetRange");
 		});
 
+		it("should validate replace-range with contextual diff data", () => {
+			const codeBlock: CodeBlock = {
+				action: "replace-range",
+				code: "code",
+				language: "typescript",
+				originalCode: "old code",
+			};
+
+			const result = CodeActionFactory.validate(codeBlock);
+			expect(result.valid).toBe(true);
+		});
+
 		it("should fail validation for create-file without filepath", () => {
 			const codeBlock: CodeBlock = {
 				action: "create-file",
@@ -163,6 +175,25 @@ describe("CodeActionFactory", () => {
 			const result = CodeActionFactory.validate(codeBlock);
 			expect(result.valid).toBe(false);
 			expect(result.error).toContain("placeholder");
+		});
+
+		it("should validate delete-range when simple changes are provided", () => {
+			const codeBlock: CodeBlock = {
+				action: "delete-range",
+				code: "",
+				language: "typescript",
+				simpleChanges: [
+					{
+						beforeContext: ["alpha"],
+						afterContext: ["gamma"],
+						oldLines: ["beta"],
+						newLines: [],
+					},
+				],
+			};
+
+			const result = CodeActionFactory.validate(codeBlock);
+			expect(result.valid).toBe(true);
 		});
 	});
 

@@ -21,20 +21,41 @@ export function AIPlanCard({ steps }: Props): JSX.Element | null {
 
 	return (
 		<div className="ai-plan-card">
-			<div className="ai-plan-card__title">Plan</div>
-			<ol className="ai-plan-card__list">
-				{visibleSteps.map((step) => (
-					<li key={step.id} data-status={step.status} data-kind={step.kind}>
-						<span className="ai-plan-card__status">{STATUS_LABEL[step.status]}</span>
-						<span className="ai-plan-card__text">{step.title}</span>
-						{step.waitingReason && (
-							<span className="ai-plan-card__waiting">waiting: {step.waitingReason}</span>
-						)}
-						{step.error && <span className="ai-plan-card__error">{step.error}</span>}
-					</li>
-				))}
-				{extraCount > 0 && <li className="ai-plan-card__more">… {extraCount} more steps</li>}
-			</ol>
+			<div className="ai-plan-card__header">
+				<div className="ai-plan-card__title">Plan</div>
+				{extraCount > 0 && (
+					<div className="ai-plan-card__more" aria-label={`${extraCount} more steps`}>
+						+{extraCount} more
+					</div>
+				)}
+			</div>
+			<table className="ai-plan-card__table">
+				<thead>
+					<tr>
+						<th scope="col">Status</th>
+						<th scope="col">Step</th>
+						<th scope="col">Notes</th>
+					</tr>
+				</thead>
+				<tbody>
+					{visibleSteps.map((step) => {
+						const notes = [
+							step.waitingReason ? `waiting: ${step.waitingReason}` : null,
+							step.error ?? null,
+						].filter(Boolean);
+
+						return (
+							<tr key={step.id} data-status={step.status} data-kind={step.kind}>
+								<td className="ai-plan-card__status-cell">
+									<span className="ai-plan-card__status">{STATUS_LABEL[step.status]}</span>
+								</td>
+								<td className="ai-plan-card__text">{step.title}</td>
+								<td className="ai-plan-card__notes">{notes.join(" • ") || "—"}</td>
+							</tr>
+						);
+					})}
+				</tbody>
+			</table>
 		</div>
 	);
 }

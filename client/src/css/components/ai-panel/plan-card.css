@@ -1,9 +1,15 @@
 .ai-plan-card {
 	margin-top: 12px;
-	padding: 12px 14px;
 	border-radius: 12px;
 	border: 1px solid var(--border-medium);
-	background: rgba(248, 250, 255, 0.8);
+	overflow: hidden;
+}
+
+.ai-plan-card__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 12px;
 }
 
 .ai-plan-card__title {
@@ -12,37 +18,58 @@
 	color: var(--text-secondary);
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
-	margin-bottom: 8px;
 }
 
-.ai-plan-card ol {
-	margin: 0;
-	padding-left: 18px;
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
-}
-
-.ai-plan-card li {
+.ai-plan-card__more {
 	font-size: 12px;
-	display: flex;
-	gap: 8px;
-	align-items: baseline;
+	color: var(--text-secondary);
+}
+
+.ai-plan-card__table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 12px;
+}
+
+.ai-plan-card__table th,
+.ai-plan-card__table td {
+	padding: 8px 12px;
+	text-align: left;
+	vertical-align: top;
+}
+
+.ai-plan-card__table th {
+	color: var(--text-secondary);
+	font-weight: 600;
+	border-top: 1px solid var(--border-light);
+}
+
+.ai-plan-card__table td {
+	border-top: 1px solid var(--border-light);
 }
 
 .ai-plan-card__status {
 	font-weight: 600;
-	color: var(--accent-blue);
+	color: var(--text-primary);
 }
 
-.ai-plan-card li[data-status="running"] .ai-plan-card__status {
-	color: #f97316;
+.ai-plan-card__status-cell {
+	width: 96px;
+	white-space: nowrap;
 }
 
-.ai-plan-card li[data-status="done"] .ai-plan-card__status {
-	color: #16a34a;
+.ai-plan-card__notes {
+	color: var(--text-secondary);
 }
 
-.ai-plan-card li[data-status="error"] .ai-plan-card__status {
-	color: #dc2626;
+.ai-plan-card tr[data-status="running"] .ai-plan-card__status {
+	color: var(--text-secondary);
+}
+
+.ai-plan-card tr[data-status="done"] .ai-plan-card__status {
+	color: var(--text-primary);
+}
+
+.ai-plan-card tr[data-status="error"] .ai-plan-card__status {
+	color: #b91c1c;
 }
