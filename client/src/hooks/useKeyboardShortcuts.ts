@@ -1,12 +1,6 @@
-/**
- * Keyboard Shortcuts Hook
- *
- * Global keyboard shortcuts for all menu actions.
- * Handles platform differences (Mac vs Windows/Linux) and conflicts.
- */
-
 import { useEffect } from "react";
 import { menuActions } from "@/services/menuActions";
+import { commandRegistry } from "@/core/commands/registry";
 
 /**
  * Normalize keyboard event to shortcut string
@@ -60,8 +54,8 @@ export function useKeyboardShortcuts() {
 			"Mod+S": () => menuActions.file.save(),
 			"Mod+Shift+S": () => menuActions.file.saveAs(),
 
-			// Edit menu - AI ASSISTANT (most important)
-			"Mod+K": () => menuActions.edit.aiAssist(),
+			// Edit menu
+			// "Mod+K" handled by command registry
 
 			// Code menu
 			// NOTE: Cmd+Enter, Cmd+Shift+Enter handled by EditorPanel's Monaco shortcuts
@@ -75,17 +69,17 @@ export function useKeyboardShortcuts() {
 			"Mod+Shift+N": () => menuActions.session.new(),
 			"Mod+,": () => menuActions.session.settings(),
 
-			// Terminal shortcuts
-			"Mod+Backquote": () => menuActions.view.focusTerminal(),
-			"Mod+Shift+T": () => menuActions.view.newTerminalSession(),
-
-			// View menu
-			"Mod+Shift+E": () => menuActions.view.togglePane("files"),
-			"Mod++": () => menuActions.view.zoomIn(),
+			// View menu - Extra mappings not in registry yet
 			"Mod+=": () => menuActions.view.zoomIn(), // Also handle = key (no shift)
-			"Mod+-": () => menuActions.view.zoomOut(),
-			"Mod+0": () => menuActions.view.zoomReset(),
 		};
+
+		// Register commands from registry
+		const registeredCommands = commandRegistry.getAll();
+		registeredCommands.forEach((cmd) => {
+			if (cmd.keybinding) {
+				shortcuts[cmd.keybinding] = () => commandRegistry.execute(cmd.id);
+			}
+		});
 
 		const handleKeyDown = (e: KeyboardEvent) => {
 			// Skip if user is typing in input/textarea (except AI panel)
