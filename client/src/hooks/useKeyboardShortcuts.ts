@@ -81,8 +81,6 @@ export function useKeyboardShortcuts() {
 
 			// View menu
 			"Mod+Shift+E": () => menuActions.view.togglePane("files"),
-			"Mod+1": () => menuActions.view.togglePane("editor"),
-			"Mod+2": () => menuActions.view.togglePane("assistant"),
 			"Mod++": () => menuActions.view.zoomIn(),
 			"Mod+=": () => menuActions.view.zoomIn(), // Also handle = key (no shift)
 			"Mod+-": () => menuActions.view.zoomOut(),
