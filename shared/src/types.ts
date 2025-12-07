@@ -154,6 +154,7 @@ export interface ToolRequestEvent extends AgentEventBase {
 	requiresApproval?: boolean;
 	approvalOptions?: ApprovalOption[];
 	preview?: ToolPreview;
+	status: AgentEventStatus;
 }
 
 export interface ToolResultEvent extends AgentEventBase {

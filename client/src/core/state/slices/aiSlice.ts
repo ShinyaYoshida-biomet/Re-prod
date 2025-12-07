@@ -2,9 +2,12 @@ import type {
 	AIMessage,
 	AIMode,
 	AgentEvent,
+	ApprovalOption,
+	ApprovalRequest,
 	CodeBlock,
 	PlanStep,
 	ToolCallLog,
+	ToolPreview,
 } from "@shared/types";
 import type { StateCreator } from "zustand";
 
@@ -12,6 +15,8 @@ type StreamingExtras = {
 	codeBlocks?: CodeBlock[];
 	planSteps?: PlanStep[];
 	toolLogs?: ToolCallLog[];
+	agentEvents?: AgentEvent[];
+	approvalRequests?: ApprovalRequest[];
 };
 
 const updateStreamingMessage = (
@@ -74,6 +79,13 @@ export interface AIState {
 	updateStreamingPlan: (streamingId: string, plan: PlanStep[]) => void;
 	recordToolEvent: (streamingId: string, log: ToolCallLog) => void;
 	recordAgentEvent: (streamingId: string, event: AgentEvent) => void;
+	queueApprovalRequest: (streamingId: string, request: ApprovalRequest) => void;
+	resolveApprovalRequest: (
+		streamingId: string,
+		eventId: string,
+		decision: ApprovalOption,
+		editedPreview?: ToolPreview,
+	) => void;
 	completeStreamingMessage: (
 		streamingId: string,
 		finalContent?: string,
@@ -187,6 +199,28 @@ export const createAISlice: StateCreator<AIState> = (set) => ({
 				})),
 			},
 		})),
+	queueApprovalRequest: (streamingId, request) =>
+		set((state) => ({
+			ai: {
+				...state.ai,
+				messages: updateStreamingMessage(state.ai.messages, streamingId, (message) => ({
+					...message,
+					approvalRequests: [...(message.approvalRequests ?? []), request],
+				})),
+			},
+		})),
+	resolveApprovalRequest: (streamingId, eventId, _decision) =>
+		set((state) => ({
+			ai: {
+				...state.ai,
+				messages: updateStreamingMessage(state.ai.messages, streamingId, (message) => ({
+					...message,
+					approvalRequests: (message.approvalRequests ?? []).filter(
+						(request) => request.eventId !== eventId,
+					),
+				})),
+			},
+		})),
 	completeStreamingMessage: (streamingId, finalContent, extras) =>
 		set((state) => ({
 			ai: {
@@ -198,7 +232,8 @@ export const createAISlice: StateCreator<AIState> = (set) => ({
 					codeBlocks: extras?.codeBlocks ?? message.codeBlocks,
 					planSteps: extras?.planSteps ?? message.planSteps,
 					toolLogs: extras?.toolLogs ?? message.toolLogs,
-					agentEvents: message.agentEvents,
+					agentEvents: extras?.agentEvents ?? message.agentEvents,
+					approvalRequests: extras?.approvalRequests ?? message.approvalRequests,
 				})),
 			},
 		})),
