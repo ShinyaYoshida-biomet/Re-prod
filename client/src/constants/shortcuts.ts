@@ -71,16 +71,6 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
 				keys: ["⌘⇧N", "Ctrl+Shift+N"],
 				description: "Start new session",
 			},
-			{
-				id: "toggle-plots",
-				keys: ["⌘3", "Ctrl+3"],
-				description: "Show or hide plots",
-			},
-			{
-				id: "toggle-timeline",
-				keys: ["⌘4", "Ctrl+4"],
-				description: "Toggle timeline tab",
-			},
 		],
 	},
 	{
