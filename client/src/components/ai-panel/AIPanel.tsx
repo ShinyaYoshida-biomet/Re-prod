@@ -10,14 +10,12 @@ export interface AIPanelRef {
 }
 
 interface AIPanelProps {
-	onOpenSettings: () => void;
 	onRequireApiKeys: () => void;
 	hasConfiguredProvider: boolean;
-	activeProviderLabel: string;
 }
 
 export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(
-	({ onOpenSettings, onRequireApiKeys, hasConfiguredProvider, activeProviderLabel }, ref) => {
+	({ onRequireApiKeys, hasConfiguredProvider }, ref) => {
 		const { input, setInput, messages, isLoading, handleAsk, handleStop, handleApplyCode } =
 			useAIConversation();
 

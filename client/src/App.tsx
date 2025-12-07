@@ -40,7 +40,6 @@ function App(): JSX.Element {
 
 	const activeProviderConfig = providers.find((provider) => provider.name === activeProvider);
 	const isActiveProviderConfigured = Boolean(activeProviderConfig?.isConfigured);
-	const activeProviderLabel = activeProviderConfig?.displayName || activeProvider || "AI provider";
 
 	const openSettings = () => setSettingsOpen(true);
 
@@ -116,10 +115,8 @@ function App(): JSX.Element {
 							<div className="ai-pane-wrapper">
 								<AIPanel
 									ref={setAIPanelRef}
-									onOpenSettings={openSettings}
 									onRequireApiKeys={handleRequireApiKeys}
 									hasConfiguredProvider={isActiveProviderConfigured}
-									activeProviderLabel={activeProviderLabel}
 								/>
 							</div>
 						</Allotment.Pane>
