@@ -125,6 +125,13 @@ export type ClientMessage =
 			project_id: string;
 			state: Record<string, unknown>;
 	  }
+	| {
+			type: "agent_event_decision";
+			request_id: string;
+			event_id: string;
+			decision: string;
+			edited_preview?: unknown;
+	  }
 	| { type: "plot_history_get" }
 	| { type: "plot_history_set_active"; plot_id: string }
 	| { type: "plot_history_export"; plot_id: string; path: string; format?: PlotHistoryExportFormat }

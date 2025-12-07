@@ -160,6 +160,14 @@ pub(super) enum WSRequest {
         #[serde(default)]
         name: Option<String>,
     },
+    #[serde(rename = "agent_event_decision")]
+    AgentEventDecision {
+        request_id: String,
+        event_id: String,
+        decision: String,
+        #[serde(default)]
+        edited_preview: Option<Value>,
+    },
     #[serde(rename = "project_state_load")]
     ProjectStateLoad { project_id: String },
     #[serde(rename = "project_state_save")]

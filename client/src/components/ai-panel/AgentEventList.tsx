@@ -28,8 +28,10 @@ function renderLabel(event: AgentEvent): string {
 			return event.summary;
 		case "error":
 			return event.error;
-		default:
-			return event.type;
+		default: {
+			const _exhaustive: never = event;
+			return _exhaustive;
+		}
 	}
 }
 

@@ -190,6 +190,7 @@ async fn handle_ws_request(
             path,
             format,
         } => handle_plot_history_export(runtime, plot_id, path, format).await,
+        WSRequest::AgentEventDecision { .. } => Vec::new(), // TODO: gate tool execution once approvals are enforced
         WSRequest::PlotHistoryDelete { plot_id } => {
             handle_plot_history_delete(runtime, plot_id).await
         }

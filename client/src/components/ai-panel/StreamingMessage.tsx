@@ -1,5 +1,7 @@
 import type { AIMessage, CodeBlock } from "@shared/types";
+import { useStore } from "@/core";
 import { AgentEventList } from "./AgentEventList";
+import { ApprovalQueue } from "./ApprovalQueue";
 import { AIPlanCard } from "./AIPlanCard";
 import { CodeBlockWithApply } from "./CodeBlockWithApply";
 import { ToolCallLog } from "./ToolCallLog";
@@ -15,12 +17,14 @@ function stripPatchBlocks(content: string): string {
 }
 
 export function StreamingMessage({ message, onApplyCode }: Props): JSX.Element {
+	const resolveApproval = useStore((state) => state.resolveApprovalRequest);
 	const isAssistant = message.role === "assistant";
 	const isStreaming = Boolean(message.streamingId && !message.isComplete);
 	const hasPlan = Boolean(message.planSteps && message.planSteps.length > 0);
 	const hasTools = Boolean(message.toolLogs && message.toolLogs.length > 0);
 	const hasCodeBlocks = Boolean(message.codeBlocks && message.codeBlocks.length > 0);
 	const hasAgentEvents = Boolean(message.agentEvents && message.agentEvents.length > 0);
+	const hasApprovals = Boolean(message.approvalRequests && message.approvalRequests.length > 0);
 	const shouldShowLegacyCode = Boolean(message.code && !hasCodeBlocks);
 
 	// Strip patch blocks from content to avoid duplicate display
@@ -47,6 +51,15 @@ export function StreamingMessage({ message, onApplyCode }: Props): JSX.Element {
 			{isAssistant && (
 				<>
 					{hasAgentEvents && <AgentEventList events={message.agentEvents!} />}
+					{hasApprovals && message.streamingId && (
+						<ApprovalQueue
+							requestId={message.streamingId}
+							requests={message.approvalRequests!}
+							onResolve={(eventId) =>
+								resolveApproval(message.streamingId!, eventId, "approve_once")
+							}
+						/>
+					)}
 
 					{hasPlan && <AIPlanCard steps={message.planSteps} />}
 

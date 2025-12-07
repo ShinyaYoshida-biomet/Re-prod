@@ -300,6 +300,7 @@ export interface AIMessage {
 	planSteps?: PlanStep[];
 	toolLogs?: ToolCallLog[];
 	agentEvents?: AgentEvent[];
+	approvalRequests?: ApprovalRequest[];
 	streamingId?: string;
 	isComplete?: boolean;
 	timestamp: number;

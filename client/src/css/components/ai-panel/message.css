@@ -205,6 +205,65 @@
 	flex: 1;
 }
 
+.approval-queue {
+	margin-top: 8px;
+	padding: 10px;
+	border: 1px solid var(--border-light);
+	border-radius: 8px;
+	background: var(--bg-primary);
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.approval-queue__title {
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--text-secondary);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+
+.approval-queue__item {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 8px;
+	border: 1px dashed var(--border-light);
+	border-radius: 6px;
+}
+
+.approval-queue__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.approval-queue__tool {
+	font-size: 12px;
+	color: var(--text-primary);
+}
+
+.approval-queue__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.approval-queue__actions .btn {
+	padding: 4px 8px;
+	font-size: 11px;
+}
+
+.approval-preview {
+	display: block;
+	font-size: 11px;
+	color: var(--text-secondary);
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
 .message-code {
 	margin-top: 6px;
 	padding: 10px;
