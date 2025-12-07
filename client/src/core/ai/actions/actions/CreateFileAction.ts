@@ -1,9 +1,5 @@
 import type { CodeBlock } from "@shared/types";
-import type {
-	CodeActionContext,
-	CodeActionValidation,
-	ICodeAction,
-} from "../ICodeAction";
+import type { CodeActionContext, CodeActionValidation, ICodeAction } from "../ICodeAction";
 
 /**
  * Action for creating a new file with content

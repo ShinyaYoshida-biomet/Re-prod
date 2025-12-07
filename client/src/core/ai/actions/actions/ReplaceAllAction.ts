@@ -1,9 +1,5 @@
 import type { CodeBlock } from "@shared/types";
-import type {
-	CodeActionContext,
-	CodeActionValidation,
-	ICodeAction,
-} from "../ICodeAction";
+import type { CodeActionContext, CodeActionValidation, ICodeAction } from "../ICodeAction";
 
 /**
  * Action for replacing entire file contents
@@ -45,7 +41,10 @@ export class ReplaceAllAction implements ICodeAction {
 		}
 	}
 
-	private isCurrentEditor(targetFile: string | undefined, editorFilepath: string | null | undefined): boolean {
+	private isCurrentEditor(
+		targetFile: string | undefined,
+		editorFilepath: string | null | undefined,
+	): boolean {
 		if (!targetFile) return true;
 
 		const placeholderPatterns = [

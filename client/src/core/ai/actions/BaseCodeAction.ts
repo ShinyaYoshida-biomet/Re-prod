@@ -1,9 +1,5 @@
 import type { CodeBlock } from "@shared/types";
-import type {
-	CodeActionContext,
-	CodeActionValidation,
-	ICodeAction,
-} from "./ICodeAction";
+import type { CodeActionContext, CodeActionValidation, ICodeAction } from "./ICodeAction";
 
 /**
  * Abstract base class for code actions.
