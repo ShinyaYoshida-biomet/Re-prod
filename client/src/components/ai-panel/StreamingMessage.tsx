@@ -1,4 +1,5 @@
 import type { AIMessage, CodeBlock } from "@shared/types";
+import { AgentEventList } from "./AgentEventList";
 import { AIPlanCard } from "./AIPlanCard";
 import { CodeBlockWithApply } from "./CodeBlockWithApply";
 import { ToolCallLog } from "./ToolCallLog";
@@ -19,6 +20,7 @@ export function StreamingMessage({ message, onApplyCode }: Props): JSX.Element {
 	const hasPlan = Boolean(message.planSteps && message.planSteps.length > 0);
 	const hasTools = Boolean(message.toolLogs && message.toolLogs.length > 0);
 	const hasCodeBlocks = Boolean(message.codeBlocks && message.codeBlocks.length > 0);
+	const hasAgentEvents = Boolean(message.agentEvents && message.agentEvents.length > 0);
 	const shouldShowLegacyCode = Boolean(message.code && !hasCodeBlocks);
 
 	// Strip patch blocks from content to avoid duplicate display
@@ -44,6 +46,8 @@ export function StreamingMessage({ message, onApplyCode }: Props): JSX.Element {
 
 			{isAssistant && (
 				<>
+					{hasAgentEvents && <AgentEventList events={message.agentEvents!} />}
+
 					{hasPlan && <AIPlanCard steps={message.planSteps} />}
 
 					{hasTools && <ToolCallLog logs={message.toolLogs} />}

@@ -147,6 +147,64 @@
 	color: var(--accent-blue);
 }
 
+.agent-events {
+	margin-top: 8px;
+	padding: 8px 10px;
+	border: 1px solid var(--border-light);
+	border-radius: 8px;
+	background: var(--bg-primary);
+}
+
+.agent-events__title {
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--text-secondary);
+	margin-bottom: 6px;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+
+.agent-events__list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.agent-events__item {
+	display: flex;
+	gap: 8px;
+	align-items: baseline;
+	font-size: 12px;
+	color: var(--text-primary);
+}
+
+.agent-events__status {
+	font-weight: 600;
+	color: var(--text-secondary);
+	white-space: nowrap;
+	min-width: 68px;
+	text-transform: lowercase;
+}
+
+.agent-events__item[data-status="error"] .agent-events__status {
+	color: #b91c1c;
+}
+
+.agent-events__item[data-status="running"] .agent-events__status {
+	color: var(--text-secondary);
+}
+
+.agent-events__item[data-status="done"] .agent-events__status {
+	color: var(--text-primary);
+}
+
+.agent-events__text {
+	flex: 1;
+}
+
 .message-code {
 	margin-top: 6px;
 	padding: 10px;

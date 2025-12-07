@@ -298,6 +298,7 @@ export interface AIMessage {
 	codeBlocks?: CodeBlock[];
 	planSteps?: PlanStep[];
 	toolLogs?: ToolCallLog[];
+	agentEvents?: AgentEvent[];
 	streamingId?: string;
 	isComplete?: boolean;
 	timestamp: number;

@@ -1,4 +1,11 @@
-import type { AIMessage, AIMode, CodeBlock, PlanStep, ToolCallLog } from "@shared/types";
+import type {
+	AIMessage,
+	AIMode,
+	AgentEvent,
+	CodeBlock,
+	PlanStep,
+	ToolCallLog,
+} from "@shared/types";
 import type { StateCreator } from "zustand";
 
 type StreamingExtras = {
@@ -66,6 +73,7 @@ export interface AIState {
 	appendStreamingChunk: (streamingId: string, chunk: string) => void;
 	updateStreamingPlan: (streamingId: string, plan: PlanStep[]) => void;
 	recordToolEvent: (streamingId: string, log: ToolCallLog) => void;
+	recordAgentEvent: (streamingId: string, event: AgentEvent) => void;
 	completeStreamingMessage: (
 		streamingId: string,
 		finalContent?: string,
@@ -169,6 +177,16 @@ export const createAISlice: StateCreator<AIState> = (set) => ({
 				})),
 			},
 		})),
+	recordAgentEvent: (streamingId, event) =>
+		set((state) => ({
+			ai: {
+				...state.ai,
+				messages: updateStreamingMessage(state.ai.messages, streamingId, (message) => ({
+					...message,
+					agentEvents: [...(message.agentEvents ?? []), event],
+				})),
+			},
+		})),
 	completeStreamingMessage: (streamingId, finalContent, extras) =>
 		set((state) => ({
 			ai: {
@@ -180,6 +198,7 @@ export const createAISlice: StateCreator<AIState> = (set) => ({
 					codeBlocks: extras?.codeBlocks ?? message.codeBlocks,
 					planSteps: extras?.planSteps ?? message.planSteps,
 					toolLogs: extras?.toolLogs ?? message.toolLogs,
+					agentEvents: message.agentEvents,
 				})),
 			},
 		})),

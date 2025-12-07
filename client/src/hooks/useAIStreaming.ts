@@ -14,6 +14,7 @@ export function useAIStreaming() {
 	const appendStreamingChunk = useStore((state) => state.appendStreamingChunk);
 	const updateStreamingPlan = useStore((state) => state.updateStreamingPlan);
 	const recordToolEvent = useStore((state) => state.recordToolEvent);
+	const recordAgentEvent = useStore((state) => state.recordAgentEvent);
 	const completeStreamingMessage = useStore((state) => state.completeStreamingMessage);
 	const setAILoading = useStore((state) => state.setAILoading);
 
@@ -92,6 +93,15 @@ export function useAIStreaming() {
 			);
 
 			disposers.push(
+				socketService.on("agent_event", (message) => {
+					if (message.type !== "agent_event" || !shouldProcess(message.id)) {
+						return;
+					}
+					recordAgentEvent(requestId, message.event);
+				}),
+			);
+
+			disposers.push(
 				socketService.on("ai_response_complete", (message) => {
 					if (message.type !== "ai_response_complete" || !shouldProcess(message.id)) {
 						return;
@@ -158,6 +168,7 @@ export function useAIStreaming() {
 			appendStreamingChunk,
 			completeStreamingMessage,
 			recordToolEvent,
+			recordAgentEvent,
 			setAILoading,
 			updateStreamingPlan,
 		],
