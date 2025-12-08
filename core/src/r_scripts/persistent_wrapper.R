@@ -22,16 +22,20 @@ if (!dir.exists(.reprod_plot_dir)) {
   }
   tryCatch({
     png_path <- file.path(.reprod_plot_dir, sprintf("%s_%d.png", .reprod_plot_prefix, index))
-    snapshot_path <- NULL
     snapshot <- tryCatch(recordPlot(), error = function(e) NULL)
     actions <- tryCatch(snapshot$actions, error = function(e) NULL)
-    if (!is.null(snapshot) && (is.null(actions) || length(actions) > 0)) {
-      snapshot_path <- file.path(.reprod_plot_dir, sprintf("%s_%d.rds", .reprod_plot_prefix, index))
-      saveRDS(snapshot, snapshot_path)
+
+    # If nothing was actually drawn, skip emitting a plot event
+    if (is.null(snapshot) || (!is.null(actions) && length(actions) == 0)) {
+      return(FALSE);
     }
+
+    snapshot_path <- file.path(.reprod_plot_dir, sprintf("%s_%d.rds", .reprod_plot_prefix, index))
+    saveRDS(snapshot, snapshot_path)
+
     cat("__REPROD_PLOT__|",
         sprintf("%s_%d", .reprod_plot_prefix, index), "|",
-        if (is.null(snapshot_path)) "" else snapshot_path, "|",
+        snapshot_path, "|",
         png_path,
         "\n", sep = "")
     file.exists(png_path)
@@ -81,28 +85,6 @@ if (reprod_png_available && names(dev.cur()) != "null device") {
     tryCatch(unlink(file.path(.reprod_plot_dir, sprintf("%s_1.png", .reprod_plot_prefix)), recursive = FALSE, force = TRUE), silent = TRUE)
     tryCatch(unlink(file.path(.reprod_plot_dir, sprintf("%s_1.rds", .reprod_plot_prefix)), recursive = FALSE, force = TRUE), silent = TRUE)
   }
-}
-
-if (reprod_png_available) {
-  tryCatch({
-    existing_plots <- list.files(
-      .reprod_plot_dir,
-      pattern = sprintf("^%s_\\d+\\.png$", .reprod_plot_prefix)
-    )
-    if (length(existing_plots) == 0 &&
-        requireNamespace("ggplot2", quietly = TRUE)) {
-      last_plot <- tryCatch(ggplot2::last_plot(), error = function(e) NULL)
-      if (inherits(last_plot, "ggplot")) {
-        next_index <- length(existing_plots) + 1
-        .reprod_open_device(next_index)
-        print(last_plot)
-        dev.off()
-      }
-    }
-  }, error = function(e) {
-    cat("REPROD_PNG_POST_ERROR: ", conditionMessage(e), "\n", file=stderr())
-    cat("REPROD_PNG_POST_ERROR: ", conditionMessage(e), "\n")
-  })
 }
 
 cat("REPROD_STATE: PNG_AVAILABLE=", reprod_png_available, " PLOT_DIR=", .reprod_plot_dir,

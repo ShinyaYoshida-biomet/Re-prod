@@ -38,16 +38,20 @@ if (file.exists(.reprod_state_path)) {
   }
   tryCatch({
     png_path <- file.path(.reprod_plot_dir, sprintf("%s_%d.png", .reprod_plot_prefix, index))
-    snapshot_path <- NULL
     snapshot <- tryCatch(recordPlot(), error = function(e) NULL)
     actions <- tryCatch(snapshot$actions, error = function(e) NULL)
-    if (!is.null(snapshot) && (is.null(actions) || length(actions) > 0)) {
-      snapshot_path <- file.path(.reprod_plot_dir, sprintf("%s_%d.rds", .reprod_plot_prefix, index))
-      saveRDS(snapshot, snapshot_path)
+
+    # If nothing was actually drawn, skip emitting a plot event
+    if (is.null(snapshot) || (!is.null(actions) && length(actions) == 0)) {
+      return(FALSE)
     }
+
+    snapshot_path <- file.path(.reprod_plot_dir, sprintf("%s_%d.rds", .reprod_plot_prefix, index))
+    saveRDS(snapshot, snapshot_path)
+
     cat("__REPROD_PLOT__|",
         sprintf("%s_%d", .reprod_plot_prefix, index), "|",
-        if (is.null(snapshot_path)) "" else snapshot_path, "|",
+        snapshot_path, "|",
         png_path,
         "\n", sep = "")
     file.exists(png_path)
