@@ -44,7 +44,7 @@ impl AIProvider for OpenAIProvider {
             "model": self.model,
             "messages": messages,
             "max_completion_tokens": 4096,
-            "temperature": 0.7,
+            "temperature": 0.1,
         });
 
         let response = self
@@ -103,7 +103,7 @@ impl AIProvider for OpenAIProvider {
             "model": self.model,
             "messages": messages,
             "max_completion_tokens": 4096,
-            "temperature": 0.7,
+            "temperature": 0.1,
         });
 
         // Add tools if provided (OpenAI uses different format)
