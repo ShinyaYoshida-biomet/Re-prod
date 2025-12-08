@@ -1079,8 +1079,8 @@ ggplot(mtcars, aes(x = wt, y = mpg)) + geom_point()
         assert!(options.include_outputs);
         assert!(!options.include_errors);
         assert!(options.include_summary);
-        assert_eq!(options.output_head_lines, 20);
-        assert_eq!(options.output_tail_lines, 8);
-        assert_eq!(options.output_max_lines, 200);
+        assert_eq!(options.output_head_lines, 3);
+        assert_eq!(options.output_tail_lines, 2);
+        assert_eq!(options.output_max_lines, 6);
     }
 }
