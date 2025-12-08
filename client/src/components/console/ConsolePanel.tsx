@@ -24,9 +24,6 @@ export function ConsolePanel({ view }: ConsolePanelProps): JSX.Element {
 						{execution.results.length === 0 ? (
 							<div className="console-welcome">
 								<p>Console ready. Run R code to see output here.</p>
-								<button className="btn btn-secondary" onClick={handleClearPlots}>
-									Clear plot history
-								</button>
 							</div>
 						) : (
 							<>
