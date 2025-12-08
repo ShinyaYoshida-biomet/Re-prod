@@ -27,21 +27,6 @@ function eventToShortcut(e: KeyboardEvent): string {
 }
 
 /**
- * Check if Monaco should handle this shortcut
- */
-function isMonacoHandled(e: KeyboardEvent): boolean {
-	const mod = e.ctrlKey || e.metaKey;
-
-	// Monaco handles these by default
-	const monacoKeys = ["F", "H", "A", "D", "L"];
-
-	if (!mod) return false;
-
-	// Let Monaco handle these when in editor
-	return monacoKeys.includes(e.key.toUpperCase());
-}
-
-/**
  * Hook to enable global keyboard shortcuts
  */
 export function useKeyboardShortcuts() {
