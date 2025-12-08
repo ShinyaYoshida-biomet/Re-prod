@@ -270,11 +270,21 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 						? "replace-all"
 						: codeBlock.action;
 
+			const applyStructuredContext = (): boolean => {
+				// Prefer patch chunks (highest fidelity), then simple changes
+				const patchApplied = applyPatchChunks();
+				if (patchApplied) {
+					return true;
+				}
+
+				const simpleApplied = applySimpleChanges();
+				return simpleApplied;
+			};
+
 			switch (effectiveAction) {
 				case "replace-all": {
-					const simpleApplied = applySimpleChanges();
-					const patchApplied = applyPatchChunks();
-					if (simpleApplied || patchApplied) {
+					const structuredApplied = applyStructuredContext();
+					if (structuredApplied) {
 						break;
 					}
 
@@ -297,9 +307,8 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 					break;
 				}
 				case "replace-range": {
-					const simpleApplied = applySimpleChanges();
-					const patchApplied = applyPatchChunks();
-					if (!simpleApplied && !patchApplied) {
+					const structuredApplied = applyStructuredContext();
+					if (!structuredApplied) {
 						const applied = applyRangeChange(codeBlock.code, contextMatchingFailed);
 						if (!applied) {
 							// No explicit context; offer to replace the whole file as a fallback
@@ -318,9 +327,8 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 					break;
 				}
 				case "delete-range": {
-					const simpleApplied = applySimpleChanges();
-					const patchApplied = applyPatchChunks();
-					if (!simpleApplied && !patchApplied) {
+					const structuredApplied = applyStructuredContext();
+					if (!structuredApplied) {
 						applyRangeChange("", contextMatchingFailed);
 					}
 					break;

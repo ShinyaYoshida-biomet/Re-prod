@@ -77,8 +77,8 @@ export function useKeyboardShortcuts() {
 
 			// Skip if Monaco editor should handle it
 			const inEditor = target.closest(".monaco-editor");
-			if (inEditor && isMonacoHandled(e) && !isAIShortcut) {
-				return; // Let Monaco handle it
+			if (inEditor && !isAIShortcut) {
+				return; // Let Monaco handle editor shortcuts (copy/paste/etc.)
 			}
 
 			// Skip browser shortcuts

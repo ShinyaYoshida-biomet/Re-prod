@@ -23,11 +23,13 @@ const isStructuredCodeBlock = (block: CodeBlock): boolean => {
 export function CodeBlockWithApply({ codeBlock, onApply, showDiffPreview }: Props): JSX.Element {
 	const [applied, setApplied] = useState(false);
 	const [currentBlock, setCurrentBlock] = useState<CodeBlock>(codeBlock);
+	const [copied, setCopied] = useState(false);
 	const shouldShowDiffPreview = showDiffPreview && isStructuredCodeBlock(currentBlock);
 
 	useEffect(() => {
 		setCurrentBlock(codeBlock);
 		setApplied(false);
+		setCopied(false);
 	}, [codeBlock]);
 
 	const handleApply = async (): Promise<void> => {
@@ -40,7 +42,15 @@ export function CodeBlockWithApply({ codeBlock, onApply, showDiffPreview }: Prop
 	};
 
 	const handleCopy = (): void => {
-		navigator.clipboard.writeText(codeBlock.code);
+		navigator.clipboard
+			.writeText(currentBlock.code)
+			.then(() => {
+				setCopied(true);
+				setTimeout(() => setCopied(false), 1200);
+			})
+			.catch((error) => {
+				console.error("Failed to copy code block", error);
+			});
 	};
 
 	const handleRetry = (): void => {
@@ -80,7 +90,7 @@ export function CodeBlockWithApply({ codeBlock, onApply, showDiffPreview }: Prop
 					<button className="btn" onClick={handleCopy} title="Copy to clipboard">
 						<>
 							<IconClipboard width={16} height={16} aria-hidden />
-							Copy
+							{copied ? "Copied" : "Copy"}
 						</>
 					</button>
 
