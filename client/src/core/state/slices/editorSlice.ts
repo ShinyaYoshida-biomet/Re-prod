@@ -7,22 +7,7 @@ export const DEFAULT_R_SCRIPT = `# Welcome to Re-prod ----
 # AI-Powered R Analysis IDE
 # Try Cmd/Ctrl+Enter to run current section
 
-# Load Data ----
-data(mtcars)
-head(mtcars)
-
-# Summary Statistics ----
-summary(mtcars)
-str(mtcars)
-
-# Scatter Plot ----
-plot(mtcars$mpg, mtcars$hp,
-     xlab = "Miles per Gallon",
-     ylab = "Horsepower",
-     main = "MPG vs Horsepower",
-     col = "steelblue",
-     pch = 19)
-abline(lm(hp ~ mpg, data = mtcars), col = "red", lwd = 2)
+# Start coding here
 `;
 
 export interface EditorState {
