@@ -17,9 +17,7 @@ export function useSettingsPersistence(): void {
 				const parsed = JSON.parse(raw);
 				updateSettings(parsed);
 			}
-		} catch (error) {
-			console.warn("Failed to restore settings from storage", error);
-		}
+		} catch (error) {}
 
 		setHydrated(true);
 	}, [updateSettings]);
@@ -31,8 +29,6 @@ export function useSettingsPersistence(): void {
 
 		try {
 			window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-		} catch (error) {
-			console.warn("Failed to persist settings", error);
-		}
+		} catch (error) {}
 	}, [hydrated, settings]);
 }

@@ -131,9 +131,7 @@ export function useBottomPaneState(): UseBottomPaneStateResult {
 		if (!plotId) {
 			return;
 		}
-		void setActivePlot(plotId).catch((error) => {
-			console.warn("Failed to persist active plot", error);
-		});
+		void setActivePlot(plotId).catch(() => {});
 	}, []);
 
 	const goToPreviousPlot = useCallback(() => {

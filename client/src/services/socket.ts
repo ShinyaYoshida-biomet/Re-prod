@@ -55,13 +55,10 @@ class SocketService {
 				this.dispatch("*", response);
 				// Deliver to one-shot handler matching this message
 				this.consumeOneShot(response);
-			} catch (e) {
-				console.error("Failed to parse WebSocket message:", e);
-			}
+			} catch (e) {}
 		};
 
-		this.ws.onerror = (error) => {
-			console.error("WebSocket error:", error);
+		this.ws.onerror = () => {
 			this.notifyConnection("error");
 		};
 
@@ -82,7 +79,6 @@ class SocketService {
 		matcher?: (message: ServerMessage) => boolean,
 	): boolean {
 		if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-			console.error("WebSocket is not connected");
 			return false;
 		}
 
@@ -208,9 +204,7 @@ class SocketService {
 		handlers?.forEach((handler) => {
 			try {
 				handler(message);
-			} catch (error) {
-				console.error("WebSocket handler threw an error", error);
-			}
+			} catch {}
 		});
 	}
 
@@ -228,18 +222,14 @@ class SocketService {
 		const [{ handler }] = this.oneShotHandlers.splice(index, 1);
 		try {
 			handler(message);
-		} catch (error) {
-			console.error("WebSocket one-shot handler threw an error", error);
-		}
+		} catch {}
 	}
 
 	private notifyConnection(status: ConnectionStatus): void {
 		this.connectionListeners.forEach((listener) => {
 			try {
 				listener(status);
-			} catch (error) {
-				console.error("WebSocket connection listener threw an error", error);
-			}
+			} catch {}
 		});
 	}
 

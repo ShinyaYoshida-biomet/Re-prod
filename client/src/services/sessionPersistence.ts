@@ -73,7 +73,6 @@ export function importSessionSnapshot(): void {
 			const data = JSON.parse(text) as SessionSnapshot;
 			applySessionSnapshot(data);
 		} catch (error) {
-			console.error("Failed to load session snapshot", error);
 			window.alert("Unable to load session snapshot. Ensure the file is valid JSON.");
 		}
 	};

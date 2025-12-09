@@ -301,7 +301,7 @@ export function FileBrowserPane(): JSX.Element {
 					await fileSystem.openExternal(node.path);
 					return;
 				} catch (error) {
-					console.error("Failed to open via backend; falling back", error);
+					// Fallback to system viewer
 					await openInSystemViewer(node.path);
 					return;
 				}
@@ -312,7 +312,7 @@ export function FileBrowserPane(): JSX.Element {
 				setEditorFilepath(node.path);
 				setEditorIsDirty(false);
 			} catch (error) {
-				console.error("Failed to open file", error);
+				window.alert(`Failed to open file: ${(error as Error).message}`);
 			}
 		},
 		[openInSystemViewer, setEditorContent, setEditorFilepath, setEditorIsDirty],
@@ -352,7 +352,7 @@ export function FileBrowserPane(): JSX.Element {
 				}
 				await refreshPath(parent || ROOT_PATH);
 			} catch (error) {
-				console.error("Failed to create entry", error);
+				window.alert(`Failed to create ${isDir ? "folder" : "file"}: ${(error as Error).message}`);
 				window.alert(`Failed to create ${isDir ? "folder" : "file"}: ${(error as Error).message}`);
 			}
 		},
@@ -371,7 +371,7 @@ export function FileBrowserPane(): JSX.Element {
 				await fileSystem.renamePath(path, destination);
 				await refreshPath(parent);
 			} catch (error) {
-				console.error("Failed to rename path", error);
+				window.alert(`Failed to rename: ${(error as Error).message}`);
 				window.alert(`Failed to rename: ${(error as Error).message}`);
 			}
 		},
@@ -425,7 +425,6 @@ export function FileBrowserPane(): JSX.Element {
 						await fileSystem.copyPath(path, destPath);
 					}
 				} catch (error) {
-					console.error("Failed to move/copy path", error);
 					window.alert(
 						`Failed to ${mode === "copy" ? "copy" : "move"} ${name}: ${(error as Error).message}`,
 					);
@@ -469,7 +468,7 @@ export function FileBrowserPane(): JSX.Element {
 			try {
 				await navigator.clipboard.writeText(value);
 			} catch (error) {
-				console.error("Failed to copy path", error);
+				// Silent failure - clipboard operation failed
 			}
 			closeContextMenu();
 		},
@@ -494,14 +493,14 @@ export function FileBrowserPane(): JSX.Element {
 					await shell.open(absolute);
 					return;
 				} catch (error) {
-					console.error("Failed to reveal path", error);
+					// Fallback to clipboard below
 				}
 			}
 			try {
 				await navigator.clipboard.writeText(absolute);
 				window.alert("Reveal is only available in the desktop build. Path copied to clipboard.");
 			} catch (error) {
-				console.error("Failed to copy path", error);
+				window.alert("Reveal is only available in the desktop build.");
 			}
 		},
 		[closeContextMenu, resolveAbsolutePath, workspaceRoot],
@@ -538,7 +537,7 @@ export function FileBrowserPane(): JSX.Element {
 				const paths = JSON.parse(data) as string[];
 				await performTransfer(paths, node.path, "cut");
 			} catch (error) {
-				console.error("Failed to parse drag payload", error);
+				// Silent failure - invalid drag data
 			}
 		},
 		[performTransfer],
@@ -559,7 +558,7 @@ export function FileBrowserPane(): JSX.Element {
 				const paths = JSON.parse(data) as string[];
 				await performTransfer(paths, ROOT_PATH, "cut");
 			} catch (error) {
-				console.error("Failed to parse drag payload", error);
+				// Silent failure - invalid drag data
 			}
 		},
 		[performTransfer],

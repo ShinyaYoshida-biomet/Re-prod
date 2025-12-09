@@ -39,7 +39,6 @@ export function setupSocketListeners(): () => void {
 	const offDeleted = socketService.on("plot_history_deleted", (message) => {
 		if (message.type === "plot_history_deleted") {
 			if (message.error) {
-				console.warn("Plot delete failed:", message.error);
 				return;
 			}
 			if (message.state) {

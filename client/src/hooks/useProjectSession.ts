@@ -38,26 +38,13 @@ export function useProjectSession(): void {
 			const isSameProject = previousProjectId.current === nextProjectId;
 			previousProjectId.current = nextProjectId;
 
-			console.log("[useProjectSession] Project opened:", {
-				projectId: nextProjectId,
-				projectName: message.project.name,
-				projectPath: message.project.path,
-				hasState,
-				isSameProject,
-			});
-
 			setProject(message.project);
 			resetPlotHistory();
-			void requestPlotHistory().catch((error) =>
-				console.warn("Failed to load plot history", error),
-			);
+			void requestPlotHistory();
 
 			// Reset and refresh workspace file tree for the new project
-			console.log("[useProjectSession] Calling resetAndLoadRoot to refresh workspace");
 			const resetAndLoadRoot = useFileSystemStore.getState().resetAndLoadRoot;
-			void resetAndLoadRoot().catch((error) =>
-				console.error("[useProjectSession] Failed to refresh workspace tree:", error),
-			);
+			void resetAndLoadRoot();
 
 			if (hasState) {
 				applySessionSnapshot(message.state as any);
@@ -94,7 +81,6 @@ export function useProjectSession(): void {
 
 		const offSaved = socketService.on("project_state_saved", (message) => {
 			if (message.type === "project_state_saved" && message.project_id) {
-				console.info(`Project ${message.project_id} state persisted`);
 			}
 		});
 

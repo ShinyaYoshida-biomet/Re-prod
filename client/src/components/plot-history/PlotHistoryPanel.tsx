@@ -17,18 +17,14 @@ export function PlotHistoryPanel(): JSX.Element {
 		if (!window.confirm("Delete this plot from history?")) {
 			return;
 		}
-		void deletePlot(plotId).catch((error) => {
-			console.warn("Failed to delete plot", error);
-		});
+		void deletePlot(plotId).catch(() => {});
 	};
 
 	const handleExport = (plotId: string, format: "png" | "pdf", filename: string) => {
 		const ext = format === "pdf" ? ".pdf" : ".png";
 		const target =
 			filename.endsWith(".png") && format === "png" ? filename : filename.replace(/\\.png$/i, ext);
-		void exportPlot(plotId, target, format).catch((error) => {
-			console.warn(`Failed to export plot as ${format}`, error);
-		});
+		void exportPlot(plotId, target, format).catch(() => {});
 	};
 
 	if (!plotHistory.items.length) {

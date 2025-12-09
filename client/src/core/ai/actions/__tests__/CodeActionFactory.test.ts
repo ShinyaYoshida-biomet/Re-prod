@@ -8,7 +8,6 @@ describe("CodeActionFactory", () => {
 		it("should return ReplaceAllAction for replace-all", () => {
 			const codeBlock: CodeBlock = {
 				action: "replace-all",
-				code: "console.log('test');",
 				language: "typescript",
 			};
 
@@ -46,7 +45,6 @@ describe("CodeActionFactory", () => {
 		it("should return CreateFileAction for create-file", () => {
 			const codeBlock: CodeBlock = {
 				action: "create-file",
-				code: "console.log('new file');",
 				language: "typescript",
 				filepath: "src/newFile.ts",
 			};

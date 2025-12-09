@@ -116,7 +116,6 @@ export function useTimelineData() {
 				const statsData = await getTimelineStats();
 				setStats(statsData);
 			} catch (err) {
-				console.error("Failed to load timeline stats:", err);
 			} finally {
 				setStatsLoading(false);
 			}

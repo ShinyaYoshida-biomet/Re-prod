@@ -41,9 +41,7 @@ export function setupFileCommands() {
 					store.setEditorContent(content);
 					store.setEditorFilepath(file.name);
 					store.setEditorIsDirty(false);
-				} catch (error) {
-					console.error(`Failed to open file: ${error}`);
-				}
+				} catch (error) {}
 			},
 		},
 		{
@@ -60,7 +58,6 @@ export function setupFileCommands() {
 				}
 
 				if (!content) {
-					console.error("No content to save");
 					return;
 				}
 
@@ -79,7 +76,6 @@ export function setupFileCommands() {
 				const { content } = store.editor || {};
 
 				if (!content) {
-					console.error("No content to save");
 					return;
 				}
 

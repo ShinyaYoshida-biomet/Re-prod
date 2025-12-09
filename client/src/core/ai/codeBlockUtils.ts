@@ -203,9 +203,7 @@ const parseJsonBlocks = (
 					}
 				}
 			}
-		} catch (error) {
-			console.warn("Failed to parse JSON code block metadata", error);
-		}
+		} catch (error) {}
 	}
 
 	return { blocks: parsedBlocks, ranges: jsonRanges };
@@ -260,7 +258,6 @@ export function extractCodeBlocks(text: string): CodeBlock[] {
 	}
 
 	if (text.includes("*** Begin Patch")) {
-		console.warn("Patch detected but structured parser could not decode it.");
 	}
 
 	const codeBlocks: CodeBlock[] = [];

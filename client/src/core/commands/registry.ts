@@ -14,7 +14,6 @@ class CommandRegistry {
 
 	register(command: Command): void {
 		if (this.commands.has(command.id)) {
-			console.warn(`Command ${command.id} is already registered. Overwriting.`);
 		}
 		this.commands.set(command.id, command);
 	}
@@ -34,20 +33,16 @@ class CommandRegistry {
 	execute(id: string, ...args: any[]): void | Promise<void> {
 		const command = this.commands.get(id);
 		if (!command) {
-			console.warn(`Command ${id} not found.`);
 			return;
 		}
 
 		if (command.enabled && !command.enabled()) {
-			console.warn(`Command ${id} is disabled.`);
 			return;
 		}
 
 		try {
 			return command.execute(...args);
-		} catch (error) {
-			console.error(`Error executing command ${id}:`, error);
-		}
+		} catch (error) {}
 	}
 
 	/**

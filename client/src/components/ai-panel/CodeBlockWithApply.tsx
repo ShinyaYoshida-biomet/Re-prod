@@ -36,9 +36,7 @@ export function CodeBlockWithApply({ codeBlock, onApply, showDiffPreview }: Prop
 		try {
 			await onApply(currentBlock);
 			setApplied(true);
-		} catch (error) {
-			console.error("Failed to apply code block", error);
-		}
+		} catch {}
 	};
 
 	const handleCopy = (): void => {
@@ -48,9 +46,7 @@ export function CodeBlockWithApply({ codeBlock, onApply, showDiffPreview }: Prop
 				setCopied(true);
 				setTimeout(() => setCopied(false), 1200);
 			})
-			.catch((error) => {
-				console.error("Failed to copy code block", error);
-			});
+			.catch(() => {});
 	};
 
 	const handleRetry = (): void => {

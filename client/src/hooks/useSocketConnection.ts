@@ -27,7 +27,6 @@ async function resolveServerPort(): Promise<number> {
 		const port = await invoke<number>("get_server_port");
 		return port;
 	} catch (error) {
-		console.error("Failed to resolve server port from Tauri, falling back to default", error);
 		return 3001;
 	}
 }

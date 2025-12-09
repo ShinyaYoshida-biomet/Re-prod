@@ -31,9 +31,7 @@ export function useAIStreaming() {
 				disposers.forEach((dispose) => {
 					try {
 						dispose();
-					} catch (error) {
-						console.error("Failed to cleanup WebSocket listener", error);
-					}
+					} catch (error) {}
 				});
 			};
 

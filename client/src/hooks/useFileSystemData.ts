@@ -9,9 +9,7 @@ export function useFileSystemData(): void {
 
 	useEffect(() => {
 		const triggerLoad = (): void => {
-			loadRoot().catch((error) => {
-				console.error("Failed to load workspace tree", error);
-			});
+			loadRoot().catch(() => {});
 		};
 
 		if (socketService.isConnected()) {

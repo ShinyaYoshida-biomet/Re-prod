@@ -68,7 +68,6 @@ export function setupCodeCommands() {
 				if (runCurrentCell) {
 					runCurrentCell();
 				} else {
-					console.error("Code execution not available: EditorPanel not mounted");
 				}
 			},
 		},
@@ -82,7 +81,6 @@ export function setupCodeCommands() {
 				if (runAll) {
 					runAll();
 				} else {
-					console.error("Code execution not available: EditorPanel not mounted");
 				}
 			},
 		},
@@ -105,9 +103,7 @@ export function setupCodeCommands() {
 				if (!store.execution.isRunning) {
 					return;
 				}
-				void interruptExecution().catch((error) => {
-					console.error("Failed to interrupt execution", error);
-				});
+				void interruptExecution().catch(() => {});
 			},
 			enabled: () => useStore.getState().execution.isRunning,
 		},
@@ -120,8 +116,7 @@ export function setupCodeCommands() {
 				if (!confirm("Restart R session? All workspace variables will be lost.")) {
 					return;
 				}
-				void restartSession().catch((error) => {
-					console.error("Failed to restart session", error);
+				void restartSession().catch(() => {
 					window.alert("Unable to restart session. Check logs for details.");
 				});
 			},

@@ -99,13 +99,10 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
 	workspaceRoot: "",
 
 	loadRoot: async () => {
-		console.log("[FileSystemStore] loadRoot: Starting (preserves UI state)");
 		set({ loading: true, error: null });
 		try {
 			const workspaceRoot = await fileSystem.getWorkspaceRoot();
-			console.log("[FileSystemStore] loadRoot: Got workspaceRoot:", workspaceRoot);
 			const files = await fileSystem.listDir(ROOT_PATH);
-			console.log("[FileSystemStore] loadRoot: Got files:", files.length, "items");
 			set((state) => {
 				const expanded = new Set(state.expandedFolders);
 				expanded.add(ROOT_PATH);
@@ -116,21 +113,16 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
 					workspaceRoot,
 				};
 			});
-			console.log("[FileSystemStore] loadRoot: Completed");
 		} catch (error) {
-			console.error("[FileSystemStore] loadRoot: Error:", error);
 			set({ error: (error as Error).message, loading: false });
 		}
 	},
 
 	resetAndLoadRoot: async () => {
-		console.log("[FileSystemStore] resetAndLoadRoot: Starting workspace refresh");
 		set({ loading: true, error: null });
 		try {
 			const workspaceRoot = await fileSystem.getWorkspaceRoot();
-			console.log("[FileSystemStore] resetAndLoadRoot: Got workspaceRoot:", workspaceRoot);
 			const files = await fileSystem.listDir(ROOT_PATH);
-			console.log("[FileSystemStore] resetAndLoadRoot: Got files:", files.length, "items");
 			set({
 				files,
 				loading: false,
@@ -141,9 +133,7 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
 				workspaceRoot,
 				error: null,
 			});
-			console.log("[FileSystemStore] resetAndLoadRoot: Workspace refreshed successfully");
 		} catch (error) {
-			console.error("[FileSystemStore] resetAndLoadRoot: Error:", error);
 			set({ error: (error as Error).message, loading: false });
 		}
 	},

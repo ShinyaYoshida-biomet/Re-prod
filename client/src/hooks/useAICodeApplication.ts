@@ -16,7 +16,6 @@ export function useAICodeApplication(postAssistantMessage: PostAssistantMessage)
 			const validation = CodeActionFactory.validate(codeBlock);
 			if (!validation.valid) {
 				postAssistantMessage(`Invalid code action: ${validation.error}`);
-				console.error("Code action validation failed:", validation.error);
 				return;
 			}
 
@@ -41,7 +40,6 @@ export function useAICodeApplication(postAssistantMessage: PostAssistantMessage)
 			} catch (error) {
 				const message = error instanceof Error ? error.message : "unknown error";
 				postAssistantMessage(`Failed to apply code change: ${message}`);
-				console.error("Code action execution failed:", error);
 			}
 		},
 		[applyCodeChange, editorFilepath, postAssistantMessage],

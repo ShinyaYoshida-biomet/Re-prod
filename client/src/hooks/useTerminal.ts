@@ -105,13 +105,11 @@ export function useTerminal(): UseTerminalResult {
 				}
 			});
 
-			pty.onExit((code) => {
-				console.info(`Terminal session ${sessionId} exited with code ${code}`);
+			pty.onExit(() => {
 				removeSession(sessionId);
 				processesRef.current.delete(sessionId);
 			});
 		} catch (error) {
-			console.error("Unable to create terminal session:", error);
 			setError("Unable to start terminal session. Please restart the desktop app.");
 			setErrorDetail(error instanceof Error ? error.message : String(error));
 		}
@@ -123,9 +121,7 @@ export function useTerminal(): UseTerminalResult {
 			if (pty) {
 				try {
 					await pty.kill();
-				} catch (error) {
-					console.error("Unable to close terminal session:", error);
-				}
+				} catch (error) {}
 			}
 
 			removeSession(sessionId);
@@ -148,7 +144,6 @@ export function useTerminal(): UseTerminalResult {
 		try {
 			await pty.write(data);
 		} catch (error) {
-			console.error("Unable to write to terminal session:", error);
 			setError("Failed to send input to terminal.");
 			setErrorDetail(error instanceof Error ? error.message : String(error));
 		}
@@ -166,9 +161,7 @@ export function useTerminal(): UseTerminalResult {
 
 		try {
 			await pty.resize(cols, rows);
-		} catch (error) {
-			console.error("Unable to resize terminal session:", error);
-		}
+		} catch (error) {}
 	}, []);
 
 	const registerOutputHandler = useCallback(
@@ -277,7 +270,6 @@ class SimplePty {
 			if (typeof e === "string" && e.includes("EOF")) {
 				return;
 			}
-			console.error("Reading error:", e);
 		}
 	}
 
@@ -290,8 +282,6 @@ class SimplePty {
 			});
 			this.exited = true;
 			this.onExitHandlers.forEach((h) => h(code));
-		} catch (e) {
-			console.error("Exit wait error:", e);
-		}
+		} catch (e) {}
 	}
 }

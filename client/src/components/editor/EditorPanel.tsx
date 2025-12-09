@@ -90,7 +90,6 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		(codeBlock: CodeBlock): void => {
 			const monacoEditor = monacoEditorRef.current;
 			if (!monacoEditor) {
-				console.error("Editor not ready");
 				return;
 			}
 
@@ -212,7 +211,6 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 						if (alreadyApplied) {
 							continue;
 						}
-						console.warn("Unable to find context for patch chunk", chunk.context);
 						recordPatchMatchFailure(
 							`Unable to match patch chunk: ${chunk.context ?? "missing context"}`,
 							codeBlock.id,
@@ -239,7 +237,6 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 				const range = resolveTargetRange();
 				if (!range) {
 					if (alertOnFail) {
-						console.warn("Missing target range for AI apply action", codeBlock.action);
 						recordPatchMatchFailure(`Missing target range for ${codeBlock.action}`, codeBlock.id);
 						const hasExplicitContext = Boolean(codeBlock.targetRange);
 						if (
@@ -349,10 +346,8 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 					break;
 				}
 				case "create-file":
-					console.info("create-file action will be handled by file service");
 					break;
 				default:
-					console.warn("Unknown code block action", codeBlock.action);
 			}
 		},
 		[setEditorContent, showConfirm, recordPatchMatchFailure, recordPatchMatchSuccess],

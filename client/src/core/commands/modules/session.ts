@@ -14,7 +14,6 @@ export function setupSessionCommands() {
 				if (timelinePanelRef) {
 					timelinePanelRef.scrollIntoView();
 				} else {
-					console.error("Timeline dialog not initialized");
 				}
 			},
 		},
