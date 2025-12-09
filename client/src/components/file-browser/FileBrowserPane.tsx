@@ -269,7 +269,7 @@ export function FileBrowserPane(): JSX.Element {
 					await shell.open(absolute);
 					return;
 				} catch (error) {
-					console.error("Failed to open file externally", error);
+					// Fallback to browser method below
 				}
 			}
 
@@ -284,7 +284,7 @@ export function FileBrowserPane(): JSX.Element {
 				await navigator.clipboard.writeText(absolute);
 				window.alert("Could not open the file. Path copied to clipboard.");
 			} catch (error) {
-				console.error("Failed to open or copy file path", error);
+				window.alert("Could not open the file.");
 			}
 		},
 		[resolveAbsolutePath, workspaceRoot],
@@ -391,7 +391,6 @@ export function FileBrowserPane(): JSX.Element {
 			try {
 				await fileSystem.deletePath(path);
 			} catch (error) {
-				console.error("Failed to delete path", error);
 				window.alert(`Failed to delete ${path}: ${(error as Error).message}`);
 			}
 		}
