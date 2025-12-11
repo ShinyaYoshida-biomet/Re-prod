@@ -1,6 +1,7 @@
 import type React from "react";
 import { useState } from "react";
 import { useSettingsStore } from "../../core/state/slices/settingsStore";
+import { TEST_STATUS_RESET_DELAY } from "../../constants/timeouts";
 import "./LLMProviderConfig.css";
 
 interface Props {
@@ -38,7 +39,7 @@ export const LLMProviderConfig: React.FC<Props> = ({
 		setTestStatus("testing");
 		const success = await testConnection(providerName);
 		setTestStatus(success ? "success" : "failed");
-		setTimeout(() => setTestStatus("idle"), 3000);
+		setTimeout(() => setTestStatus("idle"), TEST_STATUS_RESET_DELAY);
 	};
 
 	return (

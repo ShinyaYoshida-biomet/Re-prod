@@ -2,6 +2,7 @@ import type { CodeBlock } from "@shared/types";
 import { useEffect, useState } from "react";
 import { IconCheck, IconClipboard, IconLightbulb } from "@/components/shared";
 import { CodeActionFactory } from "@/core/ai/actions";
+import { COPY_FEEDBACK_DURATION } from "@/constants/timeouts";
 import { CodeBlockDiffPreview } from "./CodeBlockDiffPreview";
 
 interface Props {
@@ -44,7 +45,7 @@ export function CodeBlockWithApply({ codeBlock, onApply, showDiffPreview }: Prop
 			.writeText(currentBlock.code)
 			.then(() => {
 				setCopied(true);
-				setTimeout(() => setCopied(false), 1200);
+				setTimeout(() => setCopied(false), COPY_FEEDBACK_DURATION);
 			})
 			.catch(() => {});
 	};

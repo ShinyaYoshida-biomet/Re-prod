@@ -1,4 +1,5 @@
 import type { ClientMessage, ExtractServerMessage, ServerMessage, ServerMessageType } from "shared";
+import { WEBSOCKET_RECONNECT_DELAY, WEBSOCKET_REQUEST_TIMEOUT } from "@/constants/timeouts";
 
 export type WSRequest = ClientMessage;
 export type WSResponse = ServerMessage;
@@ -150,7 +151,7 @@ class SocketService {
 		payload: WSRequest,
 		responseType: TType,
 		matcher?: (message: ExtractServerMessage<TType>) => boolean,
-		timeoutMs = 10000,
+		timeoutMs = WEBSOCKET_REQUEST_TIMEOUT,
 	): Promise<ExtractServerMessage<TType>> {
 		return new Promise((resolve, reject) => {
 			if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
@@ -249,7 +250,7 @@ class SocketService {
 		this.reconnectTimer = setTimeout(() => {
 			this.reconnectTimer = null;
 			this.connect(this.url);
-		}, 2000);
+		}, WEBSOCKET_RECONNECT_DELAY);
 
 		if (
 			this.reconnectTimer &&
