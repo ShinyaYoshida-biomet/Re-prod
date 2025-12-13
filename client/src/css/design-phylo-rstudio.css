@@ -24,22 +24,66 @@
 	--phylo-bg-toolbar: #fafafa;
 	--phylo-bg-code: #f9f9f9;
 	--phylo-bg-ai: #fffef5; /* Slightly yellowish like lab notebook */
+	--phylo-bg-active: #d8d8d8;
+	--phylo-bg-github: #f6f8fa;
+	--phylo-bg-github-light: #f6f7fb;
+	--phylo-bg-light-blue: #e9edf3;
+	--phylo-bg-light-blue-alt: #f8f9fb;
+	--phylo-bg-gray-light: #d1d5db;
+	--phylo-bg-yellow: #fefce8;
+	--phylo-bg-yellow-light: #fef9c3;
+	--phylo-text-gray: #9ca3af;
+	--phylo-text-dark: #111827;
 
 	/* Typography */
 	--phylo-text-primary: #1a1a1a;
 	--phylo-text-secondary: #4a4a4a;
 	--phylo-text-muted: #7a7a7a;
+	--phylo-white: #ffffff;
+
+	/* Border colors */
+	--phylo-border-color: #cccccc;
+	--phylo-border-color-light: #e0e0e0;
+	--phylo-border-color-strong: #999999;
+	--phylo-border-subtle: #e5e7eb;
+	--phylo-border-github: #d0d7de;
+	--phylo-border-github-light: #d5dae1;
+	--phylo-border-blue-light: #dfe3e8;
 
 	/* Borders - 1px everywhere */
-	--phylo-border: 1px solid #cccccc;
-	--phylo-border-light: 1px solid #e0e0e0;
-	--phylo-border-strong: 1px solid #999999;
+	--phylo-border: 1px solid var(--phylo-border-color);
+	--phylo-border-light: 1px solid var(--phylo-border-color-light);
+	--phylo-border-strong: 1px solid var(--phylo-border-color-strong);
 
 	/* DNA Base Colors - Use sparingly for accents */
 	--phylo-adenine: #22c55e; /* A: Green */
+	--phylo-adenine-alt: #10b981;
+	--phylo-adenine-strong: #16a34a;
 	--phylo-thymine: #ef4444; /* T: Red */
 	--phylo-cytosine: #3b82f6; /* C: Blue */
+	--phylo-cytosine-hover: #2563eb;
+	--phylo-cytosine-light: #8ab4ff;
+	--phylo-cytosine-strong: #2f6fed;
+	--phylo-cytosine-gradient-1: #2756ca;
+	--phylo-cytosine-gradient-2: #244fc1;
 	--phylo-guanine: #eab308; /* G: Yellow */
+
+	/* Error/Danger colors */
+	--phylo-error-dark: #dc2626;
+	--phylo-error-darker: #991b1b;
+	--phylo-error-light: #fee2e2;
+	--phylo-error-medium: #b91c1c;
+	--phylo-error-alt: #dc4c3f;
+	--phylo-error-alt-dark: #c73f33;
+	--phylo-error-darker-alt: #b42318;
+
+	/* Additional colors */
+	--phylo-orange: #f97316;
+	--phylo-pink: #ffc9d4;
+	--phylo-pink-strong: #ff6384;
+	--phylo-modal-bg-dark: #1a1f2a;
+	--phylo-modal-text-light: #f4f6fb;
+	--phylo-session-package-bg: #e5edff;
 
 	/* State colors */
 	--phylo-success: #22c55e;
@@ -62,7 +106,7 @@
    GLOBAL OVERRIDES
    ============================================ */
 :root {
-	background: #e8e8e8;
+	background: var(--phylo-bg-tertiary);
 	font-family: var(--phylo-font-family);
 	font-size: var(--phylo-font-size-base);
 	line-height: var(--phylo-line-height-base);
@@ -76,9 +120,9 @@
 	--text-primary: var(--phylo-text-primary);
 	--text-secondary: var(--phylo-text-secondary);
 	--text-muted: var(--phylo-text-muted);
-	--border-color: #cccccc;
-	--border-light: #e0e0e0;
-	--border-strong: #999999;
+	--border-color: var(--phylo-border-color);
+	--border-light: var(--phylo-border-color-light);
+	--border-strong: var(--phylo-border-color-strong);
 	--panel-radius: var(--phylo-panel-radius);
 	--shadow-sm: none;
 	--shadow-md: none;
@@ -91,7 +135,7 @@
 	--panel-title-gap: 6px;
 	--panel-title-letter-spacing: 0;
 	--accent-blue: var(--phylo-cytosine);
-	--accent-blue-hover: #2563eb;
+	--accent-blue-hover: var(--phylo-cytosine-hover);
 	--accent-blue-light: rgba(59, 130, 246, 0.18);
 	--success-color: var(--phylo-success);
 	--error-color: var(--phylo-error);
@@ -112,15 +156,15 @@
 	--btn-hover-bg: var(--phylo-bg-tertiary);
 	--btn-hover-shadow: none;
 	--btn-hover-transform: none;
-	--btn-hover-border-color: #999999;
-	--btn-active-bg: #d8d8d8;
+	--btn-hover-border-color: var(--phylo-border-color-strong);
+	--btn-active-bg: var(--phylo-bg-active);
 	--btn-active-shadow: none;
 	--btn-active-transform: none;
 	--btn-primary-bg: var(--phylo-cytosine);
-	--btn-primary-color: #ffffff;
+	--btn-primary-color: var(--phylo-white);
 	--btn-primary-border: transparent;
 	--btn-primary-shadow: none;
-	--btn-primary-hover-bg: #2563eb;
+	--btn-primary-hover-bg: var(--phylo-cytosine-hover);
 	--btn-primary-hover-shadow: none;
 	--btn-icon-padding: 4px;
 	--btn-icon-size: 24px;
@@ -212,7 +256,7 @@
 	padding: 24px;
 	border-radius: var(--phylo-panel-radius);
 	background: var(--phylo-bg-primary);
-	border: 1px dashed #cccccc;
+	border: 1px dashed var(--phylo-border-color);
 	box-shadow: none;
 }
 
@@ -321,7 +365,7 @@
 }
 
 .send-btn:hover:not(:disabled) {
-	background: #2563eb;
+	background: var(--phylo-cytosine-hover);
 }
 
 .send-btn:disabled {
@@ -604,13 +648,13 @@
 }
 
 ::-webkit-scrollbar-thumb {
-	background: #cccccc;
+	background: var(--phylo-border-color);
 	border-radius: 0;
 	border: 2px solid var(--phylo-bg-secondary);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-	background: #999999;
+	background: var(--phylo-border-color-strong);
 }
 
 /* ============================================
@@ -713,7 +757,7 @@
 }
 
 .btn-stop:hover:not(:disabled) {
-	background: #dc2626;
+	background: var(--phylo-error-dark);
 }
 
 /* ============================================

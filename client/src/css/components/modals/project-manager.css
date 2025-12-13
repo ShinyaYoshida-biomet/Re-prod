@@ -32,7 +32,7 @@
 	--project-alert-margin: 8px;
 	--project-alert-error-border: 1px solid rgba(255, 99, 132, 0.4);
 	--project-alert-error-bg: rgba(255, 99, 132, 0.1);
-	--project-alert-error-color: #ff6384;
+	--project-alert-error-color: var(--phylo-pink-strong);
 	--project-alert-error-font-size: inherit;
 
 	--project-link-font-size: 0.9rem;
@@ -41,39 +41,39 @@
 }
 
 [data-theme="phylo"] {
-	--project-section-border: #e0e0e0;
+	--project-section-border: var(--phylo-border-color-light);
 	--project-section-radius: 3px;
 	--project-section-padding: 12px;
-	--project-section-bg: #f5f5f5;
+	--project-section-bg: var(--phylo-bg-secondary);
 	--project-section-title-size: 12px;
 	--project-section-title-weight: 700;
-	--project-section-title-color: #333333;
+	--project-section-title-color: var(--phylo-text-primary);
 
-	--project-card-border: #e0e0e0;
+	--project-card-border: var(--phylo-border-color-light);
 	--project-card-padding: 8px 0;
 	--project-card-title-size: 12px;
-	--project-card-title-color: #333333;
-	--project-card-muted-color: #666666;
+	--project-card-title-color: var(--phylo-text-primary);
+	--project-card-muted-color: var(--phylo-text-secondary);
 	--project-card-muted-size: 11px;
 
 	--project-input-padding: 6px 8px;
 	--project-input-radius: 3px;
-	--project-input-border: #cccccc;
+	--project-input-border: var(--phylo-border-color);
 	--project-input-bg: var(--bg-primary);
-	--project-input-color: #333333;
+	--project-input-color: var(--phylo-text-primary);
 	--project-input-font-size: 12px;
-	--project-input-outline: 1px solid #3b82f6;
+	--project-input-outline: 1px solid var(--phylo-cytosine);
 	--project-input-outline-offset: -1px;
 
 	--project-alert-padding: 8px 12px;
 	--project-alert-radius: 3px;
-	--project-alert-error-border: 1px solid #ef4444;
-	--project-alert-error-bg: #fee2e2;
-	--project-alert-error-color: #991b1b;
+	--project-alert-error-border: 1px solid var(--phylo-thymine);
+	--project-alert-error-bg: var(--phylo-error-light);
+	--project-alert-error-color: var(--phylo-error-darker);
 	--project-alert-error-font-size: 12px;
 
 	--project-link-font-size: 11px;
-	--project-link-color: #3b82f6;
+	--project-link-color: var(--phylo-cytosine);
 	--project-link-hover-decoration: underline;
 }
 

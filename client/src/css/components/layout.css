@@ -14,8 +14,8 @@
 	min-height: 0;
 	display: flex;
 	padding: 4px;
-	background: #e9edf3;
-	border: 1px solid #d5dae1;
+	background: var(--phylo-bg-light-blue);
+	border: 1px solid var(--phylo-border-github-light);
 	border-radius: 6px;
 }
 
@@ -40,7 +40,7 @@
 	display: flex;
 	flex-direction: column;
 	background: var(--bg-primary);
-	border: 1px solid #d5dae1;
+	border: 1px solid var(--phylo-border-github-light);
 	border-radius: 4px;
 	overflow: hidden;
 }
@@ -51,8 +51,8 @@
 	justify-content: space-between;
 	min-height: var(--panel-header-min-height, 38px);
 	padding: var(--panel-header-padding, 0 14px);
-	background: #f8f9fb;
-	border-bottom: 1px solid #dfe3e8;
+	background: var(--phylo-bg-light-blue-alt);
+	border-bottom: 1px solid var(--phylo-border-blue-light);
 	flex-shrink: 0;
 }
 
@@ -163,14 +163,20 @@
 }
 
 .btn-primary {
-	background: var(--btn-primary-bg, linear-gradient(180deg, #2f6fed, #2756ca));
+	background: var(
+		--btn-primary-bg,
+		linear-gradient(180deg, var(--phylo-cytosine-strong), var(--phylo-cytosine-gradient-1))
+	);
 	color: var(--btn-primary-color, var(--bg-primary));
 	border-color: var(--btn-primary-border, transparent);
 	box-shadow: var(--btn-primary-shadow, 0 10px 20px rgba(47, 111, 237, 0.25));
 }
 
 .btn-primary:hover:not(:disabled) {
-	background: var(--btn-primary-hover-bg, linear-gradient(180deg, #2f6fed, #244fc1));
+	background: var(
+		--btn-primary-hover-bg,
+		linear-gradient(180deg, var(--phylo-cytosine-strong), var(--phylo-cytosine-gradient-2))
+	);
 	box-shadow: var(--btn-primary-hover-shadow, 0 12px 24px rgba(47, 111, 237, 0.35));
 }
 

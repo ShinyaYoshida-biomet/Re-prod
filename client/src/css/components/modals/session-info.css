@@ -13,7 +13,7 @@
 	--session-dd-weight: 600;
 
 	--session-package-bg: rgba(138, 180, 255, 0.12);
-	--session-package-color: #e5edff;
+	--session-package-color: var(--phylo-session-package-bg);
 	--session-package-padding: 6px 10px;
 	--session-package-radius: 999px;
 	--session-package-font-size: 0.78rem;
@@ -29,7 +29,7 @@
 	--session-error-padding: 12px;
 	--session-error-radius: 8px;
 	--session-error-border: 1px solid rgba(255, 99, 132, 0.4);
-	--session-error-color: #ffc9d4;
+	--session-error-color: var(--phylo-pink);
 	--session-error-bg: rgba(255, 99, 132, 0.08);
 	--session-error-font-size: inherit;
 
@@ -52,48 +52,48 @@
 
 [data-theme="phylo"] {
 	--session-card-radius: 3px;
-	--session-card-border: #e0e0e0;
+	--session-card-border: var(--phylo-border-color-light);
 	--session-card-padding: 12px;
-	--session-card-bg: #f5f5f5;
+	--session-card-bg: var(--phylo-bg-secondary);
 
 	--session-dl-font-size: 11px;
-	--session-dt-color: #666666;
+	--session-dt-color: var(--phylo-text-secondary);
 	--session-dt-weight: 500;
-	--session-dd-color: #333333;
+	--session-dd-color: var(--phylo-text-primary);
 	--session-dd-font: ui-monospace, "SF Mono", Consolas, monospace;
 
 	--session-package-bg: rgba(59, 130, 246, 0.08);
-	--session-package-color: #3b82f6;
+	--session-package-color: var(--phylo-cytosine);
 	--session-package-padding: 4px 8px;
 	--session-package-radius: 3px;
 	--session-package-font-size: 10px;
 	--session-package-border: 1px solid rgba(59, 130, 246, 0.2);
-	--session-package-version-color: #666666;
-	--session-more-border: 1px dashed #cccccc;
-	--session-more-color: #999999;
+	--session-package-version-color: var(--phylo-text-secondary);
+	--session-more-border: 1px dashed var(--phylo-border-color);
+	--session-more-color: var(--phylo-border-color-strong);
 
-	--session-empty-color: #999999;
+	--session-empty-color: var(--phylo-border-color-strong);
 	--session-empty-font-size: 11px;
 
 	--session-error-padding: 10px;
 	--session-error-radius: 3px;
-	--session-error-border: 1px solid #ef4444;
-	--session-error-color: #991b1b;
-	--session-error-bg: #fee2e2;
+	--session-error-border: 1px solid var(--phylo-thymine);
+	--session-error-color: var(--phylo-error-darker);
+	--session-error-bg: var(--phylo-error-light);
 	--session-error-font-size: 12px;
 
-	--session-output-border: 1px solid #cccccc;
+	--session-output-border: 1px solid var(--phylo-border-color);
 	--session-output-radius: 3px;
 	--session-output-bg: var(--bg-primary);
-	--session-output-header-border: 1px solid #e0e0e0;
+	--session-output-header-border: 1px solid var(--phylo-border-color-light);
 	--session-output-header-padding: 8px 12px;
 	--session-output-header-size: 11px;
-	--session-output-header-bg: #f5f5f5;
-	--session-output-header-color: #333333;
+	--session-output-header-bg: var(--phylo-bg-secondary);
+	--session-output-header-color: var(--phylo-text-primary);
 
 	--session-output-pre-padding: 12px;
 	--session-output-pre-font-size: 11px;
-	--session-output-pre-color: #333333;
+	--session-output-pre-color: var(--phylo-text-primary);
 	--session-output-pre-line-height: 1.4;
 }
 

@@ -48,49 +48,49 @@
 
 [data-theme="phylo"] {
 	--shortcuts-input-bg: var(--bg-primary);
-	--shortcuts-input-border: #cccccc;
+	--shortcuts-input-border: var(--phylo-border-color);
 	--shortcuts-input-radius: 3px;
 	--shortcuts-input-padding: 6px 8px;
-	--shortcuts-input-color: #333333;
+	--shortcuts-input-color: var(--phylo-text-primary);
 	--shortcuts-input-font-size: 12px;
-	--shortcuts-input-outline: 1px solid #3b82f6;
+	--shortcuts-input-outline: 1px solid var(--phylo-cytosine);
 	--shortcuts-input-outline-offset: -1px;
 
 	--shortcuts-grid-gap: 12px;
 
 	--shortcut-group-bg: var(--bg-primary);
-	--shortcut-group-border: #e0e0e0;
+	--shortcut-group-border: var(--phylo-border-color-light);
 	--shortcut-group-radius: 3px;
 	--shortcut-group-padding: 10px;
 	--shortcut-group-gap: 8px;
 	--shortcut-group-header-size: 10px;
-	--shortcut-group-header-color: #666666;
+	--shortcut-group-header-color: var(--phylo-text-secondary);
 	--shortcut-group-header-weight: 700;
 	--shortcut-group-header-spacing: 0.02em;
 
-	--shortcut-card-bg: #f5f5f5;
-	--shortcut-card-border: #e8e8e8;
+	--shortcut-card-bg: var(--phylo-bg-secondary);
+	--shortcut-card-border: var(--phylo-bg-tertiary);
 	--shortcut-card-radius: 3px;
 	--shortcut-card-padding: 8px;
 
 	--shortcut-description-size: 12px;
-	--shortcut-description-color: #333333;
+	--shortcut-description-color: var(--phylo-text-primary);
 
 	--shortcut-scope-size: 10px;
-	--shortcut-scope-color: #999999;
+	--shortcut-scope-color: var(--phylo-border-color-strong);
 
-	--shortcut-keycap-border: #cccccc;
+	--shortcut-keycap-border: var(--phylo-border-color);
 	--shortcut-keycap-bg: var(--bg-primary);
 	--shortcut-keycap-radius: 3px;
 	--shortcut-keycap-padding: 2px 6px;
 	--shortcut-keycap-size: 11px;
-	--shortcut-keycap-color: #333333;
+	--shortcut-keycap-color: var(--phylo-text-primary);
 	--shortcut-keycap-font: ui-monospace, "SF Mono", Consolas, monospace;
 
-	--shortcuts-empty-bg: #f5f5f5;
-	--shortcuts-empty-border: 1px solid #e0e0e0;
+	--shortcuts-empty-bg: var(--phylo-bg-secondary);
+	--shortcuts-empty-border: 1px solid var(--phylo-border-color-light);
 	--shortcuts-empty-radius: 3px;
-	--shortcuts-empty-color: #999999;
+	--shortcuts-empty-color: var(--phylo-border-color-strong);
 	--shortcuts-empty-font-size: 12px;
 }
 

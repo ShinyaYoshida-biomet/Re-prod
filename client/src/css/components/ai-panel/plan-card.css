@@ -71,5 +71,5 @@
 }
 
 .ai-plan-card tr[data-status="error"] .ai-plan-card__status {
-	color: #b91c1c;
+	color: var(--phylo-error-medium);
 }

@@ -51,11 +51,11 @@
 }
 
 .ai-tool-log__status.is-running {
-	color: #f97316;
+	color: var(--phylo-orange);
 }
 
 .ai-tool-log__status.is-done {
-	color: #16a34a;
+	color: var(--phylo-adenine-strong);
 }
 
 .ai-tool-log__status.is-pending {
@@ -63,7 +63,7 @@
 }
 
 .ai-tool-log__status.is-error {
-	color: #dc2626;
+	color: var(--phylo-error-dark);
 }
 
 .ai-tool-log__block {
@@ -90,6 +90,6 @@
 .ai-tool-log__error {
 	margin-top: 8px;
 	font-size: 12px;
-	color: #b42318;
+	color: var(--phylo-error-darker-alt);
 	font-weight: 600;
 }
