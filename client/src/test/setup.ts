@@ -21,7 +21,10 @@ globalThis.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unkn
 	const id = originalSetTimeout(handler, timeout, ...args);
 	// Add unref() method if it doesn't exist
 	if (typeof id === "object" || typeof id === "number") {
-		const timer = id as ReturnType<typeof setTimeout> & { unref?: () => void };
+		const timer = id as {
+			unref?: () => void;
+		};
+
 		if (!timer.unref) {
 			timer.unref = () => timer;
 		}
