@@ -351,7 +351,11 @@ pub(super) enum PlanStepStatus {
 }
 
 impl PlanStepPayload {
-    pub(super) fn new(id: impl Into<String>, title: impl Into<String>, kind: Option<String>) -> Self {
+    pub(super) fn new(
+        id: impl Into<String>,
+        title: impl Into<String>,
+        kind: Option<String>,
+    ) -> Self {
         Self {
             id: id.into(),
             title: title.into(),

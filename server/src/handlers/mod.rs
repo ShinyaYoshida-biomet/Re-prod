@@ -34,9 +34,9 @@ use plot_history_handler::{
     handle_plot_history_set_active,
 };
 use session_handler::{handle_interrupt, handle_restart};
+use std::process::Command;
 use timeline_handler::{handle_timeline_query, handle_timeline_stats_query};
 use tool_handler::{handle_execute_tool, handle_list_tools};
-use std::process::Command;
 
 pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> Response {
     ws.on_upgrade(|socket| handle_socket(socket, state))
@@ -318,7 +318,9 @@ fn open_in_system(path: &std::path::Path) -> Result<(), anyhow::Error> {
     }
     #[cfg(target_os = "windows")]
     {
-        Command::new("cmd").args(["/C", "start", "", path.to_string_lossy().as_ref()]).status()?;
+        Command::new("cmd")
+            .args(["/C", "start", "", path.to_string_lossy().as_ref()])
+            .status()?;
     }
     #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
     {

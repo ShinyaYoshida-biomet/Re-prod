@@ -172,10 +172,12 @@ pub(super) async fn handle_ai_message(
                                 &stream_id,
                                 final_response,
                             ));
-                            if let Some(exec) = plan.iter_mut().find(|s| s.id == PLAN_STEP_EXECUTE) {
+                            if let Some(exec) = plan.iter_mut().find(|s| s.id == PLAN_STEP_EXECUTE)
+                            {
                                 exec.mark_status(PlanStepStatus::Done);
                             }
-                            if let Some(sum) = plan.iter_mut().find(|s| s.id == PLAN_STEP_SUMMARIZE) {
+                            if let Some(sum) = plan.iter_mut().find(|s| s.id == PLAN_STEP_SUMMARIZE)
+                            {
                                 sum.mark_status(PlanStepStatus::Done);
                             }
                             push_plan_update(&mut responses, &stream_id, &plan);
@@ -185,7 +187,8 @@ pub(super) async fn handle_ai_message(
                             responses.push(WSResponse::Error {
                                 message: format!("Failed to get final response: {}", e),
                             });
-                            if let Some(exec) = plan.iter_mut().find(|s| s.id == PLAN_STEP_EXECUTE) {
+                            if let Some(exec) = plan.iter_mut().find(|s| s.id == PLAN_STEP_EXECUTE)
+                            {
                                 exec.error = Some(format!("Failed to get final response: {}", e));
                                 exec.mark_status(PlanStepStatus::Error);
                             }

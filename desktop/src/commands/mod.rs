@@ -214,9 +214,7 @@ pub async fn close_terminal_session(
 }
 
 #[tauri::command]
-pub async fn get_server_port(
-    server: State<'_, SharedServerHandle>,
-) -> Result<u16, String> {
+pub async fn get_server_port(server: State<'_, SharedServerHandle>) -> Result<u16, String> {
     let server = server.lock().await;
     Ok(server.port())
 }
