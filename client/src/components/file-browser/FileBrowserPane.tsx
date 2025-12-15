@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { IconFile } from "@/components/icons/IconFile";
-import { IconChevronDown, IconChevronRight, IconFolder, IconPlus } from "@/components/shared";
+import {
+	IconChevronDown,
+	IconChevronRight,
+	IconFolder,
+	IconPlus,
+	ConfirmDialog,
+} from "@/components/shared";
 import { useFileSystemStore, useStore } from "@/core";
 import { normalizeRelativePath, normalizeSeparators, ROOT_PATH } from "@/core/pathUtils";
 import { useFileSystemData } from "@/hooks/useFileSystemData";
@@ -161,6 +167,8 @@ export function FileBrowserPane(): JSX.Element {
 	const [focusedPath, setFocusedPath] = useState<string | null>(null);
 	const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
 	const [dragOverPath, setDragOverPath] = useState<string | null>(null);
+	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+	const [filesToDelete, setFilesToDelete] = useState<Set<string>>(new Set());
 
 	const nodes = useMemo(
 		() => buildTree(files, expandedFolders, pendingFolders),
@@ -378,15 +386,14 @@ export function FileBrowserPane(): JSX.Element {
 		[closeContextMenu, refreshPath],
 	);
 
-	const handleDeleteSelected = useCallback(async () => {
+	const handleDeleteClick = useCallback(() => {
 		if (!selectedFiles.size) return;
-		const confirmDelete = window.confirm(
-			`Delete ${selectedFiles.size} item${selectedFiles.size > 1 ? "s" : ""}?`,
-		);
-		if (!confirmDelete) {
-			return;
-		}
-		const targets = Array.from(selectedFiles);
+		setFilesToDelete(selectedFiles);
+		setShowDeleteConfirm(true);
+	}, [selectedFiles]);
+
+	const handleDeleteConfirm = useCallback(async () => {
+		const targets = Array.from(filesToDelete);
 		for (const path of targets) {
 			try {
 				await fileSystem.deletePath(path);
@@ -397,7 +404,14 @@ export function FileBrowserPane(): JSX.Element {
 		await refreshParents(targets);
 		clearSelection();
 		closeContextMenu();
-	}, [selectedFiles, refreshParents, clearSelection, closeContextMenu]);
+		setShowDeleteConfirm(false);
+		setFilesToDelete(new Set());
+	}, [filesToDelete, refreshParents, clearSelection, closeContextMenu]);
+
+	const handleDeleteCancel = useCallback(() => {
+		setShowDeleteConfirm(false);
+		setFilesToDelete(new Set());
+	}, []);
 
 	const handleCopyCut = useCallback(
 		(mode: "copy" | "cut") => {
@@ -652,7 +666,7 @@ export function FileBrowserPane(): JSX.Element {
 				case "Backspace":
 				case "Delete":
 					event.preventDefault();
-					await handleDeleteSelected();
+					handleDeleteClick();
 					break;
 				default:
 					break;
@@ -662,7 +676,7 @@ export function FileBrowserPane(): JSX.Element {
 			expandedFolders,
 			focusedPath,
 			handleCopyCut,
-			handleDeleteSelected,
+			handleDeleteClick,
 			handleNodeDoubleClick,
 			handlePaste,
 			nodes,
@@ -697,7 +711,7 @@ export function FileBrowserPane(): JSX.Element {
 				<button type="button" onClick={() => handleRename(menuTarget.path)}>
 					Rename
 				</button>
-				<button type="button" onClick={handleDeleteSelected}>
+				<button type="button" onClick={handleDeleteClick}>
 					Delete
 				</button>
 				<hr />
@@ -856,6 +870,15 @@ export function FileBrowserPane(): JSX.Element {
 				<div className="file-tree">{nodes.map((node) => renderNode(node))}</div>
 			</div>
 			{renderContextMenu()}
+			<ConfirmDialog
+				open={showDeleteConfirm}
+				title="Delete Files"
+				message={`Are you sure you want to delete ${filesToDelete.size} item${filesToDelete.size > 1 ? "s" : ""}? This action cannot be undone.`}
+				confirmLabel="Delete"
+				cancelLabel="Cancel"
+				onConfirm={handleDeleteConfirm}
+				onCancel={handleDeleteCancel}
+			/>
 		</div>
 	);
 }

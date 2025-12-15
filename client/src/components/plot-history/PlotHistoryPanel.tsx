@@ -1,11 +1,13 @@
-import { useMemo } from "react";
-import { IconBarChart, IconTrash } from "@/components/shared";
+import { useMemo, useState } from "react";
+import { IconBarChart, IconTrash, ConfirmDialog } from "@/components/shared";
 import { useStore } from "@/core";
 import { deletePlot, exportPlot } from "@/services/plotHistoryService";
 import { formatClockTime } from "@/utils/time";
 
 export function PlotHistoryPanel(): JSX.Element {
 	const plotHistory = useStore((state) => state.plotHistory);
+	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+	const [plotToDelete, setPlotToDelete] = useState<string | null>(null);
 
 	const activePlot = useMemo(() => {
 		const byId = plotHistory.items.find((plot) => plot.id === plotHistory.activePlotId);
@@ -13,11 +15,22 @@ export function PlotHistoryPanel(): JSX.Element {
 		return plotHistory.items.length > 0 ? plotHistory.items[plotHistory.items.length - 1] : null;
 	}, [plotHistory.activePlotId, plotHistory.items]);
 
-	const handleDelete = (plotId: string) => {
-		if (!window.confirm("Delete this plot from history?")) {
-			return;
+	const handleDeleteClick = (plotId: string) => {
+		setPlotToDelete(plotId);
+		setShowDeleteConfirm(true);
+	};
+
+	const handleDeleteConfirm = () => {
+		if (plotToDelete) {
+			void deletePlot(plotToDelete).catch(() => {});
 		}
-		void deletePlot(plotId).catch(() => {});
+		setShowDeleteConfirm(false);
+		setPlotToDelete(null);
+	};
+
+	const handleDeleteCancel = () => {
+		setShowDeleteConfirm(false);
+		setPlotToDelete(null);
 	};
 
 	const handleExport = (plotId: string, format: "png" | "pdf", filename: string) => {
@@ -66,7 +79,7 @@ export function PlotHistoryPanel(): JSX.Element {
 							</button>
 							<button
 								className="btn btn-danger"
-								onClick={() => handleDelete(activePlot.id)}
+								onClick={() => handleDeleteClick(activePlot.id)}
 								title="Delete plot from history"
 							>
 								<IconTrash width={14} height={14} aria-hidden /> Delete
@@ -84,6 +97,15 @@ export function PlotHistoryPanel(): JSX.Element {
 					<img src={activePlot.data} alt="Active plot" className="plot-image" loading="lazy" />
 				</div>
 			)}
+			<ConfirmDialog
+				open={showDeleteConfirm}
+				title="Delete Plot"
+				message="Are you sure you want to delete this plot? This action cannot be undone."
+				confirmLabel="Delete"
+				cancelLabel="Cancel"
+				onConfirm={handleDeleteConfirm}
+				onCancel={handleDeleteCancel}
+			/>
 		</div>
 	);
 }
