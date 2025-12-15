@@ -11,6 +11,11 @@ import { useFileSystemStore, useStore } from "@/core";
 import { normalizeRelativePath, normalizeSeparators, ROOT_PATH } from "@/core/pathUtils";
 import { useFileSystemData } from "@/hooks/useFileSystemData";
 import { type FileEntry, fileSystem } from "@/services/fileSystem";
+import {
+	alertWorkspaceNotReady,
+	alertFileOperationError,
+	alertDesktopOnlyFeature,
+} from "@/utils/fileBrowserAlerts";
 
 const ROOT_LABEL = "Workspace";
 const DRAG_DATA_MIME = "application/x-reprod-paths";
@@ -262,9 +267,7 @@ export function FileBrowserPane(): JSX.Element {
 	const openInSystemViewer = useCallback(
 		async (path: string) => {
 			if (!workspaceRoot) {
-				window.alert(
-					"Workspace root is not available yet. Please try again after the project loads.",
-				);
+				alertWorkspaceNotReady();
 				return;
 			}
 			const absolute = resolveAbsolutePath(path);
@@ -320,7 +323,7 @@ export function FileBrowserPane(): JSX.Element {
 				setEditorFilepath(node.path);
 				setEditorIsDirty(false);
 			} catch (error) {
-				window.alert(`Failed to open file: ${(error as Error).message}`);
+				alertFileOperationError(`Failed to open file: ${(error as Error).message}`);
 			}
 		},
 		[openInSystemViewer, setEditorContent, setEditorFilepath, setEditorIsDirty],
@@ -360,8 +363,12 @@ export function FileBrowserPane(): JSX.Element {
 				}
 				await refreshPath(parent || ROOT_PATH);
 			} catch (error) {
-				window.alert(`Failed to create ${isDir ? "folder" : "file"}: ${(error as Error).message}`);
-				window.alert(`Failed to create ${isDir ? "folder" : "file"}: ${(error as Error).message}`);
+				alertFileOperationError(
+					`Failed to create ${isDir ? "folder" : "file"}: ${(error as Error).message}`,
+				);
+				alertFileOperationError(
+					`Failed to create ${isDir ? "folder" : "file"}: ${(error as Error).message}`,
+				);
 			}
 		},
 		[closeContextMenu, refreshPath],
@@ -379,8 +386,8 @@ export function FileBrowserPane(): JSX.Element {
 				await fileSystem.renamePath(path, destination);
 				await refreshPath(parent);
 			} catch (error) {
-				window.alert(`Failed to rename: ${(error as Error).message}`);
-				window.alert(`Failed to rename: ${(error as Error).message}`);
+				alertFileOperationError(`Failed to rename: ${(error as Error).message}`);
+				alertFileOperationError(`Failed to rename: ${(error as Error).message}`);
 			}
 		},
 		[closeContextMenu, refreshPath],
@@ -398,7 +405,7 @@ export function FileBrowserPane(): JSX.Element {
 			try {
 				await fileSystem.deletePath(path);
 			} catch (error) {
-				window.alert(`Failed to delete ${path}: ${(error as Error).message}`);
+				alertFileOperationError(`Failed to delete ${path}: ${(error as Error).message}`);
 			}
 		}
 		await refreshParents(targets);
@@ -439,7 +446,7 @@ export function FileBrowserPane(): JSX.Element {
 						await fileSystem.copyPath(path, destPath);
 					}
 				} catch (error) {
-					window.alert(
+					alertFileOperationError(
 						`Failed to ${mode === "copy" ? "copy" : "move"} ${name}: ${(error as Error).message}`,
 					);
 				}
@@ -493,9 +500,7 @@ export function FileBrowserPane(): JSX.Element {
 		async (path: string) => {
 			if (!workspaceRoot) {
 				closeContextMenu();
-				window.alert(
-					"Workspace root is not available yet. Please try again after the project loads.",
-				);
+				alertWorkspaceNotReady();
 				return;
 			}
 			const absolute = resolveAbsolutePath(path);
@@ -512,9 +517,9 @@ export function FileBrowserPane(): JSX.Element {
 			}
 			try {
 				await navigator.clipboard.writeText(absolute);
-				window.alert("Reveal is only available in the desktop build. Path copied to clipboard.");
+				alertDesktopOnlyFeature("Reveal", true);
 			} catch (error) {
-				window.alert("Reveal is only available in the desktop build.");
+				alertDesktopOnlyFeature("Reveal");
 			}
 		},
 		[closeContextMenu, resolveAbsolutePath, workspaceRoot],
