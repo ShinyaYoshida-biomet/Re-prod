@@ -38,6 +38,25 @@ export function useProjectSession(): void {
 	const resetPlotHistory = useStore((state) => state.resetPlotHistory);
 
 	useEffect(() => {
+		const restoreSnapshot = async (snapshot: SessionSnapshot | null | undefined) => {
+			if (!snapshot) {
+				resetWorkspace();
+				await refreshTimelineData();
+				setLastRestoredState(null);
+				return;
+			}
+
+			const applied = await applySessionSnapshot(snapshot);
+			if (!applied) {
+				resetWorkspace();
+				await refreshTimelineData();
+				setLastRestoredState(null);
+				return;
+			}
+
+			setLastRestoredState(snapshot as unknown as Record<string, unknown>);
+		};
+
 		const handleProjectOpened = async (message: { project: ProjectRecord; state?: unknown }) => {
 			const snapshot = message.state as unknown as SessionSnapshot | null | undefined;
 
@@ -49,20 +68,7 @@ export function useProjectSession(): void {
 			const resetAndLoadRoot = useFileSystemStore.getState().resetAndLoadRoot;
 			void resetAndLoadRoot();
 
-			if (snapshot) {
-				const applied = await applySessionSnapshot(snapshot);
-				if (applied) {
-					setLastRestoredState(snapshot as unknown as Record<string, unknown>);
-				} else {
-					resetWorkspace();
-					await refreshTimelineData();
-					setLastRestoredState(null);
-				}
-			} else {
-				resetWorkspace();
-				await refreshTimelineData();
-				setLastRestoredState(null);
-			}
+			await restoreSnapshot(snapshot);
 		};
 
 		const offOpened = socketService.on("project_opened", (message) => {
@@ -80,14 +86,7 @@ export function useProjectSession(): void {
 		const offState = socketService.on("project_state", (message) => {
 			if (message.type === "project_state" && message.state) {
 				void (async () => {
-					const applied = await applySessionSnapshot(message.state as unknown as SessionSnapshot);
-					if (applied) {
-						setLastRestoredState(message.state as unknown as Record<string, unknown>);
-					} else {
-						resetWorkspace();
-						await refreshTimelineData();
-						setLastRestoredState(null);
-					}
+					await restoreSnapshot(message.state as unknown as SessionSnapshot);
 				})();
 			}
 		});
