@@ -191,7 +191,10 @@ pub(super) enum WSRequest {
 #[serde(tag = "type")]
 pub(super) enum WSResponse {
     #[serde(rename = "execution_result")]
-    ExecutionResult { result: ExecutionResult },
+    ExecutionResult {
+        result: ExecutionResult,
+        event: ExecutionEvent,
+    },
     #[serde(rename = "ai_response")]
     AIResponse { response: String },
     #[serde(rename = "ai_response_with_tools")]

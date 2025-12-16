@@ -83,6 +83,7 @@ export interface ExecutionLogPlot {
 }
 
 export interface ExecutionLogEntry {
+	runId?: string;
 	code: string;
 	stdout: string;
 	stderr: string;

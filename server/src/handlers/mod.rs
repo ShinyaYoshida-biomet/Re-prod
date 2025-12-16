@@ -209,7 +209,10 @@ async fn handle_execution_request(
     match executor.execute_with_event_with_history(request).await {
         Ok((result, event, history)) => {
             let mut responses = vec![
-                WSResponse::ExecutionResult { result },
+                WSResponse::ExecutionResult {
+                    result: result.clone(),
+                    event: event.clone(),
+                },
                 WSResponse::TimelineEventAdded { event },
             ];
 

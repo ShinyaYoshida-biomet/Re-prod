@@ -1,3 +1,4 @@
+import { executionEventToLogEntry } from "@/core";
 import { useStore } from "@/core/state/store";
 import { socketService } from "@/services/socket";
 import { refreshTimelineData } from "@/services/sessionPersistence";
@@ -17,6 +18,13 @@ export function setupSocketListeners(): () => void {
 			store.resetExecutionState();
 			store.reset(); // resetTimeline
 			void refreshTimelineData();
+		}
+	});
+
+	const offTimelineAdded = socketService.on("timeline_event_added", (message) => {
+		if (message.type === "timeline_event_added") {
+			const entry = executionEventToLogEntry(message.event);
+			store.addExecutionResult(entry);
 		}
 	});
 
@@ -69,6 +77,7 @@ export function setupSocketListeners(): () => void {
 	return () => {
 		offInterrupt();
 		offRestart();
+		offTimelineAdded();
 		offState();
 		offUpdate();
 		offDeleted();

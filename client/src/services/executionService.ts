@@ -1,4 +1,8 @@
-import type { ExecutionRequestPayload, ExecutionResultPayload } from "@shared/types";
+import type {
+	ExecutionEventPayload,
+	ExecutionRequestPayload,
+	ExecutionResultPayload,
+} from "@shared/types";
 import type { ServerMessage } from "shared";
 import { executionMessages } from "@/services/messageBuilders";
 import { socketService } from "./socket";
@@ -18,6 +22,7 @@ export class ExecutionServiceError extends Error {
 export interface ExecuteResponse {
 	raw: ExecutionSuccessMessage;
 	result: ExecutionResultPayload;
+	event: ExecutionEventPayload;
 }
 
 /**
@@ -31,7 +36,7 @@ export async function executeRequest(request: ExecutionRequestPayload): Promise<
 			executionMessages.execute(request),
 			(message) => {
 				if (message.type === "execution_result") {
-					resolve({ raw: message, result: message.result });
+					resolve({ raw: message, result: message.result, event: message.event });
 					return;
 				}
 
