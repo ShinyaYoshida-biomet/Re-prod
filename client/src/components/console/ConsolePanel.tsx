@@ -10,6 +10,28 @@ interface ConsolePanelProps {
 export function ConsolePanel({ view }: ConsolePanelProps): JSX.Element {
 	const { execution, consoleEndRef } = useConsolePanelState();
 
+	const handlePlotsClick = (index: number, result: (typeof execution.results)[0]) => {
+		const previousPlots = execution.results
+			.slice(0, index)
+			.reduce((sum, r) => sum + r.plots.length, 0);
+		const targetPlotId = result.plots[0]?.id;
+
+		window.dispatchEvent(
+			new CustomEvent("focusPlot", {
+				detail: { plotIndex: previousPlots, plotId: targetPlotId },
+			}),
+		);
+	};
+
+	const handlePlotsKeyDown =
+		(index: number, result: (typeof execution.results)[0]) => (e: React.KeyboardEvent) => {
+			if (e.key === "Enter" || e.key === " ") {
+				e.preventDefault();
+				e.stopPropagation();
+				handlePlotsClick(index, result);
+			}
+		};
+
 	return (
 		<div className="panel panel--transparent console-panel">
 			<div className="panel-content console-content">
@@ -51,18 +73,8 @@ export function ConsolePanel({ view }: ConsolePanelProps): JSX.Element {
 										{result.plots.length > 0 && (
 											<div
 												className="console-plots-info clickable"
-												onClick={() => {
-													const previousPlots = execution.results
-														.slice(0, index)
-														.reduce((sum, r) => sum + r.plots.length, 0);
-													const targetPlotId = result.plots[0]?.id;
-
-													window.dispatchEvent(
-														new CustomEvent("focusPlot", {
-															detail: { plotIndex: previousPlots, plotId: targetPlotId },
-														}),
-													);
-												}}
+												onClick={() => handlePlotsClick(index, result)}
+												onKeyDown={handlePlotsKeyDown(index, result)}
 												role="button"
 												tabIndex={0}
 												title="Click to view plot"
