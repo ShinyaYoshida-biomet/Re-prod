@@ -12,6 +12,8 @@ import type {
 	FileSystemEventPayload,
 	PlanStep,
 	ProjectRecord,
+	RunOutputChunk,
+	RunSummary,
 	ToolCallLog,
 	ToolExecutionRequestPayload,
 } from "./types";
@@ -131,7 +133,8 @@ export type ClientMessage =
 	| { type: "plot_history_delete"; plot_id: string }
 	| { type: "plot_history_save" }
 	| { type: "plot_history_restore" }
-	| { type: "plot_history_clear" };
+	| { type: "plot_history_clear" }
+	| { type: "run_query"; limit?: number };
 
 type TimelineEventPush = Extract<TimelineMessage, { type: "timeline_event_added" }>;
 
@@ -204,6 +207,10 @@ export type ServerMessage =
 			activePlotId?: string | null;
 			error?: string | null;
 	  }
+	| { type: "run_state"; runs: RunSummary[] }
+	| { type: "run_started"; run: RunSummary }
+	| ({ type: "run_output" } & RunOutputChunk)
+	| { type: "run_finished"; run: RunSummary }
 	| TimelineEventPush;
 
 export type ServerMessageType = ServerMessage["type"];

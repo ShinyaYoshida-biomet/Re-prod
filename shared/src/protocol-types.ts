@@ -101,3 +101,25 @@ export interface ToolExecutionResult {
 	execution_time_ms: number;
 	error?: string | null;
 }
+
+export type RunStatus = "queued" | "running" | "succeeded" | "failed" | "interrupted";
+
+export interface RunSummary {
+	run_id: string;
+	status: RunStatus;
+	started_at_ms: number;
+	finished_at_ms?: number | null;
+	duration_ms?: number | null;
+	has_stdout?: boolean;
+	has_stderr?: boolean;
+	artifacts?: ArtifactInfo[] | null;
+	plots?: PlotInfo[] | null;
+	error?: string | null;
+}
+
+export interface RunOutputChunk {
+	run_id: string;
+	stream: "stdout" | "stderr";
+	chunk: string;
+	at_ms: number;
+}

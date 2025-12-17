@@ -3,6 +3,9 @@ import type {
 	ChatMessage as ProtocolChatMessage,
 	CodeBlockKind as ProtocolCodeBlockKind,
 	CodeBlockMetadata as ProtocolCodeBlockMetadata,
+	RunOutputChunk as ProtocolRunOutputChunk,
+	RunStatus as ProtocolRunStatus,
+	RunSummary as ProtocolRunSummary,
 	EnvironmentSnapshot as ProtocolEnvironmentSnapshot,
 	ExecutionActor as ProtocolExecutionActor,
 	ExecutionContext as ProtocolExecutionContext,
@@ -25,6 +28,9 @@ export type CodeBlockMetadataPayload = ProtocolCodeBlockMetadata;
 export type ExecutionRequestPayload = ProtocolExecutionRequest;
 export type ExecutionEventPayload = ProtocolExecutionEvent;
 export type ExecutionResultPayload = ProtocolExecutionResult;
+export type RunStatus = ProtocolRunStatus;
+export type RunSummary = ProtocolRunSummary;
+export type RunOutputChunk = ProtocolRunOutputChunk;
 export type PlotInfoPayload = ProtocolPlotInfo;
 export type EnvironmentSnapshotPayload = ProtocolEnvironmentSnapshot;
 export type ChatMessagePayload = ProtocolChatMessage;
