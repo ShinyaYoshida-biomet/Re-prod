@@ -1,4 +1,4 @@
-import type { ExecutionLogEntry } from "@shared/types";
+import type { ExecutionLogEntry, RunOutputChunk, RunSummary } from "@shared/types";
 import type { StateCreator } from "zustand";
 
 export interface ExecutionState {
@@ -11,6 +11,10 @@ export interface ExecutionState {
 	setIsRunning: (isRunning: boolean) => void;
 	addPendingExecution: (code: string) => void;
 	addExecutionResult: (result: ExecutionLogEntry) => void;
+	applyRunState: (runs: RunSummary[]) => void;
+	applyRunStarted: (run: RunSummary) => void;
+	applyRunOutput: (chunk: RunOutputChunk) => void;
+	applyRunFinished: (run: RunSummary) => void;
 	replacePendingExecution: (result: ExecutionLogEntry) => void;
 	clearExecutionResults: () => void;
 	setCurrentCell: (cellIndex: number | undefined) => void;
@@ -72,6 +76,79 @@ export const createExecutionSlice: StateCreator<ExecutionState> = (set) => ({
 					...state.execution,
 					results: nextResults.slice(-10),
 					history: nextHistory,
+				},
+			};
+		}),
+	applyRunState: (runs) =>
+		set((state) => {
+			const normalized = runs.map(runSummaryToLogEntry);
+			return {
+				execution: {
+					...state.execution,
+					results: normalized.slice(-10),
+					history: normalized,
+				},
+			};
+		}),
+	applyRunStarted: (run) =>
+		set((state) => {
+			const entry = runSummaryToLogEntry(run);
+			return {
+				execution: {
+					...state.execution,
+					results: [...state.execution.results.filter((r) => r.runId !== run.run_id), entry].slice(
+						-10,
+					),
+					history: [...state.execution.history.filter((r) => r.runId !== run.run_id), entry],
+				},
+			};
+		}),
+	applyRunOutput: (chunk) =>
+		set((state) => {
+			const updateList = (list: ExecutionLogEntry[]): ExecutionLogEntry[] => {
+				const idx = list.findIndex((r) => r.runId === chunk.run_id);
+				if (idx == null || idx === -1) {
+					return list;
+				}
+				const next = [...list];
+				const entry = { ...next[idx] };
+				if (chunk.stream === "stdout") {
+					entry.stdout = [entry.stdout, chunk.chunk].filter(Boolean).join("\n");
+					entry.pending = true;
+				}
+				if (chunk.stream === "stderr") {
+					entry.stderr = [entry.stderr, chunk.chunk].filter(Boolean).join("\n");
+					entry.pending = true;
+				}
+				next[idx] = entry;
+				return next;
+			};
+
+			return {
+				execution: {
+					...state.execution,
+					results: updateList(state.execution.results).slice(-10),
+					history: updateList(state.execution.history),
+				},
+			};
+		}),
+	applyRunFinished: (run) =>
+		set((state) => {
+			const entry = runSummaryToLogEntry(run);
+			const upsert = (list: ExecutionLogEntry[]): ExecutionLogEntry[] => {
+				const idx = list.findIndex((r) => r.runId === run.run_id);
+				if (idx !== -1) {
+					const next = [...list];
+					next[idx] = entry;
+					return next;
+				}
+				return [...list, entry];
+			};
+			return {
+				execution: {
+					...state.execution,
+					results: upsert(state.execution.results).slice(-10),
+					history: upsert(state.execution.history),
 				},
 			};
 		}),
@@ -137,3 +214,28 @@ export const createExecutionSlice: StateCreator<ExecutionState> = (set) => ({
 			};
 		}),
 });
+
+function runSummaryToLogEntry(run: RunSummary): ExecutionLogEntry {
+	return {
+		runId: run.run_id,
+		code: run.code ?? "",
+		stdout: "",
+		stderr: run.error ?? "",
+		plots: (run.plots ?? []).map((plot) => ({
+			id: plot.id || plot.filename || `plot-${plot.index}`,
+			path: plot.storage_path || plot.filename,
+			storagePath: plot.storage_path || null,
+			data: plot.base64_data.startsWith("data:")
+				? plot.base64_data
+				: `data:image/png;base64,${plot.base64_data}`,
+			timestamp: plot.timestamp ?? Date.now(),
+			width: plot.width ?? null,
+			height: plot.height ?? null,
+			code: plot.code ?? null,
+		})),
+		timestamp: run.started_at_ms,
+		duration: run.duration_ms ?? 0,
+		success: run.status === "succeeded",
+		pending: run.status === "running" || run.status === "queued",
+	};
+}
