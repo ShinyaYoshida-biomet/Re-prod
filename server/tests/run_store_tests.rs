@@ -69,3 +69,40 @@ fn appends_output_files() {
         fs::read_to_string(tmp.path().join("run-logs").join("stderr.ndjson")).expect("stderr file");
     assert!(stderr.contains("oops"));
 }
+
+#[test]
+fn reads_outputs_with_timestamps() {
+    let tmp = temp_dir();
+    let store = FsRunStore::new(tmp.path().to_path_buf()).expect("create store");
+
+    let run = new_run_summary("run-read", 0, None);
+    store.create(run).expect("create");
+
+    store
+        .append_output(
+            "run-read",
+            reprod_core::RunOutputChunk {
+                run_id: "run-read".into(),
+                stream: RunStream::Stdout,
+                chunk: "first".into(),
+                at_ms: 2,
+            },
+        )
+        .expect("append stdout");
+    store
+        .append_output(
+            "run-read",
+            reprod_core::RunOutputChunk {
+                run_id: "run-read".into(),
+                stream: RunStream::Stderr,
+                chunk: "err".into(),
+                at_ms: 1,
+            },
+        )
+        .expect("append stderr");
+
+    let outputs = store.outputs("run-read").expect("outputs");
+    assert_eq!(outputs.len(), 2);
+    assert_eq!(outputs[0].chunk, "err");
+    assert_eq!(outputs[1].chunk, "first");
+}

@@ -15,6 +15,7 @@ pub trait RunStore: Send + Sync {
     fn append_output(&self, run_id: &str, chunk: RunOutputChunk) -> Result<()>;
     fn finish(&self, summary: RunSummary) -> Result<RunSummary>;
     fn latest(&self, limit: Option<usize>) -> Result<Vec<RunSummary>>;
+    fn outputs(&self, run_id: &str) -> Result<Vec<RunOutputChunk>>;
 }
 
 /// File-per-run store under .reprod/runs
@@ -128,6 +129,32 @@ impl FsRunStore {
         }
         run
     }
+
+    fn read_stream(&self, run_id: &str, stream: RunStream) -> Result<Vec<RunOutputChunk>> {
+        let path = match stream {
+            RunStream::Stdout => self.stdout_path(run_id),
+            RunStream::Stderr => self.stderr_path(run_id),
+        };
+        if !path.exists() {
+            return Ok(Vec::new());
+        }
+        let file = File::open(&path)
+            .with_context(|| format!("Failed to open run output: {}", path.display()))?;
+        let reader = BufReader::new(file);
+        let mut chunks = Vec::new();
+        for line in reader.lines() {
+            let line = line?;
+            if line.trim().is_empty() {
+                continue;
+            }
+            let mut chunk: RunOutputChunk = serde_json::from_str(&line).with_context(|| {
+                format!("Failed to parse run output chunk from {}", path.display())
+            })?;
+            chunk.stream = stream.clone();
+            chunks.push(chunk);
+        }
+        Ok(chunks)
+    }
 }
 
 impl RunStore for FsRunStore {
@@ -162,6 +189,14 @@ impl RunStore for FsRunStore {
         let len = history.len();
         let start = len.saturating_sub(lim);
         Ok(history.iter().skip(start).cloned().collect())
+    }
+
+    fn outputs(&self, run_id: &str) -> Result<Vec<RunOutputChunk>> {
+        let mut combined = Vec::new();
+        combined.extend(self.read_stream(run_id, RunStream::Stdout)?);
+        combined.extend(self.read_stream(run_id, RunStream::Stderr)?);
+        combined.sort_by_key(|c| c.at_ms);
+        Ok(combined)
     }
 }
 

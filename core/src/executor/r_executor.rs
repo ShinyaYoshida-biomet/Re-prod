@@ -6,7 +6,10 @@ use crate::graphics::plot_capture::PlotCapture;
 use crate::plot_history::{
     PlotHistoryEntry, PlotHistoryManager, DEFAULT_PLOT_HEIGHT, DEFAULT_PLOT_WIDTH,
 };
-use crate::{EnvironmentSnapshot, ExecutionEvent, ExecutionRequest, ExecutionResult};
+use crate::{
+    executor::execution_utils::now_ms, EnvironmentSnapshot, ExecutionEvent, ExecutionRequest,
+    ExecutionResult, RunOutputChunk, RunStream,
+};
 use anyhow::Result;
 use tokio::fs;
 use tokio::sync::Mutex as AsyncMutex;
@@ -53,7 +56,7 @@ impl RExecutor {
     }
 
     pub async fn execute(&self, request: ExecutionRequest) -> Result<ExecutionResult> {
-        let (result, _, _) = self.execute_with_event_with_history(request).await?;
+        let (result, _, _, _) = self.execute_with_event_with_history(request).await?;
         Ok(result)
     }
 
@@ -61,14 +64,19 @@ impl RExecutor {
         &self,
         request: ExecutionRequest,
     ) -> Result<(ExecutionResult, ExecutionEvent)> {
-        let (result, event, _) = self.execute_with_event_with_history(request).await?;
+        let (result, event, _, _) = self.execute_with_event_with_history(request).await?;
         Ok((result, event))
     }
 
     pub async fn execute_with_event_with_history(
         &self,
         request: ExecutionRequest,
-    ) -> Result<(ExecutionResult, ExecutionEvent, Vec<PlotHistoryEntry>)> {
+    ) -> Result<(
+        ExecutionResult,
+        ExecutionEvent,
+        Vec<PlotHistoryEntry>,
+        Vec<RunOutputChunk>,
+    )> {
         let start = Instant::now();
 
         let mut blocks = ensure_blocks(&request);
@@ -105,6 +113,8 @@ impl RExecutor {
         let mut streamed_stdout: Vec<String> = Vec::new();
         let mut streamed_stderr: Vec<String> = Vec::new();
 
+        let mut streamed_chunks: Vec<RunOutputChunk> = Vec::new();
+
         let command_output = self
             .command_runner
             .run_streaming(
@@ -112,10 +122,23 @@ impl RExecutor {
                 &script_path,
                 &self.working_dir,
                 &mut |line: String, is_stdout: bool| {
+                    let at_ms = now_ms();
                     if is_stdout {
-                        streamed_stdout.push(line);
+                        streamed_stdout.push(line.clone());
+                        streamed_chunks.push(RunOutputChunk {
+                            run_id: String::new(), // filled by caller
+                            stream: RunStream::Stdout,
+                            chunk: line,
+                            at_ms,
+                        });
                     } else {
-                        streamed_stderr.push(line);
+                        streamed_stderr.push(line.clone());
+                        streamed_chunks.push(RunOutputChunk {
+                            run_id: String::new(), // filled by caller
+                            stream: RunStream::Stderr,
+                            chunk: line,
+                            at_ms,
+                        });
                     }
                 },
             )
@@ -156,7 +179,7 @@ impl RExecutor {
         let event = build_event(&request, &result, environment.clone(), blocks.clone());
         self.timeline.record(event.clone()).await?;
 
-        Ok((result, event, history_entries))
+        Ok((result, event, history_entries, streamed_chunks))
     }
 
     pub async fn interrupt(&self) -> Result<bool> {

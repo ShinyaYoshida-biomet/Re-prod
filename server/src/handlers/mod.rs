@@ -7,7 +7,10 @@ use axum::{
     response::Response,
 };
 use project_requests::handle_project_request;
-use reprod_core::{fs::FileSystemEvent, project::ProjectRecord, ExecutionRequest};
+use reprod_core::{
+    fs::FileSystemEvent, project::ProjectRecord, ExecutionRequest, RunOutputChunk, RunStatus,
+    RunStream,
+};
 use runtime_fs::{handle_fs_event, spawn_fs_watcher, FsWatcherHandle};
 use serde_json::{self, json};
 use std::sync::Arc;
@@ -35,7 +38,6 @@ use plot_history_handler::{
     handle_plot_history_set_active,
 };
 use reprod_core::run_store::RunStore;
-use reprod_core::{RunOutputChunk, RunStream};
 use session_handler::{handle_interrupt, handle_restart};
 use std::process::Command;
 use timeline_handler::{handle_timeline_query, handle_timeline_stats_query};
@@ -201,7 +203,18 @@ async fn handle_ws_request(
         WSRequest::PlotHistoryRestore => handle_plot_history_restore(runtime).await,
         WSRequest::PlotHistoryClear => handle_plot_history_clear(runtime).await,
         WSRequest::RunQuery { limit } => match runtime.run_store.latest(limit) {
-            Ok(runs) => common::single_response(WSResponse::RunState { runs }),
+            Ok(runs) => {
+                let mut responses =
+                    common::single_response(WSResponse::RunState { runs: runs.clone() });
+                for run in runs {
+                    if let Ok(chunks) = runtime.run_store.outputs(&run.run_id) {
+                        for chunk in chunks {
+                            responses.push(WSResponse::RunOutput(chunk));
+                        }
+                    }
+                }
+                responses
+            }
             Err(e) => error_response(format!("Run query failed: {}", e)),
         },
         _ => Vec::new(),
@@ -227,33 +240,72 @@ async fn handle_execution_request(
 
     let executor = runtime.r_executor.lock().await;
     match executor.execute_with_event_with_history(request).await {
-        Ok((result, event, history)) => {
+        Ok((result, event, history, streamed_chunks)) => {
             let finished_at = common::now_millis() as u64;
-            run_summary.has_stdout = !result.output.is_empty();
-            run_summary.has_stderr = result.error.is_some();
+            let mut saw_stdout = false;
+            let mut saw_stderr = false;
 
-            if !result.output.is_empty() {
-                responses.push(WSResponse::RunOutput(RunOutputChunk {
-                    run_id: run_summary.run_id.clone(),
-                    stream: RunStream::Stdout,
-                    chunk: result.output.clone(),
-                    at_ms: finished_at,
-                }));
+            for mut chunk in streamed_chunks {
+                chunk.run_id = run_summary.run_id.clone();
+                let stored_chunk = chunk.clone();
+                match chunk.stream {
+                    RunStream::Stdout => saw_stdout = true,
+                    RunStream::Stderr => saw_stderr = true,
+                }
+                responses.push(WSResponse::RunOutput(chunk));
+                let _ = runtime
+                    .run_store
+                    .append_output(&run_summary.run_id, stored_chunk);
             }
-            if let Some(err) = &result.error {
-                responses.push(WSResponse::RunOutput(RunOutputChunk {
-                    run_id: run_summary.run_id.clone(),
-                    stream: RunStream::Stderr,
-                    chunk: err.clone(),
-                    at_ms: finished_at,
-                }));
+            if responses
+                .iter()
+                .all(|r| !matches!(r, WSResponse::RunOutput(_)))
+            {
+                if !result.output.is_empty() {
+                    saw_stdout = true;
+                    responses.push(WSResponse::RunOutput(RunOutputChunk {
+                        run_id: run_summary.run_id.clone(),
+                        stream: RunStream::Stdout,
+                        chunk: result.output.clone(),
+                        at_ms: finished_at,
+                    }));
+                    let _ = runtime.run_store.append_output(
+                        &run_summary.run_id,
+                        RunOutputChunk {
+                            run_id: run_summary.run_id.clone(),
+                            stream: RunStream::Stdout,
+                            chunk: result.output.clone(),
+                            at_ms: finished_at,
+                        },
+                    );
+                }
+                if let Some(err) = &result.error {
+                    saw_stderr = true;
+                    responses.push(WSResponse::RunOutput(RunOutputChunk {
+                        run_id: run_summary.run_id.clone(),
+                        stream: RunStream::Stderr,
+                        chunk: err.clone(),
+                        at_ms: finished_at,
+                    }));
+                    let _ = runtime.run_store.append_output(
+                        &run_summary.run_id,
+                        RunOutputChunk {
+                            run_id: run_summary.run_id.clone(),
+                            stream: RunStream::Stderr,
+                            chunk: err.clone(),
+                            at_ms: finished_at,
+                        },
+                    );
+                }
             }
+            run_summary.has_stdout = saw_stdout || !result.output.is_empty();
+            run_summary.has_stderr = saw_stderr || result.error.is_some();
             run_summary = reprod_core::run_store::finalize_run_summary(
                 run_summary,
                 if result.success {
-                    reprod_core::RunStatus::Succeeded
+                    RunStatus::Succeeded
                 } else {
-                    reprod_core::RunStatus::Failed
+                    RunStatus::Failed
                 },
                 finished_at,
                 None,
@@ -282,9 +334,10 @@ async fn handle_execution_request(
         }
         Err(e) => {
             let finished_at = common::now_millis() as u64;
+            run_summary.has_stderr = true;
             run_summary = reprod_core::run_store::finalize_run_summary(
                 run_summary,
-                reprod_core::RunStatus::Failed,
+                RunStatus::Failed,
                 finished_at,
                 None,
                 None,
