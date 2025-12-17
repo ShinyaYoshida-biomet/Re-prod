@@ -94,4 +94,28 @@ describe("execution run handling", () => {
 		expect(entry?.pending).toBe(false);
 		expect(entry?.stderr).toContain("boom");
 	});
+
+	it("keeps streamed output when a run finishes", () => {
+		useStore
+			.getState()
+			.applyRunStarted(baseRun({ run_id: "r-out", status: "running", code: "cat('hi')" }));
+
+		useStore
+			.getState()
+			.applyRunOutput({ run_id: "r-out", stream: "stdout", chunk: "partial", at_ms: 1 });
+
+		useStore.getState().applyRunFinished(
+			baseRun({
+				run_id: "r-out",
+				status: "succeeded",
+				finished_at_ms: 20,
+				duration_ms: 20,
+			}),
+		);
+
+		const entry = useStore.getState().execution.results.find((r) => r.runId === "r-out");
+		expect(entry?.stdout).toContain("partial");
+		expect(entry?.pending).toBe(false);
+		expect(entry?.success).toBe(true);
+	});
 });

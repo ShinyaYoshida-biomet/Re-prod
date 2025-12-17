@@ -1,4 +1,4 @@
-import { executionEventToLogEntry, useStore } from "@/core";
+import { useStore } from "@/core";
 import { useFileSystemStore } from "@/core/fileSystemStore";
 import type { ViewData } from "@/core/state/slices/viewSlice";
 import { fileSystem } from "@/services/fileSystem";
@@ -153,7 +153,7 @@ export async function applySessionSnapshot(snapshot: SessionSnapshot): Promise<b
 
 export async function refreshTimelineData(): Promise<void> {
 	const state = useStore.getState();
-	const { filters, sort, limit, setEvents, setLoading, setError, loadExecutionHistory } = state;
+	const { filters, sort, limit, setEvents, setLoading, setError } = state;
 
 	setLoading(true);
 	try {
@@ -164,8 +164,6 @@ export async function refreshTimelineData(): Promise<void> {
 			offset: 0,
 		});
 		setEvents(response.events, response.total, response.hasMore);
-		const executionHistory = response.events.map(executionEventToLogEntry);
-		loadExecutionHistory(executionHistory);
 	} catch (error) {
 		setError(error instanceof Error ? error.message : "Failed to refresh timeline");
 	}

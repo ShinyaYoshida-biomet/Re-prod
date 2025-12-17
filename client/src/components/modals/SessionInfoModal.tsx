@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { IconInfo, IconRefresh } from "@/components/shared";
 import { buildExecutionRequest, useStore } from "@/core";
-import { ExecutionServiceError, executeRequest } from "@/services/executionService";
+import { ExecutionServiceError, executeRequestAwaitResult } from "@/services/executionService";
 import { formatClockTime, formatDateTime } from "@/utils/time";
 import { ModalShell } from "./ModalShell";
 
@@ -89,7 +89,7 @@ export function SessionInfoModal({ open, onClose }: SessionInfoModalProps): JSX.
 		setError(null);
 
 		try {
-			const { result } = await executeRequest(request);
+			const { result } = await executeRequestAwaitResult(request);
 			setSessionInfo(parseSessionInfoOutput(result.output || ""));
 			setLastUpdated(Date.now());
 			if (result.error) {

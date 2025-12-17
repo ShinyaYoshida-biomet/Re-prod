@@ -1,4 +1,3 @@
-import { executionEventToLogEntry } from "@/core";
 import { useStore } from "@/core/state/store";
 import { socketService } from "@/services/socket";
 import { refreshTimelineData } from "@/services/sessionPersistence";
@@ -24,12 +23,17 @@ export function setupSocketListeners(): () => void {
 	const offRunState = socketService.on("run_state", (message) => {
 		if (message.type === "run_state") {
 			store.applyRunState(message.runs);
+			const hasRunning = message.runs.some(
+				(run) => run.status === "running" || run.status === "queued",
+			);
+			store.setIsRunning(hasRunning);
 		}
 	});
 
 	const offRunStarted = socketService.on("run_started", (message) => {
 		if (message.type === "run_started") {
 			store.applyRunStarted(message.run);
+			store.setIsRunning(true);
 		}
 	});
 
@@ -42,13 +46,7 @@ export function setupSocketListeners(): () => void {
 	const offRunFinished = socketService.on("run_finished", (message) => {
 		if (message.type === "run_finished") {
 			store.applyRunFinished(message.run);
-		}
-	});
-
-	const offTimelineAdded = socketService.on("timeline_event_added", (message) => {
-		if (message.type === "timeline_event_added") {
-			const entry = executionEventToLogEntry(message.event);
-			store.addExecutionResult(entry);
+			store.setIsRunning(false);
 		}
 	});
 
@@ -105,7 +103,6 @@ export function setupSocketListeners(): () => void {
 		offRunStarted();
 		offRunOutput();
 		offRunFinished();
-		offTimelineAdded();
 		offState();
 		offUpdate();
 		offDeleted();

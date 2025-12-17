@@ -81,7 +81,21 @@ export const createExecutionSlice: StateCreator<ExecutionState> = (set) => ({
 		}),
 	applyRunState: (runs) =>
 		set((state) => {
-			const normalized = runs.map(runSummaryToLogEntry);
+			const normalized = runs.map((run) => {
+				const base = runSummaryToLogEntry(run);
+				const existing = state.execution.history.find((entry) => entry.runId === run.run_id);
+				if (!existing) {
+					return base;
+				}
+				return {
+					...existing,
+					...base,
+					stdout: existing.stdout,
+					stderr: existing.stderr,
+					plots: base.plots.length ? base.plots : existing.plots,
+					code: existing.code || base.code,
+				};
+			});
 			return {
 				execution: {
 					...state.execution,
@@ -108,7 +122,18 @@ export const createExecutionSlice: StateCreator<ExecutionState> = (set) => ({
 			const updateList = (list: ExecutionLogEntry[]): ExecutionLogEntry[] => {
 				const idx = list.findIndex((r) => r.runId === chunk.run_id);
 				if (idx == null || idx === -1) {
-					return list;
+					const entry: ExecutionLogEntry = {
+						runId: chunk.run_id,
+						code: "",
+						stdout: chunk.stream === "stdout" ? chunk.chunk : "",
+						stderr: chunk.stream === "stderr" ? chunk.chunk : "",
+						plots: [],
+						timestamp: chunk.at_ms,
+						duration: 0,
+						success: false,
+						pending: true,
+					};
+					return [...list, entry];
 				}
 				const next = [...list];
 				const entry = { ...next[idx] };
@@ -135,14 +160,31 @@ export const createExecutionSlice: StateCreator<ExecutionState> = (set) => ({
 	applyRunFinished: (run) =>
 		set((state) => {
 			const entry = runSummaryToLogEntry(run);
+			const mergeWithExisting = (existing: ExecutionLogEntry | undefined): ExecutionLogEntry => {
+				if (!existing) {
+					return entry;
+				}
+				const mergedStderr = run.error
+					? [existing.stderr, run.error].filter(Boolean).join("\n")
+					: existing.stderr;
+				return {
+					...existing,
+					...entry,
+					stdout: existing.stdout,
+					stderr: mergedStderr,
+					plots: entry.plots.length ? entry.plots : existing.plots,
+					code: existing.code || entry.code,
+					timestamp: existing.timestamp ?? entry.timestamp,
+				};
+			};
 			const upsert = (list: ExecutionLogEntry[]): ExecutionLogEntry[] => {
 				const idx = list.findIndex((r) => r.runId === run.run_id);
 				if (idx !== -1) {
 					const next = [...list];
-					next[idx] = entry;
+					next[idx] = mergeWithExisting(list[idx]);
 					return next;
 				}
-				return [...list, entry];
+				return [...list, mergeWithExisting(undefined)];
 			};
 			return {
 				execution: {
