@@ -4,6 +4,7 @@ use reprod_core::{
     executor::timeline::JsonTimeline,
     fs::FileSystem,
     plot_history::PlotHistoryManager,
+    run_store::FsRunStore,
 };
 use reprod_core::{
     project::{
@@ -109,6 +110,7 @@ fn default_zoom() -> f32 {
 pub struct ProjectRuntime {
     pub descriptor: ProjectDescriptor,
     pub timeline: Arc<JsonTimeline>,
+    pub run_store: Arc<FsRunStore>,
     pub file_system: Arc<FileSystem>,
     pub filesystem_tool: Arc<FileSystemTool>,
     pub r_context_tool: Arc<RContextTool>,
@@ -136,6 +138,9 @@ impl ProjectRuntime {
         });
         let timeline = Arc::new(timeline);
 
+        let runs_root = descriptor.root_path.join(".reprod").join("runs");
+        let run_store = Arc::new(FsRunStore::new(runs_root)?);
+
         let plot_history_path = descriptor.root_path.join(".reprod").join("plots");
         let plot_history_manager = PlotHistoryManager::new(plot_history_path)?;
         let plot_history = Arc::new(Mutex::new(plot_history_manager));
@@ -159,6 +164,7 @@ impl ProjectRuntime {
         Ok(Self {
             descriptor,
             timeline,
+            run_store,
             file_system: Arc::new(FileSystem::new(&filesystem_root)),
             filesystem_tool: Arc::new(FileSystemTool::new(filesystem_root)),
             r_context_tool: Arc::new(RContextTool::new()),

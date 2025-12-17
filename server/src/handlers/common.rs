@@ -10,7 +10,7 @@ use reprod_core::{
     plot_history::PlotHistoryEntry,
     project::ProjectRecord,
     AIResponse, ChatMessage, Config, ExecutionEvent, ExecutionRequest, ExecutionResult,
-    ToolExecutor, ToolManifest, ToolRegistry,
+    RunOutputChunk, RunSummary, ToolExecutor, ToolManifest, ToolRegistry,
 };
 use serde_json::Value;
 use tokio::sync::Mutex;
@@ -185,6 +185,11 @@ pub(super) enum WSRequest {
     PlotHistoryRestore,
     #[serde(rename = "plot_history_clear")]
     PlotHistoryClear,
+    #[serde(rename = "run_query")]
+    RunQuery {
+        #[serde(default)]
+        limit: Option<usize>,
+    },
 }
 
 #[derive(serde::Serialize)]
@@ -323,6 +328,14 @@ pub(super) enum WSResponse {
         #[serde(skip_serializing_if = "Option::is_none")]
         error: Option<String>,
     },
+    #[serde(rename = "run_state")]
+    RunState { runs: Vec<RunSummary> },
+    #[serde(rename = "run_started")]
+    RunStarted { run: RunSummary },
+    #[serde(rename = "run_output")]
+    RunOutput(RunOutputChunk),
+    #[serde(rename = "run_finished")]
+    RunFinished { run: RunSummary },
 }
 
 #[allow(dead_code)] // Reserved for future AI planning feature
