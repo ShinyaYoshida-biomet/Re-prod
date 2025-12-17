@@ -19,7 +19,6 @@ mod common;
 mod export_handler;
 mod plot_history_handler;
 mod project_requests;
-mod run_handler;
 mod runtime_fs;
 mod session_handler;
 mod timeline_handler;
@@ -35,12 +34,12 @@ use plot_history_handler::{
     handle_plot_history_get, handle_plot_history_restore, handle_plot_history_save,
     handle_plot_history_set_active,
 };
-use run_handler::{handle_run_finished, handle_run_query, handle_run_started};
+use reprod_core::run_store::RunStore;
+use reprod_core::{RunOutputChunk, RunStream};
 use session_handler::{handle_interrupt, handle_restart};
 use std::process::Command;
 use timeline_handler::{handle_timeline_query, handle_timeline_stats_query};
 use tool_handler::{handle_execute_tool, handle_list_tools};
-use reprod_core::run_store::RunStore;
 
 pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> Response {
     ws.on_upgrade(|socket| handle_socket(socket, state))
@@ -201,7 +200,10 @@ async fn handle_ws_request(
         WSRequest::PlotHistorySave => handle_plot_history_save(runtime).await,
         WSRequest::PlotHistoryRestore => handle_plot_history_restore(runtime).await,
         WSRequest::PlotHistoryClear => handle_plot_history_clear(runtime).await,
-        WSRequest::RunQuery { limit } => handle_run_query(runtime, limit),
+        WSRequest::RunQuery { limit } => match runtime.run_store.latest(limit) {
+            Ok(runs) => common::single_response(WSResponse::RunState { runs }),
+            Err(e) => error_response(format!("Run query failed: {}", e)),
+        },
         _ => Vec::new(),
     }
 }
@@ -212,13 +214,16 @@ async fn handle_execution_request(
 ) -> Vec<WSResponse> {
     let run_id = Uuid::new_v4().to_string();
     let started_at = common::now_millis() as u64;
-    let mut run_summary = reprod_core::run_store::new_run_summary(&run_id, started_at);
+    let mut run_summary =
+        reprod_core::run_store::new_run_summary(&run_id, started_at, Some(request.code.clone()));
 
     if let Err(e) = runtime.run_store.create(run_summary.clone()) {
         return error_response(format!("Failed to create run: {}", e));
     }
 
-    let mut responses = handle_run_started(run_summary.clone());
+    let mut responses = common::single_response(WSResponse::RunStarted {
+        run: run_summary.clone(),
+    });
 
     let executor = runtime.r_executor.lock().await;
     match executor.execute_with_event_with_history(request).await {
@@ -226,6 +231,23 @@ async fn handle_execution_request(
             let finished_at = common::now_millis() as u64;
             run_summary.has_stdout = !result.output.is_empty();
             run_summary.has_stderr = result.error.is_some();
+
+            if !result.output.is_empty() {
+                responses.push(WSResponse::RunOutput(RunOutputChunk {
+                    run_id: run_summary.run_id.clone(),
+                    stream: RunStream::Stdout,
+                    chunk: result.output.clone(),
+                    at_ms: finished_at,
+                }));
+            }
+            if let Some(err) = &result.error {
+                responses.push(WSResponse::RunOutput(RunOutputChunk {
+                    run_id: run_summary.run_id.clone(),
+                    stream: RunStream::Stderr,
+                    chunk: err.clone(),
+                    at_ms: finished_at,
+                }));
+            }
             run_summary = reprod_core::run_store::finalize_run_summary(
                 run_summary,
                 if result.success {
@@ -246,7 +268,9 @@ async fn handle_execution_request(
                 event: event.clone(),
             });
             responses.push(WSResponse::TimelineEventAdded { event });
-            responses.extend(handle_run_finished(run_summary.clone()));
+            responses.push(WSResponse::RunFinished {
+                run: run_summary.clone(),
+            });
 
             if !history.is_empty() {
                 let active_plot_id = history.last().map(|plot| plot.id.clone());
@@ -268,7 +292,9 @@ async fn handle_execution_request(
             );
             let _ = runtime.run_store.finish(run_summary.clone());
             responses.extend(error_response(e.to_string()));
-            responses.extend(handle_run_finished(run_summary.clone()));
+            responses.push(WSResponse::RunFinished {
+                run: run_summary.clone(),
+            });
         }
     }
 

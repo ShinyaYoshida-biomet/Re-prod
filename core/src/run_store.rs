@@ -166,13 +166,18 @@ impl RunStore for FsRunStore {
 }
 
 /// Helper to build an initial RunSummary when a run starts.
-pub fn new_run_summary(run_id: impl Into<String>, started_at_ms: u64) -> RunSummary {
+pub fn new_run_summary(
+    run_id: impl Into<String>,
+    started_at_ms: u64,
+    code: Option<String>,
+) -> RunSummary {
     RunSummary {
         run_id: run_id.into(),
         status: RunStatus::Running,
         started_at_ms,
         finished_at_ms: None,
         duration_ms: None,
+        code,
         has_stdout: false,
         has_stderr: false,
         artifacts: None,

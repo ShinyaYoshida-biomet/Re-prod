@@ -13,6 +13,7 @@ pub mod graphics;
 pub mod plot_history;
 pub mod project;
 pub mod protocol;
+pub mod run_store;
 pub mod terminal;
 pub mod timeline;
 pub mod tools;

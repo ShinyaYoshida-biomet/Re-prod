@@ -218,6 +218,8 @@ pub struct RunSummary {
     #[serde(default)]
     pub duration_ms: Option<u64>,
     #[serde(default)]
+    pub code: Option<String>,
+    #[serde(default)]
     pub has_stdout: bool,
     #[serde(default)]
     pub has_stderr: bool,

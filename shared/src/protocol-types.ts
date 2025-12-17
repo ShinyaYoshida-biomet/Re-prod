@@ -110,6 +110,7 @@ export interface RunSummary {
 	started_at_ms: number;
 	finished_at_ms?: number | null;
 	duration_ms?: number | null;
+	code?: string | null;
 	has_stdout?: boolean;
 	has_stderr?: boolean;
 	artifacts?: ArtifactInfo[] | null;
