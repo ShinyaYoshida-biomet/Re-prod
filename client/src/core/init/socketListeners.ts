@@ -21,6 +21,30 @@ export function setupSocketListeners(): () => void {
 		}
 	});
 
+	const offRunState = socketService.on("run_state", (message) => {
+		if (message.type === "run_state") {
+			store.applyRunState(message.runs);
+		}
+	});
+
+	const offRunStarted = socketService.on("run_started", (message) => {
+		if (message.type === "run_started") {
+			store.applyRunStarted(message.run);
+		}
+	});
+
+	const offRunOutput = socketService.on("run_output", (message) => {
+		if (message.type === "run_output") {
+			store.applyRunOutput(message);
+		}
+	});
+
+	const offRunFinished = socketService.on("run_finished", (message) => {
+		if (message.type === "run_finished") {
+			store.applyRunFinished(message.run);
+		}
+	});
+
 	const offTimelineAdded = socketService.on("timeline_event_added", (message) => {
 		if (message.type === "timeline_event_added") {
 			const entry = executionEventToLogEntry(message.event);
@@ -77,6 +101,10 @@ export function setupSocketListeners(): () => void {
 	return () => {
 		offInterrupt();
 		offRestart();
+		offRunState();
+		offRunStarted();
+		offRunOutput();
+		offRunFinished();
 		offTimelineAdded();
 		offState();
 		offUpdate();

@@ -36,6 +36,7 @@ export function useProjectSession(): void {
 	const setProjects = useStore((state) => state.setProjects);
 	const setLastRestoredState = useStore((state) => state.setLastRestoredState);
 	const resetPlotHistory = useStore((state) => state.resetPlotHistory);
+	const applyRunState = useStore((state) => state.applyRunState);
 
 	useEffect(() => {
 		const restoreSnapshot = async (snapshot: SessionSnapshot | null | undefined) => {
@@ -68,6 +69,7 @@ export function useProjectSession(): void {
 			const resetAndLoadRoot = useFileSystemStore.getState().resetAndLoadRoot;
 			void resetAndLoadRoot();
 
+			socketService.send({ type: "run_query", limit: 50 });
 			await restoreSnapshot(snapshot);
 		};
 
@@ -99,11 +101,13 @@ export function useProjectSession(): void {
 		const unsubscribeConnection = socketService.onConnectionChange((status) => {
 			if (status === "connected") {
 				projectService.requestList();
+				socketService.send({ type: "run_query", limit: 50 });
 			}
 		});
 
 		if (socketService.isConnected()) {
 			projectService.requestList();
+			socketService.send({ type: "run_query", limit: 50 });
 		}
 
 		return () => {
