@@ -70,6 +70,28 @@ pub trait CommandRunner: Send + Sync {
         script_path: &Path,
         working_dir: &Path,
     ) -> Result<CommandOutput>;
+
+    /// Run with streaming stdout/stderr lines. Default implementation falls back to `run`.
+    async fn run_streaming(
+        &self,
+        r_path: &str,
+        script_path: &Path,
+        working_dir: &Path,
+        on_chunk: &mut (dyn FnMut(String, bool) + Send),
+    ) -> Result<CommandOutput> {
+        let output = self.run(r_path, script_path, working_dir).await?;
+        if let Ok(text) = std::str::from_utf8(&output.stdout) {
+            for line in text.lines() {
+                on_chunk(line.to_string(), true);
+            }
+        }
+        if let Ok(text) = std::str::from_utf8(&output.stderr) {
+            for line in text.lines() {
+                on_chunk(line.to_string(), false);
+            }
+        }
+        Ok(output)
+    }
     async fn interrupt(&self) -> Result<bool>;
 }
 

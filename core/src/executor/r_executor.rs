@@ -102,9 +102,23 @@ impl RExecutor {
         );
         fs::write(&script_path, &wrapped_code).await?;
 
+        let mut streamed_stdout: Vec<String> = Vec::new();
+        let mut streamed_stderr: Vec<String> = Vec::new();
+
         let command_output = self
             .command_runner
-            .run(&self.r_path, &script_path, &self.working_dir)
+            .run_streaming(
+                &self.r_path,
+                &script_path,
+                &self.working_dir,
+                &mut |line: String, is_stdout: bool| {
+                    if is_stdout {
+                        streamed_stdout.push(line);
+                    } else {
+                        streamed_stderr.push(line);
+                    }
+                },
+            )
             .await?;
 
         let captures = plot_capture
@@ -114,7 +128,14 @@ impl RExecutor {
 
         let _ = fs::remove_file(&script_path).await;
 
-        let parsed_output = parse_command_output(&command_output);
+        // If streaming captured any lines, prefer them for display to preserve ordering.
+        let mut parsed_output = parse_command_output(&command_output);
+        if !streamed_stdout.is_empty() {
+            parsed_output.stdout_raw = streamed_stdout.join("\n");
+        }
+        if !streamed_stderr.is_empty() {
+            parsed_output.stderr_raw = streamed_stderr.join("\n");
+        }
         info!(
             target: "reprod.r.exec",
             stdout = %parsed_output.stdout_raw,
