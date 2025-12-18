@@ -300,18 +300,19 @@ async fn handle_execution_request(
             }
             run_summary.has_stdout = saw_stdout || !result.output.is_empty();
             run_summary.has_stderr = saw_stderr || result.error.is_some();
-            run_summary = reprod_core::run_store::finalize_run_summary(
-                run_summary,
-                if result.success {
-                    RunStatus::Succeeded
-                } else {
-                    RunStatus::Failed
-                },
-                finished_at,
-                None,
-                Some(result.plots.clone()),
-                result.error.clone(),
-            );
+            let status = if result.success {
+                RunStatus::Succeeded
+            } else {
+                RunStatus::Failed
+            };
+            let opts = reprod_core::run_store::FinalizeOpts::new(status, finished_at)
+                .with_plots(result.plots.clone());
+            let opts = if let Some(err) = result.error.clone() {
+                opts.with_error(err)
+            } else {
+                opts
+            };
+            run_summary = run_summary.finalize(opts);
 
             let _ = runtime.run_store.finish(run_summary.clone());
 
@@ -335,13 +336,9 @@ async fn handle_execution_request(
         Err(e) => {
             let finished_at = common::now_millis() as u64;
             run_summary.has_stderr = true;
-            run_summary = reprod_core::run_store::finalize_run_summary(
-                run_summary,
-                RunStatus::Failed,
-                finished_at,
-                None,
-                None,
-                Some(e.to_string()),
+            run_summary = run_summary.finalize(
+                reprod_core::run_store::FinalizeOpts::new(RunStatus::Failed, finished_at)
+                    .with_error(e.to_string()),
             );
             let _ = runtime.run_store.finish(run_summary.clone());
             responses.extend(error_response(e.to_string()));

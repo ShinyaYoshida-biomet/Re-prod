@@ -1,4 +1,4 @@
-import type { ExecutionLogEntry, PlotInfo, RunOutputChunk, RunSummary } from "@shared/types";
+import type { ExecutionLogEntry, PlotInfoPayload, RunOutputChunk, RunSummary } from "@shared/types";
 import type { StateCreator } from "zustand";
 
 export interface ExecutionState {
@@ -206,7 +206,7 @@ function runSummaryToLogEntry(run: RunSummary): ExecutionLogEntry {
 	};
 }
 
-function mapPlotInfo(plot: PlotInfo): ExecutionLogEntry["plots"][number] {
+function mapPlotInfo(plot: PlotInfoPayload): ExecutionLogEntry["plots"][number] {
 	return {
 		id: plot.id || plot.filename || `plot-${plot.index}`,
 		path: plot.storage_path || plot.filename,

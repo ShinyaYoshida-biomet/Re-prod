@@ -1,6 +1,6 @@
 use std::fs;
 
-use reprod_core::run_store::{finalize_run_summary, new_run_summary, FsRunStore, RunStore};
+use reprod_core::run_store::{new_run_summary, FsRunStore, RunStore};
 use reprod_core::{RunStatus, RunStream};
 
 fn temp_dir() -> tempfile::TempDir {
@@ -18,8 +18,11 @@ fn creates_and_lists_runs() {
     assert_eq!(created.status, RunStatus::Running);
 
     // finish
-    let finished = finalize_run_summary(run, RunStatus::Succeeded, 20, None, None, None);
-    let finished = store.finish(finished).expect("finish run");
+    let finished = store
+        .finish(run.finalize(
+            reprod_core::run_store::FinalizeOpts::new(RunStatus::Succeeded, 20),
+        ))
+        .expect("finish run");
     assert_eq!(finished.status, RunStatus::Succeeded);
     assert_eq!(finished.duration_ms, Some(10));
 

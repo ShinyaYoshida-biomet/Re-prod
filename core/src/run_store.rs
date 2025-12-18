@@ -221,20 +221,72 @@ pub fn new_run_summary(
     }
 }
 
-/// Helper to finalize a RunSummary.
+/// Finalization parameters to avoid long argument lists.
+pub struct FinalizeOpts {
+    status: RunStatus,
+    finished_at_ms: u64,
+    artifacts: Option<Vec<ArtifactInfo>>,
+    plots: Option<Vec<PlotInfo>>,
+    error: Option<String>,
+}
+
+impl FinalizeOpts {
+    pub fn new(status: RunStatus, finished_at_ms: u64) -> Self {
+        Self {
+            status,
+            finished_at_ms,
+            artifacts: None,
+            plots: None,
+            error: None,
+        }
+    }
+
+    pub fn with_artifacts(mut self, artifacts: Vec<ArtifactInfo>) -> Self {
+        self.artifacts = Some(artifacts);
+        self
+    }
+
+    pub fn with_plots(mut self, plots: Vec<PlotInfo>) -> Self {
+        self.plots = Some(plots);
+        self
+    }
+
+    pub fn with_error(mut self, error: impl Into<String>) -> Self {
+        self.error = Some(error.into());
+        self
+    }
+}
+
+impl RunSummary {
+    /// Finalize a running summary with the given options.
+    pub fn finalize(self, opts: FinalizeOpts) -> Self {
+        let duration = opts.finished_at_ms.saturating_sub(self.started_at_ms);
+        Self {
+            status: opts.status,
+            finished_at_ms: Some(opts.finished_at_ms),
+            duration_ms: Some(duration),
+            artifacts: opts.artifacts,
+            plots: opts.plots,
+            error: opts.error,
+            ..self
+        }
+    }
+}
+
+/// Backward-compatible helper for legacy call sites.
 pub fn finalize_run_summary(
-    mut run: RunSummary,
+    run: RunSummary,
     status: RunStatus,
     finished_at_ms: u64,
     artifacts: Option<Vec<ArtifactInfo>>,
     plots: Option<Vec<PlotInfo>>,
     error: Option<String>,
 ) -> RunSummary {
-    run.status = status;
-    run.finished_at_ms = Some(finished_at_ms);
-    run.duration_ms = Some(finished_at_ms.saturating_sub(run.started_at_ms));
-    run.artifacts = artifacts;
-    run.plots = plots;
-    run.error = error;
-    run
+    run.finalize(FinalizeOpts {
+        status,
+        finished_at_ms,
+        artifacts,
+        plots,
+        error,
+    })
 }
