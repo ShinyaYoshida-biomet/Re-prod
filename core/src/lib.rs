@@ -6,6 +6,7 @@ pub mod ai;
 pub mod api;
 pub mod config;
 pub mod error;
+pub mod execution_repository;
 pub mod executor;
 pub mod export;
 pub mod fs;

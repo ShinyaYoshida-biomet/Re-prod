@@ -244,7 +244,7 @@ if (length(dev.list()) > 0) {
         Ok(())
     }
 
-    fn environment_snapshot(&self) -> EnvironmentSnapshot {
+    pub fn environment_snapshot(&self) -> EnvironmentSnapshot {
         EnvironmentSnapshot {
             r_path: self.r_path.clone(),
             working_dir: self.working_dir.to_string_lossy().into_owned(),

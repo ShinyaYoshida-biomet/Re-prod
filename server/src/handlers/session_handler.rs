@@ -21,7 +21,16 @@ pub(super) async fn handle_restart(runtime: &Arc<ProjectRuntime>) -> Vec<WSRespo
             .reset()
             .await
             .map_err(|e| e.to_string())?;
-        let cleared = runtime.timeline.reset().map_err(|e| e.to_string())?;
+        runtime
+            .stream_buffer
+            .lock()
+            .await
+            .clear();
+        let cleared = runtime
+            .execution_repo
+            .reset()
+            .await
+            .map_err(|e| e.to_string())?;
         Ok::<u64, String>(cleared as u64)
     }
     .await;
