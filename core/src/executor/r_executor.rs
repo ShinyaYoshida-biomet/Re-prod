@@ -28,6 +28,7 @@ pub struct RExecutor {
     pub(crate) command_runner: Arc<dyn CommandRunner>,
     pub(crate) plot_history: Option<Arc<AsyncMutex<PlotHistoryManager>>>,
     pub(crate) persistent_mode: bool,
+    pub(crate) record_runs: bool,
 }
 
 impl RExecutor {
@@ -40,6 +41,7 @@ impl RExecutor {
             command_runner: Arc::new(ProcessCommandRunner::default()),
             plot_history: None,
             persistent_mode: false,
+            record_runs: true,
         }
     }
 
@@ -180,7 +182,9 @@ impl RExecutor {
 
         let environment = self.environment_snapshot();
         let event = build_event(&request, &result, environment.clone(), blocks.clone());
-        self.timeline.record(event.clone()).await?;
+        if self.record_runs {
+            self.timeline.record(event.clone()).await?;
+        }
 
         Ok((result, event, history_entries, streamed_chunks))
     }

@@ -245,6 +245,7 @@ async fn handle_execution_request_streaming(
             block.label = Some(format!("Block {}", idx + 1));
         }
     }
+    request.blocks = blocks.clone();
 
     let environment = {
         let executor = runtime.r_executor.lock().await;

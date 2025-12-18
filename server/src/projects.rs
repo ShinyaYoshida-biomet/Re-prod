@@ -160,6 +160,7 @@ impl ProjectRuntime {
             .with_plot_history(plot_history.clone())
             .with_working_dir(descriptor.root_path.clone())
             .use_persistent_mode()
+            .disable_run_recording()
             .build();
 
         let filesystem_root = descriptor.root_path.clone();

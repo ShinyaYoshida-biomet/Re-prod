@@ -148,14 +148,6 @@ export const timelineMessages = {
 	}),
 } as const;
 
-// Run messages
-export const runMessages = {
-	query: (limit?: number): Extract<ClientMessage, { type: "run_query" }> => ({
-		type: "run_query",
-		limit,
-	}),
-} as const;
-
 // Execution messages
 export const executionMessages = {
 	execute: (request: ExecutionRequestPayload): Extract<ClientMessage, { type: "execute" }> => ({
