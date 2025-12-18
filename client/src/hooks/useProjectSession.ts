@@ -36,7 +36,6 @@ export function useProjectSession(): void {
 	const setProjects = useStore((state) => state.setProjects);
 	const setLastRestoredState = useStore((state) => state.setLastRestoredState);
 	const resetPlotHistory = useStore((state) => state.resetPlotHistory);
-	const applyRunState = useStore((state) => state.applyRunState);
 
 	useEffect(() => {
 		const restoreSnapshot = async (snapshot: SessionSnapshot | null | undefined) => {
