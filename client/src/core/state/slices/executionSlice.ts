@@ -73,87 +73,29 @@ export const createExecutionSlice: StateCreator<ExecutionState> = (set) => ({
 			return {
 				execution: {
 					...state.execution,
-					results: [...state.execution.results.filter((r) => r.runId !== run.run_id), entry].slice(
-						-10,
-					),
-					history: [...state.execution.history.filter((r) => r.runId !== run.run_id), entry],
+					results: upsertRunEntry(state.execution.results, entry).slice(-10),
+					history: upsertRunEntry(state.execution.history, entry),
 				},
 			};
 		}),
 	applyRunOutput: (chunk) =>
 		set((state) => {
-			const updateList = (list: ExecutionLogEntry[]): ExecutionLogEntry[] => {
-				const idx = list.findIndex((r) => r.runId === chunk.run_id);
-				if (idx == null || idx === -1) {
-					const entry: ExecutionLogEntry = {
-						runId: chunk.run_id,
-						code: "",
-						stdout: chunk.stream === "stdout" ? chunk.chunk : "",
-						stderr: chunk.stream === "stderr" ? chunk.chunk : "",
-						plots: [],
-						timestamp: chunk.at_ms,
-						duration: 0,
-						success: false,
-						pending: true,
-					};
-					return [...list, entry];
-				}
-				const next = [...list];
-				const entry = { ...next[idx] };
-				if (chunk.stream === "stdout") {
-					entry.stdout = [entry.stdout, chunk.chunk].filter(Boolean).join("\n");
-					entry.pending = true;
-				}
-				if (chunk.stream === "stderr") {
-					entry.stderr = [entry.stderr, chunk.chunk].filter(Boolean).join("\n");
-					entry.pending = true;
-				}
-				next[idx] = entry;
-				return next;
-			};
-
 			return {
 				execution: {
 					...state.execution,
-					results: updateList(state.execution.results).slice(-10),
-					history: updateList(state.execution.history),
+					results: updateRunOutput(state.execution.results, chunk).slice(-10),
+					history: updateRunOutput(state.execution.history, chunk),
 				},
 			};
 		}),
 	applyRunFinished: (run) =>
 		set((state) => {
 			const entry = runSummaryToLogEntry(run);
-			const mergeWithExisting = (existing: ExecutionLogEntry | undefined): ExecutionLogEntry => {
-				if (!existing) {
-					return entry;
-				}
-				const mergedStderr = run.error
-					? [existing.stderr, run.error].filter(Boolean).join("\n")
-					: existing.stderr;
-				return {
-					...existing,
-					...entry,
-					stdout: existing.stdout,
-					stderr: mergedStderr,
-					plots: entry.plots.length ? entry.plots : existing.plots,
-					code: existing.code || entry.code,
-					timestamp: existing.timestamp ?? entry.timestamp,
-				};
-			};
-			const upsert = (list: ExecutionLogEntry[]): ExecutionLogEntry[] => {
-				const idx = list.findIndex((r) => r.runId === run.run_id);
-				if (idx !== -1) {
-					const next = [...list];
-					next[idx] = mergeWithExisting(list[idx]);
-					return next;
-				}
-				return [...list, mergeWithExisting(undefined)];
-			};
 			return {
 				execution: {
 					...state.execution,
-					results: upsert(state.execution.results).slice(-10),
-					history: upsert(state.execution.history),
+					results: upsertFinished(state.execution.results, entry, run.error).slice(-10),
+					history: upsertFinished(state.execution.history, entry, run.error),
 				},
 			};
 		}),
@@ -219,4 +161,69 @@ function mapPlotInfo(plot: PlotInfoPayload): ExecutionLogEntry["plots"][number] 
 		height: plot.height ?? null,
 		code: plot.code ?? null,
 	};
+}
+
+function upsertRunEntry(list: ExecutionLogEntry[], entry: ExecutionLogEntry): ExecutionLogEntry[] {
+	return [...list.filter((r) => r.runId !== entry.runId), entry];
+}
+
+function updateRunOutput(list: ExecutionLogEntry[], chunk: RunOutputChunk): ExecutionLogEntry[] {
+	const idx = list.findIndex((r) => r.runId === chunk.run_id);
+	if (idx === -1) {
+		const entry: ExecutionLogEntry = {
+			runId: chunk.run_id,
+			code: "",
+			stdout: chunk.stream === "stdout" ? chunk.chunk : "",
+			stderr: chunk.stream === "stderr" ? chunk.chunk : "",
+			plots: [],
+			timestamp: chunk.at_ms,
+			duration: 0,
+			success: false,
+			pending: true,
+		};
+		return [...list, entry];
+	}
+	const next = [...list];
+	const entry = { ...next[idx] };
+	if (chunk.stream === "stdout") {
+		entry.stdout = [entry.stdout, chunk.chunk].filter(Boolean).join("\n");
+		entry.pending = true;
+	}
+	if (chunk.stream === "stderr") {
+		entry.stderr = [entry.stderr, chunk.chunk].filter(Boolean).join("\n");
+		entry.pending = true;
+	}
+	next[idx] = entry;
+	return next;
+}
+
+function upsertFinished(
+	list: ExecutionLogEntry[],
+	entry: ExecutionLogEntry,
+	error?: string | null,
+): ExecutionLogEntry[] {
+	const mergeWithExisting = (existing: ExecutionLogEntry | undefined): ExecutionLogEntry => {
+		if (!existing) {
+			return entry;
+		}
+		const mergedStderr = error
+			? [existing.stderr, error].filter(Boolean).join("\n")
+			: existing.stderr;
+		return {
+			...existing,
+			...entry,
+			stdout: existing.stdout,
+			stderr: mergedStderr,
+			plots: entry.plots.length ? entry.plots : existing.plots,
+			code: existing.code || entry.code,
+			timestamp: existing.timestamp ?? entry.timestamp,
+		};
+	};
+	const idx = list.findIndex((r) => r.runId === entry.runId);
+	if (idx !== -1) {
+		const next = [...list];
+		next[idx] = mergeWithExisting(list[idx]);
+		return next;
+	}
+	return [...list, mergeWithExisting(undefined)];
 }
