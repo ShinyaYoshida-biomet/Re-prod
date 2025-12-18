@@ -1,18 +1,22 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use ts_rs::TS;
 
 /// Result of code execution
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
+#[ts(export, export_to = "../../shared/src/generated/")]
 pub struct ExecutionResult {
     pub success: bool,
     pub output: String,
     pub error: Option<String>,
     pub plots: Vec<PlotInfo>,
+    #[ts(type = "number")]
     pub execution_time_ms: u64,
 }
 
 /// Plot information
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
+#[ts(export, export_to = "../../shared/src/generated/")]
 pub struct PlotInfo {
     #[serde(default)]
     pub id: String,
@@ -24,6 +28,7 @@ pub struct PlotInfo {
     #[serde(default)]
     pub height: Option<u32>,
     #[serde(default)]
+    #[ts(type = "number | null")]
     pub timestamp: Option<u64>,
     #[serde(default)]
     pub code: Option<String>,
@@ -34,14 +39,16 @@ pub struct PlotInfo {
 }
 
 /// Chat message for AI communication
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
+#[ts(export, export_to = "../../shared/src/generated/")]
 pub struct ChatMessage {
     pub role: String,
     pub content: String,
 }
 
 /// Tool call from AI
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
+#[ts(export, export_to = "../../shared/src/generated/")]
 pub struct ToolCall {
     pub id: String,
     pub name: String,
@@ -49,7 +56,8 @@ pub struct ToolCall {
 }
 
 /// AI response with optional tool calls
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
+#[ts(export, export_to = "../../shared/src/generated/")]
 pub struct AIResponse {
     pub content: String,
     pub tool_calls: Option<Vec<ToolCall>>,
@@ -57,7 +65,8 @@ pub struct AIResponse {
 }
 
 /// Tool result to send back to AI
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
+#[ts(export, export_to = "../../shared/src/generated/")]
 pub struct ToolResult {
     pub tool_use_id: String,
     pub content: String,
@@ -65,16 +74,17 @@ pub struct ToolResult {
 }
 
 /// File change event
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
+#[ts(export, export_to = "../../shared/src/generated/")]
 pub struct FileChangeEvent {
     pub event_type: String,
     pub path: String,
 }
 
 /// Source of an R execution request.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, TS)]
 #[serde(rename_all = "snake_case")]
-#[derive(Default)]
+#[ts(export, export_to = "../../shared/src/generated/")]
 pub enum ExecutionSource {
     Selection,
     Cell,
@@ -84,9 +94,9 @@ pub enum ExecutionSource {
 }
 
 /// Actor initiating the execution event (user vs AI).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, TS)]
 #[serde(rename_all = "snake_case")]
-#[derive(Default)]
+#[ts(export, export_to = "../../shared/src/generated/")]
 pub enum ExecutionActor {
     #[default]
     User,
@@ -94,8 +104,9 @@ pub enum ExecutionActor {
 }
 
 /// Type of code block captured during execution.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
 #[serde(rename_all = "snake_case")]
+#[ts(export, export_to = "../../shared/src/generated/")]
 pub enum CodeBlockKind {
     Section,
     Chunk,
@@ -104,7 +115,8 @@ pub enum CodeBlockKind {
 }
 
 /// Metadata describing a captured code block.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
+#[ts(export, export_to = "../../shared/src/generated/")]
 pub struct CodeBlockMetadata {
     pub id: String,
     pub index: u32,
@@ -116,7 +128,8 @@ pub struct CodeBlockMetadata {
 }
 
 /// Context supplied when triggering R execution.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, TS)]
+#[ts(export, export_to = "../../shared/src/generated/")]
 pub struct ExecutionContext {
     #[serde(default)]
     pub source: ExecutionSource,
@@ -126,13 +139,15 @@ pub struct ExecutionContext {
     pub cell_index: Option<u32>,
     /// Epoch milliseconds supplied by the caller (0 if unknown).
     #[serde(default)]
+    #[ts(type = "number")]
     pub triggered_at_ms: u64,
     #[serde(default)]
     pub actor: ExecutionActor,
 }
 
 /// Incoming execution request from UI/backend client.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
+#[ts(export, export_to = "../../shared/src/generated/")]
 pub struct ExecutionRequest {
     pub code: String,
     #[serde(default)]
@@ -141,14 +156,17 @@ pub struct ExecutionRequest {
     pub blocks: Vec<CodeBlockMetadata>,
     /// Optional plot width in pixels (defaults to DEFAULT_PLOT_WIDTH if not specified)
     #[serde(default)]
+    #[ts(optional)]
     pub plot_width: Option<u32>,
     /// Optional plot height in pixels (defaults to DEFAULT_PLOT_HEIGHT if not specified)
     #[serde(default)]
+    #[ts(optional)]
     pub plot_height: Option<u32>,
 }
 
 /// Snapshot of the environment used when executing R code.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
+#[ts(export, export_to = "../../shared/src/generated/")]
 pub struct EnvironmentSnapshot {
     pub r_path: String,
     pub working_dir: String,
@@ -156,21 +174,26 @@ pub struct EnvironmentSnapshot {
 }
 
 /// Event emitted to the timeline after execution completes.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
+#[ts(export, export_to = "../../shared/src/generated/")]
 pub struct ExecutionEvent {
     pub event_id: String,
     pub context: ExecutionContext,
     pub blocks: Vec<CodeBlockMetadata>,
     pub result: ExecutionResult,
     pub environment: EnvironmentSnapshot,
+    #[ts(type = "number")]
     pub created_at_ms: u64,
     #[serde(default = "default_run_status")]
     pub status: RunStatus,
     #[serde(default)]
+    #[ts(type = "number")]
     pub started_at_ms: u64,
     #[serde(default)]
+    #[ts(type = "number | null")]
     pub finished_at_ms: Option<u64>,
     #[serde(default)]
+    #[ts(type = "number | null")]
     pub duration_ms: Option<u64>,
 }
 
@@ -179,7 +202,8 @@ pub fn default_run_status() -> RunStatus {
 }
 
 /// Request to execute a tool capability
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
+#[ts(export, export_to = "../../shared/src/generated/")]
 pub struct ToolExecutionRequest {
     pub tool_id: String,
     pub capability_id: String,
@@ -187,7 +211,8 @@ pub struct ToolExecutionRequest {
 }
 
 /// Artifact generated during tool execution
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
+#[ts(export, export_to = "../../shared/src/generated/")]
 pub struct ArtifactInfo {
     pub path: String,
     pub artifact_type: String,
@@ -196,7 +221,8 @@ pub struct ArtifactInfo {
 }
 
 /// Result of tool execution with provenance metadata
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
+#[ts(export, export_to = "../../shared/src/generated/")]
 pub struct ToolExecutionResult {
     pub tool_id: String,
     pub capability_id: String,
@@ -204,13 +230,15 @@ pub struct ToolExecutionResult {
     pub stdout: Option<String>,
     pub stderr: Option<String>,
     pub artifacts: Vec<ArtifactInfo>,
+    #[ts(type = "number")]
     pub execution_time_ms: u64,
     pub error: Option<String>,
 }
 
 /// Status of a run
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
 #[serde(rename_all = "snake_case")]
+#[ts(export, export_to = "../../shared/src/generated/")]
 pub enum RunStatus {
     Queued,
     Running,
@@ -220,14 +248,18 @@ pub enum RunStatus {
 }
 
 /// Summary metadata for a run
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
+#[ts(export, export_to = "../../shared/src/generated/")]
 pub struct RunSummary {
     pub run_id: String,
     pub status: RunStatus,
+    #[ts(type = "number")]
     pub started_at_ms: u64,
     #[serde(default)]
+    #[ts(type = "number | null")]
     pub finished_at_ms: Option<u64>,
     #[serde(default)]
+    #[ts(type = "number | null")]
     pub duration_ms: Option<u64>,
     #[serde(default)]
     pub code: Option<String>,
@@ -244,17 +276,20 @@ pub struct RunSummary {
 }
 
 /// Output chunk streamed during execution
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
+#[ts(export, export_to = "../../shared/src/generated/")]
 pub struct RunOutputChunk {
     pub run_id: String,
     pub stream: RunStream,
     pub chunk: String,
+    #[ts(type = "number")]
     pub at_ms: u64,
 }
 
 /// Stream kind for run output
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
 #[serde(rename_all = "snake_case")]
+#[ts(export, export_to = "../../shared/src/generated/")]
 pub enum RunStream {
     Stdout,
     Stderr,
@@ -348,5 +383,23 @@ mod tests {
         let decoded: ExecutionEvent = serde_json::from_value(value).expect("deserialize");
 
         assert_eq!(decoded, event);
+    }
+
+    #[test]
+    fn export_typescript_bindings() {
+        // This test exports all TypeScript bindings to shared/src/generated/
+        // Export all root types - their dependencies will be exported automatically
+        ExecutionResult::export_all().expect("Failed to export ExecutionResult");
+        ExecutionEvent::export_all().expect("Failed to export ExecutionEvent");
+        ExecutionRequest::export_all().expect("Failed to export ExecutionRequest");
+        RunSummary::export_all().expect("Failed to export RunSummary");
+        RunOutputChunk::export_all().expect("Failed to export RunOutputChunk");
+        ChatMessage::export_all().expect("Failed to export ChatMessage");
+        ToolCall::export_all().expect("Failed to export ToolCall");
+        AIResponse::export_all().expect("Failed to export AIResponse");
+        ToolResult::export_all().expect("Failed to export ToolResult");
+        FileChangeEvent::export_all().expect("Failed to export FileChangeEvent");
+        ToolExecutionRequest::export_all().expect("Failed to export ToolExecutionRequest");
+        ToolExecutionResult::export_all().expect("Failed to export ToolExecutionResult");
     }
 }
