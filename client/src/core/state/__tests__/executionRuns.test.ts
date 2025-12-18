@@ -57,6 +57,16 @@ describe("execution run handling", () => {
 		expect(r2?.success).toBe(true);
 	});
 
+	it("shows code immediately when run starts", () => {
+		const run = baseRun({ run_id: "r-immediate", status: "running", code: "print('hi')" });
+
+		useStore.getState().applyRunStarted(run);
+
+		const entry = useStore.getState().execution.results.find((r) => r.runId === "r-immediate");
+		expect(entry?.code).toBe("print('hi')");
+		expect(entry?.pending).toBe(true);
+	});
+
 	it("appends stdout/stderr chunks to existing run", () => {
 		useStore.getState().applyRunState([baseRun({ run_id: "r-stream", code: "cat('hi')" })]);
 
