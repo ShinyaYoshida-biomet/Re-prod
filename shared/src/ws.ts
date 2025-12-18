@@ -139,7 +139,6 @@ export type ClientMessage =
 type TimelineEventPush = Extract<TimelineMessage, { type: "timeline_event_added" }>;
 
 export type ServerMessage =
-	| { type: "execution_result"; result: ExecutionResultPayload; event: ExecutionEventPayload }
 	| { type: "ai_response"; response: string }
 	| {
 			type: "ai_response_with_tools";

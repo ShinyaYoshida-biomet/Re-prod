@@ -367,10 +367,6 @@ async fn handle_execution_request_body(
             }
 
             let summary = run_summary_from_event(&event);
-            responses.push(WSResponse::ExecutionResult {
-                event: event.clone(),
-                result: event.result.clone(),
-            });
             responses.push(WSResponse::TimelineEventAdded { event: event.clone() });
             responses.push(WSResponse::RunFinished {
                 run: summary,
