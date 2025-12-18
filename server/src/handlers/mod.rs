@@ -203,18 +203,7 @@ async fn handle_ws_request(
         WSRequest::PlotHistoryRestore => handle_plot_history_restore(runtime).await,
         WSRequest::PlotHistoryClear => handle_plot_history_clear(runtime).await,
         WSRequest::RunQuery { limit } => match runtime.run_store.latest(limit) {
-            Ok(runs) => {
-                let mut responses =
-                    common::single_response(WSResponse::RunState { runs: runs.clone() });
-                for run in runs {
-                    if let Ok(chunks) = runtime.run_store.outputs(&run.run_id) {
-                        for chunk in chunks {
-                            responses.push(WSResponse::RunOutput(chunk));
-                        }
-                    }
-                }
-                responses
-            }
+            Ok(runs) => build_run_state_responses(runtime, runs),
             Err(e) => error_response(format!("Run query failed: {}", e)),
         },
         _ => Vec::new(),
@@ -491,3 +480,21 @@ pub(in crate::handlers) async fn build_project_opened_response(
         state: project_state,
     }
 }
+
+fn build_run_state_responses(
+    runtime: &Arc<ProjectRuntime>,
+    runs: Vec<RunSummary>,
+) -> Vec<WSResponse> {
+    let mut responses = common::single_response(WSResponse::RunState {
+        runs: runs.clone(),
+    });
+    for run in runs {
+        if let Ok(chunks) = runtime.run_store.outputs(&run.run_id) {
+            responses.extend(chunks.into_iter().map(WSResponse::RunOutput));
+        } else {
+            tracing::warn!("Failed to load run output for {}", run.run_id);
+        }
+    }
+    responses
+}
+use reprod_core::RunSummary;
