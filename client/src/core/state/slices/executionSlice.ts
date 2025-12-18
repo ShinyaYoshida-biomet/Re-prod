@@ -1,4 +1,4 @@
-import type { ExecutionLogEntry, RunOutputChunk, RunSummary } from "@shared/types";
+import type { ExecutionLogEntry, PlotInfo, RunOutputChunk, RunSummary } from "@shared/types";
 import type { StateCreator } from "zustand";
 
 export interface ExecutionState {
@@ -198,21 +198,25 @@ function runSummaryToLogEntry(run: RunSummary): ExecutionLogEntry {
 		code: run.code ?? "",
 		stdout: "",
 		stderr: run.error ?? "",
-		plots: (run.plots ?? []).map((plot) => ({
-			id: plot.id || plot.filename || `plot-${plot.index}`,
-			path: plot.storage_path || plot.filename,
-			storagePath: plot.storage_path || null,
-			data: plot.base64_data.startsWith("data:")
-				? plot.base64_data
-				: `data:image/png;base64,${plot.base64_data}`,
-			timestamp: plot.timestamp ?? Date.now(),
-			width: plot.width ?? null,
-			height: plot.height ?? null,
-			code: plot.code ?? null,
-		})),
+		plots: (run.plots ?? []).map(mapPlotInfo),
 		timestamp: run.started_at_ms,
 		duration: run.duration_ms ?? 0,
 		success: run.status === "succeeded",
 		pending: run.status === "running" || run.status === "queued",
+	};
+}
+
+function mapPlotInfo(plot: PlotInfo): ExecutionLogEntry["plots"][number] {
+	return {
+		id: plot.id || plot.filename || `plot-${plot.index}`,
+		path: plot.storage_path || plot.filename,
+		storagePath: plot.storage_path || null,
+		data: plot.base64_data.startsWith("data:")
+			? plot.base64_data
+			: `data:image/png;base64,${plot.base64_data}`,
+		timestamp: plot.timestamp ?? Date.now(),
+		width: plot.width ?? null,
+		height: plot.height ?? null,
+		code: plot.code ?? null,
 	};
 }
