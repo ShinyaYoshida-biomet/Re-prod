@@ -21,11 +21,15 @@ function registerHandlers(handlers: Partial<RunEventHandlers>): () => void {
 
 export function setupSocketListeners(): () => void {
 	const store = useStore.getState();
+	const setIsRunningFromExecutionState = (): void => {
+		const hasRunning = useStore.getState().execution.history.some((entry) => entry.pending);
+		store.setIsRunning(hasRunning);
+	};
 
 	// --- Session Control Events ---
 	const offInterrupt = socketService.on("execution_interrupted", (message) => {
 		if (message.type === "execution_interrupted" && message.success) {
-			store.setIsRunning(false);
+			setIsRunningFromExecutionState();
 		}
 	});
 
@@ -51,10 +55,11 @@ export function setupSocketListeners(): () => void {
 		},
 		run_output: (message) => {
 			store.applyRunOutput(message);
+			setIsRunningFromExecutionState();
 		},
 		run_finished: (message) => {
 			store.applyRunFinished(message.run);
-			store.setIsRunning(false);
+			setIsRunningFromExecutionState();
 		},
 	});
 
