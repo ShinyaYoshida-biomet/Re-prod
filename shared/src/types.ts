@@ -170,14 +170,6 @@ export interface ToolCallLog {
 	finishedAt?: number;
 }
 
-export interface AIResponse {
-	message: string;
-	suggestedCode?: string; // Deprecated: use codeBlocks instead
-	codeBlocks?: CodeBlock[];
-	explanation?: string;
-	timestamp: number;
-}
-
 // UI State Types
 export interface LayoutState {
 	editorWidth: number;

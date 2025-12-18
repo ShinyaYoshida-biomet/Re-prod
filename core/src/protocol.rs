@@ -52,6 +52,7 @@ pub struct ChatMessage {
 pub struct ToolCall {
     pub id: String,
     pub name: String,
+    #[ts(type = "any")]
     pub input: serde_json::Value,
 }
 
@@ -207,6 +208,7 @@ pub fn default_run_status() -> RunStatus {
 pub struct ToolExecutionRequest {
     pub tool_id: String,
     pub capability_id: String,
+    #[ts(type = "Record<string, any>")]
     pub parameters: HashMap<String, serde_json::Value>,
 }
 
