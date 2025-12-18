@@ -330,6 +330,8 @@ pub(super) enum WSResponse {
     },
     #[serde(rename = "run_state")]
     RunState { runs: Vec<RunSummary> },
+    #[serde(rename = "run_accepted")]
+    RunAccepted { run_id: String },
     #[serde(rename = "run_started")]
     RunStarted { run: RunSummary },
     #[serde(rename = "run_output")]

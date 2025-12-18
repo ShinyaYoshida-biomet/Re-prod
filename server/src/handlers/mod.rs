@@ -126,8 +126,15 @@ async fn handle_ws_text(
                     return continue_loop;
                 }
 
-                let responses = handle_ws_request(request, state, current_runtime).await;
-                send_responses(socket, responses).await
+                match request {
+                    WSRequest::Execute { request } => {
+                        handle_execution_request_streaming(socket, current_runtime, request).await
+                    }
+                    other => {
+                        let responses = handle_ws_request(other, state, current_runtime).await;
+                        send_responses(socket, responses).await
+                    }
+                }
             }
             Err(error) => {
                 tracing::warn!("Failed to parse WebSocket request: {}", error);
@@ -149,7 +156,6 @@ async fn handle_ws_request(
     runtime: &Arc<ProjectRuntime>,
 ) -> Vec<WSResponse> {
     match request {
-        WSRequest::Execute { request } => handle_execution_request(runtime, request).await,
         WSRequest::AIMessage {
             messages,
             enable_tools,
@@ -210,22 +216,46 @@ async fn handle_ws_request(
     }
 }
 
-async fn handle_execution_request(
+async fn handle_execution_request_streaming(
+    socket: &mut WebSocket,
     runtime: &Arc<ProjectRuntime>,
     request: ExecutionRequest,
-) -> Vec<WSResponse> {
+) -> bool {
     let run_id = Uuid::new_v4().to_string();
     let started_at = common::now_millis() as u64;
     let mut run_summary =
         reprod_core::run_store::new_run_summary(&run_id, started_at, Some(request.code.clone()));
 
     if let Err(e) = runtime.run_store.create(run_summary.clone()) {
-        return error_response(format!("Failed to create run: {}", e));
+        return send_responses(
+            socket,
+            error_response(format!("Failed to create run: {}", e)),
+        )
+        .await;
     }
 
-    let mut responses = common::single_response(WSResponse::RunStarted {
-        run: run_summary.clone(),
-    });
+    let accepted_and_started = vec![
+        WSResponse::RunAccepted {
+            run_id: run_id.clone(),
+        },
+        WSResponse::RunStarted {
+            run: run_summary.clone(),
+        },
+    ];
+    if !send_responses(socket, accepted_and_started).await {
+        return false;
+    }
+
+    let responses = handle_execution_request_body(runtime, request, &mut run_summary).await;
+    send_responses(socket, responses).await
+}
+
+async fn handle_execution_request_body(
+    runtime: &Arc<ProjectRuntime>,
+    request: ExecutionRequest,
+    run_summary: &mut RunSummary,
+) -> Vec<WSResponse> {
+    let mut responses: Vec<WSResponse> = Vec::new();
 
     let executor = runtime.r_executor.lock().await;
     match executor.execute_with_event_with_history(request).await {
@@ -301,7 +331,7 @@ async fn handle_execution_request(
             } else {
                 opts
             };
-            run_summary = run_summary.finalize(opts);
+            *run_summary = run_summary.clone().finalize(opts);
 
             let _ = runtime.run_store.finish(run_summary.clone());
 
@@ -325,7 +355,7 @@ async fn handle_execution_request(
         Err(e) => {
             let finished_at = common::now_millis() as u64;
             run_summary.has_stderr = true;
-            run_summary = run_summary.finalize(
+            *run_summary = run_summary.clone().finalize(
                 reprod_core::run_store::FinalizeOpts::new(RunStatus::Failed, finished_at)
                     .with_error(e.to_string()),
             );

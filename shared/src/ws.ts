@@ -208,6 +208,7 @@ export type ServerMessage =
 			error?: string | null;
 	  }
 	| { type: "run_state"; runs: RunSummary[] }
+	| { type: "run_accepted"; run_id: string }
 	| { type: "run_started"; run: RunSummary }
 	| ({ type: "run_output" } & RunOutputChunk)
 	| { type: "run_finished"; run: RunSummary }
