@@ -485,9 +485,7 @@ fn build_run_state_responses(
     runtime: &Arc<ProjectRuntime>,
     runs: Vec<RunSummary>,
 ) -> Vec<WSResponse> {
-    let mut responses = common::single_response(WSResponse::RunState {
-        runs: runs.clone(),
-    });
+    let mut responses = common::single_response(WSResponse::RunState { runs: runs.clone() });
     for run in runs {
         if let Ok(chunks) = runtime.run_store.outputs(&run.run_id) {
             responses.extend(chunks.into_iter().map(WSResponse::RunOutput));

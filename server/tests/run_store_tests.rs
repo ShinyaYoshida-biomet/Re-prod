@@ -19,9 +19,10 @@ fn creates_and_lists_runs() {
 
     // finish
     let finished = store
-        .finish(run.finalize(
-            reprod_core::run_store::FinalizeOpts::new(RunStatus::Succeeded, 20),
-        ))
+        .finish(run.finalize(reprod_core::run_store::FinalizeOpts::new(
+            RunStatus::Succeeded,
+            20,
+        )))
         .expect("finish run");
     assert_eq!(finished.status, RunStatus::Succeeded);
     assert_eq!(finished.duration_ms, Some(10));
