@@ -1,7 +1,7 @@
 use std::{path::PathBuf, sync::Arc, time::Instant};
 
 use crate::executor::command_runner::{CommandRunner, ProcessCommandRunner};
-use crate::executor::output_parser::parse_command_output;
+use crate::executor::output_parser::{is_internal_line, parse_command_output};
 use crate::graphics::plot_capture::PlotCapture;
 use crate::plot_history::{
     PlotHistoryEntry, PlotHistoryManager, DEFAULT_PLOT_HEIGHT, DEFAULT_PLOT_WIDTH,
@@ -123,6 +123,9 @@ impl RExecutor {
                 &self.working_dir,
                 &mut |line: String, is_stdout: bool| {
                     let at_ms = now_ms();
+                    if is_internal_line(&line) {
+                        return;
+                    }
                     if is_stdout {
                         streamed_stdout.push(line.clone());
                         streamed_chunks.push(RunOutputChunk {
