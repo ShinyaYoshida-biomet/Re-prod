@@ -1,6 +1,23 @@
+import type { ServerMessage } from "shared";
 import { useStore } from "@/core/state/store";
 import { socketService } from "@/services/socket";
 import { refreshTimelineData } from "@/services/sessionPersistence";
+
+type RunEventHandlers = {
+	run_state: (message: Extract<ServerMessage, { type: "run_state" }>) => void;
+	run_started: (message: Extract<ServerMessage, { type: "run_started" }>) => void;
+	run_output: (message: Extract<ServerMessage, { type: "run_output" }>) => void;
+	run_finished: (message: Extract<ServerMessage, { type: "run_finished" }>) => void;
+};
+
+function registerHandlers(handlers: Partial<RunEventHandlers>): () => void {
+	const unsubs = Object.entries(handlers).map(([type, fn]) =>
+		socketService.on(type as keyof RunEventHandlers, (message) => fn?.(message as never)),
+	);
+	return () => {
+		unsubs.forEach((off) => off());
+	};
+}
 
 export function setupSocketListeners(): () => void {
 	const store = useStore.getState();
@@ -20,34 +37,25 @@ export function setupSocketListeners(): () => void {
 		}
 	});
 
-	const offRunState = socketService.on("run_state", (message) => {
-		if (message.type === "run_state") {
+	const offRunEvents = registerHandlers({
+		run_state: (message) => {
 			store.applyRunState(message.runs);
 			const hasRunning = message.runs.some(
 				(run) => run.status === "running" || run.status === "queued",
 			);
 			store.setIsRunning(hasRunning);
-		}
-	});
-
-	const offRunStarted = socketService.on("run_started", (message) => {
-		if (message.type === "run_started") {
+		},
+		run_started: (message) => {
 			store.applyRunStarted(message.run);
 			store.setIsRunning(true);
-		}
-	});
-
-	const offRunOutput = socketService.on("run_output", (message) => {
-		if (message.type === "run_output") {
+		},
+		run_output: (message) => {
 			store.applyRunOutput(message);
-		}
-	});
-
-	const offRunFinished = socketService.on("run_finished", (message) => {
-		if (message.type === "run_finished") {
+		},
+		run_finished: (message) => {
 			store.applyRunFinished(message.run);
 			store.setIsRunning(false);
-		}
+		},
 	});
 
 	// --- Plot History Events ---
@@ -99,10 +107,7 @@ export function setupSocketListeners(): () => void {
 	return () => {
 		offInterrupt();
 		offRestart();
-		offRunState();
-		offRunStarted();
-		offRunOutput();
-		offRunFinished();
+		offRunEvents();
 		offState();
 		offUpdate();
 		offDeleted();
