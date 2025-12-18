@@ -154,6 +154,7 @@ mod tests {
         ExecutionResult, PlotInfo,
     };
     use crate::timeline::TimelineSink;
+    use crate::RunStatus;
 
     fn build_event(event_id: &str, created_at_ms: u64) -> ExecutionEvent {
         ExecutionEvent {
@@ -198,6 +199,10 @@ mod tests {
                 temp_dir: "/tmp/reprod".to_string(),
             },
             created_at_ms,
+            status: RunStatus::Succeeded,
+            started_at_ms: created_at_ms,
+            finished_at_ms: Some(created_at_ms),
+            duration_ms: Some(0),
         }
     }
 

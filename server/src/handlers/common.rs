@@ -9,8 +9,8 @@ use reprod_core::{
     fs::FileSystemEvent,
     plot_history::PlotHistoryEntry,
     project::ProjectRecord,
-    AIResponse, ChatMessage, Config, ExecutionEvent, ExecutionRequest, ExecutionResult,
-    RunOutputChunk, RunSummary, ToolExecutor, ToolManifest, ToolRegistry,
+    AIResponse, ChatMessage, Config, ExecutionEvent, ExecutionRequest, RunOutputChunk, RunSummary,
+    ToolExecutor, ToolManifest, ToolRegistry,
 };
 use serde_json::Value;
 use tokio::sync::Mutex;
@@ -195,11 +195,6 @@ pub(super) enum WSRequest {
 #[derive(serde::Serialize)]
 #[serde(tag = "type")]
 pub(super) enum WSResponse {
-    #[serde(rename = "execution_result")]
-    ExecutionResult {
-        result: ExecutionResult,
-        event: ExecutionEvent,
-    },
     #[serde(rename = "ai_response")]
     AIResponse { response: String },
     #[serde(rename = "ai_response_with_tools")]

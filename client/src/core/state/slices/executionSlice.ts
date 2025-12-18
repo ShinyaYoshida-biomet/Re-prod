@@ -152,29 +152,14 @@ function upsertRunEntry(list: ExecutionLogEntry[], entry: ExecutionLogEntry): Ex
 
 function updateRunOutput(list: ExecutionLogEntry[], chunk: RunOutputChunk): ExecutionLogEntry[] {
 	const idx = list.findIndex((r) => r.runId === chunk.run_id);
-	if (idx === -1) {
-		const entry: ExecutionLogEntry = {
-			runId: chunk.run_id,
-			code: "",
-			stdout: chunk.stream === "stdout" ? chunk.chunk : "",
-			stderr: chunk.stream === "stderr" ? chunk.chunk : "",
-			plots: [],
-			timestamp: chunk.at_ms,
-			duration: 0,
-			success: false,
-			pending: true,
-		};
-		return [...list, entry];
-	}
+	if (idx === -1) return list;
 	const next = [...list];
 	const entry = { ...next[idx] };
 	if (chunk.stream === "stdout") {
 		entry.stdout = [entry.stdout, chunk.chunk].filter(Boolean).join("\n");
-		entry.pending = true;
 	}
 	if (chunk.stream === "stderr") {
 		entry.stderr = [entry.stderr, chunk.chunk].filter(Boolean).join("\n");
-		entry.pending = true;
 	}
 	next[idx] = entry;
 	return next;

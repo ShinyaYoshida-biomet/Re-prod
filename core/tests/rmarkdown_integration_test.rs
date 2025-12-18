@@ -4,7 +4,7 @@ use reprod_core::export::{
 };
 use reprod_core::protocol::{
     CodeBlockKind, CodeBlockMetadata, EnvironmentSnapshot, ExecutionActor, ExecutionContext,
-    ExecutionEvent, ExecutionResult, ExecutionSource, PlotInfo,
+    ExecutionEvent, ExecutionResult, ExecutionSource, PlotInfo, RunStatus,
 };
 
 /// Create a realistic execution event for testing.
@@ -74,6 +74,10 @@ fn create_test_event(
             temp_dir: "/tmp/reprod-test".to_string(),
         },
         created_at_ms: timestamp + 100,
+        status: RunStatus::Succeeded,
+        started_at_ms: timestamp,
+        finished_at_ms: Some(timestamp + 200),
+        duration_ms: Some(200),
     }
 }
 

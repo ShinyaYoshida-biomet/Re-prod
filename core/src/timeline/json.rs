@@ -2,7 +2,7 @@ use crate::protocol::{ExecutionActor, ExecutionEvent, ExecutionSource};
 use crate::timeline::{
     SortOrder, TimelineFilters, TimelineQuery, TimelineResponse, TimelineSink, TimelineStats,
 };
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
@@ -322,6 +322,60 @@ impl JsonTimeline {
 
         Ok(count)
     }
+
+    /// Update an existing event by event_id.
+    pub fn update(&self, updated_event: ExecutionEvent) -> Result<()> {
+        let mut records = self.read_records()?;
+        let mut found = false;
+        for record in records.iter_mut() {
+            if record.event_id == updated_event.event_id {
+                *record = Self::create_record(updated_event.clone());
+                found = true;
+                break;
+            }
+        }
+        if !found {
+            return Err(anyhow!("Event not found: {}", updated_event.event_id));
+        }
+        self.rewrite_all(&records)
+    }
+
+    /// Retrieve a single event by id.
+    pub fn get(&self, event_id: &str) -> Result<Option<ExecutionEvent>> {
+        let records = self.read_records()?;
+        Ok(records
+            .into_iter()
+            .find(|r| r.event_id == event_id)
+            .map(|r| r.event))
+    }
+
+    fn rewrite_all(&self, records: &[TimelineRecord]) -> Result<()> {
+        let mut writer = self.writer.lock().expect("timeline lock poisoned");
+        *writer = None;
+
+        {
+            let file = OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(&self.file_path)
+                .context("Failed to rewrite timeline file")?;
+            let mut buf = std::io::BufWriter::new(file);
+            for record in records {
+                let json = serde_json::to_string(record)?;
+                writeln!(buf, "{}", json)?;
+            }
+            buf.flush()?;
+        }
+
+        let file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&self.file_path)
+            .context("Failed to reopen timeline file")?;
+        *writer = Some(file);
+        Ok(())
+    }
 }
 
 #[async_trait::async_trait]
@@ -346,7 +400,7 @@ mod tests {
     use super::*;
     use crate::protocol::{
         CodeBlockKind, CodeBlockMetadata, EnvironmentSnapshot, ExecutionActor, ExecutionContext,
-        ExecutionEvent, ExecutionResult, ExecutionSource, PlotInfo,
+        ExecutionEvent, ExecutionResult, ExecutionSource, PlotInfo, RunStatus,
     };
 
     fn create_test_event(
@@ -408,6 +462,14 @@ mod tests {
                 temp_dir: "/tmp/reprod".into(),
             },
             created_at_ms,
+            status: if has_error {
+                RunStatus::Failed
+            } else {
+                RunStatus::Succeeded
+            },
+            started_at_ms: created_at_ms,
+            finished_at_ms: Some(created_at_ms),
+            duration_ms: Some(0),
         }
     }
 
@@ -613,5 +675,33 @@ mod tests {
 
         assert_eq!(response.events.len(), 1);
         assert_eq!(response.events[0].event_id, "evt-1");
+    }
+
+    #[tokio::test]
+    async fn update_and_get_rewrite_event() {
+        let timeline = JsonTimeline::new_in_memory().expect("timeline");
+        let mut event = create_test_event(
+            "evt-update",
+            ExecutionActor::User,
+            ExecutionSource::Cell,
+            3,
+            false,
+            false,
+            "a <- 1",
+        );
+        timeline.record(event.clone()).await.expect("record");
+
+        event.result.output = "changed".into();
+        event.status = RunStatus::Failed;
+        event.finished_at_ms = Some(4);
+        event.duration_ms = Some(1);
+
+        timeline.update(event.clone()).expect("update");
+
+        let fetched = timeline.get("evt-update").expect("get").expect("exists");
+        assert_eq!(fetched.result.output, "changed");
+        assert_eq!(fetched.status, RunStatus::Failed);
+        assert_eq!(fetched.finished_at_ms, Some(4));
+        assert_eq!(fetched.duration_ms, Some(1));
     }
 }

@@ -100,7 +100,7 @@ mod tests {
     use super::*;
     use crate::protocol::{
         CodeBlockKind, CodeBlockMetadata, EnvironmentSnapshot, ExecutionActor, ExecutionContext,
-        ExecutionEvent, ExecutionResult, ExecutionSource, PlotInfo,
+        ExecutionEvent, ExecutionResult, ExecutionSource, PlotInfo, RunStatus,
     };
 
     #[tokio::test]
@@ -149,6 +149,10 @@ mod tests {
                 temp_dir: "/tmp/reprod".into(),
             },
             created_at_ms: 2,
+            status: RunStatus::Succeeded,
+            started_at_ms: 1,
+            finished_at_ms: Some(2),
+            duration_ms: Some(1),
         };
 
         timeline
