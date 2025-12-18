@@ -17,7 +17,6 @@ export interface ExecutionState {
 	clearExecutionResults: () => void;
 	setCurrentCell: (cellIndex: number | undefined) => void;
 	resetExecutionState: () => void;
-	loadExecutionHistory: (history: ExecutionLogEntry[]) => void;
 }
 
 export const createExecutionSlice: StateCreator<ExecutionState> = (set) => ({
@@ -116,22 +115,6 @@ export const createExecutionSlice: StateCreator<ExecutionState> = (set) => ({
 				currentCell: undefined,
 			},
 		})),
-	loadExecutionHistory: (history) =>
-		set(() => {
-			const normalized = history.map((entry) => ({
-				...entry,
-				code: entry.code ?? "",
-				pending: entry.pending ?? false,
-			}));
-			return {
-				execution: {
-					isRunning: false,
-					results: normalized.slice(-10),
-					history: normalized,
-					currentCell: undefined,
-				},
-			};
-		}),
 });
 
 function runSummaryToLogEntry(run: RunSummary): ExecutionLogEntry {
