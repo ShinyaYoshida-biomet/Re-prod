@@ -34,7 +34,7 @@ export function useEditorExecution({ editorRef, cells }: UseEditorExecutionProps
 	const editorFilepath = useStore((state) => state.editor.filepath);
 	const cursorLine = useStore((state) => state.editor.cursorPosition.line);
 	const setIsRunning = useStore((state) => state.setIsRunning);
-	const addExecutionResult = useStore((state) => state.addExecutionResult);
+	const appendExecutionEntry = useStore((state) => state.appendExecutionEntry);
 
 	const [executingCellIndex, setExecutingCellIndex] = useState<number | null>(null);
 
@@ -59,13 +59,13 @@ export function useEditorExecution({ editorRef, cells }: UseEditorExecutionProps
 					error instanceof ExecutionServiceError
 						? error.message
 						: "Execution failed due to an unexpected error.";
-				addExecutionResult(normalizeFailure(message, target.code));
+				appendExecutionEntry(normalizeFailure(message, target.code));
 				setIsRunning(false);
 			} finally {
 				setExecutingCellIndex(null);
 			}
 		},
-		[addExecutionResult, cells, editorContent, editorFilepath, setIsRunning],
+		[appendExecutionEntry, cells, editorContent, editorFilepath, setIsRunning],
 	);
 
 	const handleRunAll = useCallback(() => {

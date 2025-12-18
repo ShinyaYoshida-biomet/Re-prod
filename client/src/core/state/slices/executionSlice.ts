@@ -9,13 +9,11 @@ export interface ExecutionState {
 		currentCell: number | undefined;
 	};
 	setIsRunning: (isRunning: boolean) => void;
-	addPendingExecution: (code: string) => void;
-	addExecutionResult: (result: ExecutionLogEntry) => void;
+	appendExecutionEntry: (entry: ExecutionLogEntry) => void;
 	applyRunState: (runs: RunSummary[]) => void;
 	applyRunStarted: (run: RunSummary) => void;
 	applyRunOutput: (chunk: RunOutputChunk) => void;
 	applyRunFinished: (run: RunSummary) => void;
-	replacePendingExecution: (result: ExecutionLogEntry) => void;
 	clearExecutionResults: () => void;
 	setCurrentCell: (cellIndex: number | undefined) => void;
 	resetExecutionState: () => void;
@@ -33,49 +31,14 @@ export const createExecutionSlice: StateCreator<ExecutionState> = (set) => ({
 		set((state) => ({
 			execution: { ...state.execution, isRunning },
 		})),
-	addPendingExecution: (code) =>
+	appendExecutionEntry: (entry) =>
 		set((state) => {
-			const entry: ExecutionLogEntry = {
-				runId: undefined,
-				code,
-				stdout: "",
-				stderr: "",
-				plots: [],
-				timestamp: Date.now(),
-				duration: 0,
-				success: true,
-				pending: true,
-			};
+			const next = { ...entry, pending: entry.pending ?? false };
 			return {
 				execution: {
 					...state.execution,
-					results: [...state.execution.results, entry],
-					history: [...state.execution.history, entry],
-				},
-			};
-		}),
-	addExecutionResult: (result) =>
-		set((state) => {
-			const upsert = (list: ExecutionLogEntry[]): ExecutionLogEntry[] => {
-				if (result.runId) {
-					const idx = list.findIndex((entry) => entry.runId === result.runId);
-					if (idx !== -1) {
-						const next = [...list];
-						next[idx] = { ...next[idx], ...result, pending: false };
-						return next;
-					}
-				}
-				return [...list, { ...result, pending: false }];
-			};
-
-			const nextResults = upsert(state.execution.results);
-			const nextHistory = upsert(state.execution.history);
-
-			return {
-				execution: {
-					...state.execution,
-					results: nextResults.slice(-10),
-					history: nextHistory,
+					results: [...state.execution.results, next].slice(-10),
+					history: [...state.execution.history, next],
 				},
 			};
 		}),
@@ -191,34 +154,6 @@ export const createExecutionSlice: StateCreator<ExecutionState> = (set) => ({
 					...state.execution,
 					results: upsert(state.execution.results).slice(-10),
 					history: upsert(state.execution.history),
-				},
-			};
-		}),
-	replacePendingExecution: (result) =>
-		set((state) => {
-			const normalized = { ...result, pending: false };
-			const replace = (list: ExecutionLogEntry[]): ExecutionLogEntry[] => {
-				if (normalized.runId) {
-					const byId = list.findIndex((entry) => entry.runId === normalized.runId);
-					if (byId !== -1) {
-						const next = [...list];
-						next[byId] = { ...next[byId], ...normalized };
-						return next;
-					}
-				}
-				const idx = list.findIndex((entry) => entry.pending);
-				if (idx === -1) {
-					return [...list, normalized];
-				}
-				const next = [...list];
-				next[idx] = normalized;
-				return next;
-			};
-			return {
-				execution: {
-					...state.execution,
-					results: replace(state.execution.results).slice(-10),
-					history: replace(state.execution.history),
 				},
 			};
 		}),
