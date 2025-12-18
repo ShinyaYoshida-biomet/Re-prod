@@ -321,7 +321,7 @@ mod tests {
     use super::*;
     use crate::protocol::{
         CodeBlockKind, CodeBlockMetadata, EnvironmentSnapshot, ExecutionActor, ExecutionContext,
-        ExecutionResult, ExecutionSource,
+        ExecutionResult, ExecutionSource, RunStatus,
     };
 
     fn create_test_bundle() -> ReproductionBundle {
@@ -356,6 +356,10 @@ mod tests {
                 temp_dir: "/tmp/reprod".to_string(),
             },
             created_at_ms: 1699200001000,
+            status: RunStatus::Succeeded,
+            started_at_ms: 1699200000000,
+            finished_at_ms: Some(1699200001000),
+            duration_ms: Some(1000),
         };
 
         ReproductionBundle::from_events(vec![event])

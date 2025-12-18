@@ -781,7 +781,7 @@ mod tests {
     use super::*;
     use crate::protocol::{
         CodeBlockKind, CodeBlockMetadata, EnvironmentSnapshot, ExecutionContext, ExecutionResult,
-        ExecutionSource, PlotInfo,
+        ExecutionSource, PlotInfo, RunStatus,
     };
 
     fn create_test_event(event_id: &str, actor: ExecutionActor, has_plot: bool) -> ExecutionEvent {
@@ -831,6 +831,10 @@ mod tests {
                 temp_dir: "/tmp/reprod".to_string(),
             },
             created_at_ms: 1699200001000,
+            status: RunStatus::Succeeded,
+            started_at_ms: 1699200000000,
+            finished_at_ms: Some(1699200001000),
+            duration_ms: Some(1000),
         }
     }
 

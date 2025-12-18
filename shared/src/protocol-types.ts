@@ -65,6 +65,10 @@ export interface ExecutionEvent {
 	result: ExecutionResult;
 	environment: EnvironmentSnapshot;
 	created_at_ms: number;
+	status?: RunStatus;
+	started_at_ms?: number;
+	finished_at_ms?: number | null;
+	duration_ms?: number | null;
 }
 
 export interface ChatMessage {

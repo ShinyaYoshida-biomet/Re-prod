@@ -164,6 +164,18 @@ pub struct ExecutionEvent {
     pub result: ExecutionResult,
     pub environment: EnvironmentSnapshot,
     pub created_at_ms: u64,
+    #[serde(default = "default_run_status")]
+    pub status: RunStatus,
+    #[serde(default)]
+    pub started_at_ms: u64,
+    #[serde(default)]
+    pub finished_at_ms: Option<u64>,
+    #[serde(default)]
+    pub duration_ms: Option<u64>,
+}
+
+pub fn default_run_status() -> RunStatus {
+    RunStatus::Succeeded
 }
 
 /// Request to execute a tool capability
@@ -326,6 +338,10 @@ mod tests {
                 temp_dir: "/tmp/reprod".into(),
             },
             created_at_ms: 1_706_000_123_500,
+            status: RunStatus::Succeeded,
+            started_at_ms: 1_706_000_123_000,
+            finished_at_ms: Some(1_706_000_123_500),
+            duration_ms: Some(500),
         };
 
         let value = serde_json::to_value(&event).expect("serialize");
