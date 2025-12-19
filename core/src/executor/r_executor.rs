@@ -12,7 +12,7 @@ use crate::{
 };
 use anyhow::Result;
 use tokio::fs;
-use tokio::sync::Mutex as AsyncMutex;
+use tokio::sync::{mpsc, Mutex as AsyncMutex};
 use tracing::info;
 use uuid::Uuid;
 
@@ -79,6 +79,33 @@ impl RExecutor {
         Vec<PlotHistoryEntry>,
         Vec<RunOutputChunk>,
     )> {
+        self.execute_with_event_with_history_internal(request, None, None)
+            .await
+    }
+
+    pub async fn execute_with_event_with_history_streaming(
+        &self,
+        request: ExecutionRequest,
+        run_id: &str,
+        output_tx: mpsc::UnboundedSender<RunOutputChunk>,
+    ) -> Result<(ExecutionResult, ExecutionEvent, Vec<PlotHistoryEntry>)> {
+        let (result, event, history, _) = self
+            .execute_with_event_with_history_internal(request, Some(run_id), Some(output_tx))
+            .await?;
+        Ok((result, event, history))
+    }
+
+    async fn execute_with_event_with_history_internal(
+        &self,
+        request: ExecutionRequest,
+        run_id: Option<&str>,
+        output_tx: Option<mpsc::UnboundedSender<RunOutputChunk>>,
+    ) -> Result<(
+        ExecutionResult,
+        ExecutionEvent,
+        Vec<PlotHistoryEntry>,
+        Vec<RunOutputChunk>,
+    )> {
         let start = Instant::now();
 
         let mut blocks = ensure_blocks(&request);
@@ -116,6 +143,7 @@ impl RExecutor {
         let mut streamed_stderr: Vec<String> = Vec::new();
 
         let mut streamed_chunks: Vec<RunOutputChunk> = Vec::new();
+        let run_id = run_id.map(str::to_string);
 
         let command_output = self
             .command_runner
@@ -128,22 +156,25 @@ impl RExecutor {
                     if is_internal_line(&line) {
                         return;
                     }
+                    let chunk = RunOutputChunk {
+                        run_id: run_id.clone().unwrap_or_default(),
+                        stream: if is_stdout {
+                            RunStream::Stdout
+                        } else {
+                            RunStream::Stderr
+                        },
+                        chunk: line.clone(),
+                        at_ms,
+                    };
+                    if let Some(tx) = output_tx.as_ref() {
+                        let _ = tx.send(chunk.clone());
+                    }
                     if is_stdout {
                         streamed_stdout.push(line.clone());
-                        streamed_chunks.push(RunOutputChunk {
-                            run_id: String::new(), // filled by caller
-                            stream: RunStream::Stdout,
-                            chunk: line,
-                            at_ms,
-                        });
+                        streamed_chunks.push(chunk);
                     } else {
                         streamed_stderr.push(line.clone());
-                        streamed_chunks.push(RunOutputChunk {
-                            run_id: String::new(), // filled by caller
-                            stream: RunStream::Stderr,
-                            chunk: line,
-                            at_ms,
-                        });
+                        streamed_chunks.push(chunk);
                     }
                 },
             )

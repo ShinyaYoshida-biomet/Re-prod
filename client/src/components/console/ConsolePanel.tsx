@@ -37,6 +37,11 @@ export function ConsolePanel({ view }: ConsolePanelProps): JSX.Element {
 			<div className="panel-content console-content">
 				{view === "console" && (
 					<div className="console-output">
+						{execution.lastError && (
+							<div className="console-error-banner" role="alert">
+								{execution.lastError}
+							</div>
+						)}
 						{execution.results.length === 0 ? (
 							<div className="console-welcome">
 								<p>Console ready. Run R code to see output here.</p>

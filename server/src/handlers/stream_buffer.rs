@@ -37,11 +37,19 @@ impl StreamBuffer {
             }
         }
 
-        let error = if stderr.is_empty() { None } else { Some(stderr) };
+        let error = if stderr.is_empty() {
+            None
+        } else {
+            Some(stderr)
+        };
         (stdout, error)
     }
 
     pub fn clear(&mut self) {
         self.chunks.clear();
+    }
+
+    pub fn remove_run(&mut self, run_id: &str) {
+        self.chunks.remove(run_id);
     }
 }

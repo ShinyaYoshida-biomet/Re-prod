@@ -10,6 +10,7 @@ use std::sync::Arc;
 #[async_trait]
 pub trait ExecutionRepository: Send + Sync {
     async fn create_run(&self, event: ExecutionEvent) -> Result<ExecutionEvent>;
+    async fn update_run(&self, event: ExecutionEvent) -> Result<ExecutionEvent>;
     async fn finish_run(&self, event: ExecutionEvent) -> Result<ExecutionEvent>;
     async fn latest_runs(&self, limit: usize) -> Result<Vec<ExecutionEvent>>;
     async fn get_run(&self, event_id: &str) -> Result<Option<ExecutionEvent>>;
@@ -40,6 +41,11 @@ impl TimelineExecutionRepository {
 impl ExecutionRepository for TimelineExecutionRepository {
     async fn create_run(&self, event: ExecutionEvent) -> Result<ExecutionEvent> {
         self.timeline.record(event.clone()).await?;
+        Ok(event)
+    }
+
+    async fn update_run(&self, event: ExecutionEvent) -> Result<ExecutionEvent> {
+        self.timeline.update(event.clone())?;
         Ok(event)
     }
 
