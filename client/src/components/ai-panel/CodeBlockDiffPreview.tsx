@@ -1,5 +1,5 @@
 import { DiffEditor } from "@monaco-editor/react";
-import type { CodeBlock, CodeRange } from "@shared/types";
+import type { CodeBlock, CodeRange } from "@/types";
 import { useMemo } from "react";
 import { useStore } from "@/core";
 

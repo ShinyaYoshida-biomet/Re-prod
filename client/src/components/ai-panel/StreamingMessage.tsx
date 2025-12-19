@@ -1,4 +1,4 @@
-import type { AIMessage, CodeBlock } from "@shared/types";
+import type { AIMessage, CodeBlock } from "@/types";
 import { AIPlanCard } from "./AIPlanCard";
 import { CodeBlockWithApply } from "./CodeBlockWithApply";
 import { ToolCallLog } from "./ToolCallLog";

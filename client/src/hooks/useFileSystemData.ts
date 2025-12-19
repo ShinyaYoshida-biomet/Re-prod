@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import type { ExtractServerMessage } from "shared";
+import type { ExtractServerMessage } from "@/types";
 import { useFileSystemStore } from "@/core/fileSystemStore";
 import { socketService } from "@/services/socket";
 

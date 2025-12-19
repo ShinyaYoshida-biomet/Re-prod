@@ -1,4 +1,4 @@
-import type { ExportRMarkdownRequestPayload, ExportRMarkdownResponsePayload } from "shared";
+import type { ExportRMarkdownRequestPayload, ExportRMarkdownResponsePayload } from "@/types";
 import type { DataTransport } from "@/repositories/core/DataTransport";
 import { ExportRepository, ExportRepositoryError } from "@/repositories/ExportRepository";
 import { WebSocketTransport } from "@/repositories/core/WebSocketTransport";

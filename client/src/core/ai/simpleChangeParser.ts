@@ -1,4 +1,4 @@
-import type { SimpleCodeChange } from "@shared/types";
+import type { SimpleCodeChange } from "@/types";
 
 const CODE_FENCE_REGEX = /```[a-zA-Z0-9_-]*\n([\s\S]*?)```/g;
 

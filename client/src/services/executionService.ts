@@ -1,4 +1,4 @@
-import type { ExecutionRequestPayload, RunSummary } from "@shared/types";
+import type { ExecutionRequestPayload, RunSummary } from "@/types";
 import type { DataTransport } from "@/repositories/core/DataTransport";
 import { ExecutionRepository } from "@/repositories/ExecutionRepository";
 import { WebSocketTransport } from "@/repositories/core/WebSocketTransport";

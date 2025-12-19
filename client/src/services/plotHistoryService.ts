@@ -1,4 +1,4 @@
-import type { PlotHistoryStatePayload } from "shared";
+import type { PlotHistoryStatePayload } from "@/types";
 import type { DataTransport } from "@/repositories/core/DataTransport";
 import { PlotHistoryRepository } from "@/repositories/PlotHistoryRepository";
 import { WebSocketTransport } from "@/repositories/core/WebSocketTransport";

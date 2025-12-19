@@ -1,11 +1,9 @@
+// Import protocol types
 import type {
 	ArtifactInfo as ProtocolArtifactInfo,
 	ChatMessage as ProtocolChatMessage,
 	CodeBlockKind as ProtocolCodeBlockKind,
 	CodeBlockMetadata as ProtocolCodeBlockMetadata,
-	RunOutputChunk as ProtocolRunOutputChunk,
-	RunStatus as ProtocolRunStatus,
-	RunSummary as ProtocolRunSummary,
 	EnvironmentSnapshot as ProtocolEnvironmentSnapshot,
 	ExecutionActor as ProtocolExecutionActor,
 	ExecutionContext as ProtocolExecutionContext,
@@ -15,9 +13,12 @@ import type {
 	ExecutionSource as ProtocolExecutionSource,
 	FileChangeEvent as ProtocolFileChangeEvent,
 	PlotInfo as ProtocolPlotInfo,
+	RunOutputChunk as ProtocolRunOutputChunk,
+	RunStatus as ProtocolRunStatus,
+	RunSummary as ProtocolRunSummary,
 	ToolExecutionRequest as ProtocolToolExecutionRequest,
 	ToolExecutionResult as ProtocolToolExecutionResult,
-} from "./protocol-types";
+} from "./protocol";
 
 // Protocol aliases to keep existing payload naming conventions in the client.
 export type ExecutionSource = ProtocolExecutionSource;
@@ -168,14 +169,6 @@ export interface ToolCallLog {
 	error?: string;
 	startedAt?: number;
 	finishedAt?: number;
-}
-
-export interface AIResponse {
-	message: string;
-	suggestedCode?: string; // Deprecated: use codeBlocks instead
-	codeBlocks?: CodeBlock[];
-	explanation?: string;
-	timestamp: number;
 }
 
 // UI State Types

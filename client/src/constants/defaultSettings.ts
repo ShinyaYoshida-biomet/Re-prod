@@ -3,7 +3,7 @@
  * Centralized default values for app configuration
  */
 
-import type { AppSettings } from "@shared/types";
+import type { AppSettings } from "@/types";
 
 export const DEFAULT_SETTINGS: AppSettings = {
 	autoRun: false,

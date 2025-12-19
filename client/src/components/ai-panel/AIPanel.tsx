@@ -1,4 +1,4 @@
-import type { AIMode } from "@shared/types";
+import type { AIMode } from "@/types";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { IconSend, IconSquare } from "@/components/shared";
 import { useAIConversation } from "@/hooks/useAIConversation";

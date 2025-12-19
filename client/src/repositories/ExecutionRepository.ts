@@ -1,4 +1,4 @@
-import type { ExecutionRequestPayload, RunOutputChunk, RunSummary } from "@shared/types";
+import type { ExecutionRequestPayload, RunOutputChunk, RunSummary } from "@/types";
 import type { DataTransport } from "./core/DataTransport";
 import { executionMessages } from "@/services/messageBuilders";
 

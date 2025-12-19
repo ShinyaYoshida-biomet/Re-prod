@@ -1,4 +1,9 @@
-import type { ClientMessage, ExtractServerMessage, ServerMessage, ServerMessageType } from "shared";
+import type {
+	ClientMessage,
+	ExtractServerMessage,
+	ServerMessage,
+	ServerMessageType,
+} from "@/types";
 
 export class TransportError extends Error {
 	constructor(message: string) {

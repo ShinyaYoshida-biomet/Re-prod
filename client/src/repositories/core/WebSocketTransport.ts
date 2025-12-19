@@ -1,4 +1,4 @@
-import type { ExtractServerMessage, ServerMessage, ServerMessageType } from "shared";
+import type { ExtractServerMessage, ServerMessage, ServerMessageType } from "@/types";
 import type { socketService } from "@/services/socket";
 import { RemoteError, TransportError, type DataTransport } from "./DataTransport";
 

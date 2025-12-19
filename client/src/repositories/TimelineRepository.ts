@@ -1,4 +1,4 @@
-import type { TimelineQuery, TimelineResponse, TimelineStats } from "shared";
+import type { TimelineQuery, TimelineResponse, TimelineStats } from "@/types";
 import type { DataTransport } from "./core/DataTransport";
 import { timelineMessages } from "@/services/messageBuilders";
 

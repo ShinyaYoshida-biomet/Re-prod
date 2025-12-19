@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import type { ProjectRecord } from "shared";
+import type { ProjectRecord } from "@/types";
 
 import { useStore } from "@/core";
 import { useFileSystemStore } from "@/core/fileSystemStore";

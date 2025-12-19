@@ -31,8 +31,7 @@ Re-prod is a cross-platform IDE for R and scientific analysis, built as a Rust�
 
 ### Frontend
 
-- `client/` is a React + TypeScript + Vite application that renders a Monaco-powered editor, and other panes.
-- `shared/` exports TypeScript types and constants shared across the client, server, and scripts.
+- `client/` is a React + TypeScript + Vite application that renders a Monaco-powered editor, and other panes. All TypeScript types are located in `client/src/types/`, with protocol types auto-generated from Rust via ts-rs.
 
 ## Prerequisites
 
@@ -117,7 +116,7 @@ Re-prod/
 ├── desktop/                   # Tauri desktop shell + commands
 ├── server/                    # Axum HTTP/WebSocket API
 ├── client/                    # React + TypeScript web frontend
-├── shared/                    # Shared TypeScript metadata
+│   └── src/types/             # TypeScript types (auto-generated from Rust via ts-rs)
 ├── AGENTS.md                  # AI agent coordination guide
 └── package.json               # pnpm workspace config + scripts
 ```

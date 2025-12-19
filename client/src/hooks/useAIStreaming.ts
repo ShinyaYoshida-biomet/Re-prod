@@ -1,4 +1,4 @@
-import type { CodeBlock } from "@shared/types";
+import type { CodeBlock } from "@/types";
 import { useCallback } from "react";
 import { useStore } from "@/core";
 import { extractCodeBlocks } from "@/core/ai/codeBlockUtils";

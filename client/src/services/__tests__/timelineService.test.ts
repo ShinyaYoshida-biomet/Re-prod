@@ -1,4 +1,9 @@
-import type { ExecutionEventPayload, TimelineQuery, TimelineResponse, TimelineStats } from "shared";
+import type {
+	ExecutionEventPayload,
+	TimelineQuery,
+	TimelineResponse,
+	TimelineStats,
+} from "@/types";
 import { describe, expect, it, vi } from "vitest";
 import type { DataTransport } from "@/repositories/core/DataTransport";
 import { createTimelineService } from "../timelineService";

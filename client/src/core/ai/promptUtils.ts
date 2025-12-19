@@ -1,4 +1,4 @@
-import type { ExecutionLogEntry } from "@shared/types";
+import type { ExecutionLogEntry } from "@/types";
 
 /**
  * Set of code change actions that should be applied to remote files

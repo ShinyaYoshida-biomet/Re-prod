@@ -5,12 +5,12 @@ import type {
 	ExportDialogAction,
 	ExportDialogOptions,
 	ExportDialogState,
-	ExportFormat,
+	ExportDialogFormat,
 	ExportOptionKey,
 	ExportPdfOptionKey,
 	ExportPdfOptions,
 } from "@/types/exportDialog";
-import type { CodeFolding, ExportRMarkdownRequestPayload } from "shared";
+import type { CodeFolding, ExportRMarkdownRequestPayload } from "@/types";
 
 function reducer(state: ExportDialogState, action: ExportDialogAction): ExportDialogState {
 	switch (action.type) {
@@ -50,8 +50,8 @@ function reducer(state: ExportDialogState, action: ExportDialogAction): ExportDi
 }
 
 interface UseExportDialogReturn {
-	format: ExportFormat;
-	setFormat: (next: ExportFormat) => void;
+	format: ExportDialogFormat;
+	setFormat: (next: ExportDialogFormat) => void;
 	mode: ExportRMarkdownRequestPayload["mode"];
 	setMode: (next: ExportRMarkdownRequestPayload["mode"]) => void;
 	options: ExportDialogOptions;

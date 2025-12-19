@@ -1,4 +1,4 @@
-import type { ToolCallLog as ToolCallLogEntry } from "@shared/types";
+import type { ToolCallLog as ToolCallLogEntry } from "@/types";
 
 interface Props {
 	logs?: ToolCallLogEntry[];

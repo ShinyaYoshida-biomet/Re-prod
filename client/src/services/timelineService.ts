@@ -1,4 +1,9 @@
-import type { ExecutionEventPayload, TimelineQuery, TimelineResponse, TimelineStats } from "shared";
+import type {
+	ExecutionEventPayload,
+	TimelineQuery,
+	TimelineResponse,
+	TimelineStats,
+} from "@/types";
 import type { DataTransport } from "@/repositories/core/DataTransport";
 import { TimelineRepository } from "@/repositories/TimelineRepository";
 import { WebSocketTransport } from "@/repositories/core/WebSocketTransport";

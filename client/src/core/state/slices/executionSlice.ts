@@ -1,4 +1,4 @@
-import type { ExecutionLogEntry, PlotInfoPayload, RunOutputChunk, RunSummary } from "@shared/types";
+import type { ExecutionLogEntry, PlotInfoPayload, RunOutputChunk, RunSummary } from "@/types";
 import type { StateCreator } from "zustand";
 
 export interface ExecutionState {

@@ -1,4 +1,4 @@
-import type { CodeBlock } from "@shared/types";
+import type { CodeBlock } from "@/types";
 
 export async function applyCodeChangeFile(codeBlock: CodeBlock): Promise<void> {
 	const response = await fetch("/api/ai/code-change", {

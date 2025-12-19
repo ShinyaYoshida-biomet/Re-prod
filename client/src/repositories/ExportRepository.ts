@@ -1,4 +1,4 @@
-import type { ExportRMarkdownRequestPayload, ExportRMarkdownResponsePayload } from "shared";
+import type { ExportRMarkdownRequestPayload, ExportRMarkdownResponsePayload } from "@/types";
 import type { DataTransport } from "./core/DataTransport";
 import { exportMessages } from "@/services/messageBuilders";
 

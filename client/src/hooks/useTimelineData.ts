@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { ExecutionEventPayload, TimelineStats } from "shared";
+import type { ExecutionEventPayload, TimelineStats } from "@/types";
 import { useStore } from "@/core";
 import { appendEventToStats, matchesTimelineFilters } from "@/core/timeline/utils";
 import {

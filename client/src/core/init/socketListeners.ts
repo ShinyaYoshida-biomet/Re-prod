@@ -1,4 +1,4 @@
-import type { ServerMessage } from "shared";
+import type { ServerMessage } from "@/types";
 import { useStore } from "@/core/state/store";
 import { socketService } from "@/services/socket";
 import { refreshTimelineData } from "@/services/sessionPersistence";

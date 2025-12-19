@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from "react";
-import type { ExecutionEventPayload } from "shared";
+import type { ExecutionEventPayload } from "@/types";
 
 import { useStore } from "@/core";
 import { useTimelineData } from "@/hooks/useTimelineData";

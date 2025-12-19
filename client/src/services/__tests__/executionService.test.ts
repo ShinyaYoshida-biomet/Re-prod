@@ -1,4 +1,4 @@
-import type { ExecutionRequestPayload, RunSummary } from "@shared/types";
+import type { ExecutionRequestPayload, RunSummary } from "@/types";
 import { describe, expect, it, vi } from "vitest";
 import type { DataTransport } from "@/repositories/core/DataTransport";
 import { TransportError } from "@/repositories/core/DataTransport";

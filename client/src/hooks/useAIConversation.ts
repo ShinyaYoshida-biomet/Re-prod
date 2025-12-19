@@ -1,4 +1,4 @@
-import type { AIMessage, AIMode } from "@shared/types";
+import type { AIMessage, AIMode } from "@/types";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useStore } from "@/core";
 import { buildPromptWithContext, createRequestId } from "@/core/ai/promptUtils";

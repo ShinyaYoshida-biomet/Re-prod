@@ -1,4 +1,4 @@
-import type { AppSettings } from "@shared/types";
+import type { AppSettings } from "@/types";
 import { useEffect, useState } from "react";
 import { IconSettings } from "@/components/shared";
 import { DEFAULT_SETTINGS } from "@/constants/defaultSettings";
