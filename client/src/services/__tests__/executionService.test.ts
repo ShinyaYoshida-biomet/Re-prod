@@ -1,22 +1,22 @@
 import type { ExecutionRequestPayload, RunSummary } from "@shared/types";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { socketService } from "../socket";
-import { executeRequestAwaitRunCompletion } from "../executionService";
+import { describe, expect, it, vi } from "vitest";
+import type { DataTransport } from "@/repositories/core/DataTransport";
+import { TransportError } from "@/repositories/core/DataTransport";
+import { createExecutionService, ExecutionServiceError } from "../executionService";
 
-vi.mock("../socket", () => ({
-	socketService: {
+function createMockTransport(): DataTransport {
+	return {
+		send: vi.fn(),
 		request: vi.fn(),
 		on: vi.fn(),
-		send: vi.fn(),
-	},
-}));
+	};
+}
 
 describe("executionService", () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
 	it("awaits run_accepted then resolves on matching run_finished", async () => {
+		const transport = createMockTransport();
+		const service = createExecutionService(transport);
+
 		const request = {
 			code: "print('Hello')",
 			context: {
@@ -44,17 +44,17 @@ describe("executionService", () => {
 			error: null,
 		};
 
-		vi.mocked(socketService.request).mockResolvedValue({ type: "run_accepted", run_id: runId });
+		vi.mocked(transport.request).mockResolvedValueOnce({ type: "run_accepted", run_id: runId });
 
 		const handlers = new Map<string, (msg: any) => void>();
-		vi.mocked(socketService.on).mockImplementation((event, handler) => {
-			handlers.set(event as string, handler);
+		vi.mocked(transport.on).mockImplementation((event, handler) => {
+			handlers.set(event as string, handler as (msg: any) => void);
 			return () => handlers.delete(event as string);
 		});
 
-		const promise = executeRequestAwaitRunCompletion(request);
+		const promise = service.executeRequestAwaitRunCompletion(request);
 
-		await new Promise((resolve) => setTimeout(resolve, 0));
+		await Promise.resolve();
 
 		handlers.get("run_output")?.({
 			type: "run_output",
@@ -70,5 +70,18 @@ describe("executionService", () => {
 		expect(completion.stdout).toContain("Hello");
 		expect(completion.stderr).toBe("");
 		expect(completion.run.status).toBe("succeeded");
+	});
+
+	it("wraps transport send errors as ExecutionServiceError", async () => {
+		const transport = createMockTransport();
+		const service = createExecutionService(transport);
+
+		vi.mocked(transport.send).mockImplementation(() => {
+			throw new TransportError("WebSocket is not connected");
+		});
+
+		await expect(service.executeRequest({} as ExecutionRequestPayload)).rejects.toBeInstanceOf(
+			ExecutionServiceError,
+		);
 	});
 });

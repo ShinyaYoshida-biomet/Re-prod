@@ -1,26 +1,27 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 import { ExportDialog } from "../ExportDialog";
-import { socketService } from "@/services/socket";
+
+const { exportRMarkdownMock } = vi.hoisted(() => ({
+	exportRMarkdownMock: vi.fn(),
+}));
+
+vi.mock("@/services/exportService", () => ({
+	exportRMarkdown: exportRMarkdownMock,
+	ExportServiceError: class ExportServiceError extends Error {},
+}));
 
 describe("ExportDialog", () => {
 	afterEach(() => {
 		vi.restoreAllMocks();
+		exportRMarkdownMock.mockReset();
 	});
 
 	it("sends the nested request payload and closes when export succeeds", async () => {
-		const sendMock = vi.fn((request, handler) => {
-			handler({
-				type: "export_rmarkdown_response",
-				response: {
-					success: true,
-					outputPath: "analysis_report.Rmd",
-				},
-			});
-			return true;
+		exportRMarkdownMock.mockResolvedValueOnce({
+			success: true,
+			outputPath: "analysis_report.Rmd",
 		});
-
-		vi.spyOn(socketService, "send").mockImplementation(sendMock);
 		const onClose = vi.fn();
 
 		render(<ExportDialog open onClose={onClose} />);
@@ -29,10 +30,9 @@ describe("ExportDialog", () => {
 
 		await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
 
-		expect(sendMock).toHaveBeenCalledTimes(1);
-		const [sentRequest] = sendMock.mock.calls[0];
-		expect(sentRequest.type).toBe("export_rmarkdown");
-		expect(sentRequest.request).toMatchObject({
+		expect(exportRMarkdownMock).toHaveBeenCalledTimes(1);
+		const [sentRequest] = exportRMarkdownMock.mock.calls[0];
+		expect(sentRequest).toMatchObject({
 			mode: "timeline",
 			format: "rmarkdown",
 			outputPath: "analysis_report.Rmd",
@@ -49,24 +49,12 @@ describe("ExportDialog", () => {
 				maxLines: 200,
 			},
 		});
-		expect(sentRequest.request.pdfOptions).toBeUndefined();
-		expect(sentRequest.request.documentPath).toBeUndefined();
+		expect(sentRequest.pdfOptions).toBeUndefined();
+		expect(sentRequest.documentPath).toBeUndefined();
 	});
 
 	it("shows an error message when the backend reports a failure and keeps the dialog open", async () => {
-		const sendMock = vi.fn((request, handler) => {
-			handler({
-				type: "export_rmarkdown_response",
-				response: {
-					success: false,
-					outputPath: "",
-					error: "Export failed",
-				},
-			});
-			return true;
-		});
-
-		vi.spyOn(socketService, "send").mockImplementation(sendMock);
+		exportRMarkdownMock.mockRejectedValueOnce(new Error("Export failed"));
 		const onClose = vi.fn();
 
 		render(<ExportDialog open onClose={onClose} />);
@@ -82,20 +70,12 @@ describe("ExportDialog", () => {
 		});
 
 		expect(onClose).not.toHaveBeenCalled();
-		const [sentRequest] = sendMock.mock.calls[0];
-		expect(sentRequest.request.documentPath).toBe("/tmp/report.R");
+		const [sentRequest] = exportRMarkdownMock.mock.calls[0];
+		expect(sentRequest.documentPath).toBe("/tmp/report.R");
 	});
 
 	it("sends PDF export requests with PDF options and updated output path", async () => {
-		const sendMock = vi.fn((request, handler) => {
-			handler({
-				type: "export_rmarkdown_response",
-				response: { success: true, outputPath: "analysis_report.pdf" },
-			});
-			return true;
-		});
-
-		vi.spyOn(socketService, "send").mockImplementation(sendMock);
+		exportRMarkdownMock.mockResolvedValueOnce({ success: true, outputPath: "analysis_report.pdf" });
 		const onClose = vi.fn();
 
 		render(<ExportDialog open onClose={onClose} />);
@@ -111,29 +91,21 @@ describe("ExportDialog", () => {
 
 		await waitFor(() => expect(onClose).toHaveBeenCalled());
 
-		const [sentRequest] = sendMock.mock.calls[0];
-		expect(sentRequest.request.format).toBe("pdf");
-		expect(sentRequest.request.outputPath).toBe("analysis_report.pdf");
-		expect(sentRequest.request.pdfOptions).toMatchObject({
+		const [sentRequest] = exportRMarkdownMock.mock.calls[0];
+		expect(sentRequest.format).toBe("pdf");
+		expect(sentRequest.outputPath).toBe("analysis_report.pdf");
+		expect(sentRequest.pdfOptions).toMatchObject({
 			toc: true,
 			includeSource: false,
 			highlightTheme: "tango",
 			figWidth: 7,
 			figHeight: 5,
 		});
-		expect(sentRequest.request.embedPlots).toBe(true);
+		expect(sentRequest.embedPlots).toBe(true);
 	});
 
 	it("toggles includeTimestamps option correctly", async () => {
-		const sendMock = vi.fn((request, handler) => {
-			handler({
-				type: "export_rmarkdown_response",
-				response: { success: true, outputPath: "test.Rmd" },
-			});
-			return true;
-		});
-
-		vi.spyOn(socketService, "send").mockImplementation(sendMock);
+		exportRMarkdownMock.mockResolvedValueOnce({ success: true, outputPath: "test.Rmd" });
 		const onClose = vi.fn();
 
 		render(<ExportDialog open onClose={onClose} />);
@@ -148,13 +120,11 @@ describe("ExportDialog", () => {
 
 		await waitFor(() => expect(onClose).toHaveBeenCalled());
 
-		const [sentRequest] = sendMock.mock.calls[0];
-		expect(sentRequest.request.includeTimestamps).toBe(false);
+		const [sentRequest] = exportRMarkdownMock.mock.calls[0];
+		expect(sentRequest.includeTimestamps).toBe(false);
 	});
 
 	it("requires document path for document mode", async () => {
-		const sendMock = vi.fn();
-		vi.spyOn(socketService, "send").mockImplementation(sendMock);
 		const onClose = vi.fn();
 
 		render(<ExportDialog open onClose={onClose} />);
@@ -169,13 +139,12 @@ describe("ExportDialog", () => {
 			).toBeInTheDocument();
 		});
 
-		expect(sendMock).not.toHaveBeenCalled();
+		expect(exportRMarkdownMock).not.toHaveBeenCalled();
 		expect(onClose).not.toHaveBeenCalled();
 	});
 
 	it("handles WebSocket connection failure", async () => {
-		const sendMock = vi.fn(() => false);
-		vi.spyOn(socketService, "send").mockImplementation(sendMock);
+		exportRMarkdownMock.mockRejectedValueOnce(new Error("WebSocket is not connected"));
 		const onClose = vi.fn();
 
 		render(<ExportDialog open onClose={onClose} />);
@@ -183,22 +152,14 @@ describe("ExportDialog", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Export" }));
 
 		await waitFor(() => {
-			expect(screen.getByText("WebSocket not connected")).toBeInTheDocument();
+			expect(screen.getByText("WebSocket is not connected")).toBeInTheDocument();
 		});
 
 		expect(onClose).not.toHaveBeenCalled();
 	});
 
 	it("changes output path correctly", async () => {
-		const sendMock = vi.fn((request, handler) => {
-			handler({
-				type: "export_rmarkdown_response",
-				response: { success: true, outputPath: "custom_report.Rmd" },
-			});
-			return true;
-		});
-
-		vi.spyOn(socketService, "send").mockImplementation(sendMock);
+		exportRMarkdownMock.mockResolvedValueOnce({ success: true, outputPath: "custom_report.Rmd" });
 		const onClose = vi.fn();
 
 		render(<ExportDialog open onClose={onClose} />);
@@ -210,7 +171,7 @@ describe("ExportDialog", () => {
 
 		await waitFor(() => expect(onClose).toHaveBeenCalled());
 
-		const [sentRequest] = sendMock.mock.calls[0];
-		expect(sentRequest.request.outputPath).toBe("custom_report.Rmd");
+		const [sentRequest] = exportRMarkdownMock.mock.calls[0];
+		expect(sentRequest.outputPath).toBe("custom_report.Rmd");
 	});
 });

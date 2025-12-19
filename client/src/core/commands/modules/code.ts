@@ -1,60 +1,6 @@
 import { commandRegistry } from "../registry";
 import { useStore } from "@/core/state/store";
-import { socketService } from "@/services/socket";
-import { executionMessages } from "@/services/messageBuilders";
-import type { ServerMessage } from "shared";
-
-const interruptMatcher = (message: ServerMessage): boolean =>
-	message.type === "execution_interrupted" || message.type === "error";
-
-const restartMatcher = (message: ServerMessage): boolean =>
-	message.type === "session_restarted" || message.type === "error";
-
-async function interruptExecution(): Promise<boolean> {
-	return new Promise((resolve, reject) => {
-		const didSend = socketService.send(
-			executionMessages.interrupt(),
-			(message) => {
-				if (message.type === "execution_interrupted") {
-					resolve(message.success);
-					return;
-				}
-
-				if (message.type === "error") {
-					reject(new Error(message.message));
-				}
-			},
-			interruptMatcher,
-		);
-
-		if (!didSend) {
-			reject(new Error("WebSocket is not connected."));
-		}
-	});
-}
-
-async function restartSession(): Promise<void> {
-	return new Promise((resolve, reject) => {
-		const didSend = socketService.send(
-			executionMessages.restart(),
-			(message) => {
-				if (message.type === "session_restarted") {
-					resolve();
-					return;
-				}
-
-				if (message.type === "error") {
-					reject(new Error(message.message));
-				}
-			},
-			restartMatcher,
-		);
-
-		if (!didSend) {
-			reject(new Error("WebSocket is not connected."));
-		}
-	});
-}
+import { interruptExecution, restartSession } from "@/services/executionService";
 
 export function setupCodeCommands() {
 	commandRegistry.registerMany([

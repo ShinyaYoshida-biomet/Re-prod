@@ -6,6 +6,7 @@ export type WSResponse = ServerMessage;
 
 type MessageHandler = (response: ServerMessage) => void;
 type OneShotHandler = {
+	id: string;
 	handler: MessageHandler;
 	matcher?: (message: ServerMessage) => boolean;
 };
@@ -18,6 +19,7 @@ class SocketService {
 	private messageHandlers: Map<string, Set<MessageHandler>> = new Map();
 	// One-shot handlers for request/response style calls with optional matchers.
 	private oneShotHandlers: OneShotHandler[] = [];
+	private nextOneShotId = 0;
 	private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 	private autoReconnectEnabled = true;
 	private intentionalDisconnect = false;
@@ -84,11 +86,10 @@ class SocketService {
 		}
 
 		if (handler) {
-			this.oneShotHandlers.push({ handler, matcher });
+			this.oneShotHandlers.push({ id: `oneshot-${this.nextOneShotId++}`, handler, matcher });
 		}
 
-		this.ws.send(JSON.stringify(request));
-		return true;
+		return this.sendPayload(request);
 	}
 
 	on(event: ServerMessageType | "*", handler: MessageHandler): () => void {
@@ -198,6 +199,64 @@ class SocketService {
 				reject(new Error(`Timed out waiting for ${responseType}`));
 			}, timeoutMs);
 		});
+	}
+
+	sendAndWait<TMessage extends ServerMessage>(
+		payload: WSRequest,
+		matcher: (message: ServerMessage) => message is TMessage,
+		timeoutMs = WEBSOCKET_REQUEST_TIMEOUT,
+	): Promise<TMessage> {
+		return new Promise((resolve, reject) => {
+			if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+				reject(new Error("WebSocket is not connected"));
+				return;
+			}
+
+			let timeoutId: ReturnType<typeof setTimeout> | null = null;
+			const oneShotId = `oneshot-${this.nextOneShotId++}`;
+
+			const cleanup = (): void => {
+				if (timeoutId) {
+					clearTimeout(timeoutId);
+					timeoutId = null;
+				}
+				this.oneShotHandlers = this.oneShotHandlers.filter((h) => h.id !== oneShotId);
+			};
+
+			this.oneShotHandlers.push({
+				id: oneShotId,
+				handler: (message) => {
+					if (!matcher(message)) {
+						reject(new Error("Unexpected response"));
+						return;
+					}
+					cleanup();
+					resolve(message);
+				},
+				matcher,
+			});
+
+			const didSend = this.sendPayload(payload);
+
+			if (!didSend) {
+				cleanup();
+				reject(new Error("Failed to send WebSocket request"));
+				return;
+			}
+
+			timeoutId = setTimeout(() => {
+				cleanup();
+				reject(new Error("WebSocket request timed out"));
+			}, timeoutMs);
+		});
+	}
+
+	private sendPayload(request: WSRequest): boolean {
+		if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+			return false;
+		}
+		this.ws.send(JSON.stringify(request));
+		return true;
 	}
 
 	private dispatch(type: string, message: ServerMessage): void {
