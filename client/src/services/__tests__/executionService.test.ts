@@ -1,4 +1,4 @@
-import type { ExecutionRequestPayload, RunSummary } from "@shared/types";
+import type { ExecutionRequestPayload, RunSummary } from "@/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { socketService } from "../socket";
 import { executeRequestAwaitRunCompletion } from "../executionService";

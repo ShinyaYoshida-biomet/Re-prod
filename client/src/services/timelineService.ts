@@ -4,7 +4,7 @@ import type {
 	TimelineQuery,
 	TimelineResponse,
 	TimelineStats,
-} from "shared";
+} from "@/types";
 import { timelineMessages } from "@/services/messageBuilders";
 import { socketService } from "./socket";
 

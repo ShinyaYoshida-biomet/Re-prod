@@ -4,8 +4,4 @@ import type { ToolCall } from "./ToolCall";
 /**
  * AI response with optional tool calls
  */
-export type AIResponse = {
-	content: string;
-	tool_calls: Array<ToolCall> | null;
-	stop_reason: string;
-};
+export type AIResponse = { content: string, tool_calls: Array<ToolCall> | null, stop_reason: string, };

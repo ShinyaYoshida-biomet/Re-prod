@@ -1,4 +1,9 @@
-import type { ClientMessage, ExtractServerMessage, ServerMessage, ServerMessageType } from "shared";
+import type {
+	ClientMessage,
+	ExtractServerMessage,
+	ServerMessage,
+	ServerMessageType,
+} from "@/types";
 import { WEBSOCKET_RECONNECT_DELAY, WEBSOCKET_REQUEST_TIMEOUT } from "@/constants/timeouts";
 
 export type WSRequest = ClientMessage;

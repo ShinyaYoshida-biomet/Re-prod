@@ -11,8 +11,8 @@ import type {
 	ExecutionRequestPayload,
 	FileSystemAction,
 	ToolExecutionRequestPayload,
-} from "@shared/types";
-import type { ClientMessage, ExportRMarkdownRequestPayload, TimelineQuery } from "shared";
+} from "@/types";
+import type { ClientMessage, ExportRMarkdownRequestPayload, TimelineQuery } from "@/types";
 
 // Project messages
 export const projectMessages = {

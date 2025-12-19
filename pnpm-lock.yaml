@@ -127,12 +127,6 @@ importers:
         specifier: ^8.0.0
         version: 8.46.0
 
-  shared:
-    devDependencies:
-      typescript:
-        specifier: ^5.3.3
-        version: 5.9.3
-
 packages:
 
   '@adobe/css-tools@4.4.4':

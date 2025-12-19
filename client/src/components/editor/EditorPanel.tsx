@@ -1,5 +1,5 @@
 import Editor, { type Monaco } from "@monaco-editor/react";
-import type { CodeBlock, CodeRange } from "@shared/types";
+import type { CodeBlock, CodeRange } from "@/types";
 import type { editor as MonacoEditor } from "monaco-editor";
 import type { ForwardedRef } from "react";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";

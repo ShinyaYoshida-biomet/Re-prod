@@ -6,8 +6,7 @@
 	"description": "AI-Powered R Analysis IDE",
 	"workspaces": [
 		"client",
-		"desktop/e2e",
-		"shared"
+		"desktop/e2e"
 	],
 	"scripts": {
 		"prepare": "husky",
@@ -34,16 +33,12 @@
 	"compilerOptions": {
 		"baseUrl": ".",
 		"paths": {
-			"@shared/*": [
-				"shared/src/*"
-			],
 			"@server/*": [
 				"server/src/*"
 			]
 		},
 		"rootDirs": [
-			"server/src",
-			"shared/src"
+			"server/src"
 		]
 	}
 }

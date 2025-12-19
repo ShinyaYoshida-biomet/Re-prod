@@ -1,5 +1,5 @@
-import type { PlotHistoryStatePayload } from "shared";
-import type { ServerMessage } from "shared";
+import type { PlotHistoryStatePayload } from "@/types";
+import type { ServerMessage } from "@/types";
 import { plotHistoryMessages } from "@/services/messageBuilders";
 import { socketService } from "./socket";
 

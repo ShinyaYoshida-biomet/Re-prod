@@ -1,4 +1,4 @@
-import type { AIMessage, CodeBlock } from "@shared/types";
+import type { AIMessage, CodeBlock } from "@/types";
 import { useCallback } from "react";
 import { useStore } from "@/core";
 import { CodeActionFactory, type CodeActionContext } from "@/core/ai/actions";

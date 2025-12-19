@@ -1,4 +1,4 @@
-import type { CodeBlock } from "@shared/types";
+import type { CodeBlock } from "@/types";
 
 /**
  * Interface for code action strategies.

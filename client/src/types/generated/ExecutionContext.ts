@@ -5,13 +5,8 @@ import type { ExecutionSource } from "./ExecutionSource";
 /**
  * Context supplied when triggering R execution.
  */
-export type ExecutionContext = {
-	source: ExecutionSource;
-	document_path: string | null;
-	cell_index: number | null;
-	/**
-	 * Epoch milliseconds supplied by the caller (0 if unknown).
-	 */
-	triggered_at_ms: number;
-	actor: ExecutionActor;
-};
+export type ExecutionContext = { source: ExecutionSource, document_path: string | null, cell_index: number | null, 
+/**
+ * Epoch milliseconds supplied by the caller (0 if unknown).
+ */
+triggered_at_ms: number, actor: ExecutionActor, };

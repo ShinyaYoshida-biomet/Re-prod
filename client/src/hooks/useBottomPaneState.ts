@@ -1,4 +1,4 @@
-import type { ExecutionLogPlot } from "@shared/types";
+import type { ExecutionLogPlot } from "@/types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PanelTabItem } from "@/components/shared";
 import { useStore } from "@/core";

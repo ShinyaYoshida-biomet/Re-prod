@@ -3,4 +3,4 @@
 /**
  * Chat message for AI communication
  */
-export type ChatMessage = { role: string; content: string };
+export type ChatMessage = { role: string, content: string, };

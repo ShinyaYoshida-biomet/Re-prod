@@ -1,4 +1,9 @@
-import type { ExecutionEventPayload, TimelineQuery, TimelineResponse, TimelineStats } from "shared";
+import type {
+	ExecutionEventPayload,
+	TimelineQuery,
+	TimelineResponse,
+	TimelineStats,
+} from "@/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { socketService } from "../socket";
 import { getTimelineStats, queryTimeline, subscribeToTimelineEvents } from "../timelineService";

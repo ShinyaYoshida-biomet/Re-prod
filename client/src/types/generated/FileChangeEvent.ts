@@ -3,4 +3,4 @@
 /**
  * File change event
  */
-export type FileChangeEvent = { event_type: string; path: string };
+export type FileChangeEvent = { event_type: string, path: string, };

@@ -3,4 +3,4 @@
 /**
  * Tool call from AI
  */
-export type ToolCall = { id: string; name: string; input: any };
+export type ToolCall = { id: string, name: string, input: any, };

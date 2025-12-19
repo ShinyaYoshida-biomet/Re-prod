@@ -1,4 +1,4 @@
-import type { AppSettings } from "@shared/types";
+import type { AppSettings } from "@/types";
 import type { StateCreator } from "zustand";
 import { DEFAULT_SETTINGS } from "@/constants/defaultSettings";
 

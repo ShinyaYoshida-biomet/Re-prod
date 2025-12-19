@@ -1,4 +1,4 @@
-import type { ExecutionLogEntry } from "@shared/types";
+import type { ExecutionLogEntry } from "@/types";
 import type { editor as MonacoEditor } from "monaco-editor";
 import type { MutableRefObject } from "react";
 import { useCallback, useState } from "react";

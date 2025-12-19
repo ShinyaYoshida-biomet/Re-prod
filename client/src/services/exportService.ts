@@ -2,7 +2,7 @@ import type {
 	ExportRMarkdownRequestPayload,
 	ExportRMarkdownResponsePayload,
 	ServerMessage,
-} from "shared";
+} from "@/types";
 import { exportMessages } from "@/services/messageBuilders";
 import { socketService } from "@/services/socket";
 

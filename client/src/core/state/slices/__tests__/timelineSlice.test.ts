@@ -1,4 +1,4 @@
-import type { ExecutionEventPayload } from "shared";
+import type { ExecutionEventPayload } from "@/types";
 import { beforeEach, describe, expect, it } from "vitest";
 import { create } from "zustand";
 import { createTimelineSlice, type TimelineState } from "../timelineSlice";

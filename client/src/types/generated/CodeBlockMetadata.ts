@@ -4,12 +4,4 @@ import type { CodeBlockKind } from "./CodeBlockKind";
 /**
  * Metadata describing a captured code block.
  */
-export type CodeBlockMetadata = {
-	id: string;
-	index: number;
-	kind: CodeBlockKind;
-	label: string | null;
-	start_line: number;
-	end_line: number;
-	code: string;
-};
+export type CodeBlockMetadata = { id: string, index: number, kind: CodeBlockKind, label: string | null, start_line: number, end_line: number, code: string, };

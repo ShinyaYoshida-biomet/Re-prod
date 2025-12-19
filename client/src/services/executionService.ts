@@ -1,4 +1,4 @@
-import type { ExecutionRequestPayload, RunOutputChunk, RunSummary } from "@shared/types";
+import type { ExecutionRequestPayload, RunOutputChunk, RunSummary } from "@/types";
 import { executionMessages } from "@/services/messageBuilders";
 import { socketService } from "./socket";
 

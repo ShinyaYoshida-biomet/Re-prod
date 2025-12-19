@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { CodeBlock } from "@shared/types";
+import type { CodeBlock } from "@/types";
 import { CodeActionFactory } from "../CodeActionFactory";
 import type { CodeActionContext } from "../ICodeAction";
 

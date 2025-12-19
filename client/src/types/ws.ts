@@ -14,7 +14,7 @@ import type {
 	RunSummary,
 	ToolCallLog,
 	ToolExecutionRequestPayload,
-} from "./types";
+} from "./ui";
 
 type ToolExecutionResponse = {
 	tool_id: string;

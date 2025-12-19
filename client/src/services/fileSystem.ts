@@ -1,5 +1,5 @@
-import type { FileEntryPayload, FileSystemAction, FileSystemEventPayload } from "@shared/types";
-import type { ExtractServerMessage } from "shared";
+import type { FileEntryPayload, FileSystemAction, FileSystemEventPayload } from "@/types";
+import type { ExtractServerMessage } from "@/types";
 import { normalizePathInput, normalizeRelativePath, ROOT_PATH } from "@/core/pathUtils";
 import { fsMessages } from "@/services/messageBuilders";
 import { socketService } from "./socket";

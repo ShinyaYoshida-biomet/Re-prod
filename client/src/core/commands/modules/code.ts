@@ -2,7 +2,7 @@ import { commandRegistry } from "../registry";
 import { useStore } from "@/core/state/store";
 import { socketService } from "@/services/socket";
 import { executionMessages } from "@/services/messageBuilders";
-import type { ServerMessage } from "shared";
+import type { ServerMessage } from "@/types";
 
 const interruptMatcher = (message: ServerMessage): boolean =>
 	message.type === "execution_interrupted" || message.type === "error";

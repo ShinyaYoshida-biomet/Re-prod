@@ -1,4 +1,4 @@
-import type { CodeBlock } from "@shared/types";
+import type { CodeBlock } from "@/types";
 import { useEffect, useState } from "react";
 import { IconCheck, IconClipboard, IconLightbulb } from "@/components/shared";
 import { CodeActionFactory } from "@/core/ai/actions";

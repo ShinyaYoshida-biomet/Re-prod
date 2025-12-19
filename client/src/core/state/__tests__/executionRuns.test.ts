@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { RunOutputChunk, RunSummary } from "@shared/types";
+import type { RunOutputChunk, RunSummary } from "@/types";
 import { useStore } from "../store";
 
 const baseRun = (overrides: Partial<RunSummary> = {}): RunSummary => ({
