@@ -17,7 +17,7 @@ export class RemoteError extends Error {
 export interface DataTransport {
 	send(payload: ClientMessage): void;
 
-	request<TType extends ServerMessageType>(
+	request<TType extends Exclude<ServerMessageType, "error">>(
 		payload: ClientMessage,
 		responseType: TType,
 		options?: {
@@ -26,8 +26,9 @@ export interface DataTransport {
 		},
 	): Promise<ExtractServerMessage<TType>>;
 
-	on<TType extends ServerMessageType | "*">(
+	on(type: "*", handler: (message: ServerMessage) => void): () => void;
+	on<TType extends ServerMessageType>(
 		type: TType,
-		handler: (message: TType extends "*" ? ServerMessage : ExtractServerMessage<TType>) => void,
+		handler: (message: ExtractServerMessage<TType>) => void,
 	): () => void;
 }

@@ -14,14 +14,16 @@ export class WebSocketTransport implements DataTransport {
 		}
 	}
 
-	on<TType extends ServerMessageType | "*">(
+	on(type: "*", handler: (message: ServerMessage) => void): () => void;
+	on<TType extends ServerMessageType>(
 		type: TType,
-		handler: (message: TType extends "*" ? ServerMessage : ExtractServerMessage<TType>) => void,
-	): () => void {
+		handler: (message: ExtractServerMessage<TType>) => void,
+	): () => void;
+	on(type: ServerMessageType | "*", handler: (message: ServerMessage) => void): () => void {
 		return this.socket.on(type, handler as never);
 	}
 
-	async request<TType extends ServerMessageType>(
+	async request<TType extends Exclude<ServerMessageType, "error">>(
 		payload: Parameters<SocketService["send"]>[0],
 		responseType: TType,
 		options?: {
@@ -29,15 +31,11 @@ export class WebSocketTransport implements DataTransport {
 			timeoutMs?: number;
 		},
 	): Promise<ExtractServerMessage<TType>> {
-		const response = await this.socket.sendAndWait(
+		const response = await this.socket.sendAndWait<ServerMessage>(
 			payload,
-			(message): message is ExtractServerMessage<TType> | ExtractServerMessage<"error"> => {
-				if (message.type === "error") {
-					return true;
-				}
-				if (message.type !== responseType) {
-					return false;
-				}
+			(message): message is ServerMessage => {
+				if (message.type === "error") return true;
+				if (message.type !== responseType) return false;
 				const typed = message as ExtractServerMessage<TType>;
 				return options?.matcher ? options.matcher(typed) : true;
 			},
@@ -54,6 +52,6 @@ export class WebSocketTransport implements DataTransport {
 			);
 		}
 
-		return response;
+		return response as ExtractServerMessage<TType>;
 	}
 }
