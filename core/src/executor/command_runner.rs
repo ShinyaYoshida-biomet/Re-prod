@@ -14,7 +14,7 @@ use tokio::{
     fs,
     io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader},
     process::{Child, Command},
-    sync::Mutex as AsyncMutex,
+    sync::{mpsc, Mutex as AsyncMutex},
     task::JoinHandle,
     time::{timeout, Duration},
 };
@@ -253,6 +253,79 @@ impl PersistentProcessCommandRunner {
 
         Ok((stdout_buf, stderr_buf, !saw_error_marker))
     }
+
+    async fn read_until_delimiter_streaming(
+        child: &mut PersistentChild,
+        timeout_duration: Duration,
+        on_chunk: &mut (dyn FnMut(String, bool) + Send),
+    ) -> Result<(Vec<u8>, Vec<u8>, bool)> {
+        let mut stdout_buf = Vec::new();
+        let mut stderr_buf = Vec::new();
+        let mut saw_error_marker = false;
+        let mut stdout_line = String::new();
+        let mut stderr_line = String::new();
+
+        loop {
+            let read_result = timeout(timeout_duration, async {
+                tokio::select! {
+                    res = child.stdout.read_line(&mut stdout_line) => res.map(|n| ("stdout", n)),
+                    res = child.stderr.read_line(&mut stderr_line) => res.map(|n| ("stderr", n)),
+                }
+            })
+            .await??;
+
+            match read_result {
+                ("stdout", 0) => break,
+                ("stdout", _) => {
+                    if stdout_line.contains(PERSISTENT_DELIMITER) {
+                        stdout_line.clear();
+                        break;
+                    }
+                    stdout_buf.extend_from_slice(stdout_line.as_bytes());
+                    let trimmed = stdout_line.trim_end_matches(['\n', '\r']).to_string();
+                    if !trimmed.is_empty() {
+                        on_chunk(trimmed, true);
+                    }
+                    stdout_line.clear();
+                }
+                ("stderr", 0) => continue,
+                ("stderr", _) => {
+                    stderr_buf.extend_from_slice(stderr_line.as_bytes());
+                    if stderr_line.contains("REPROD_ERROR:") {
+                        saw_error_marker = true;
+                    }
+                    let trimmed = stderr_line.trim_end_matches(['\n', '\r']).to_string();
+                    if !trimmed.is_empty() {
+                        on_chunk(trimmed, false);
+                    }
+                    stderr_line.clear();
+                }
+                _ => {}
+            }
+        }
+
+        loop {
+            match timeout(
+                Duration::from_millis(50),
+                child.stderr.read_line(&mut stderr_line),
+            )
+            .await
+            {
+                Ok(Ok(0)) | Err(_) => break,
+                Ok(Ok(_)) => {
+                    stderr_buf.extend_from_slice(stderr_line.as_bytes());
+                    let trimmed = stderr_line.trim_end_matches(['\n', '\r']).to_string();
+                    if !trimmed.is_empty() {
+                        on_chunk(trimmed, false);
+                    }
+                    stderr_line.clear();
+                }
+                Ok(Err(e)) => return Err(anyhow!(e)),
+            }
+        }
+
+        Ok((stdout_buf, stderr_buf, !saw_error_marker))
+    }
 }
 
 #[async_trait]
@@ -306,6 +379,103 @@ impl CommandRunner for ProcessCommandRunner {
             .await
             .map_err(|e| anyhow!("Failed to join stderr task: {}", e))??;
 
+        Ok(CommandOutput {
+            success: status.success(),
+            stdout: stdout_bytes,
+            stderr: stderr_bytes,
+            interrupted: active.was_interrupted(),
+        })
+    }
+
+    async fn run_streaming(
+        &self,
+        r_path: &str,
+        script_path: &Path,
+        working_dir: &Path,
+        on_chunk: &mut (dyn FnMut(String, bool) + Send),
+    ) -> Result<CommandOutput> {
+        let script_str = script_path
+            .to_str()
+            .ok_or_else(|| anyhow!("Invalid path"))?;
+        let mut child = Command::new(r_path)
+            .args(["--vanilla", "--quiet", script_str])
+            .current_dir(working_dir)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()?;
+
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| anyhow!("Missing stdout"))?;
+        let stderr = child
+            .stderr
+            .take()
+            .ok_or_else(|| anyhow!("Missing stderr"))?;
+
+        let active = ActiveChild::new(child);
+        {
+            let mut guard = self.active_child.lock().await;
+            *guard = Some(active.clone());
+        }
+
+        let (tx, mut rx) = mpsc::unbounded_channel::<(bool, Vec<u8>)>();
+        let stdout_task = spawn_line_reader(BufReader::new(stdout), true, tx.clone());
+        let stderr_task = spawn_line_reader(BufReader::new(stderr), false, tx);
+
+        let mut stdout_bytes: Vec<u8> = Vec::new();
+        let mut stderr_bytes: Vec<u8> = Vec::new();
+
+        let status_fut = active.wait();
+        tokio::pin!(status_fut);
+        let mut status: Option<std::process::ExitStatus> = None;
+        let mut io_closed = false;
+
+        loop {
+            tokio::select! {
+                exit = &mut status_fut, if status.is_none() => {
+                    status = Some(exit.context("Failed to wait for R process")?);
+                    if io_closed {
+                        break;
+                    }
+                }
+                maybe_line = rx.recv() => {
+                    let Some((is_stdout, bytes)) = maybe_line else {
+                        io_closed = true;
+                        if status.is_some() {
+                            break;
+                        }
+                        continue;
+                    };
+
+                    if is_stdout {
+                        stdout_bytes.extend_from_slice(&bytes);
+                    } else {
+                        stderr_bytes.extend_from_slice(&bytes);
+                    }
+
+                    if let Ok(text) = std::str::from_utf8(&bytes) {
+                        for line in text.lines() {
+                            on_chunk(line.to_string(), is_stdout);
+                        }
+                    }
+                }
+            }
+        }
+
+        let _ = stdout_task.await;
+        let _ = stderr_task.await;
+
+        {
+            let mut guard = self.active_child.lock().await;
+            if let Some(current) = guard.as_ref() {
+                if current.matches(&active) {
+                    guard.take();
+                }
+            }
+        }
+
+        let status = status.ok_or_else(|| anyhow!("Missing process status"))?;
         Ok(CommandOutput {
             success: status.success(),
             stdout: stdout_bytes,
@@ -369,6 +539,46 @@ impl CommandRunner for PersistentProcessCommandRunner {
         })
     }
 
+    async fn run_streaming(
+        &self,
+        _r_path: &str,
+        script_path: &Path,
+        _working_dir: &Path,
+        on_chunk: &mut (dyn FnMut(String, bool) + Send),
+    ) -> Result<CommandOutput> {
+        let _guard = self.in_flight.lock().await;
+        self.ensure_child().await?;
+
+        let mut child_guard = self.child.lock().await;
+        let child = child_guard
+            .as_mut()
+            .ok_or_else(|| anyhow!("Persistent process missing"))?;
+
+        let script_str = fs::read_to_string(script_path).await?;
+        let mut block = String::with_capacity(script_str.len() + 4);
+        block.push_str("{\n");
+        block.push_str(&script_str);
+        if !block.ends_with('\n') {
+            block.push('\n');
+        }
+        block.push_str("}\n");
+
+        child.stdin.write_all(block.as_bytes()).await?;
+        child.stdin.flush().await?;
+
+        let (stdout_bytes, stderr_bytes, status_ok) =
+            Self::read_until_delimiter_streaming(child, PERSISTENT_EXECUTION_TIMEOUT, on_chunk)
+                .await?;
+        let was_interrupted = self.interrupted.swap(false, Ordering::SeqCst);
+
+        Ok(CommandOutput {
+            success: status_ok && !was_interrupted,
+            stdout: stdout_bytes,
+            stderr: stderr_bytes,
+            interrupted: was_interrupted,
+        })
+    }
+
     async fn interrupt(&self) -> Result<bool> {
         let mut guard = self.child.lock().await;
         if let Some(child) = guard.as_mut() {
@@ -405,6 +615,31 @@ where
             Ok(buffer)
         } else {
             Ok(Vec::new())
+        }
+    })
+}
+
+fn spawn_line_reader<R>(
+    reader: BufReader<R>,
+    is_stdout: bool,
+    tx: mpsc::UnboundedSender<(bool, Vec<u8>)>,
+) -> JoinHandle<()>
+where
+    R: AsyncRead + Unpin + Send + 'static,
+{
+    tokio::spawn(async move {
+        let mut reader = reader;
+        let mut line = String::new();
+        loop {
+            line.clear();
+            let n = match reader.read_line(&mut line).await {
+                Ok(n) => n,
+                Err(_) => break,
+            };
+            if n == 0 {
+                break;
+            }
+            let _ = tx.send((is_stdout, line.as_bytes().to_vec()));
         }
     })
 }

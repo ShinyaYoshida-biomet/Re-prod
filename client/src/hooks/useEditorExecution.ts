@@ -1,4 +1,3 @@
-import type { ExecutionLogEntry } from "@shared/types";
 import type { editor as MonacoEditor } from "monaco-editor";
 import type { MutableRefObject } from "react";
 import { useCallback, useState } from "react";
@@ -18,28 +17,18 @@ interface UseEditorExecutionProps {
 	cells: Cell[];
 }
 
-const normalizeFailure = (message: string, code: string): ExecutionLogEntry => ({
-	runId: undefined,
-	code,
-	stdout: "",
-	stderr: message,
-	plots: [],
-	timestamp: Date.now(),
-	duration: 0,
-	success: false,
-});
-
 export function useEditorExecution({ editorRef, cells }: UseEditorExecutionProps) {
 	const editorContent = useStore((state) => state.editor.content);
 	const editorFilepath = useStore((state) => state.editor.filepath);
 	const cursorLine = useStore((state) => state.editor.cursorPosition.line);
 	const setIsRunning = useStore((state) => state.setIsRunning);
-	const appendExecutionEntry = useStore((state) => state.appendExecutionEntry);
+	const setExecutionError = useStore((state) => state.setExecutionError);
 
 	const [executingCellIndex, setExecutingCellIndex] = useState<number | null>(null);
 
 	const executeCode = useCallback(
 		async (target: ExecutionTarget, cellIndex?: number | null) => {
+			setExecutionError(null);
 			setIsRunning(true);
 			if (cellIndex !== undefined && cellIndex !== null) {
 				setExecutingCellIndex(cellIndex);
@@ -59,13 +48,13 @@ export function useEditorExecution({ editorRef, cells }: UseEditorExecutionProps
 					error instanceof ExecutionServiceError
 						? error.message
 						: "Execution failed due to an unexpected error.";
-				appendExecutionEntry(normalizeFailure(message, target.code));
+				setExecutionError(message);
 				setIsRunning(false);
 			} finally {
 				setExecutingCellIndex(null);
 			}
 		},
-		[appendExecutionEntry, cells, editorContent, editorFilepath, setIsRunning],
+		[cells, editorContent, editorFilepath, setExecutionError, setIsRunning],
 	);
 
 	const handleRunAll = useCallback(() => {

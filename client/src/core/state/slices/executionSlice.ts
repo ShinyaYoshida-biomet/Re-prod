@@ -7,8 +7,10 @@ export interface ExecutionState {
 		results: ExecutionLogEntry[];
 		history: ExecutionLogEntry[];
 		currentCell: number | undefined;
+		lastError: string | null;
 	};
 	setIsRunning: (isRunning: boolean) => void;
+	setExecutionError: (message: string | null) => void;
 	appendExecutionEntry: (entry: ExecutionLogEntry) => void;
 	applyRunState: (runs: RunSummary[]) => void;
 	applyRunStarted: (run: RunSummary) => void;
@@ -25,10 +27,15 @@ export const createExecutionSlice: StateCreator<ExecutionState> = (set) => ({
 		results: [],
 		history: [],
 		currentCell: undefined,
+		lastError: null,
 	},
 	setIsRunning: (isRunning) =>
 		set((state) => ({
 			execution: { ...state.execution, isRunning },
+		})),
+	setExecutionError: (message) =>
+		set((state) => ({
+			execution: { ...state.execution, lastError: message },
 		})),
 	appendExecutionEntry: (entry) =>
 		set((state) => {
@@ -113,6 +120,7 @@ export const createExecutionSlice: StateCreator<ExecutionState> = (set) => ({
 				results: [],
 				history: [],
 				currentCell: undefined,
+				lastError: null,
 			},
 		})),
 });

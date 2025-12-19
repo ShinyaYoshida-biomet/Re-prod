@@ -51,7 +51,8 @@ export function setupSocketListeners(): () => void {
 		},
 		run_started: (message) => {
 			store.applyRunStarted(message.run);
-			store.setIsRunning(true);
+			store.setExecutionError(null);
+			setIsRunningFromExecutionState();
 		},
 		run_output: (message) => {
 			store.applyRunOutput(message);

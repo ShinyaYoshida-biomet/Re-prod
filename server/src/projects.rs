@@ -1,9 +1,10 @@
-use anyhow::{anyhow, Context, Result};
 use crate::handlers::stream_buffer::StreamBuffer;
+use anyhow::{anyhow, Context, Result};
 use reprod_core::{
     ai::tools::{FileSystemTool, RContextTool},
     execution_repository::{ExecutionRepository, TimelineExecutionRepository},
     fs::FileSystem,
+    plot_history::PlotHistoryEntry,
     plot_history::PlotHistoryManager,
     timeline::JsonTimeline,
 };
@@ -12,7 +13,7 @@ use reprod_core::{
         default_config_path, default_registry_path, locate_config, ProjectConfig,
         ProjectDescriptor, ProjectRecord, ProjectRegistry,
     },
-    Config, RExecutor,
+    Config, ExecutionEvent, RExecutor, RunOutputChunk, RunSummary,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -21,7 +22,7 @@ use std::{
     process::Command,
     sync::Arc,
 };
-use tokio::sync::Mutex;
+use tokio::sync::{broadcast, Mutex};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -108,11 +109,32 @@ fn default_zoom() -> f32 {
     1.0
 }
 
+#[derive(Debug, Clone)]
+pub enum RuntimeBroadcastEvent {
+    RunStarted {
+        run: RunSummary,
+    },
+    RunOutput {
+        chunk: RunOutputChunk,
+    },
+    RunFinished {
+        run: RunSummary,
+    },
+    TimelineEventAdded {
+        event: ExecutionEvent,
+    },
+    PlotHistoryUpdated {
+        active_plot_id: Option<String>,
+        plots: Vec<PlotHistoryEntry>,
+    },
+}
+
 pub struct ProjectRuntime {
     pub descriptor: ProjectDescriptor,
     pub timeline: Arc<JsonTimeline>,
     pub execution_repo: Arc<dyn ExecutionRepository>,
     pub stream_buffer: Arc<Mutex<StreamBuffer>>,
+    pub run_events: broadcast::Sender<RuntimeBroadcastEvent>,
     pub file_system: Arc<FileSystem>,
     pub filesystem_tool: Arc<FileSystemTool>,
     pub r_context_tool: Arc<RContextTool>,
@@ -164,11 +186,13 @@ impl ProjectRuntime {
             .build();
 
         let filesystem_root = descriptor.root_path.clone();
+        let (run_events, _) = broadcast::channel(1024);
         Ok(Self {
             descriptor,
             timeline,
             execution_repo,
             stream_buffer: Arc::new(Mutex::new(StreamBuffer::new())),
+            run_events,
             file_system: Arc::new(FileSystem::new(&filesystem_root)),
             filesystem_tool: Arc::new(FileSystemTool::new(filesystem_root)),
             r_context_tool: Arc::new(RContextTool::new()),
