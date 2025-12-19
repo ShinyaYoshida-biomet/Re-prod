@@ -8,8 +8,9 @@ use axum::{
 };
 use project_requests::handle_project_request;
 use reprod_core::{
-    executor::ensure_blocks, fs::FileSystemEvent, project::ProjectRecord, ExecutionEvent,
-    ExecutionRequest, ExecutionResult, RunOutputChunk, RunStatus, RunStream, RunSummary,
+    executor::ensure_blocks, fs::FileSystemEvent, project::ProjectRecord, ArtifactInfo,
+    ExecutionEvent, ExecutionRequest, ExecutionResult, RunOutputChunk, RunStatus, RunStream,
+    RunSummary,
 };
 use runtime_fs::{handle_fs_event, spawn_fs_watcher, FsWatcherHandle};
 use serde_json::{self, json};
@@ -640,7 +641,16 @@ async fn build_run_state_responses(
     for event in events {
         if matches!(event.status, RunStatus::Running | RunStatus::Queued) {
             let buffered = runtime.stream_buffer.lock().await.get(&event.event_id);
-            responses.extend(buffered.into_iter().map(WSResponse::RunOutput));
+            if buffered.is_empty() {
+                // Fallback for cases like server restarts where the in-memory buffer is empty.
+                responses.extend(
+                    run_output_chunks_from_event(&event)
+                        .into_iter()
+                        .map(WSResponse::RunOutput),
+                );
+            } else {
+                responses.extend(buffered.into_iter().map(WSResponse::RunOutput));
+            }
         } else {
             // Replay stdout/stderr from the persisted run record for finished runs.
             responses.extend(
@@ -655,6 +665,21 @@ async fn build_run_state_responses(
 }
 
 fn run_summary_from_event(event: &ExecutionEvent) -> RunSummary {
+    let artifacts: Vec<ArtifactInfo> = event
+        .result
+        .plots
+        .iter()
+        .map(|plot| ArtifactInfo {
+            path: plot
+                .storage_path
+                .clone()
+                .unwrap_or_else(|| plot.filename.clone()),
+            artifact_type: "plot".to_string(),
+            label: Some(plot.filename.clone()),
+            record_as: format!("plot[{}]", plot.index),
+        })
+        .collect();
+
     RunSummary {
         run_id: event.event_id.clone(),
         status: event.status.clone(),
@@ -664,7 +689,11 @@ fn run_summary_from_event(event: &ExecutionEvent) -> RunSummary {
         code: event.blocks.first().map(|b| b.code.clone()),
         has_stdout: !event.result.output.is_empty(),
         has_stderr: event.result.error.is_some(),
-        artifacts: None,
+        artifacts: if artifacts.is_empty() {
+            None
+        } else {
+            Some(artifacts)
+        },
         plots: if event.result.plots.is_empty() {
             None
         } else {
