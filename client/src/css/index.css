@@ -18,6 +18,7 @@
 @import "./components/confirm-dialog.css";
 @import "./components/modals/index.css";
 @import "./components/loading-spinner.css";
+@import "./components/toast.css";
 
 /* Design themes */
 @import "./design-phylo-rstudio.css";

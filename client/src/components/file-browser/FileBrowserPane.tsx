@@ -6,6 +6,7 @@ import {
 	IconFolder,
 	IconPlus,
 	ConfirmDialog,
+	useToast,
 } from "@/components/shared";
 import { useFileSystemStore, useStore } from "@/core";
 import { normalizeRelativePath, normalizeSeparators, ROOT_PATH } from "@/core/pathUtils";
@@ -152,6 +153,7 @@ const useEditorActions = () => {
 
 export function FileBrowserPane(): JSX.Element {
 	useFileSystemData();
+	const toast = useToast();
 	const { setEditorContent, setEditorFilepath, setEditorIsDirty } = useEditorActions();
 	const files = useFileSystemStore((state) => state.files);
 	const expandedFolders = useFileSystemStore((state) => state.expandedFolders);
@@ -267,7 +269,7 @@ export function FileBrowserPane(): JSX.Element {
 	const openInSystemViewer = useCallback(
 		async (path: string) => {
 			if (!workspaceRoot) {
-				alertWorkspaceNotReady();
+				alertWorkspaceNotReady(toast);
 				return;
 			}
 			const absolute = resolveAbsolutePath(path);
@@ -293,12 +295,12 @@ export function FileBrowserPane(): JSX.Element {
 
 			try {
 				await navigator.clipboard.writeText(absolute);
-				window.alert("Could not open the file. Path copied to clipboard.");
+				toast.showWarning("Could not open the file. Path copied to clipboard.");
 			} catch (error) {
-				window.alert("Could not open the file.");
+				toast.showError("Could not open the file.");
 			}
 		},
-		[resolveAbsolutePath, workspaceRoot],
+		[resolveAbsolutePath, workspaceRoot, toast],
 	);
 
 	const handleNodeDoubleClick = useCallback(
@@ -323,10 +325,10 @@ export function FileBrowserPane(): JSX.Element {
 				setEditorFilepath(node.path);
 				setEditorIsDirty(false);
 			} catch (error) {
-				alertFileOperationError(`Failed to open file: ${(error as Error).message}`);
+				alertFileOperationError(toast, `Failed to open file: ${(error as Error).message}`);
 			}
 		},
-		[openInSystemViewer, setEditorContent, setEditorFilepath, setEditorIsDirty],
+		[openInSystemViewer, setEditorContent, setEditorFilepath, setEditorIsDirty, toast],
 	);
 
 	const handleContextMenu = useCallback(
@@ -364,14 +366,12 @@ export function FileBrowserPane(): JSX.Element {
 				await refreshPath(parent || ROOT_PATH);
 			} catch (error) {
 				alertFileOperationError(
-					`Failed to create ${isDir ? "folder" : "file"}: ${(error as Error).message}`,
-				);
-				alertFileOperationError(
+					toast,
 					`Failed to create ${isDir ? "folder" : "file"}: ${(error as Error).message}`,
 				);
 			}
 		},
-		[closeContextMenu, refreshPath],
+		[closeContextMenu, refreshPath, toast],
 	);
 
 	const handleRename = useCallback(
@@ -386,11 +386,10 @@ export function FileBrowserPane(): JSX.Element {
 				await fileSystem.renamePath(path, destination);
 				await refreshPath(parent);
 			} catch (error) {
-				alertFileOperationError(`Failed to rename: ${(error as Error).message}`);
-				alertFileOperationError(`Failed to rename: ${(error as Error).message}`);
+				alertFileOperationError(toast, `Failed to rename: ${(error as Error).message}`);
 			}
 		},
-		[closeContextMenu, refreshPath],
+		[closeContextMenu, refreshPath, toast],
 	);
 
 	const handleDeleteClick = useCallback(() => {
@@ -405,7 +404,7 @@ export function FileBrowserPane(): JSX.Element {
 			try {
 				await fileSystem.deletePath(path);
 			} catch (error) {
-				alertFileOperationError(`Failed to delete ${path}: ${(error as Error).message}`);
+				alertFileOperationError(toast, `Failed to delete ${path}: ${(error as Error).message}`);
 			}
 		}
 		await refreshParents(targets);
@@ -413,7 +412,7 @@ export function FileBrowserPane(): JSX.Element {
 		closeContextMenu();
 		setShowDeleteConfirm(false);
 		setFilesToDelete(new Set());
-	}, [filesToDelete, refreshParents, clearSelection, closeContextMenu]);
+	}, [filesToDelete, refreshParents, clearSelection, closeContextMenu, toast]);
 
 	const handleDeleteCancel = useCallback(() => {
 		setShowDeleteConfirm(false);
@@ -447,6 +446,7 @@ export function FileBrowserPane(): JSX.Element {
 					}
 				} catch (error) {
 					alertFileOperationError(
+						toast,
 						`Failed to ${mode === "copy" ? "copy" : "move"} ${name}: ${(error as Error).message}`,
 					);
 				}
@@ -456,7 +456,7 @@ export function FileBrowserPane(): JSX.Element {
 				await refreshParents(targets);
 			}
 		},
-		[refreshPath, refreshParents],
+		[refreshPath, refreshParents, toast],
 	);
 
 	const handlePaste = useCallback(
@@ -500,7 +500,7 @@ export function FileBrowserPane(): JSX.Element {
 		async (path: string) => {
 			if (!workspaceRoot) {
 				closeContextMenu();
-				alertWorkspaceNotReady();
+				alertWorkspaceNotReady(toast);
 				return;
 			}
 			const absolute = resolveAbsolutePath(path);
@@ -517,12 +517,12 @@ export function FileBrowserPane(): JSX.Element {
 			}
 			try {
 				await navigator.clipboard.writeText(absolute);
-				alertDesktopOnlyFeature("Reveal", true);
+				alertDesktopOnlyFeature(toast, "Reveal", true);
 			} catch (error) {
-				alertDesktopOnlyFeature("Reveal");
+				alertDesktopOnlyFeature(toast, "Reveal");
 			}
 		},
-		[closeContextMenu, resolveAbsolutePath, workspaceRoot],
+		[closeContextMenu, resolveAbsolutePath, workspaceRoot, toast],
 	);
 
 	const handleNodeDragStart = useCallback(

@@ -14,6 +14,7 @@ import {
 	SessionInfoModal,
 	SettingsModal,
 } from "@/components/modals";
+import { ToastProvider } from "@/components/shared";
 import { TimelineDialog, type TimelineDialogRef } from "@/components/timeline";
 import { useStore } from "@/core";
 import { useSettingsStore } from "@/core/state/slices/settingsStore";
@@ -62,53 +63,58 @@ function App(): JSX.Element {
 	}, [fetchSettings]);
 
 	return (
-		<div className="app">
-			<MenuBar />
-			<div className="workspace-shell">
-				<Allotment>
-					{panes.files && (
-						<Allotment.Pane minSize={220} preferredSize={240}>
-							<FileBrowserPane />
-						</Allotment.Pane>
-					)}
-					{/* Left side: Editor + Bottom Pane */}
-					<Allotment.Pane minSize={400} preferredSize="75%">
-						<Allotment vertical>
-							{panes.editor && (
-								<Allotment.Pane minSize={300} preferredSize="65%">
-									<EditorPanel />
-								</Allotment.Pane>
-							)}
-							<Allotment.Pane minSize={150} preferredSize={panes.editor ? "35%" : "100%"}>
-								<BottomPane />
+		<ToastProvider>
+			<div className="app">
+				<MenuBar />
+				<div className="workspace-shell">
+					<Allotment>
+						{panes.files && (
+							<Allotment.Pane minSize={220} preferredSize={240}>
+								<FileBrowserPane />
 							</Allotment.Pane>
-						</Allotment>
-					</Allotment.Pane>
-					{/* Right side: AI Assistant (full height) */}
-					{panes.assistant && (
-						<Allotment.Pane minSize={260} preferredSize="25%">
-							<div className="ai-pane-wrapper">
-								<AIPanel ref={setAIPanelRef} hasConfiguredProvider={isActiveProviderConfigured} />
-							</div>
+						)}
+						{/* Left side: Editor + Bottom Pane */}
+						<Allotment.Pane minSize={400} preferredSize="75%">
+							<Allotment vertical>
+								{panes.editor && (
+									<Allotment.Pane minSize={300} preferredSize="65%">
+										<EditorPanel />
+									</Allotment.Pane>
+								)}
+								<Allotment.Pane minSize={150} preferredSize={panes.editor ? "35%" : "100%"}>
+									<BottomPane />
+								</Allotment.Pane>
+							</Allotment>
 						</Allotment.Pane>
-					)}
-				</Allotment>
+						{/* Right side: AI Assistant (full height) */}
+						{panes.assistant && (
+							<Allotment.Pane minSize={260} preferredSize="25%">
+								<div className="ai-pane-wrapper">
+									<AIPanel ref={setAIPanelRef} hasConfiguredProvider={isActiveProviderConfigured} />
+								</div>
+							</Allotment.Pane>
+						)}
+					</Allotment>
+				</div>
+				<StatusBar />
+				<ExportDialog open={modals.export} onClose={() => setModalOpen("export", false)} />
+				<TimelineDialog ref={timelineDialogRef} />
+				<KeyboardShortcutsModal
+					open={modals.shortcuts}
+					onClose={() => setModalOpen("shortcuts", false)}
+				/>
+				<AboutModal open={modals.about} onClose={() => setModalOpen("about", false)} />
+				<SessionInfoModal
+					open={modals.sessionInfo}
+					onClose={() => setModalOpen("sessionInfo", false)}
+				/>
+				<SettingsModal open={modals.settings} onClose={() => setModalOpen("settings", false)} />
+				<ProjectManagerModal
+					open={modals.projects}
+					onClose={() => setModalOpen("projects", false)}
+				/>
 			</div>
-			<StatusBar />
-			<ExportDialog open={modals.export} onClose={() => setModalOpen("export", false)} />
-			<TimelineDialog ref={timelineDialogRef} />
-			<KeyboardShortcutsModal
-				open={modals.shortcuts}
-				onClose={() => setModalOpen("shortcuts", false)}
-			/>
-			<AboutModal open={modals.about} onClose={() => setModalOpen("about", false)} />
-			<SessionInfoModal
-				open={modals.sessionInfo}
-				onClose={() => setModalOpen("sessionInfo", false)}
-			/>
-			<SettingsModal open={modals.settings} onClose={() => setModalOpen("settings", false)} />
-			<ProjectManagerModal open={modals.projects} onClose={() => setModalOpen("projects", false)} />
-		</div>
+		</ToastProvider>
 	);
 }
 

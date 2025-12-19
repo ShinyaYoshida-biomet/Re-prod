@@ -1,0 +1,78 @@
+import { useEffect, useState } from "react";
+import { IconXCircle } from "../icons";
+
+export type ToastSeverity = "info" | "success" | "warning" | "error";
+
+export interface ToastProps {
+	id: string;
+	message: string;
+	severity: ToastSeverity;
+	duration?: number;
+	onDismiss: (id: string) => void;
+}
+
+export function Toast({ id, message, severity, duration = 4000, onDismiss }: ToastProps) {
+	const [isExiting, setIsExiting] = useState(false);
+
+	useEffect(() => {
+		if (duration <= 0) return;
+
+		const timer = setTimeout(() => {
+			handleDismiss();
+		}, duration);
+
+		return () => clearTimeout(timer);
+	}, [duration, id, onDismiss]);
+
+	const handleDismiss = () => {
+		setIsExiting(true);
+		// Wait for exit animation before removing from DOM
+		setTimeout(() => {
+			onDismiss(id);
+		}, 300);
+	};
+
+	const handleKeyDown = (e: React.KeyboardEvent) => {
+		if (e.key === "Escape") {
+			handleDismiss();
+		}
+	};
+
+	return (
+		<div
+			className={`toast toast-${severity} ${isExiting ? "toast-exiting" : ""}`}
+			role="alert"
+			aria-live="polite"
+			aria-atomic="true"
+			onKeyDown={handleKeyDown}
+			tabIndex={0}
+		>
+			<div className="toast-content">
+				<span className="toast-icon">{getIcon(severity)}</span>
+				<span className="toast-message">{message}</span>
+			</div>
+			<button
+				type="button"
+				className="toast-close"
+				onClick={handleDismiss}
+				aria-label="Dismiss notification"
+			>
+				<IconXCircle />
+			</button>
+		</div>
+	);
+}
+
+function getIcon(severity: ToastSeverity): string {
+	switch (severity) {
+		case "success":
+			return "✓";
+		case "error":
+			return "✕";
+		case "warning":
+			return "⚠";
+		case "info":
+		default:
+			return "ℹ";
+	}
+}

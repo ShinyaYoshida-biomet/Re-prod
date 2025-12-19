@@ -127,7 +127,8 @@ export function importSessionSnapshot(): void {
 			const data = JSON.parse(text) as SessionSnapshot;
 			await applySessionSnapshot(data);
 		} catch (error) {
-			window.alert("Unable to load session snapshot. Ensure the file is valid JSON.");
+			const { showError } = await import("./toastService");
+			showError("Unable to load session snapshot. Ensure the file is valid JSON.");
 		}
 	};
 
@@ -136,7 +137,8 @@ export function importSessionSnapshot(): void {
 
 export async function applySessionSnapshot(snapshot: SessionSnapshot): Promise<boolean> {
 	if (snapshot.version !== SNAPSHOT_VERSION) {
-		window.alert("Session snapshot version is not compatible with this build.");
+		const { showError } = await import("./toastService");
+		showError("Session snapshot version is not compatible with this build.");
 		resetDomainState();
 		applyViewState();
 		await restoreEditorFromFilesystem(snapshot.editor?.filepath ?? null);

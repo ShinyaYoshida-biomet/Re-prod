@@ -62,8 +62,9 @@ export function setupCodeCommands() {
 				if (!confirm("Restart R session? All workspace variables will be lost.")) {
 					return;
 				}
-				void restartSession().catch(() => {
-					window.alert("Unable to restart session. Check logs for details.");
+				void restartSession().catch(async () => {
+					const { showError } = await import("@/services/toastService");
+					showError("Unable to restart session. Check logs for details.");
 				});
 			},
 		},
