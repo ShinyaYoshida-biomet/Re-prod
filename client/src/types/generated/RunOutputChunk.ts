@@ -4,4 +4,4 @@ import type { RunStream } from "./RunStream";
 /**
  * Output chunk streamed during execution
  */
-export type RunOutputChunk = { run_id: string, stream: RunStream, chunk: string, at_ms: number, };
+export type RunOutputChunk = { run_id: string; stream: RunStream; chunk: string; at_ms: number };

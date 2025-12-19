@@ -4,4 +4,10 @@ import type { PlotInfo } from "./PlotInfo";
 /**
  * Result of code execution
  */
-export type ExecutionResult = { success: boolean, output: string, error: string | null, plots: Array<PlotInfo>, execution_time_ms: number, };
+export type ExecutionResult = {
+	success: boolean;
+	output: string;
+	error: string | null;
+	plots: Array<PlotInfo>;
+	execution_time_ms: number;
+};

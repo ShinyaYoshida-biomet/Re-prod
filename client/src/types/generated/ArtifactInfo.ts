@@ -3,4 +3,9 @@
 /**
  * Artifact generated during tool execution
  */
-export type ArtifactInfo = { path: string, artifact_type: string, label: string | null, record_as: string, };
+export type ArtifactInfo = {
+	path: string;
+	artifact_type: string;
+	label: string | null;
+	record_as: string;
+};

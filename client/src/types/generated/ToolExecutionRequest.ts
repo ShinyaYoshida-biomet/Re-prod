@@ -3,4 +3,8 @@
 /**
  * Request to execute a tool capability
  */
-export type ToolExecutionRequest = { tool_id: string, capability_id: string, parameters: Record<string, any>, };
+export type ToolExecutionRequest = {
+	tool_id: string;
+	capability_id: string;
+	parameters: Record<string, any>;
+};

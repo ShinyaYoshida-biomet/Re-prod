@@ -8,4 +8,15 @@ import type { RunStatus } from "./RunStatus";
 /**
  * Event emitted to the timeline after execution completes.
  */
-export type ExecutionEvent = { event_id: string, context: ExecutionContext, blocks: Array<CodeBlockMetadata>, result: ExecutionResult, environment: EnvironmentSnapshot, created_at_ms: number, status: RunStatus, started_at_ms: number, finished_at_ms: number | null, duration_ms: number | null, };
+export type ExecutionEvent = {
+	event_id: string;
+	context: ExecutionContext;
+	blocks: Array<CodeBlockMetadata>;
+	result: ExecutionResult;
+	environment: EnvironmentSnapshot;
+	created_at_ms: number;
+	status: RunStatus;
+	started_at_ms: number;
+	finished_at_ms: number | null;
+	duration_ms: number | null;
+};

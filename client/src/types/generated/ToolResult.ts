@@ -3,4 +3,4 @@
 /**
  * Tool result to send back to AI
  */
-export type ToolResult = { tool_use_id: string, content: string, is_error: boolean, };
+export type ToolResult = { tool_use_id: string; content: string; is_error: boolean };
