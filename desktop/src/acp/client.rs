@@ -9,12 +9,6 @@ use anyhow::{anyhow, bail, Context, Result};
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::warn;
 
-/// ACP client implementation for Re-prod.
-///
-/// This is intentionally minimal for #228:
-/// - session updates forwarded to the frontend via a channel (connection emits Tauri events)
-/// - permission requests auto-approved (placeholder until #229)
-/// - file operations restricted to `workspace_root` (path-escape prevention)
 pub struct ReprodAcpClient {
     workspace_root: PathBuf,
     session_update_tx: UnboundedSender<SessionNotification>,
