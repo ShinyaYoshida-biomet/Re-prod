@@ -24,11 +24,17 @@ import { useSettingsPersistence } from "@/hooks/useSettingsPersistence";
 import { useSocketConnection } from "@/hooks/useSocketConnection";
 import { setupSocketListeners } from "@/core/init/socketListeners";
 import { ACP_FEATURE_ENABLED } from "@/constants/features";
+import { PermissionRequestManager } from "@/components/agent/PermissionRequestManager";
 
 function App(): JSX.Element {
 	const panes = useStore((state) => state.view.panes);
 	const modals = useStore((state) => state.view.modals);
 	const theme = useStore((state) => state.settings.theme);
+	const activeMode = useStore((state) => state.activeMode);
+	const activeAgent = useStore((state) => state.activeAgent);
+	const setActiveMode = useStore((state) => state.setActiveMode);
+	const setActiveAgent = useStore((state) => state.setActiveAgent);
+	const setDetectedAgents = useStore((state) => state.setDetectedAgents);
 	const setAIPanelRef = useStore((state) => state.setAIPanelRef);
 	const setTimelinePanelRef = useStore((state) => state.setTimelinePanelRef);
 	const setModalOpen = useStore((state) => state.setModalOpen);
@@ -38,7 +44,10 @@ function App(): JSX.Element {
 
 	const activeProviderConfig = providers.find((provider) => provider.name === activeProvider);
 	const isActiveProviderConfigured = Boolean(activeProviderConfig?.isConfigured);
-	const canUseAssistant = ACP_FEATURE_ENABLED || isActiveProviderConfigured;
+	const canUseAssistant =
+		activeMode === "external_agent"
+			? ACP_FEATURE_ENABLED && Boolean(activeAgent)
+			: isActiveProviderConfigured || ACP_FEATURE_ENABLED;
 
 	// Enable global keyboard shortcuts
 	useKeyboardShortcuts();
@@ -63,6 +72,28 @@ function App(): JSX.Element {
 	useEffect(() => {
 		void fetchSettings();
 	}, [fetchSettings]);
+
+	useEffect(() => {
+		const win = window as typeof window & { __TAURI__?: unknown; __TAURI_IPC__?: unknown };
+		if (!ACP_FEATURE_ENABLED || (!win.__TAURI__ && !win.__TAURI_IPC__)) return;
+
+		const bootstrap = async () => {
+			try {
+				const { invoke } = await import("@tauri-apps/api/core");
+				const [cfg, agents] = await Promise.all([
+					invoke<{ active_mode: string; active_agent: string | null }>("acp_get_agent_config"),
+					invoke("acp_detect_agents"),
+				]);
+				setActiveMode((cfg.active_mode as "api" | "external_agent") ?? "api");
+				setActiveAgent(cfg.active_agent);
+				setDetectedAgents(agents as any);
+			} catch (error) {
+				console.error("Failed to bootstrap ACP config", error);
+			}
+		};
+
+		void bootstrap();
+	}, [setActiveAgent, setActiveMode, setDetectedAgents]);
 
 	return (
 		<ToastProvider>
@@ -115,6 +146,7 @@ function App(): JSX.Element {
 					open={modals.projects}
 					onClose={() => setModalOpen("projects", false)}
 				/>
+				<PermissionRequestManager />
 			</div>
 		</ToastProvider>
 	);
