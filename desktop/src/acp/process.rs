@@ -1,0 +1,59 @@
+use std::{collections::HashMap, path::PathBuf, process::Stdio, time::Duration};
+
+use anyhow::{anyhow, Context, Result};
+use tokio::process::{Child, Command};
+use tokio::time::sleep;
+use tracing::{debug, error};
+use which::which;
+
+pub struct ProcessConfig {
+    pub command: String,
+    pub args: Vec<String>,
+    pub cwd: PathBuf,
+    pub env: HashMap<String, String>,
+}
+
+pub struct AcpChild {
+    child: Child,
+}
+
+impl AcpChild {
+    pub fn new(child: Child) -> Result<Self> {
+        Ok(Self { child })
+    }
+
+    pub async fn notify_ready(&mut self) -> Result<()> {
+        // Placeholder: give the process a brief moment to start.
+        // Future: replace with protocol handshake.
+        sleep(Duration::from_millis(50)).await;
+        Ok(())
+    }
+
+    pub async fn shutdown(&mut self) {
+        if let Some(id) = self.child.id() {
+            debug!("Shutting down ACP child process pid={}", id);
+        }
+        if let Err(err) = self.child.kill().await {
+            error!("Failed to kill ACP child process: {err}");
+        }
+    }
+}
+
+pub async fn spawn_agent(config: ProcessConfig) -> Result<AcpChild> {
+    let command_path = which(&config.command)
+        .with_context(|| format!("Agent binary not found on PATH: {}", config.command))?;
+
+    let mut cmd = Command::new(command_path);
+    cmd.args(config.args);
+    cmd.current_dir(config.cwd);
+    cmd.envs(config.env);
+    cmd.stdin(Stdio::piped());
+    cmd.stdout(Stdio::piped());
+    cmd.stderr(Stdio::piped());
+
+    let child = cmd
+        .spawn()
+        .map_err(|err| anyhow!("Failed to spawn ACP agent: {err}"))?;
+
+    AcpChild::new(child)
+}
