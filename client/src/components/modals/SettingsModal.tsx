@@ -4,6 +4,7 @@ import { IconSettings } from "@/components/shared";
 import { DEFAULT_SETTINGS } from "@/constants/defaultSettings";
 import { useStore } from "@/core";
 import { SettingsPanel } from "../settings/SettingsPanel";
+import { ExternalAgentSettingsPane } from "../agent/ExternalAgentSettingsPane";
 import { ModalShell } from "./ModalShell";
 
 interface SettingsModalProps {
@@ -138,6 +139,11 @@ export function SettingsModal({ open, onClose }: SettingsModalProps): JSX.Elemen
 				<section>
 					<h3>LLM Providers</h3>
 					<SettingsPanel />
+				</section>
+
+				<section>
+					<h3>External Agents (ACP)</h3>
+					<ExternalAgentSettingsPane />
 				</section>
 			</form>
 		</ModalShell>

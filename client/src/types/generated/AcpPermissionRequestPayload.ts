@@ -6,5 +6,6 @@ export type AcpPermissionRequestPayload = {
 	session_id: string;
 	tool_call_id: string;
 	tool_title: string | null;
+	locations: Array<string>;
 	options: Array<AcpPermissionOption>;
 };

@@ -2,54 +2,86 @@ use std::{
     collections::HashMap,
     path::{Path, PathBuf},
     sync::Arc,
+    time::Duration,
 };
 
 use agent_client_protocol::{
-    Client, ReadTextFileRequest, ReadTextFileResponse, RequestPermissionOutcome,
-    RequestPermissionRequest, RequestPermissionResponse, SessionNotification, ToolCallUpdate,
-    WriteTextFileRequest, WriteTextFileResponse,
+    Client, PermissionOption, PermissionOptionKind, ReadTextFileRequest, ReadTextFileResponse,
+    RequestPermissionOutcome, RequestPermissionRequest, RequestPermissionResponse,
+    SessionNotification, WriteTextFileRequest, WriteTextFileResponse,
 };
 use anyhow::{anyhow, bail, Context, Result};
 use tokio::sync::{mpsc::UnboundedSender, oneshot, Mutex};
-use tracing::warn;
-use uuid::Uuid;
+use tokio::time::timeout;
+use tracing::{error, warn};
 
-use crate::acp::types::{
-    AcpPermissionDecision, AcpPermissionDecisionOutcome, AcpPermissionOption,
-    AcpPermissionRequestPayload,
-};
+use crate::acp::{connection::map_permission_request, types::AcpPermissionRequestPayload};
 
-pub struct PermissionDecisionMessage {
-    pub request_id: String,
-    pub outcome: AcpPermissionDecisionOutcome,
-    pub option_id: Option<String>,
-}
+#[cfg(not(test))]
+const PERMISSION_TIMEOUT: Duration = Duration::from_secs(30);
+
+#[cfg(test)]
+const PERMISSION_TIMEOUT: Duration = Duration::from_millis(200);
 
 pub struct ReprodAcpClient {
     workspace_root: PathBuf,
     session_update_tx: UnboundedSender<SessionNotification>,
-    permission_event_tx: UnboundedSender<AcpPermissionRequestPayload>,
-    pending: Arc<Mutex<HashMap<String, oneshot::Sender<RequestPermissionOutcome>>>>,
+    permission_request_tx: UnboundedSender<AcpPermissionRequestPayload>,
+    pending_permissions: Arc<Mutex<HashMap<String, oneshot::Sender<RequestPermissionOutcome>>>>,
 }
 
 impl ReprodAcpClient {
     pub fn new(
         workspace_root: PathBuf,
         session_update_tx: UnboundedSender<SessionNotification>,
-        permission_event_tx: UnboundedSender<AcpPermissionRequestPayload>,
+        permission_request_tx: UnboundedSender<AcpPermissionRequestPayload>,
+        pending_permissions: Arc<Mutex<HashMap<String, oneshot::Sender<RequestPermissionOutcome>>>>,
     ) -> Self {
         Self {
             workspace_root,
             session_update_tx,
-            permission_event_tx,
-            pending: Arc::new(Mutex::new(HashMap::new())),
+            permission_request_tx,
+            pending_permissions,
         }
     }
 
-    pub fn pending(
+    async fn wait_for_permission(
         &self,
-    ) -> Arc<Mutex<HashMap<String, oneshot::Sender<RequestPermissionOutcome>>>> {
-        Arc::clone(&self.pending)
+        payload: AcpPermissionRequestPayload,
+        fallback: RequestPermissionOutcome,
+    ) -> RequestPermissionOutcome {
+        let (tx, rx) = oneshot::channel();
+        let request_id = payload.request_id.clone();
+        if self
+            .pending_permissions
+            .lock()
+            .await
+            .insert(request_id.clone(), tx)
+            .is_some()
+        {
+            warn!("Overwriting pending permission request_id={}", request_id);
+        }
+
+        if let Err(err) = self.permission_request_tx.send(payload) {
+            error!("Failed to send permission request to UI: {err}");
+            let _ = self.pending_permissions.lock().await.remove(&request_id);
+            return fallback;
+        }
+
+        let outcome = match timeout(PERMISSION_TIMEOUT, rx).await {
+            Ok(Ok(outcome)) => outcome,
+            Ok(Err(_)) => {
+                warn!("Permission responder dropped; using fallback");
+                fallback
+            }
+            Err(_) => {
+                warn!("Permission request timed out; using fallback");
+                fallback
+            }
+        };
+
+        let _ = self.pending_permissions.lock().await.remove(&request_id);
+        outcome
     }
 }
 
@@ -59,44 +91,9 @@ impl Client for ReprodAcpClient {
         &self,
         args: RequestPermissionRequest,
     ) -> agent_client_protocol::Result<RequestPermissionResponse> {
-        let request_id = Uuid::new_v4().to_string();
-        let options: Vec<AcpPermissionOption> = args
-            .options
-            .iter()
-            .map(|opt| AcpPermissionOption {
-                option_id: opt.option_id.to_string(),
-                name: opt.name.clone(),
-                kind: format!("{:?}", opt.kind),
-            })
-            .collect();
-
-        if options.is_empty() {
-            warn!(
-                "ACP permission request had no options; cancelling session_id={}",
-                args.session_id
-            );
-            return Ok(RequestPermissionResponse::new(
-                RequestPermissionOutcome::Cancelled,
-            ));
-        }
-
-        let payload = AcpPermissionRequestPayload {
-            request_id: request_id.clone(),
-            session_id: args.session_id.to_string(),
-            tool_call_id: args.tool_call.tool_call_id.to_string(),
-            tool_title: extract_tool_title(&args.tool_call),
-            options,
-        };
-
-        let (tx, rx) = oneshot::channel();
-        {
-            let mut pending = self.pending.lock().await;
-            pending.insert(request_id.clone(), tx);
-        }
-
-        let _ = self.permission_event_tx.send(payload);
-
-        let outcome = rx.await.unwrap_or(RequestPermissionOutcome::Cancelled);
+        let payload = map_permission_request(args.clone());
+        let fallback = select_timeout_outcome(&args.options);
+        let outcome = self.wait_for_permission(payload, fallback).await;
         Ok(RequestPermissionResponse::new(outcome))
     }
 
@@ -197,20 +194,125 @@ fn ensure_within_workspace(workspace_root: &Path, requested: &Path) -> Result<Pa
     Ok(resolved)
 }
 
-fn extract_tool_title(update: &ToolCallUpdate) -> Option<String> {
-    update
-        .fields
-        .title
-        .clone()
-        .or_else(|| update.fields.kind.as_ref().map(|k| format!("{k:?}")))
+fn select_timeout_outcome(options: &[PermissionOption]) -> RequestPermissionOutcome {
+    let deny_option = options.iter().find(|opt| {
+        matches!(
+            opt.kind,
+            PermissionOptionKind::RejectOnce | PermissionOptionKind::RejectAlways
+        )
+    });
+
+    if let Some(option) = deny_option {
+        return RequestPermissionOutcome::Selected(
+            agent_client_protocol::SelectedPermissionOutcome::new(option.option_id.clone()),
+        );
+    }
+
+    warn!("ACP permission request had no deny option; cancelling");
+    RequestPermissionOutcome::Cancelled
 }
 
-impl From<AcpPermissionDecision> for PermissionDecisionMessage {
-    fn from(value: AcpPermissionDecision) -> Self {
-        Self {
-            request_id: value.request_id,
-            outcome: value.outcome,
-            option_id: value.option_id,
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use agent_client_protocol::{
+        PermissionOption, PermissionOptionId, PermissionOptionKind, SelectedPermissionOutcome,
+        SessionId, ToolCallId, ToolCallUpdate, ToolCallUpdateFields,
+    };
+    use tokio::task::LocalSet;
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn forwards_permission_and_awaits_decision() {
+        let local = LocalSet::new();
+        local
+            .run_until(async {
+                let workspace = std::env::temp_dir().join("acp-client-test");
+                let _ = std::fs::create_dir_all(&workspace);
+
+                let (session_tx, _session_rx) = tokio::sync::mpsc::unbounded_channel();
+                let (permission_tx, mut permission_rx) = tokio::sync::mpsc::unbounded_channel();
+                let pending = Arc::new(Mutex::new(HashMap::new()));
+                let client =
+                    ReprodAcpClient::new(workspace, session_tx, permission_tx, pending.clone());
+
+                let req = RequestPermissionRequest::new(
+                    SessionId::new("s-test"),
+                    ToolCallUpdate::new(
+                        ToolCallId::new("tool-1"),
+                        ToolCallUpdateFields::new().title("read file"),
+                    ),
+                    vec![PermissionOption::new(
+                        PermissionOptionId::new("allow"),
+                        "Allow once",
+                        PermissionOptionKind::AllowOnce,
+                    )],
+                );
+
+                let handle =
+                    tokio::task::spawn_local(async move { client.request_permission(req).await });
+
+                let payload = permission_rx.recv().await.expect("permission payload");
+                assert_eq!(payload.request_id, "tool-1");
+
+                let sender = pending
+                    .lock()
+                    .await
+                    .remove(&payload.request_id)
+                    .expect("pending sender");
+                sender
+                    .send(RequestPermissionOutcome::Selected(
+                        SelectedPermissionOutcome::new("allow"),
+                    ))
+                    .expect("send outcome");
+
+                let resp = handle.await.expect("join").expect("permission response");
+                match resp.outcome {
+                    RequestPermissionOutcome::Selected(choice) => {
+                        assert_eq!(choice.option_id.to_string(), "allow");
+                    }
+                    other => panic!("Unexpected outcome: {other:?}"),
+                }
+            })
+            .await;
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn times_out_to_reject_when_no_response() {
+        let workspace = std::env::temp_dir().join("acp-client-timeout");
+        let _ = std::fs::create_dir_all(&workspace);
+
+        let (session_tx, _session_rx) = tokio::sync::mpsc::unbounded_channel();
+        let (permission_tx, mut permission_rx) = tokio::sync::mpsc::unbounded_channel();
+        let pending = Arc::new(Mutex::new(HashMap::new()));
+        let client = ReprodAcpClient::new(workspace, session_tx, permission_tx, pending);
+
+        let req = RequestPermissionRequest::new(
+            SessionId::new("s-test"),
+            ToolCallUpdate::new(
+                ToolCallId::new("tool-1"),
+                ToolCallUpdateFields::new().title("read file"),
+            ),
+            vec![PermissionOption::new(
+                PermissionOptionId::new("deny"),
+                "Deny",
+                PermissionOptionKind::RejectOnce,
+            )],
+        );
+
+        let local = LocalSet::new();
+        let resp = local
+            .run_until(async move {
+                let handle =
+                    tokio::task::spawn_local(async move { client.request_permission(req).await });
+                let _ = permission_rx.recv().await.expect("permission payload");
+                handle.await.expect("join").expect("response")
+            })
+            .await;
+        match resp.outcome {
+            RequestPermissionOutcome::Selected(choice) => {
+                assert_eq!(choice.option_id.to_string(), "deny");
+            }
+            other => panic!("Unexpected outcome: {other:?}"),
         }
     }
 }

@@ -1,6 +1,8 @@
 mod client;
 pub mod commands;
+mod config;
 mod connection;
+mod detection;
 mod process;
 mod session;
 pub mod types;
@@ -8,7 +10,7 @@ pub mod types;
 use std::path::{Path, PathBuf};
 
 use crate::acp::{
-    connection::AcpConnection,
+    connection::{AcpConnection, PermissionDecisionMessage},
     process::{spawn_agent, AcpChild, ProcessConfig, SpawnedPipes},
     session::AcpSessionManager,
 };
@@ -113,6 +115,15 @@ impl AcpManager {
         Ok(())
     }
 
+    pub async fn respond_permission(&self, decision: AcpPermissionDecision) -> Result<()> {
+        let conn = self
+            .conn
+            .as_ref()
+            .ok_or_else(|| anyhow!("ACP connection not initialized"))?;
+        let mapped: PermissionDecisionMessage = decision.try_into()?;
+        conn.respond_permission(mapped).await
+    }
+
     pub async fn send_prompt(
         &self,
         app_handle: &AppHandle,
@@ -189,7 +200,7 @@ fn map_session_update(update: &SessionUpdate) -> AcpSessionUpdate {
         SessionUpdate::AgentMessageChunk(chunk) => AcpSessionUpdate::AgentMessageChunk {
             text: stringify_chunk(chunk),
         },
-        SessionUpdate::AgentThoughtChunk(chunk) => AcpSessionUpdate::AgentMessageChunk {
+        SessionUpdate::AgentThoughtChunk(chunk) => AcpSessionUpdate::AgentThoughtChunk {
             text: stringify_chunk(chunk),
         },
         SessionUpdate::Plan(plan) => AcpSessionUpdate::AgentThoughtChunk {

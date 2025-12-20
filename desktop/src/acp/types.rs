@@ -60,6 +60,7 @@ pub struct AcpPermissionRequestPayload {
     pub session_id: String,
     pub tool_call_id: String,
     pub tool_title: Option<String>,
+    pub locations: Vec<String>,
     pub options: Vec<AcpPermissionOption>,
 }
 
@@ -67,7 +68,9 @@ pub struct AcpPermissionRequestPayload {
 #[ts(export, export_to = "../../client/src/types/generated/")]
 pub enum AcpPermissionDecisionOutcome {
     AllowOnce,
+    AllowAlways,
     RejectOnce,
+    RejectAlways,
     Cancelled,
 }
 
@@ -77,6 +80,23 @@ pub struct AcpPermissionDecision {
     pub request_id: String,
     pub outcome: AcpPermissionDecisionOutcome,
     pub option_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
+pub struct AcpDetectedAgent {
+    pub id: String,
+    pub name: String,
+    pub command: String,
+    pub available: bool,
+    pub path: Option<std::path::PathBuf>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
+pub struct AcpAgentConfig {
+    pub active_mode: String,
+    pub active_agent: Option<String>,
 }
 
 #[cfg(test)]
@@ -95,5 +115,7 @@ mod tests {
         AcpPermissionRequestPayload::export().unwrap();
         AcpPermissionDecisionOutcome::export().unwrap();
         AcpPermissionDecision::export().unwrap();
+        AcpDetectedAgent::export().unwrap();
+        AcpAgentConfig::export().unwrap();
     }
 }

@@ -15,6 +15,8 @@ const STREAM_TIMEOUT_MS = 45000;
 export function useAIConversation() {
 	const messages = useStore((state) => state.ai.messages);
 	const isLoading = useStore((state) => state.ai.isLoading);
+	const activeMode = useStore((state) => state.activeMode);
+	const activeAgent = useStore((state) => state.activeAgent);
 	const appendStreamingChunk = useStore((state) => state.appendStreamingChunk);
 
 	const addAIMessage = useStore((state) => state.addAIMessage);
@@ -34,7 +36,8 @@ export function useAIConversation() {
 	const acpReadyRef = useRef(false);
 	const acpStreamsRef = useRef<Map<string, string>>(new Map());
 	const acpUnlistenRef = useRef<(() => void) | null>(null);
-	const acpActive = ACP_FEATURE_ENABLED && IS_TAURI;
+	const acpActive =
+		ACP_FEATURE_ENABLED && IS_TAURI && activeMode === "external_agent" && Boolean(activeAgent);
 
 	const postAssistantMessage = useCallback(
 		(content: string, extras?: Partial<AIMessage>) => {

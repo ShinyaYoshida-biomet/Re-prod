@@ -32,3 +32,5 @@ export * from "./AcpPermissionOption";
 export * from "./AcpPermissionRequestPayload";
 export * from "./AcpPermissionDecisionOutcome";
 export * from "./AcpPermissionDecision";
+export * from "./AcpDetectedAgent";
+export * from "./AcpAgentConfig";
