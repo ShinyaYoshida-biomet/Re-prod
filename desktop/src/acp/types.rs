@@ -45,6 +45,40 @@ pub struct AcpCancelRequest {
     pub session_id: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
+pub struct AcpPermissionOption {
+    pub option_id: String,
+    pub name: String,
+    pub kind: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
+pub struct AcpPermissionRequestPayload {
+    pub request_id: String,
+    pub session_id: String,
+    pub tool_call_id: String,
+    pub tool_title: Option<String>,
+    pub options: Vec<AcpPermissionOption>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
+pub enum AcpPermissionDecisionOutcome {
+    AllowOnce,
+    RejectOnce,
+    Cancelled,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
+pub struct AcpPermissionDecision {
+    pub request_id: String,
+    pub outcome: AcpPermissionDecisionOutcome,
+    pub option_id: Option<String>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -57,5 +91,9 @@ mod tests {
         AcpSessionUpdateEnvelope::export().unwrap();
         AcpSessionUpdate::export().unwrap();
         AcpCancelRequest::export().unwrap();
+        AcpPermissionOption::export().unwrap();
+        AcpPermissionRequestPayload::export().unwrap();
+        AcpPermissionDecisionOutcome::export().unwrap();
+        AcpPermissionDecision::export().unwrap();
     }
 }

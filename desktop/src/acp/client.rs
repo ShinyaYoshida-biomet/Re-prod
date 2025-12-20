@@ -1,28 +1,55 @@
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use agent_client_protocol::{
     Client, ReadTextFileRequest, ReadTextFileResponse, RequestPermissionOutcome,
-    RequestPermissionRequest, RequestPermissionResponse, SelectedPermissionOutcome,
-    SessionNotification, WriteTextFileRequest, WriteTextFileResponse,
+    RequestPermissionRequest, RequestPermissionResponse, SessionNotification, ToolCallUpdate,
+    WriteTextFileRequest, WriteTextFileResponse,
 };
 use anyhow::{anyhow, bail, Context, Result};
-use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::{mpsc::UnboundedSender, oneshot, Mutex};
 use tracing::warn;
+use uuid::Uuid;
+
+use crate::acp::types::{
+    AcpPermissionDecision, AcpPermissionDecisionOutcome, AcpPermissionOption,
+    AcpPermissionRequestPayload,
+};
+
+pub struct PermissionDecisionMessage {
+    pub request_id: String,
+    pub outcome: AcpPermissionDecisionOutcome,
+    pub option_id: Option<String>,
+}
 
 pub struct ReprodAcpClient {
     workspace_root: PathBuf,
     session_update_tx: UnboundedSender<SessionNotification>,
+    permission_event_tx: UnboundedSender<AcpPermissionRequestPayload>,
+    pending: Arc<Mutex<HashMap<String, oneshot::Sender<RequestPermissionOutcome>>>>,
 }
 
 impl ReprodAcpClient {
     pub fn new(
         workspace_root: PathBuf,
         session_update_tx: UnboundedSender<SessionNotification>,
+        permission_event_tx: UnboundedSender<AcpPermissionRequestPayload>,
     ) -> Self {
         Self {
             workspace_root,
             session_update_tx,
+            permission_event_tx,
+            pending: Arc::new(Mutex::new(HashMap::new())),
         }
+    }
+
+    pub fn pending(
+        &self,
+    ) -> Arc<Mutex<HashMap<String, oneshot::Sender<RequestPermissionOutcome>>>> {
+        Arc::clone(&self.pending)
     }
 }
 
@@ -32,26 +59,18 @@ impl Client for ReprodAcpClient {
         &self,
         args: RequestPermissionRequest,
     ) -> agent_client_protocol::Result<RequestPermissionResponse> {
-        let allow_option = args
+        let request_id = Uuid::new_v4().to_string();
+        let options: Vec<AcpPermissionOption> = args
             .options
             .iter()
-            .find(|opt| {
-                matches!(
-                    opt.kind,
-                    agent_client_protocol::PermissionOptionKind::AllowOnce
-                )
+            .map(|opt| AcpPermissionOption {
+                option_id: opt.option_id.to_string(),
+                name: opt.name.clone(),
+                kind: format!("{:?}", opt.kind),
             })
-            .or_else(|| {
-                args.options.iter().find(|opt| {
-                    matches!(
-                        opt.kind,
-                        agent_client_protocol::PermissionOptionKind::AllowAlways
-                    )
-                })
-            })
-            .or_else(|| args.options.first());
+            .collect();
 
-        let Some(option) = allow_option else {
+        if options.is_empty() {
             warn!(
                 "ACP permission request had no options; cancelling session_id={}",
                 args.session_id
@@ -59,13 +78,26 @@ impl Client for ReprodAcpClient {
             return Ok(RequestPermissionResponse::new(
                 RequestPermissionOutcome::Cancelled,
             ));
+        }
+
+        let payload = AcpPermissionRequestPayload {
+            request_id: request_id.clone(),
+            session_id: args.session_id.to_string(),
+            tool_call_id: args.tool_call.tool_call_id.to_string(),
+            tool_title: extract_tool_title(&args.tool_call),
+            options,
         };
 
-        Ok(RequestPermissionResponse::new(
-            RequestPermissionOutcome::Selected(SelectedPermissionOutcome::new(
-                option.option_id.clone(),
-            )),
-        ))
+        let (tx, rx) = oneshot::channel();
+        {
+            let mut pending = self.pending.lock().await;
+            pending.insert(request_id.clone(), tx);
+        }
+
+        let _ = self.permission_event_tx.send(payload);
+
+        let outcome = rx.await.unwrap_or(RequestPermissionOutcome::Cancelled);
+        Ok(RequestPermissionResponse::new(outcome))
     }
 
     async fn session_notification(
@@ -163,4 +195,22 @@ fn ensure_within_workspace(workspace_root: &Path, requested: &Path) -> Result<Pa
     }
 
     Ok(resolved)
+}
+
+fn extract_tool_title(update: &ToolCallUpdate) -> Option<String> {
+    update
+        .fields
+        .title
+        .clone()
+        .or_else(|| update.fields.kind.as_ref().map(|k| format!("{k:?}")))
+}
+
+impl From<AcpPermissionDecision> for PermissionDecisionMessage {
+    fn from(value: AcpPermissionDecision) -> Self {
+        Self {
+            request_id: value.request_id,
+            outcome: value.outcome,
+            option_id: value.option_id,
+        }
+    }
 }

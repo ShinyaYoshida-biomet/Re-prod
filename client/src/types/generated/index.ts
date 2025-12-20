@@ -28,3 +28,7 @@ export * from "./AcpPromptRequest";
 export * from "./AcpSessionUpdate";
 export * from "./AcpSessionUpdateEnvelope";
 export * from "./AcpCancelRequest";
+export * from "./AcpPermissionOption";
+export * from "./AcpPermissionRequestPayload";
+export * from "./AcpPermissionDecisionOutcome";
+export * from "./AcpPermissionDecision";

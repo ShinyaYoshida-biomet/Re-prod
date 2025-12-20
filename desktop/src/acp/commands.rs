@@ -1,6 +1,8 @@
 use std::{path::PathBuf, sync::Arc};
 
-use crate::acp::types::{AcpCancelRequest, AcpInitializeResponse, AcpPromptRequest};
+use crate::acp::types::{
+    AcpCancelRequest, AcpInitializeResponse, AcpPermissionDecision, AcpPromptRequest,
+};
 use crate::acp::{build_process_config, AcpManager};
 use tauri::{AppHandle, State};
 use tokio::sync::Mutex;
@@ -68,4 +70,16 @@ pub async fn acp_cancel(state: AcpState<'_>, request: AcpCancelRequest) -> Resul
         .map_err(|err| err.to_string())?;
     manager.remove_session(&request.session_id);
     Ok(())
+}
+
+#[tauri::command]
+pub async fn acp_respond_to_permission(
+    state: AcpState<'_>,
+    decision: AcpPermissionDecision,
+) -> Result<(), String> {
+    let manager = state.lock().await;
+    manager
+        .respond_permission(decision)
+        .await
+        .map_err(|err| err.to_string())
 }

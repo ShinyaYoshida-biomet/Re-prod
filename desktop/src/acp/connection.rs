@@ -1,7 +1,7 @@
 use agent_client_protocol::{
     Agent, CancelNotification, ClientSideConnection, ContentBlock, InitializeRequest,
-    NewSessionRequest, PromptRequest, PromptResponse, ProtocolVersion, SessionId,
-    SessionNotification,
+    NewSessionRequest, PromptRequest, PromptResponse, ProtocolVersion, RequestPermissionOutcome,
+    SelectedPermissionOutcome, SessionId, SessionNotification,
 };
 use anyhow::{Context, Result};
 use std::thread;
@@ -17,7 +17,8 @@ use tokio::{
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 use tracing::error;
 
-use crate::acp::client::ReprodAcpClient;
+use crate::acp::client::{PermissionDecisionMessage, ReprodAcpClient};
+use crate::acp::types::{AcpPermissionDecisionOutcome, AcpPermissionRequestPayload};
 
 enum AcpRequest {
     CreateSession {
@@ -37,6 +38,7 @@ enum AcpRequest {
 /// Thin wrapper over agent-client-protocol's ClientSideConnection.
 pub struct AcpConnection {
     tx: tokio::sync::mpsc::UnboundedSender<AcpRequest>,
+    permission_response_tx: tokio::sync::mpsc::UnboundedSender<PermissionDecisionMessage>,
 }
 
 impl AcpConnection {
@@ -44,13 +46,21 @@ impl AcpConnection {
         workspace_root: std::path::PathBuf,
         outgoing: W,
         incoming: R,
-    ) -> Result<(Self, UnboundedReceiver<SessionNotification>)>
+    ) -> Result<(
+        Self,
+        UnboundedReceiver<SessionNotification>,
+        UnboundedReceiver<AcpPermissionRequestPayload>,
+    )>
     where
         R: AsyncRead + Send + Unpin + 'static,
         W: AsyncWrite + Send + Unpin + 'static,
     {
         let (notif_tx, notif_rx) = unbounded_channel();
-        let handler = ReprodAcpClient::new(workspace_root, notif_tx);
+        let (permission_event_tx, permission_event_rx) = unbounded_channel();
+        let (permission_response_tx, mut permission_response_rx) =
+            unbounded_channel::<PermissionDecisionMessage>();
+        let handler = ReprodAcpClient::new(workspace_root, notif_tx, permission_event_tx);
+        let pending = handler.pending();
         let (request_tx, mut request_rx) = tokio::sync::mpsc::unbounded_channel();
         let (init_tx, init_rx) = oneshot::channel();
         let outgoing = outgoing.compat_write();
@@ -73,6 +83,34 @@ impl AcpConnection {
                         tokio::task::spawn_local(async move {
                             if let Err(err) = io_task.await {
                                 error!("ACP IO task ended: {err}");
+                            }
+                        });
+
+                        tokio::task::spawn_local(async move {
+                            while let Some(msg) = permission_response_rx.recv().await {
+                                if let Some(sender) = pending.lock().await.remove(&msg.request_id) {
+                                    let outcome = match msg.outcome {
+                                        AcpPermissionDecisionOutcome::AllowOnce => {
+                                            match msg.option_id {
+                                                Some(option) => RequestPermissionOutcome::Selected(
+                                                    SelectedPermissionOutcome::new(option),
+                                                ),
+                                                None => RequestPermissionOutcome::Selected(
+                                                    SelectedPermissionOutcome::new("allow"),
+                                                ),
+                                            }
+                                        }
+                                        AcpPermissionDecisionOutcome::RejectOnce => {
+                                            RequestPermissionOutcome::Selected(
+                                                SelectedPermissionOutcome::new("reject"),
+                                            )
+                                        }
+                                        AcpPermissionDecisionOutcome::Cancelled => {
+                                            RequestPermissionOutcome::Cancelled
+                                        }
+                                    };
+                                    let _ = sender.send(outcome);
+                                }
                             }
                         });
 
@@ -116,7 +154,14 @@ impl AcpConnection {
 
         init_rx.await??;
 
-        Ok((Self { tx: request_tx }, notif_rx))
+        Ok((
+            Self {
+                tx: request_tx,
+                permission_response_tx,
+            },
+            notif_rx,
+            permission_event_rx,
+        ))
     }
 
     pub async fn create_session(&self, cwd: String) -> Result<SessionId> {
@@ -148,5 +193,11 @@ impl AcpConnection {
     pub fn make_prompt_from_strings(session_id: String, messages: Vec<String>) -> PromptRequest {
         let prompt = messages.into_iter().map(ContentBlock::from).collect();
         PromptRequest::new(session_id, prompt)
+    }
+
+    pub async fn respond_permission(&self, msg: PermissionDecisionMessage) -> Result<()> {
+        self.permission_response_tx
+            .send(msg)
+            .map_err(|err| anyhow::anyhow!(err.to_string()))
     }
 }

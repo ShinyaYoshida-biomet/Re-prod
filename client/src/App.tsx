@@ -24,6 +24,7 @@ import { useSettingsPersistence } from "@/hooks/useSettingsPersistence";
 import { useSocketConnection } from "@/hooks/useSocketConnection";
 import { setupSocketListeners } from "@/core/init/socketListeners";
 import { ACP_FEATURE_ENABLED } from "@/constants/features";
+import { PermissionRequestManager } from "@/components/agent/PermissionRequestManager";
 
 function App(): JSX.Element {
 	const panes = useStore((state) => state.view.panes);
@@ -115,6 +116,7 @@ function App(): JSX.Element {
 					open={modals.projects}
 					onClose={() => setModalOpen("projects", false)}
 				/>
+				<PermissionRequestManager />
 			</div>
 		</ToastProvider>
 	);
