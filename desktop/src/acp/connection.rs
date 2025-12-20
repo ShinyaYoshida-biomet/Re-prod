@@ -1,7 +1,7 @@
 use agent_client_protocol::{
-    Agent, CancelNotification, Client, ClientSideConnection, ContentBlock, InitializeRequest,
-    NewSessionRequest, PromptRequest, PromptResponse, ProtocolVersion, RequestPermissionOutcome,
-    RequestPermissionRequest, RequestPermissionResponse, SessionId, SessionNotification,
+    Agent, CancelNotification, ClientSideConnection, ContentBlock, InitializeRequest,
+    NewSessionRequest, PromptRequest, PromptResponse, ProtocolVersion, SessionId,
+    SessionNotification,
 };
 use anyhow::{Context, Result};
 use std::thread;
@@ -9,7 +9,7 @@ use tokio::{
     io::{AsyncRead, AsyncWrite},
     runtime::Builder,
     sync::{
-        mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
+        mpsc::{unbounded_channel, UnboundedReceiver},
         oneshot,
     },
     task::LocalSet,
@@ -17,30 +17,7 @@ use tokio::{
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 use tracing::error;
 
-/// Simple client handler: auto-allow permissions, forward session updates via channel.
-struct ClientHandler {
-    tx: UnboundedSender<SessionNotification>,
-}
-
-#[async_trait::async_trait(?Send)]
-impl Client for ClientHandler {
-    async fn request_permission(
-        &self,
-        _args: RequestPermissionRequest,
-    ) -> agent_client_protocol::Result<RequestPermissionResponse> {
-        Ok(RequestPermissionResponse::new(
-            RequestPermissionOutcome::Cancelled,
-        ))
-    }
-
-    async fn session_notification(
-        &self,
-        args: SessionNotification,
-    ) -> agent_client_protocol::Result<()> {
-        let _ = self.tx.send(args);
-        Ok(())
-    }
-}
+use crate::acp::client::ReprodAcpClient;
 
 enum AcpRequest {
     CreateSession {
@@ -64,6 +41,7 @@ pub struct AcpConnection {
 
 impl AcpConnection {
     pub async fn initialize<R, W>(
+        workspace_root: std::path::PathBuf,
         outgoing: W,
         incoming: R,
     ) -> Result<(Self, UnboundedReceiver<SessionNotification>)>
@@ -72,7 +50,7 @@ impl AcpConnection {
         W: AsyncWrite + Send + Unpin + 'static,
     {
         let (notif_tx, notif_rx) = unbounded_channel();
-        let handler = ClientHandler { tx: notif_tx };
+        let handler = ReprodAcpClient::new(workspace_root, notif_tx);
         let (request_tx, mut request_rx) = tokio::sync::mpsc::unbounded_channel();
         let (init_tx, init_rx) = oneshot::channel();
         let outgoing = outgoing.compat_write();

@@ -1,3 +1,4 @@
+mod client;
 pub mod commands;
 mod connection;
 mod process;
@@ -57,7 +58,8 @@ impl AcpManager {
         } = spawn_agent(config).await?;
         child.notify_ready().await?;
 
-        let (connection, updates) = AcpConnection::initialize(writer, reader).await?;
+        let (connection, updates) =
+            AcpConnection::initialize(self.workspace_root.clone(), writer, reader).await?;
         self.forward_updates(app_handle.clone(), updates);
 
         self.child = Some(child);

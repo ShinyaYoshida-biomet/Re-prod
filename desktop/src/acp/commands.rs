@@ -44,7 +44,7 @@ pub async fn acp_send_prompt(
     state: AcpState<'_>,
     request: AcpPromptRequest,
 ) -> Result<(), String> {
-    let mut manager = state.lock().await;
+    let manager = state.lock().await;
     if !manager.session_exists(&request.session_id) {
         return Err("Unknown session".to_string());
     }
