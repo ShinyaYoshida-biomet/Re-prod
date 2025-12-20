@@ -1,23 +1,28 @@
-pub mod types;
-
-mod commands;
+pub mod commands;
+mod connection;
 mod process;
+pub mod types;
 
 use std::{
     collections::HashSet,
     path::{Path, PathBuf},
 };
 
-use crate::acp::process::{spawn_agent, AcpChild, ProcessConfig};
+use crate::acp::{
+    connection::AcpConnection,
+    process::{spawn_agent, AcpChild, ProcessConfig, SpawnedPipes},
+};
+use agent_client_protocol::{ContentBlock, ContentChunk, SessionNotification, SessionUpdate};
 use anyhow::{anyhow, Result};
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
+use tokio::sync::mpsc::UnboundedReceiver;
 use tracing::info;
 use types::{AcpInitializeResponse, AcpSessionUpdate, AcpSessionUpdateEnvelope};
-use uuid::Uuid;
 
 /// Manages the lifecycle of the external ACP agent and simple in-memory sessions.
 pub struct AcpManager {
     child: Option<AcpChild>,
+    conn: Option<AcpConnection>,
     workspace_root: PathBuf,
     sessions: HashSet<String>,
 }
@@ -26,6 +31,7 @@ impl AcpManager {
     pub fn new(workspace_root: PathBuf) -> Self {
         Self {
             child: None,
+            conn: None,
             workspace_root,
             sessions: HashSet::new(),
         }
@@ -43,10 +49,18 @@ impl AcpManager {
             });
         }
 
-        let mut child = spawn_agent(config).await?;
+        let SpawnedPipes {
+            mut child,
+            reader,
+            writer,
+        } = spawn_agent(config).await?;
         child.notify_ready().await?;
 
+        let (connection, updates) = AcpConnection::initialize(writer, reader).await?;
+        self.forward_updates(app_handle.clone(), updates);
+
         self.child = Some(child);
+        self.conn = Some(connection);
         info!("ACP agent spawned");
 
         app_handle.emit("acp://status", "ready").ok();
@@ -57,10 +71,19 @@ impl AcpManager {
         })
     }
 
-    pub fn create_session(&mut self) -> String {
-        let id = Uuid::new_v4().to_string();
-        self.sessions.insert(id.clone());
-        id
+    pub async fn create_session(&mut self) -> Result<String> {
+        let conn = self
+            .conn
+            .as_ref()
+            .ok_or_else(|| anyhow!("ACP connection not initialized"))?;
+
+        let session_id = conn
+            .create_session(self.workspace_root.to_string_lossy().to_string())
+            .await?;
+
+        let id_string = session_id.to_string();
+        self.sessions.insert(id_string.clone());
+        Ok(id_string)
     }
 
     pub fn session_exists(&self, session_id: &str) -> bool {
@@ -71,27 +94,76 @@ impl AcpManager {
         self.sessions.remove(session_id);
     }
 
-    pub async fn send_placeholder_update(
-        &self,
-        app_handle: &AppHandle,
-        session_id: &str,
-        text: &str,
-    ) -> Result<()> {
-        let payload = AcpSessionUpdateEnvelope {
-            session_id: session_id.to_string(),
-            update: AcpSessionUpdate::AgentMessageChunk {
-                text: text.to_string(),
-            },
-        };
-        app_handle
-            .emit("acp://session-update", payload)
-            .map_err(|err| anyhow!(err.to_string()))
+    pub async fn cancel(&self, session_id: &str) -> Result<()> {
+        let conn = self
+            .conn
+            .as_ref()
+            .ok_or_else(|| anyhow!("ACP connection not initialized"))?;
+
+        conn.cancel(agent_client_protocol::SessionId::new(
+            session_id.to_string(),
+        ))
+        .await?;
+        Ok(())
+    }
+
+    pub async fn send_prompt(&self, session_id: &str, messages: Vec<String>) -> Result<()> {
+        let conn = self
+            .conn
+            .as_ref()
+            .ok_or_else(|| anyhow!("ACP connection not initialized"))?;
+
+        let request = AcpConnection::make_prompt_from_strings(session_id.to_string(), messages);
+        conn.prompt(request).await?;
+
+        Ok(())
     }
 
     pub async fn shutdown(&mut self) {
         if let Some(mut child) = self.child.take() {
             child.shutdown().await;
         }
+    }
+
+    fn forward_updates(
+        &self,
+        app_handle: AppHandle,
+        updates: UnboundedReceiver<SessionNotification>,
+    ) {
+        tauri::async_runtime::spawn(async move {
+            let mut updates = updates;
+            while let Some(notification) = updates.recv().await {
+                let payload = AcpSessionUpdateEnvelope {
+                    session_id: notification.session_id.to_string(),
+                    update: map_session_update(&notification.update),
+                };
+                let _ = app_handle.emit("acp://session-update", payload);
+            }
+        });
+    }
+}
+
+fn map_session_update(update: &SessionUpdate) -> AcpSessionUpdate {
+    match update {
+        SessionUpdate::UserMessageChunk(chunk) => AcpSessionUpdate::UserMessageChunk {
+            text: stringify_chunk(chunk),
+        },
+        SessionUpdate::AgentMessageChunk(chunk) => AcpSessionUpdate::AgentMessageChunk {
+            text: stringify_chunk(chunk),
+        },
+        SessionUpdate::AgentThoughtChunk(chunk) => AcpSessionUpdate::AgentMessageChunk {
+            text: stringify_chunk(chunk),
+        },
+        other => AcpSessionUpdate::AgentMessageChunk {
+            text: format!("{other:?}"),
+        },
+    }
+}
+
+fn stringify_chunk(chunk: &ContentChunk) -> String {
+    match &chunk.content {
+        ContentBlock::Text(text) => text.text.clone(),
+        other => format!("{other:?}"),
     }
 }
 
@@ -108,5 +180,3 @@ pub fn build_process_config(
         env: Default::default(),
     }
 }
-
-pub use commands::{acp_cancel, acp_create_session, acp_initialize, acp_send_prompt, AcpState};

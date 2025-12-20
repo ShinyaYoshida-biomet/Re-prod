@@ -56,10 +56,10 @@ async fn main() {
             commands::resize_terminal,
             commands::close_terminal_session,
             commands::get_server_port,
-            acp::acp_initialize,
-            acp::acp_create_session,
-            acp::acp_send_prompt,
-            acp::acp_cancel,
+            acp::commands::acp_initialize,
+            acp::commands::acp_create_session,
+            acp::commands::acp_send_prompt,
+            acp::commands::acp_cancel,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

@@ -13,6 +13,12 @@ pub struct ProcessConfig {
     pub env: HashMap<String, String>,
 }
 
+pub struct SpawnedPipes {
+    pub child: AcpChild,
+    pub reader: tokio::process::ChildStdout,
+    pub writer: tokio::process::ChildStdin,
+}
+
 pub struct AcpChild {
     child: Child,
 }
@@ -39,7 +45,7 @@ impl AcpChild {
     }
 }
 
-pub async fn spawn_agent(config: ProcessConfig) -> Result<AcpChild> {
+pub async fn spawn_agent(config: ProcessConfig) -> Result<SpawnedPipes> {
     let command_path = which(&config.command)
         .with_context(|| format!("Agent binary not found on PATH: {}", config.command))?;
 
@@ -51,9 +57,22 @@ pub async fn spawn_agent(config: ProcessConfig) -> Result<AcpChild> {
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
 
-    let child = cmd
+    let mut child = cmd
         .spawn()
         .map_err(|err| anyhow!("Failed to spawn ACP agent: {err}"))?;
 
-    AcpChild::new(child)
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| anyhow!("Failed to take agent stdout"))?;
+    let stdin = child
+        .stdin
+        .take()
+        .ok_or_else(|| anyhow!("Failed to take agent stdin"))?;
+
+    Ok(SpawnedPipes {
+        child: AcpChild::new(child)?,
+        reader: stdout,
+        writer: stdin,
+    })
 }

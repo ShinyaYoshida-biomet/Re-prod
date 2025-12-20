@@ -31,29 +31,25 @@ pub async fn acp_initialize(
 
 #[tauri::command]
 pub async fn acp_create_session(state: AcpState<'_>) -> Result<String, String> {
-    let mut manager = state.lock().await;
-    Ok(manager.create_session())
+    let manager = &mut *state.lock().await;
+    manager
+        .create_session()
+        .await
+        .map_err(|err| err.to_string())
 }
 
 #[tauri::command]
-pub async fn acp_send_prompt(
-    app_handle: AppHandle,
-    state: AcpState<'_>,
-    request: AcpPromptRequest,
-) -> Result<(), String> {
+pub async fn acp_send_prompt(state: AcpState<'_>, request: AcpPromptRequest) -> Result<(), String> {
     let manager = state.lock().await;
     if !manager.session_exists(&request.session_id) {
         return Err("Unknown session".to_string());
     }
 
-    let echo = request
-        .messages
-        .last()
-        .map(|m| format!("Echo from ACP stub: {}", m.content))
-        .unwrap_or_else(|| "Echo from ACP stub".to_string());
-
     manager
-        .send_placeholder_update(&app_handle, &request.session_id, &echo)
+        .send_prompt(
+            &request.session_id,
+            request.messages.iter().map(|m| m.content.clone()).collect(),
+        )
         .await
         .map_err(|err| err.to_string())
 }
@@ -61,6 +57,10 @@ pub async fn acp_send_prompt(
 #[tauri::command]
 pub async fn acp_cancel(state: AcpState<'_>, request: AcpCancelRequest) -> Result<(), String> {
     let mut manager = state.lock().await;
+    manager
+        .cancel(&request.session_id)
+        .await
+        .map_err(|err| err.to_string())?;
     manager.remove_session(&request.session_id);
     Ok(())
 }
