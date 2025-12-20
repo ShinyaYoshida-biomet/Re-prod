@@ -1,6 +1,8 @@
 mod client;
 pub mod commands;
+mod config;
 mod connection;
+mod detection;
 mod process;
 mod session;
 pub mod types;
@@ -8,7 +10,7 @@ pub mod types;
 use std::path::{Path, PathBuf};
 
 use crate::acp::{
-    connection::AcpConnection,
+    connection::{AcpConnection, PermissionDecisionMessage},
     process::{spawn_agent, AcpChild, ProcessConfig, SpawnedPipes},
     session::AcpSessionManager,
 };
@@ -18,7 +20,8 @@ use tauri::{AppHandle, Emitter};
 use tokio::sync::mpsc::UnboundedReceiver;
 use tracing::info;
 use types::{
-    AcpInitializeResponse, AcpSessionUpdate, AcpSessionUpdate::Done, AcpSessionUpdateEnvelope,
+    AcpInitializeResponse, AcpPermissionDecision, AcpPermissionRequestPayload, AcpSessionUpdate,
+    AcpSessionUpdate::Done, AcpSessionUpdateEnvelope,
 };
 
 /// Manages the lifecycle of the external ACP agent and simple in-memory sessions.
@@ -58,9 +61,10 @@ impl AcpManager {
         } = spawn_agent(config).await?;
         child.notify_ready().await?;
 
-        let (connection, updates) =
+        let (connection, updates, permission_requests) =
             AcpConnection::initialize(self.workspace_root.clone(), writer, reader).await?;
         self.forward_updates(app_handle.clone(), updates);
+        self.forward_permission_requests(app_handle.clone(), permission_requests);
 
         self.child = Some(child);
         self.conn = Some(connection);
@@ -111,6 +115,15 @@ impl AcpManager {
         Ok(())
     }
 
+    pub async fn respond_permission(&self, decision: AcpPermissionDecision) -> Result<()> {
+        let conn = self
+            .conn
+            .as_ref()
+            .ok_or_else(|| anyhow!("ACP connection not initialized"))?;
+        let mapped: PermissionDecisionMessage = decision.try_into()?;
+        conn.respond_permission(mapped).await
+    }
+
     pub async fn send_prompt(
         &self,
         app_handle: &AppHandle,
@@ -155,6 +168,19 @@ impl AcpManager {
             }
         });
     }
+
+    fn forward_permission_requests(
+        &self,
+        app_handle: AppHandle,
+        requests: UnboundedReceiver<AcpPermissionRequestPayload>,
+    ) {
+        tauri::async_runtime::spawn(async move {
+            let mut requests = requests;
+            while let Some(request) = requests.recv().await {
+                let _ = app_handle.emit("acp://permission-request", request);
+            }
+        });
+    }
 }
 
 fn map_session_update(update: &SessionUpdate) -> AcpSessionUpdate {
@@ -165,7 +191,7 @@ fn map_session_update(update: &SessionUpdate) -> AcpSessionUpdate {
         SessionUpdate::AgentMessageChunk(chunk) => AcpSessionUpdate::AgentMessageChunk {
             text: stringify_chunk(chunk),
         },
-        SessionUpdate::AgentThoughtChunk(chunk) => AcpSessionUpdate::AgentMessageChunk {
+        SessionUpdate::AgentThoughtChunk(chunk) => AcpSessionUpdate::AgentThoughtChunk {
             text: stringify_chunk(chunk),
         },
         SessionUpdate::Plan(plan) => AcpSessionUpdate::AgentThoughtChunk {

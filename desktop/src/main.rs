@@ -60,6 +60,10 @@ async fn main() {
             acp::commands::acp_create_session,
             acp::commands::acp_send_prompt,
             acp::commands::acp_cancel,
+            acp::commands::acp_respond_to_permission,
+            acp::commands::acp_detect_agents,
+            acp::commands::acp_get_agent_config,
+            acp::commands::acp_set_agent_config,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
