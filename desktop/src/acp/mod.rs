@@ -152,15 +152,6 @@ impl AcpManager {
         }
     }
 
-    pub async fn respond_permission(&self, decision: AcpPermissionDecision) -> Result<()> {
-        let conn = self
-            .conn
-            .as_ref()
-            .ok_or_else(|| anyhow!("ACP connection not initialized"))?;
-
-        conn.respond_permission(decision.into()).await
-    }
-
     fn forward_updates(
         &self,
         app_handle: AppHandle,
