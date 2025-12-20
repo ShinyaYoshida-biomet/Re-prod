@@ -108,6 +108,7 @@ If you are asked to work in worktree dir, **never damage the main dir**. Please 
 
 ## Commit & Pull Request Guidelines
 
+- When you have noticed that you have finished some todos or tasks, always consider to `git add/commit`.
 - Commit messages: short, present tense, start with an action (e.g., “Add model selection constants”). Keep the summary under ~72 chars; include scope prefixes only when they add clarity.
 - After committing, please eusure that you pass both of pre-push hook in .husky dir and Ci/CD workflow in .github dir
 - PRs: include a crisp summary, linked issue/ID, and before/after notes. Add screenshots or clips for UI changes; list test commands run (cargo tests, Vitest, lint/format). Request review when checks pass and TODOs are cleared.
