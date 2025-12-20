@@ -35,6 +35,8 @@ pub struct AcpSessionUpdateEnvelope {
 pub enum AcpSessionUpdate {
     UserMessageChunk { text: String },
     AgentMessageChunk { text: String },
+    AgentThoughtChunk { text: String },
+    Done,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

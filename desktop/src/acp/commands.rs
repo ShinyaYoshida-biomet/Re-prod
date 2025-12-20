@@ -39,14 +39,19 @@ pub async fn acp_create_session(state: AcpState<'_>) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn acp_send_prompt(state: AcpState<'_>, request: AcpPromptRequest) -> Result<(), String> {
-    let manager = state.lock().await;
+pub async fn acp_send_prompt(
+    app_handle: AppHandle,
+    state: AcpState<'_>,
+    request: AcpPromptRequest,
+) -> Result<(), String> {
+    let mut manager = state.lock().await;
     if !manager.session_exists(&request.session_id) {
         return Err("Unknown session".to_string());
     }
 
     manager
         .send_prompt(
+            &app_handle,
             &request.session_id,
             request.messages.iter().map(|m| m.content.clone()).collect(),
         )

@@ -16,7 +16,9 @@ use anyhow::{anyhow, Result};
 use tauri::{AppHandle, Emitter};
 use tokio::sync::mpsc::UnboundedReceiver;
 use tracing::info;
-use types::{AcpInitializeResponse, AcpSessionUpdate, AcpSessionUpdateEnvelope};
+use types::{
+    AcpInitializeResponse, AcpSessionUpdate, AcpSessionUpdate::Done, AcpSessionUpdateEnvelope,
+};
 
 /// Manages the lifecycle of the external ACP agent and simple in-memory sessions.
 pub struct AcpManager {
@@ -107,7 +109,12 @@ impl AcpManager {
         Ok(())
     }
 
-    pub async fn send_prompt(&self, session_id: &str, messages: Vec<String>) -> Result<()> {
+    pub async fn send_prompt(
+        &self,
+        app_handle: &AppHandle,
+        session_id: &str,
+        messages: Vec<String>,
+    ) -> Result<()> {
         let conn = self
             .conn
             .as_ref()
@@ -115,6 +122,11 @@ impl AcpManager {
 
         let request = AcpConnection::make_prompt_from_strings(session_id.to_string(), messages);
         conn.prompt(request).await?;
+        let payload = AcpSessionUpdateEnvelope {
+            session_id: session_id.to_string(),
+            update: Done,
+        };
+        let _ = app_handle.emit("acp://session-update", payload);
 
         Ok(())
     }
@@ -153,6 +165,9 @@ fn map_session_update(update: &SessionUpdate) -> AcpSessionUpdate {
         },
         SessionUpdate::AgentThoughtChunk(chunk) => AcpSessionUpdate::AgentMessageChunk {
             text: stringify_chunk(chunk),
+        },
+        SessionUpdate::Plan(plan) => AcpSessionUpdate::AgentThoughtChunk {
+            text: format!("{plan:?}"),
         },
         other => AcpSessionUpdate::AgentMessageChunk {
             text: format!("{other:?}"),

@@ -1,5 +1,5 @@
 import type { AIMessage, AIMode } from "@/types";
-import type { AcpPromptMessage, AcpSessionUpdateEnvelope } from "@/types/acp";
+import type { AcpPromptMessage, AcpSessionUpdateEnvelope } from "@/types/generated";
 import { ACP_FEATURE_ENABLED, IS_TAURI } from "@/constants/features";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useStore } from "@/core";
