@@ -1,16 +1,15 @@
 pub mod commands;
 mod connection;
 mod process;
+mod session;
 pub mod types;
 
-use std::{
-    collections::HashSet,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use crate::acp::{
     connection::AcpConnection,
     process::{spawn_agent, AcpChild, ProcessConfig, SpawnedPipes},
+    session::AcpSessionManager,
 };
 use agent_client_protocol::{ContentBlock, ContentChunk, SessionNotification, SessionUpdate};
 use anyhow::{anyhow, Result};
@@ -24,7 +23,7 @@ pub struct AcpManager {
     child: Option<AcpChild>,
     conn: Option<AcpConnection>,
     workspace_root: PathBuf,
-    sessions: HashSet<String>,
+    sessions: AcpSessionManager,
 }
 
 impl AcpManager {
@@ -33,7 +32,7 @@ impl AcpManager {
             child: None,
             conn: None,
             workspace_root,
-            sessions: HashSet::new(),
+            sessions: AcpSessionManager::new(),
         }
     }
 
@@ -82,12 +81,13 @@ impl AcpManager {
             .await?;
 
         let id_string = session_id.to_string();
-        self.sessions.insert(id_string.clone());
+        self.sessions
+            .register(id_string.clone(), self.workspace_root.clone());
         Ok(id_string)
     }
 
     pub fn session_exists(&self, session_id: &str) -> bool {
-        self.sessions.contains(session_id)
+        self.sessions.exists(session_id)
     }
 
     pub fn remove_session(&mut self, session_id: &str) {

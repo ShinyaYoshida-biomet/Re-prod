@@ -23,6 +23,7 @@ import { useProjectSession } from "@/hooks/useProjectSession";
 import { useSettingsPersistence } from "@/hooks/useSettingsPersistence";
 import { useSocketConnection } from "@/hooks/useSocketConnection";
 import { setupSocketListeners } from "@/core/init/socketListeners";
+import { ACP_FEATURE_ENABLED } from "@/constants/features";
 
 function App(): JSX.Element {
 	const panes = useStore((state) => state.view.panes);
@@ -37,6 +38,7 @@ function App(): JSX.Element {
 
 	const activeProviderConfig = providers.find((provider) => provider.name === activeProvider);
 	const isActiveProviderConfigured = Boolean(activeProviderConfig?.isConfigured);
+	const canUseAssistant = ACP_FEATURE_ENABLED || isActiveProviderConfigured;
 
 	// Enable global keyboard shortcuts
 	useKeyboardShortcuts();
@@ -90,7 +92,7 @@ function App(): JSX.Element {
 						{panes.assistant && (
 							<Allotment.Pane minSize={260} preferredSize="25%">
 								<div className="ai-pane-wrapper">
-									<AIPanel ref={setAIPanelRef} hasConfiguredProvider={isActiveProviderConfigured} />
+									<AIPanel ref={setAIPanelRef} hasConfiguredProvider={canUseAssistant} />
 								</div>
 							</Allotment.Pane>
 						)}
