@@ -169,7 +169,8 @@ export function PermissionRequestManager(): JSX.Element | null {
 		borderRadius: 12,
 		padding: 16,
 		boxShadow: "0 12px 30px rgba(0,0,0,0.3)",
-		width: 320,
+		width: 340,
+		maxWidth: "calc(100vw - 24px)",
 	};
 
 	return (
@@ -188,6 +189,15 @@ export function PermissionRequestManager(): JSX.Element | null {
 						<p className="hint" id="acp-permission-desc">
 							{pending.tool_title}
 						</p>
+					)}
+					{pending.tool_kind && <p className="hint">Action type: {pending.tool_kind}</p>}
+					{pending.raw_input && (
+						<pre
+							className="hint"
+							style={{ whiteSpace: "pre-wrap", maxHeight: 140, overflow: "auto" }}
+						>
+							{pending.raw_input}
+						</pre>
 					)}
 				</header>
 				{pending.locations.length > 0 && (
