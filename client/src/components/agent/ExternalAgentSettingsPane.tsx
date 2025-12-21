@@ -71,7 +71,10 @@ export function ExternalAgentSettingsPane(): JSX.Element {
 					Mode
 					<small>Switch between built-in providers and an external ACP agent.</small>
 				</span>
-				<div className="settings-radio-group">
+				<div
+					className="settings-radio-group"
+					style={{ display: "flex", flexDirection: "column", gap: 8 }}
+				>
 					<label>
 						<input
 							type="radio"
@@ -87,9 +90,14 @@ export function ExternalAgentSettingsPane(): JSX.Element {
 							name="agent-mode"
 							checked={activeMode === "external_agent"}
 							onChange={() => handleModeChange("external_agent")}
-							disabled={!enabled}
+							disabled={!ACP_FEATURE_ENABLED || !IS_TAURI}
 						/>
 						External agent (ACP)
+						{!enabled && (
+							<small className="hint">
+								Enable ACP feature and run inside the desktop app to activate.
+							</small>
+						)}
 					</label>
 				</div>
 			</div>
