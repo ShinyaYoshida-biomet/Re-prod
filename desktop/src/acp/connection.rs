@@ -231,6 +231,13 @@ pub fn map_permission_request(req: RequestPermissionRequest) -> AcpPermissionReq
         session_id: req.session_id.to_string(),
         tool_call_id,
         tool_title,
+        tool_kind: req.tool_call.fields.kind.map(|k| format!("{k:?}")),
+        raw_input: req
+            .tool_call
+            .fields
+            .raw_input
+            .and_then(|v| serde_json::to_string(&v).ok()),
+        trust_key: req.session_id.to_string(),
         locations,
         options,
     }

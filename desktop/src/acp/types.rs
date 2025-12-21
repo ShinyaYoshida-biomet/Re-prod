@@ -60,6 +60,9 @@ pub struct AcpPermissionRequestPayload {
     pub session_id: String,
     pub tool_call_id: String,
     pub tool_title: Option<String>,
+    pub tool_kind: Option<String>,
+    pub raw_input: Option<String>,
+    pub trust_key: String,
     pub locations: Vec<String>,
     pub options: Vec<AcpPermissionOption>,
 }

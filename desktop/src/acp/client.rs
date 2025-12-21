@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    fs,
     path::{Path, PathBuf},
     sync::Arc,
     time::Duration,
@@ -8,9 +9,11 @@ use std::{
 use agent_client_protocol::{
     Client, PermissionOption, PermissionOptionKind, ReadTextFileRequest, ReadTextFileResponse,
     RequestPermissionOutcome, RequestPermissionRequest, RequestPermissionResponse,
-    SessionNotification, WriteTextFileRequest, WriteTextFileResponse,
+    SelectedPermissionOutcome, SessionNotification, WriteTextFileRequest, WriteTextFileResponse,
 };
 use anyhow::{anyhow, bail, Context, Result};
+use reprod_core::config::app_config_dir;
+use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc::UnboundedSender, oneshot, Mutex};
 use tokio::time::timeout;
 use tracing::{error, warn};
@@ -28,6 +31,8 @@ pub struct ReprodAcpClient {
     session_update_tx: UnboundedSender<SessionNotification>,
     permission_request_tx: UnboundedSender<AcpPermissionRequestPayload>,
     pending_permissions: Arc<Mutex<HashMap<String, oneshot::Sender<RequestPermissionOutcome>>>>,
+    trust_store: Arc<Mutex<HashMap<String, TrustDecision>>>,
+    trust_path: PathBuf,
 }
 
 impl ReprodAcpClient {
@@ -37,11 +42,95 @@ impl ReprodAcpClient {
         permission_request_tx: UnboundedSender<AcpPermissionRequestPayload>,
         pending_permissions: Arc<Mutex<HashMap<String, oneshot::Sender<RequestPermissionOutcome>>>>,
     ) -> Self {
+        let trust_path = trust_store_path(&workspace_root);
+        let trust_store = Arc::new(Mutex::new(
+            load_trust_store(&trust_path).unwrap_or_default(),
+        ));
         Self {
             workspace_root,
             session_update_tx,
             permission_request_tx,
             pending_permissions,
+            trust_store,
+            trust_path,
+        }
+    }
+
+    fn build_trust_key(&self, payload: &AcpPermissionRequestPayload) -> String {
+        let base = self.workspace_root.to_string_lossy();
+        let kind = payload
+            .tool_kind
+            .clone()
+            .unwrap_or_else(|| "unknown".to_string());
+        let location = payload
+            .locations
+            .first()
+            .cloned()
+            .unwrap_or_else(|| payload.tool_call_id.clone());
+        format!("{base}:{kind}:{location}")
+    }
+
+    fn apply_trust(
+        &self,
+        payload: &AcpPermissionRequestPayload,
+        options: &[PermissionOption],
+    ) -> Option<RequestPermissionOutcome> {
+        let key = self.build_trust_key(payload);
+        let store = self.trust_store.blocking_lock();
+        match store.get(&key) {
+            Some(TrustDecision::Allow) => {
+                let opt_id = pick_option_id(
+                    options,
+                    &[
+                        PermissionOptionKind::AllowAlways,
+                        PermissionOptionKind::AllowOnce,
+                    ],
+                )?;
+                Some(RequestPermissionOutcome::Selected(
+                    SelectedPermissionOutcome::new(opt_id),
+                ))
+            }
+            Some(TrustDecision::Reject) => {
+                let opt_id = pick_option_id(
+                    options,
+                    &[
+                        PermissionOptionKind::RejectAlways,
+                        PermissionOptionKind::RejectOnce,
+                    ],
+                )?;
+                Some(RequestPermissionOutcome::Selected(
+                    SelectedPermissionOutcome::new(opt_id),
+                ))
+            }
+            None => None,
+        }
+    }
+
+    async fn persist_trust(
+        &self,
+        options: &[PermissionOption],
+        outcome: &RequestPermissionOutcome,
+        payload: &AcpPermissionRequestPayload,
+    ) {
+        let decision = match &outcome {
+            RequestPermissionOutcome::Selected(sel) => options
+                .iter()
+                .find(|o| o.option_id == sel.option_id)
+                .and_then(|o| match o.kind {
+                    PermissionOptionKind::AllowAlways => Some(TrustDecision::Allow),
+                    PermissionOptionKind::RejectAlways => Some(TrustDecision::Reject),
+                    _ => None,
+                }),
+            _ => None,
+        };
+
+        if let Some(decision) = decision {
+            let key = self.build_trust_key(payload);
+            let mut guard = self.trust_store.lock().await;
+            guard.insert(key, decision);
+            if let Err(err) = save_trust_store(&self.trust_path, &*guard) {
+                warn!("Failed to persist ACP trust store: {err}");
+            }
         }
     }
 
@@ -91,9 +180,16 @@ impl Client for ReprodAcpClient {
         &self,
         args: RequestPermissionRequest,
     ) -> agent_client_protocol::Result<RequestPermissionResponse> {
-        let payload = map_permission_request(args.clone());
+        let mut payload = map_permission_request(args.clone());
+        payload.trust_key = self.build_trust_key(&payload);
+
+        if let Some(outcome) = self.apply_trust(&payload, &args.options) {
+            return Ok(RequestPermissionResponse::new(outcome));
+        }
+
         let fallback = select_timeout_outcome(&args.options);
-        let outcome = self.wait_for_permission(payload, fallback).await;
+        let outcome = self.wait_for_permission(payload.clone(), fallback).await;
+        self.persist_trust(&args.options, &outcome, &payload).await;
         Ok(RequestPermissionResponse::new(outcome))
     }
 
@@ -187,11 +283,54 @@ fn ensure_within_workspace(workspace_root: &Path, requested: &Path) -> Result<Pa
     let resolved = existing_ancestor.canonicalize()?.join(suffix);
     if !resolved.starts_with(&root) {
         return Err(anyhow!(
-			"ACP path escapes workspace root: requested={requested:?} resolved={resolved:?} root={root:?}"
-		));
+            "ACP path escapes workspace root: requested={requested:?} resolved={resolved:?} root={root:?}"
+        ));
     }
 
     Ok(resolved)
+}
+
+fn trust_store_path(workspace_root: &Path) -> PathBuf {
+    let slug = workspace_root
+        .to_string_lossy()
+        .replace(std::path::MAIN_SEPARATOR, "_")
+        .replace(':', "_");
+    app_config_dir()
+        .unwrap_or_else(|_| PathBuf::from("."))
+        .join("acp_trust")
+        .join(format!("{slug}.json"))
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+enum TrustDecision {
+    Allow,
+    Reject,
+}
+
+fn load_trust_store(path: &Path) -> Option<HashMap<String, TrustDecision>> {
+    let contents = fs::read_to_string(path).ok()?;
+    serde_json::from_str(&contents).ok()
+}
+
+fn save_trust_store(path: &Path, store: &HashMap<String, TrustDecision>) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let data = serde_json::to_string_pretty(store)?;
+    fs::write(path, data)?;
+    Ok(())
+}
+
+fn pick_option_id(
+    options: &[PermissionOption],
+    prefer_kind: &[PermissionOptionKind],
+) -> Option<String> {
+    for kind in prefer_kind {
+        if let Some(opt) = options.iter().find(|o| &o.kind == kind) {
+            return Some(opt.option_id.to_string());
+        }
+    }
+    None
 }
 
 fn select_timeout_outcome(options: &[PermissionOption]) -> RequestPermissionOutcome {
@@ -314,5 +453,68 @@ mod tests {
             }
             other => panic!("Unexpected outcome: {other:?}"),
         }
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn applies_trust_store_decisions() {
+        let workspace = std::env::temp_dir().join("acp-client-trust");
+        let _ = std::fs::create_dir_all(&workspace);
+
+        let (session_tx, _session_rx) = tokio::sync::mpsc::unbounded_channel();
+        let (permission_tx, mut permission_rx) = tokio::sync::mpsc::unbounded_channel();
+        let pending = Arc::new(Mutex::new(HashMap::new()));
+        let client = ReprodAcpClient::new(
+            workspace.clone(),
+            session_tx,
+            permission_tx,
+            pending.clone(),
+        );
+
+        let req = RequestPermissionRequest::new(
+            SessionId::new("s-trust"),
+            ToolCallUpdate::new(
+                ToolCallId::new("tool-allow"),
+                ToolCallUpdateFields::new().title("read file"),
+            ),
+            vec![
+                PermissionOption::new(
+                    PermissionOptionId::new("allow-always"),
+                    "Always allow",
+                    PermissionOptionKind::AllowAlways,
+                ),
+                PermissionOption::new(
+                    PermissionOptionId::new("deny"),
+                    "Deny",
+                    PermissionOptionKind::RejectOnce,
+                ),
+            ],
+        );
+
+        let mut payload = map_permission_request(req.clone());
+        payload.trust_key = format!("{}:file:/tmp/foo", workspace.to_string_lossy());
+
+        {
+            let mut store = client.trust_store.lock().await;
+            store.insert(payload.trust_key.clone(), TrustDecision::Allow);
+        }
+
+        let outcome = client
+            .apply_trust(&payload, &req.options)
+            .expect("applied trust");
+        match &outcome {
+            RequestPermissionOutcome::Selected(sel) => {
+                assert_eq!(sel.option_id.to_string(), "allow-always");
+            }
+            other => panic!("unexpected outcome {other:?}"),
+        }
+
+        // Round trip persistence
+        client.persist_trust(&req.options, &outcome, &payload).await;
+        let stored = load_trust_store(&trust_store_path(&workspace)).unwrap();
+        assert!(stored.contains_key(&payload.trust_key));
+
+        // Ensure pending sender cleanup still works when skipping UI
+        assert!(pending.lock().await.is_empty());
+        assert!(permission_rx.try_recv().is_err());
     }
 }
