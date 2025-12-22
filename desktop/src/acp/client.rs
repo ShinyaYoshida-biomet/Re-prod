@@ -12,7 +12,7 @@ use agent_client_protocol::{
     SelectedPermissionOutcome, SessionNotification, WriteTextFileRequest, WriteTextFileResponse,
 };
 use anyhow::{anyhow, bail, Context, Result};
-use reprod_core::config::app_config_dir;
+use dunce::canonicalize;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc::UnboundedSender, oneshot, Mutex};
 use tokio::time::timeout;
@@ -251,40 +251,32 @@ impl Client for ReprodAcpClient {
 }
 
 fn ensure_within_workspace(workspace_root: &Path, requested: &Path) -> Result<PathBuf> {
-    let root = workspace_root
-        .canonicalize()
+    let root = canonicalize(workspace_root)
         .with_context(|| format!("Failed to canonicalize workspace root: {workspace_root:?}"))?;
 
-    if !requested.is_absolute() {
-        bail!("ACP requested path must be absolute: {requested:?}");
-    }
+    let requested_abs = if requested.is_absolute() {
+        requested.to_path_buf()
+    } else {
+        workspace_root.join(requested)
+    };
 
-    if requested.components().any(|component| {
-        matches!(
-            component,
-            std::path::Component::CurDir | std::path::Component::ParentDir
-        )
-    }) {
-        bail!("ACP requested path contains invalid components: {requested:?}");
-    }
+    let resolved = canonicalize(&requested_abs).or_else(|_| {
+        let mut ancestor = requested_abs.as_path();
+        while !ancestor.exists() {
+            ancestor = ancestor
+                .parent()
+                .ok_or_else(|| anyhow!("ACP path has no existing ancestor: {requested_abs:?}"))?;
+        }
+        let suffix = requested_abs
+            .strip_prefix(ancestor)
+            .context("ACP path prefix mismatch")?;
+        Ok::<PathBuf, anyhow::Error>(canonicalize(ancestor)?.join(suffix))
+    })?;
 
-    let mut existing_ancestor = requested.to_path_buf();
-    while !existing_ancestor.exists() {
-        existing_ancestor = existing_ancestor
-            .parent()
-            .ok_or_else(|| anyhow!("ACP path has no existing ancestor: {requested:?}"))?
-            .to_path_buf();
-    }
-
-    let suffix = requested
-        .strip_prefix(&existing_ancestor)
-        .context("ACP path prefix mismatch")?;
-
-    let resolved = existing_ancestor.canonicalize()?.join(suffix);
     if !resolved.starts_with(&root) {
-        return Err(anyhow!(
-            "ACP path escapes workspace root: requested={requested:?} resolved={resolved:?} root={root:?}"
-        ));
+        bail!(
+            "ACP path escapes workspace root: requested={requested_abs:?} resolved={resolved:?} root={root:?}"
+        );
     }
 
     Ok(resolved)
@@ -516,5 +508,25 @@ mod tests {
         // Ensure pending sender cleanup still works when skipping UI
         assert!(pending.lock().await.is_empty());
         assert!(permission_rx.try_recv().is_err());
+    }
+
+    #[test]
+    fn rejects_path_outside_workspace() {
+        let workspace = std::env::temp_dir().join("acp-client-path");
+        let outside = workspace.parent().unwrap().join("outside.txt");
+        std::fs::create_dir_all(&workspace).unwrap();
+        let err = ensure_within_workspace(&workspace, &outside).unwrap_err();
+        assert!(format!("{err}").contains("escapes workspace"));
+    }
+
+    #[test]
+    fn resolves_relative_path_inside_workspace() {
+        let workspace = std::env::temp_dir().join("acp-client-path-inside");
+        let file = workspace.join("subdir/inner.txt");
+        std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+        std::fs::write(&file, b"hi").unwrap();
+        let resolved = ensure_within_workspace(&workspace, Path::new("subdir/inner.txt"))
+            .expect("within workspace");
+        assert!(resolved.starts_with(&workspace));
     }
 }

@@ -4,7 +4,8 @@ use anyhow::{anyhow, Context, Result};
 use tokio::process::{Child, Command};
 use tokio::time::sleep;
 use tracing::{debug, error};
-use which::which;
+
+use crate::acp::detection::find_agent_binary;
 
 pub struct ProcessConfig {
     pub command: String,
@@ -46,8 +47,8 @@ impl AcpChild {
 }
 
 pub async fn spawn_agent(config: ProcessConfig) -> Result<SpawnedPipes> {
-    let command_path = which(&config.command)
-        .with_context(|| format!("Agent binary not found on PATH: {}", config.command))?;
+    let command_path = find_agent_binary(&config.command)
+        .ok_or_else(|| anyhow!("Agent binary not found: {}", config.command))?;
 
     let mut cmd = Command::new(command_path);
     cmd.args(config.args);
