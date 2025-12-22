@@ -815,6 +815,7 @@ export function FileBrowserPane(): JSX.Element {
 						type="button"
 						className="btn btn-icon"
 						title="New File"
+						aria-label="Create new file"
 						onClick={() => handleCreateEntry(ROOT_PATH, false, true)}
 					>
 						<IconPlus width={14} height={14} />
@@ -823,6 +824,7 @@ export function FileBrowserPane(): JSX.Element {
 						type="button"
 						className="btn btn-icon"
 						title="New Folder"
+						aria-label="Create new folder"
 						onClick={() => handleCreateEntry(ROOT_PATH, true, true)}
 					>
 						<IconFolder width={14} height={14} />
