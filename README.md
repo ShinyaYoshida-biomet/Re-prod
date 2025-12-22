@@ -187,6 +187,35 @@ pnpm -r lint
 pnpm -r build
 ```
 
+### Code Statistics
+
+View lines of code (LOC) statistics using [Tokei](https://github.com/XAMPPRocky/tokei):
+
+**Install Tokei:**
+
+```bash
+# macOS
+brew install tokei
+
+# Linux/macOS (via cargo)
+cargo install tokei
+
+# Or download pre-built binaries from:
+# https://github.com/XAMPPRocky/tokei/releases
+```
+
+**Run LOC count:**
+
+```bash
+# Show detailed statistics
+pnpm loc
+
+# Output as JSON (for scripting)
+pnpm loc:json
+```
+
+**Note:** Tokei must be installed separately and is not included as a dependency. It's used for development metrics only and does not affect production builds.
+
 ### Clean Temporary Files
 
 Temporary R plots and scripts are stored in `server/temp/`.

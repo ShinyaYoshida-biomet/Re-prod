@@ -18,7 +18,9 @@
 		"format": "biome format --write",
 		"format:check": "biome format",
 		"biome:check": "biome check",
-		"biome:fix": "biome check --write"
+		"biome:fix": "biome check --write",
+		"loc": "tokei",
+		"loc:json": "tokei --output json"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.7",
