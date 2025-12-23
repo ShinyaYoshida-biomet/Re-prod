@@ -4,40 +4,37 @@ import { PermissionRequestManager } from "../PermissionRequestManager";
 
 vi.mock("@/constants/features", () => ({
 	ACP_FEATURE_ENABLED: true,
-	IS_TAURI: true,
 }));
 
-const invokeMock = vi.fn();
-const socketSendMock = vi.fn();
-const socketOnMock = vi.fn().mockReturnValue(() => {});
-let listener: ((event: { payload: any }) => void) | null = null;
+const decidePermissionMock = vi.fn();
+let permissionListener: ((payload: any) => void) | null = null;
 
-vi.mock("@tauri-apps/api/core", () => ({
-	invoke: (...args: any[]) => invokeMock(...args),
-}));
-
-vi.mock("@tauri-apps/api/event", () => ({
-	listen: (_evt: string, handler: (event: { payload: any }) => void) => {
-		listener = handler;
-		return Promise.resolve(() => {
-			listener = null;
-		});
+const externalAgentClientMock = {
+	onSessionUpdate: vi.fn(),
+	onPermissionRequest: (cb: (payload: any) => void) => {
+		permissionListener = cb;
+		return () => {
+			permissionListener = null;
+		};
 	},
-}));
+	createSession: vi.fn(),
+	prompt: vi.fn(),
+	cancel: vi.fn(),
+	decidePermission: (...args: any[]) => decidePermissionMock(...args),
+};
 
-vi.mock("@/services/socket", () => ({
-	socketService: {
-		on: (...args: any[]) => socketOnMock(...args),
-		send: (...args: any[]) => socketSendMock(...args),
-	},
+vi.mock("@/services/externalAgentClient", () => ({
+	getExternalAgentClient: () => externalAgentClientMock,
 }));
 
 describe("PermissionRequestManager", () => {
 	beforeEach(() => {
-		invokeMock.mockReset();
-		socketSendMock.mockReset();
-		socketOnMock.mockClear();
-		listener = null;
+		decidePermissionMock.mockReset();
+		permissionListener = null;
+		externalAgentClientMock.onSessionUpdate.mockReset();
+		externalAgentClientMock.createSession.mockReset();
+		externalAgentClientMock.prompt.mockReset();
+		externalAgentClientMock.cancel.mockReset();
 	});
 
 	it("renders request with context, allow/deny/remember, and sends decision", async () => {
@@ -56,8 +53,8 @@ describe("PermissionRequestManager", () => {
 
 		render(<PermissionRequestManager />);
 
-		await waitFor(() => expect(listener).toBeInstanceOf(Function));
-		act(() => listener?.({ payload }));
+		await waitFor(() => expect(permissionListener).toBeInstanceOf(Function));
+		act(() => permissionListener?.(payload));
 
 		expect(screen.getByText(/read file/)).toBeInTheDocument();
 		expect(screen.getByText("/workspace/file.txt")).toBeInTheDocument();
@@ -68,12 +65,10 @@ describe("PermissionRequestManager", () => {
 		fireEvent.click(screen.getByRole("button", { name: /Allow/ }));
 
 		await waitFor(() =>
-			expect(invokeMock).toHaveBeenCalledWith("acp_respond_to_permission", {
-				decision: {
-					request_id: "req-1",
-					option_id: "allow",
-					outcome: "AllowOnce",
-				},
+			expect(decidePermissionMock).toHaveBeenCalledWith({
+				request_id: "req-1",
+				option_id: "allow",
+				outcome: "AllowOnce",
 			}),
 		);
 	});
@@ -97,16 +92,18 @@ describe("PermissionRequestManager", () => {
 		};
 
 		render(<PermissionRequestManager />);
-		await waitFor(() => expect(listener).toBeInstanceOf(Function));
-		act(() => listener?.({ payload: first }));
-		act(() => listener?.({ payload: second }));
+		await waitFor(() => expect(permissionListener).toBeInstanceOf(Function));
+		act(() => permissionListener?.(first));
+		act(() => permissionListener?.(second));
 
 		expect(screen.getByText("first")).toBeInTheDocument();
 		fireEvent.keyDown(document, { key: "Enter" });
 
 		await waitFor(() =>
-			expect(invokeMock).toHaveBeenCalledWith("acp_respond_to_permission", {
-				decision: { request_id: "req-1", option_id: "allow", outcome: "AllowOnce" },
+			expect(decidePermissionMock).toHaveBeenCalledWith({
+				request_id: "req-1",
+				option_id: "allow",
+				outcome: "AllowOnce",
 			}),
 		);
 
@@ -114,8 +111,10 @@ describe("PermissionRequestManager", () => {
 		fireEvent.keyDown(document, { key: "Escape" });
 
 		await waitFor(() =>
-			expect(invokeMock).toHaveBeenCalledWith("acp_respond_to_permission", {
-				decision: { request_id: "req-2", option_id: "deny", outcome: "RejectOnce" },
+			expect(decidePermissionMock).toHaveBeenCalledWith({
+				request_id: "req-2",
+				option_id: "deny",
+				outcome: "RejectOnce",
 			}),
 		);
 	});

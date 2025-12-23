@@ -1,8 +1,8 @@
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AcpPermissionOption, AcpPermissionRequestPayload } from "@/types/generated";
-import { ACP_FEATURE_ENABLED, IS_TAURI } from "@/constants/features";
-import { socketService } from "@/services/socket";
+import { ACP_FEATURE_ENABLED } from "@/constants/features";
+import { getExternalAgentClient } from "@/services/externalAgentClient";
 
 type DecisionOutcome = "AllowOnce" | "AllowAlways" | "RejectOnce" | "RejectAlways" | "Cancelled";
 
@@ -12,46 +12,20 @@ export function PermissionRequestManager(): JSX.Element | null {
 	const [remember, setRemember] = useState(false);
 	const allowButtonRef = useRef<HTMLButtonElement | null>(null);
 
-	const tauriEnabled = ACP_FEATURE_ENABLED && IS_TAURI;
-	const serverEnabled = ACP_FEATURE_ENABLED && !IS_TAURI;
 	const enabled = ACP_FEATURE_ENABLED;
+	const externalAgentClient = enabled ? getExternalAgentClient() : null;
 	const pending = queue[0] ?? null;
 
 	useEffect(() => {
-		if (!tauriEnabled) return;
-
-		let unsubscribe: (() => void) | undefined;
-		void import("@tauri-apps/api/event")
-			.then(({ listen }) =>
-				listen<AcpPermissionRequestPayload>("acp://permission-request", (event) => {
-					setQueue((prev) => [...prev, event.payload]);
-					setSelected((prev) => prev ?? event.payload.options[0]?.option_id ?? null);
-				}),
-			)
-			.then((dispose) => {
-				unsubscribe = dispose;
-			})
-			.catch((error) => {
-				console.error("Failed to bind ACP permission listener", error);
-			});
-
-		return () => {
-			if (unsubscribe) {
-				unsubscribe();
-			}
-		};
-	}, [tauriEnabled]);
-
-	useEffect(() => {
-		if (!serverEnabled) return;
-		const unsubscribe = socketService.on("acp://permission-request", (message) => {
-			setQueue((prev) => [...prev, message.request]);
-			setSelected((prev) => prev ?? message.request.options[0]?.option_id ?? null);
+		if (!externalAgentClient) return;
+		const unsubscribe = externalAgentClient.onPermissionRequest((payload) => {
+			setQueue((prev) => [...prev, payload]);
+			setSelected((prev) => prev ?? payload.options[0]?.option_id ?? null);
 		});
 		return () => {
 			unsubscribe();
 		};
-	}, [serverEnabled]);
+	}, [externalAgentClient]);
 
 	const optionLabel = (option: AcpPermissionOption) => {
 		const kind = option.kind.replace(/_/g, " ");
@@ -74,19 +48,8 @@ export function PermissionRequestManager(): JSX.Element | null {
 				outcome,
 			};
 			if (remember_scope !== "none") baseDecision.remember_scope = remember_scope;
-			if (tauriEnabled) {
-				const { invoke } = await import("@tauri-apps/api/core");
-				await invoke("acp_respond_to_permission", {
-					decision: baseDecision,
-				});
-			} else if (serverEnabled) {
-				const sent = socketService.send({
-					type: "acp_permission_decision",
-					decision: baseDecision,
-				});
-				if (!sent) {
-					throw new Error("Failed to send ACP permission decision");
-				}
+			if (externalAgentClient) {
+				await externalAgentClient.decidePermission(baseDecision);
 			}
 		} catch (error) {
 			console.error("Failed to send permission decision", error);
