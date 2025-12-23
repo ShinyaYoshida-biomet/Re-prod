@@ -4,8 +4,10 @@ use crate::acp::types::{
     AcpAgentConfig, AcpCancelRequest, AcpDetectedAgent, AcpInitializeResponse,
     AcpPermissionDecision, AcpPromptRequest,
 };
+use crate::acp::runtime::DesktopAcpRuntime;
 use crate::acp::{build_process_config, AcpManager};
 use reprod_acp::config::{load_acp_config, normalize_active_mode, save_acp_config, ACP_MODE_API};
+use reprod_acp::AcpRuntime;
 use reprod_acp::detection::{detect_agents, resolve_active_agent_command};
 use tauri::{AppHandle, State};
 use tokio::sync::Mutex;
@@ -40,11 +42,8 @@ pub async fn acp_initialize(
 
 #[tauri::command]
 pub async fn acp_create_session(state: AcpState<'_>) -> Result<String, String> {
-    let manager = &mut *state.lock().await;
-    manager
-        .create_session()
-        .await
-        .map_err(|err| err.to_string())
+    let runtime = DesktopAcpRuntime::new(state.inner().clone());
+    runtime.create_session().await.map_err(|err| err.to_string())
 }
 
 #[tauri::command]
@@ -53,8 +52,10 @@ pub async fn acp_send_prompt(state: AcpState<'_>, request: AcpPromptRequest) -> 
     if !manager.session_exists(&request.session_id) {
         return Err("Unknown session".to_string());
     }
+    drop(manager);
 
-    manager
+    let runtime = DesktopAcpRuntime::new(state.inner().clone());
+    runtime
         .send_prompt(
             &request.session_id,
             request.messages.iter().map(|m| m.content.clone()).collect(),
@@ -65,13 +66,11 @@ pub async fn acp_send_prompt(state: AcpState<'_>, request: AcpPromptRequest) -> 
 
 #[tauri::command]
 pub async fn acp_cancel(state: AcpState<'_>, request: AcpCancelRequest) -> Result<(), String> {
-    let mut manager = state.lock().await;
-    manager
+    let runtime = DesktopAcpRuntime::new(state.inner().clone());
+    runtime
         .cancel(&request.session_id)
         .await
-        .map_err(|err| err.to_string())?;
-    manager.remove_session(&request.session_id);
-    Ok(())
+        .map_err(|err| err.to_string())
 }
 
 #[tauri::command]
@@ -79,8 +78,8 @@ pub async fn acp_respond_to_permission(
     state: AcpState<'_>,
     decision: AcpPermissionDecision,
 ) -> Result<(), String> {
-    let manager = state.lock().await;
-    manager
+    let runtime = DesktopAcpRuntime::new(state.inner().clone());
+    runtime
         .respond_permission(decision)
         .await
         .map_err(|err| err.to_string())

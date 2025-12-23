@@ -1,4 +1,5 @@
 pub mod commands;
+pub mod runtime;
 
 pub use reprod_acp::types;
 
@@ -6,11 +7,15 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use reprod_acp::{
-    types::{AcpInitializeResponse, AcpPermissionDecision},
+    types::{
+        AcpInitializeResponse, AcpPermissionDecision, AcpPermissionRequestPayload,
+        AcpSessionUpdateEnvelope,
+    },
     AcpGateway, ProcessConfig,
 };
 use tauri::{AppHandle, Emitter};
 use tracing::{info, warn};
+use tokio::sync::broadcast;
 
 struct Forwarders {
     updates: tauri::async_runtime::JoinHandle<()>,
@@ -73,6 +78,18 @@ impl AcpManager {
         self.gateway.send_prompt(session_id, messages).await
     }
 
+    pub fn subscribe_session_updates(
+        &self,
+    ) -> broadcast::Receiver<AcpSessionUpdateEnvelope> {
+        self.gateway.subscribe_session_updates()
+    }
+
+    pub fn subscribe_permission_requests(
+        &self,
+    ) -> broadcast::Receiver<AcpPermissionRequestPayload> {
+        self.gateway.subscribe_permission_requests()
+    }
+
     pub async fn shutdown(&mut self) {
         if let Some(handles) = self.forwarders.take() {
             handles.updates.abort();
@@ -86,8 +103,8 @@ impl AcpManager {
             return;
         }
 
-        let mut updates_rx = self.gateway.subscribe_session_updates();
-        let mut permissions_rx = self.gateway.subscribe_permission_requests();
+        let mut updates_rx = self.subscribe_session_updates();
+        let mut permissions_rx = self.subscribe_permission_requests();
         let handle_for_updates = app_handle.clone();
         let update_handle = tauri::async_runtime::spawn(async move {
             loop {

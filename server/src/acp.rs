@@ -6,6 +6,7 @@ use reprod_acp::{
     build_process_config,
     config::{is_external_mode, load_acp_config},
     detection::{detect_agents, resolve_active_agent_command},
+    runtime::AcpRuntime,
     types::{AcpPermissionDecision, AcpPermissionRequestPayload, AcpSessionUpdateEnvelope},
     AcpGateway,
 };
@@ -118,6 +119,35 @@ impl AcpService {
     ) -> broadcast::Receiver<AcpPermissionRequestPayload> {
         let gateway = self.gateway.lock().await;
         gateway.subscribe_permission_requests()
+    }
+}
+
+#[async_trait::async_trait]
+impl AcpRuntime for AcpService {
+    async fn create_session(&self) -> Result<String> {
+        self.create_session().await
+    }
+
+    async fn send_prompt(&self, session_id: &str, messages: Vec<String>) -> Result<()> {
+        self.send_prompt(session_id, messages).await
+    }
+
+    async fn cancel(&self, session_id: &str) -> Result<()> {
+        self.cancel(session_id).await
+    }
+
+    async fn respond_permission(&self, decision: AcpPermissionDecision) -> Result<()> {
+        self.respond_permission(decision).await
+    }
+
+    async fn subscribe_session_updates(&self) -> broadcast::Receiver<AcpSessionUpdateEnvelope> {
+        self.subscribe_session_updates().await
+    }
+
+    async fn subscribe_permission_requests(
+        &self,
+    ) -> broadcast::Receiver<AcpPermissionRequestPayload> {
+        self.subscribe_permission_requests().await
     }
 }
 
