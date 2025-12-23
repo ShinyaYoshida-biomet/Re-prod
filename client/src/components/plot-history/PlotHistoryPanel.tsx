@@ -1,13 +1,13 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { IconBarChart, IconTrash, ConfirmDialog } from "@/components/shared";
 import { useStore } from "@/core";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { deletePlot, exportPlot } from "@/services/plotHistoryService";
 import { formatClockTime } from "@/utils/time";
 
 export function PlotHistoryPanel(): JSX.Element {
 	const plotHistory = useStore((state) => state.plotHistory);
-	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-	const [plotToDelete, setPlotToDelete] = useState<string | null>(null);
+	const { dialogState, showConfirm, handleConfirm, handleCancel } = useConfirmDialog();
 
 	const activePlot = useMemo(() => {
 		const byId = plotHistory.items.find((plot) => plot.id === plotHistory.activePlotId);
@@ -15,22 +15,18 @@ export function PlotHistoryPanel(): JSX.Element {
 		return plotHistory.items.length > 0 ? plotHistory.items[plotHistory.items.length - 1] : null;
 	}, [plotHistory.activePlotId, plotHistory.items]);
 
-	const handleDeleteClick = (plotId: string) => {
-		setPlotToDelete(plotId);
-		setShowDeleteConfirm(true);
-	};
+	const handleDeleteClick = async (plotId: string) => {
+		const confirmed = await showConfirm(
+			"Delete Plot",
+			"Are you sure you want to delete this plot? This action cannot be undone.",
+		);
 
-	const handleDeleteConfirm = () => {
-		if (plotToDelete) {
-			void deletePlot(plotToDelete).catch(() => {});
+		if (!confirmed) {
+			return;
 		}
-		setShowDeleteConfirm(false);
-		setPlotToDelete(null);
-	};
 
-	const handleDeleteCancel = () => {
-		setShowDeleteConfirm(false);
-		setPlotToDelete(null);
+		// Delete the plot
+		void deletePlot(plotId).catch(() => {});
 	};
 
 	const handleExport = (plotId: string, format: "png" | "pdf", filename: string) => {
@@ -98,13 +94,13 @@ export function PlotHistoryPanel(): JSX.Element {
 				</div>
 			)}
 			<ConfirmDialog
-				open={showDeleteConfirm}
-				title="Delete Plot"
-				message="Are you sure you want to delete this plot? This action cannot be undone."
+				open={dialogState.open}
+				title={dialogState.title}
+				message={dialogState.message}
 				confirmLabel="Delete"
 				cancelLabel="Cancel"
-				onConfirm={handleDeleteConfirm}
-				onCancel={handleDeleteCancel}
+				onConfirm={handleConfirm}
+				onCancel={handleCancel}
 			/>
 		</div>
 	);

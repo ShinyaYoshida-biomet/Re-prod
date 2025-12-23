@@ -11,6 +11,7 @@ import {
 import { useFileSystemStore, useStore } from "@/core";
 import { normalizeRelativePath, normalizeSeparators, ROOT_PATH } from "@/core/pathUtils";
 import { useFileSystemData } from "@/hooks/useFileSystemData";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { type FileEntry, fileSystem } from "@/services/fileSystem";
 import {
 	alertWorkspaceNotReady,
@@ -174,8 +175,7 @@ export function FileBrowserPane(): JSX.Element {
 	const [focusedPath, setFocusedPath] = useState<string | null>(null);
 	const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
 	const [dragOverPath, setDragOverPath] = useState<string | null>(null);
-	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-	const [filesToDelete, setFilesToDelete] = useState<Set<string>>(new Set());
+	const { dialogState, showConfirm, handleConfirm, handleCancel } = useConfirmDialog();
 
 	const nodes = useMemo(
 		() => buildTree(files, expandedFolders, pendingFolders),
@@ -392,14 +392,21 @@ export function FileBrowserPane(): JSX.Element {
 		[closeContextMenu, refreshPath, toast],
 	);
 
-	const handleDeleteClick = useCallback(() => {
+	const handleDeleteClick = useCallback(async () => {
 		if (!selectedFiles.size) return;
-		setFilesToDelete(selectedFiles);
-		setShowDeleteConfirm(true);
-	}, [selectedFiles]);
 
-	const handleDeleteConfirm = useCallback(async () => {
-		const targets = Array.from(filesToDelete);
+		const targets = Array.from(selectedFiles);
+
+		const confirmed = await showConfirm(
+			"Delete Files",
+			`Are you sure you want to delete ${targets.length} item${targets.length > 1 ? "s" : ""}? This action cannot be undone.`,
+		);
+
+		if (!confirmed) {
+			return;
+		}
+
+		// Deletion logic
 		for (const path of targets) {
 			try {
 				await fileSystem.deletePath(path);
@@ -407,17 +414,11 @@ export function FileBrowserPane(): JSX.Element {
 				alertFileOperationError(toast, `Failed to delete ${path}: ${(error as Error).message}`);
 			}
 		}
+
 		await refreshParents(targets);
 		clearSelection();
 		closeContextMenu();
-		setShowDeleteConfirm(false);
-		setFilesToDelete(new Set());
-	}, [filesToDelete, refreshParents, clearSelection, closeContextMenu, toast]);
-
-	const handleDeleteCancel = useCallback(() => {
-		setShowDeleteConfirm(false);
-		setFilesToDelete(new Set());
-	}, []);
+	}, [selectedFiles, showConfirm, refreshParents, clearSelection, closeContextMenu, toast]);
 
 	const handleCopyCut = useCallback(
 		(mode: "copy" | "cut") => {
@@ -878,13 +879,13 @@ export function FileBrowserPane(): JSX.Element {
 			</div>
 			{renderContextMenu()}
 			<ConfirmDialog
-				open={showDeleteConfirm}
-				title="Delete Files"
-				message={`Are you sure you want to delete ${filesToDelete.size} item${filesToDelete.size > 1 ? "s" : ""}? This action cannot be undone.`}
+				open={dialogState.open}
+				title={dialogState.title}
+				message={dialogState.message}
 				confirmLabel="Delete"
 				cancelLabel="Cancel"
-				onConfirm={handleDeleteConfirm}
-				onCancel={handleDeleteCancel}
+				onConfirm={handleConfirm}
+				onCancel={handleCancel}
 			/>
 		</div>
 	);
