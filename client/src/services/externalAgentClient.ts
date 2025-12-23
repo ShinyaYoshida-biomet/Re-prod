@@ -1,4 +1,4 @@
-import { ACP_FEATURE_ENABLED, IS_TAURI } from "@/constants/features";
+import { IS_TAURI } from "@/constants/features";
 import type {
 	AcpPermissionDecision,
 	AcpPermissionRequestPayload,
@@ -124,7 +124,7 @@ class DesktopAcpClient implements ExternalAgentClient {
 	}
 
 	private async ensureInitialized(): Promise<void> {
-		if (this.initialized || !ACP_FEATURE_ENABLED) return;
+		if (this.initialized) return;
 		const { invoke } = await import("@tauri-apps/api/core");
 		await invoke("acp_initialize", {
 			command: null,
