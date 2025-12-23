@@ -1,0 +1,22 @@
+# mise configuration for Re-prod
+# Ensures consistent development environment across all contributors
+# Install mise: https://mise.jdx.dev/getting-started.html
+# Usage: Run `mise install` in the project root
+
+[tools]
+# Node.js - JavaScript runtime
+# Required for client development and build tools
+node = "22"
+
+# pnpm - Fast, disk space efficient package manager
+# Used for managing JavaScript dependencies
+pnpm = "9"
+
+# Rust - Systems programming language
+# Used for backend (server) and desktop (Tauri) development
+# Version matches the MSRV (Minimum Supported Rust Version) in Cargo.toml
+rust = "1.77.2"
+
+[settings]
+# Automatically install missing tools when entering the directory
+auto_install = true

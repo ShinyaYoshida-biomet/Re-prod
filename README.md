@@ -42,6 +42,26 @@ Re-prod is a cross-platform IDE for R and scientific analysis, built as a Rustâ€
 - **AI API key** (optional, for AI features) - Anthropic or OpenAI
 - **Writable workspace**: the project root must be writable so `.reprod/` can store timeline/plot artifacts, and the OS temp dir (e.g., `/tmp/reprod`) must be writable for execution scratch files.
 
+### Quick Setup with mise (Recommended)
+
+For the easiest setup experience, we recommend using [mise](https://mise.jdx.dev/) to automatically manage Rust, Node.js, and pnpm versions:
+
+```bash
+# Install mise (macOS/Linux)
+curl https://mise.run | sh
+
+# Or via Homebrew
+brew install mise
+
+# Navigate to the project directory
+cd re-prod
+
+# Automatically install all required tools
+mise install
+```
+
+The `.mise.toml` file in the project root ensures all contributors use consistent runtime versions, reducing environment-related issues.
+
 ## Installation
 
 ### 1. Install Rust (if not already installed)

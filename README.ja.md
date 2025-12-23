@@ -37,6 +37,26 @@ Re-prod は Rust、Tauri、React/TypeScript を組み合わせたマルチパッ
 - **R** 4.0+ (`Rscript` が PATH に含まれていること)
 - **Anthropic API キー** (任意、AI 機能用)
 
+### mise による簡単セットアップ（推奨）
+
+最も簡単なセットアップ方法として、[mise](https://mise.jdx.dev/) を使用して Rust、Node.js、pnpm のバージョンを自動管理することをお勧めします：
+
+```bash
+# mise をインストール (macOS/Linux)
+curl https://mise.run | sh
+
+# または Homebrew 経由
+brew install mise
+
+# プロジェクトディレクトリに移動
+cd re-prod
+
+# 必要なツールを自動インストール
+mise install
+```
+
+プロジェクトルートの `.mise.toml` ファイルにより、すべての貢献者が一貫したランタイムバージョンを使用でき、環境関連の問題を減らすことができます。
+
 ## インストール手順
 
 ### 1. Rust をインストール
