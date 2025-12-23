@@ -3,6 +3,7 @@ import { useCallback } from "react";
 import { useStore } from "@/core";
 import { CodeActionFactory, type CodeActionContext } from "@/core/ai/actions";
 import { applyCodeChangeFile } from "@/services/fileService";
+import { getErrorMessage } from "@/utils/error";
 
 type PostAssistantMessage = (content: string, extras?: Partial<AIMessage>) => void;
 
@@ -38,7 +39,7 @@ export function useAICodeApplication(postAssistantMessage: PostAssistantMessage)
 				// Delegate to the action implementation
 				await action.apply(codeBlock, context);
 			} catch (error) {
-				const message = error instanceof Error ? error.message : "unknown error";
+				const message = getErrorMessage(error, "unknown error");
 				postAssistantMessage(`Failed to apply code change: ${message}`);
 			}
 		},

@@ -7,6 +7,7 @@ import {
 	queryTimeline,
 	subscribeToTimelineEvents,
 } from "@/services/timelineService";
+import { getErrorMessage } from "@/utils/error";
 
 export function useTimelineData() {
 	const {
@@ -69,7 +70,7 @@ export function useTimelineData() {
 
 				setEvents(response.events, response.total, response.hasMore);
 			} catch (err) {
-				setError(err instanceof Error ? err.message : "Failed to load timeline");
+				setError(getErrorMessage(err, "Failed to load timeline"));
 			}
 		};
 
@@ -95,7 +96,7 @@ export function useTimelineData() {
 
 				setEvents([...events, ...response.events], response.total, response.hasMore);
 			} catch (err) {
-				setError(err instanceof Error ? err.message : "Failed to load more events");
+				setError(getErrorMessage(err, "Failed to load more events"));
 			}
 		};
 

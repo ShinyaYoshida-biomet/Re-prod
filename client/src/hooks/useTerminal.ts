@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { TerminalState } from "@/types/terminal";
+import { getErrorMessage } from "@/utils/error";
 
 const isTauriAvailable =
 	typeof window !== "undefined" &&
@@ -111,7 +112,7 @@ export function useTerminal(): UseTerminalResult {
 			});
 		} catch (error) {
 			setError("Unable to start terminal session. Please restart the desktop app.");
-			setErrorDetail(error instanceof Error ? error.message : String(error));
+			setErrorDetail(getErrorMessage(error, String(error)));
 		}
 	}, [addSession, removeSession]);
 
@@ -145,7 +146,7 @@ export function useTerminal(): UseTerminalResult {
 			await pty.write(data);
 		} catch (error) {
 			setError("Failed to send input to terminal.");
-			setErrorDetail(error instanceof Error ? error.message : String(error));
+			setErrorDetail(getErrorMessage(error, String(error)));
 		}
 	}, []);
 

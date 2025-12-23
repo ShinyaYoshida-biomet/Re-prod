@@ -7,6 +7,7 @@ import {
 	ReplaceAllAction,
 	ReplaceRangeAction,
 } from "./actions";
+import { getErrorMessage } from "@/utils/error";
 
 /**
  * Factory for creating code action instances based on action type.
@@ -71,7 +72,7 @@ export class CodeActionFactory {
 		} catch (error) {
 			return {
 				valid: false,
-				error: error instanceof Error ? error.message : "Unknown validation error",
+				error: getErrorMessage(error, "Unknown validation error"),
 			};
 		}
 	}

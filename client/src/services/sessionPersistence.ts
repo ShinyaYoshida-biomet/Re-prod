@@ -3,6 +3,7 @@ import { useFileSystemStore } from "@/core/fileSystemStore";
 import type { ViewData } from "@/core/state/slices/viewSlice";
 import { fileSystem } from "@/services/fileSystem";
 import { queryTimeline } from "@/services/timelineService";
+import { getErrorMessage } from "@/utils/error";
 
 const SNAPSHOT_VERSION = 2;
 const STORAGE_FILENAME = () =>
@@ -167,6 +168,6 @@ export async function refreshTimelineData(): Promise<void> {
 		});
 		setEvents(response.events, response.total, response.hasMore);
 	} catch (error) {
-		setError(error instanceof Error ? error.message : "Failed to refresh timeline");
+		setError(getErrorMessage(error, "Failed to refresh timeline"));
 	}
 }
