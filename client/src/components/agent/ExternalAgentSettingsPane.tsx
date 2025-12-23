@@ -12,6 +12,7 @@ export function ExternalAgentSettingsPane(): JSX.Element {
 	const setDetectedAgents = useStore((state) => state.setDetectedAgents);
 	const [loading, setLoading] = useState(false);
 	const enabled = ACP_FEATURE_ENABLED && IS_TAURI;
+	const isWindows = typeof navigator !== "undefined" && navigator.userAgent.includes("Windows");
 
 	const availableAgents = useMemo(
 		() => detectedAgents.filter((agent) => agent.available),
@@ -139,6 +140,7 @@ export function ExternalAgentSettingsPane(): JSX.Element {
 						{availableAgents.length === 0 && (
 							<div className="agent-empty-note">
 								Install an ACP agent (e.g. claude-code-acp) and refresh.
+								{isWindows && " On Windows, ensure the binary (or .cmd) is on PATH."}
 							</div>
 						)}
 					</div>

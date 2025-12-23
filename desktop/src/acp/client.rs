@@ -13,6 +13,7 @@ use agent_client_protocol::{
 };
 use anyhow::{anyhow, bail, Context, Result};
 use dunce::canonicalize;
+use reprod_core::config::app_config_dir;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc::UnboundedSender, oneshot, Mutex};
 use tokio::time::timeout;
