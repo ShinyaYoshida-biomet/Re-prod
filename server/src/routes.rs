@@ -6,8 +6,8 @@ use axum::{
     Json,
 };
 use reprod_acp::{
-    config::{load_acp_config, save_acp_config},
-    detection::detect_agents,
+    config::{load_acp_config, normalize_active_mode, save_acp_config, ACP_MODE_API},
+    detection::{detect_agents, resolve_active_agent_command},
     types::{AcpAgentConfig, AcpDetectedAgent},
 };
 use reprod_core::{
@@ -203,31 +203,25 @@ pub struct SetAcpConfigRequest {
 }
 
 pub async fn acp_set_config(Json(payload): Json<SetAcpConfigRequest>) -> Resp<AcpAgentConfig> {
-    let normalized_mode = payload.active_mode.to_lowercase();
-    if normalized_mode != "api" && normalized_mode != "external_agent" {
-        return Err(err_400(
-            "Invalid active_mode; use 'api' or 'external_agent'",
-        ));
-    }
+    let normalized_mode =
+        normalize_active_mode(&payload.active_mode).map_err(|err| err_400(err.to_string()))?;
 
     let mut cfg = load_acp_config().unwrap_or_else(|_| Default::default());
     cfg.active_mode = normalized_mode.clone();
-    cfg.active_agent = if normalized_mode == "api" {
-        None
+    cfg.active_agent = payload.active_agent.clone();
+    if normalized_mode == ACP_MODE_API {
+        cfg.active_agent = None;
     } else {
-        let selected = payload
+        let selected = cfg
             .active_agent
             .clone()
             .ok_or_else(|| err_400("active_agent must be set for external_agent mode"))?;
         let detected = detect_agents().map_err(err_500)?;
-        let available = detected
-            .iter()
-            .any(|agent| agent.id == selected && agent.available);
-        if !available {
+        if resolve_active_agent_command(&cfg, &detected).is_none() {
             return Err(err_400(format!("ACP agent unavailable: {selected}")));
         }
-        Some(selected)
-    };
+        cfg.active_agent = Some(selected);
+    }
 
     save_acp_config(&cfg).map_err(err_500)?;
 

@@ -46,7 +46,6 @@ impl AcpManager {
         let response = self.gateway.initialize(config).await?;
         self.start_forwarders(app_handle.clone());
         info!("ACP agent ready");
-        app_handle.emit("acp://status", "ready").ok();
         Ok(response)
     }
 

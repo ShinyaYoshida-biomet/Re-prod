@@ -4,8 +4,8 @@ use std::time::{Duration, Instant};
 use anyhow::{anyhow, bail, Result};
 use reprod_acp::{
     build_process_config,
-    config::load_acp_config,
-    detection::detect_agents,
+    config::{is_external_mode, load_acp_config},
+    detection::{detect_agents, resolve_active_agent_command},
     types::{AcpPermissionDecision, AcpPermissionRequestPayload, AcpSessionUpdateEnvelope},
     AcpGateway,
 };
@@ -150,20 +150,11 @@ impl RateLimiter {
 
 fn resolve_agent_command() -> Result<String> {
     let cfg = load_acp_config().unwrap_or_else(|_| Default::default());
-    if cfg.active_mode != "external_agent" {
+    if !is_external_mode(&cfg.active_mode) {
         bail!("External agent mode not enabled");
     }
-    let active_id = cfg
-        .active_agent
-        .ok_or_else(|| anyhow!("No ACP agent selected"))?;
     let detected = detect_agents()?;
-    let agent = detected
-        .into_iter()
-        .find(|agent| agent.id == active_id && agent.available)
-        .ok_or_else(|| anyhow!("Selected ACP agent unavailable: {active_id}"))?;
-
-    Ok(agent
-        .path
-        .map(|p| p.to_string_lossy().to_string())
-        .unwrap_or(agent.command))
+    resolve_active_agent_command(&cfg, &detected).ok_or_else(|| {
+        anyhow!("Selected ACP agent unavailable or not set for external_agent mode")
+    })
 }

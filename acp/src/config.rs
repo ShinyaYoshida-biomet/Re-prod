@@ -1,8 +1,11 @@
 use std::path::PathBuf;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use reprod_core::config::app_config_dir;
 use serde::{Deserialize, Serialize};
+
+pub const ACP_MODE_API: &str = "api";
+pub const ACP_MODE_EXTERNAL_AGENT: &str = "external_agent";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AcpConfig {
@@ -12,7 +15,7 @@ pub struct AcpConfig {
 }
 
 fn default_mode() -> String {
-    "api".to_string()
+    ACP_MODE_API.to_string()
 }
 
 impl Default for AcpConfig {
@@ -47,4 +50,36 @@ pub fn save_acp_config(cfg: &AcpConfig) -> Result<()> {
     let content = serde_json::to_string_pretty(cfg)?;
     std::fs::write(path, content)?;
     Ok(())
+}
+
+pub fn normalize_active_mode(mode: &str) -> Result<String> {
+    let normalized = mode.to_lowercase();
+    if normalized != ACP_MODE_API && normalized != ACP_MODE_EXTERNAL_AGENT {
+        bail!("Invalid active_mode; use 'api' or 'external_agent'");
+    }
+    Ok(normalized)
+}
+
+pub fn is_external_mode(mode: &str) -> bool {
+    mode == ACP_MODE_EXTERNAL_AGENT
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalizes_active_mode() {
+        assert_eq!(normalize_active_mode("API").unwrap(), ACP_MODE_API);
+        assert_eq!(
+            normalize_active_mode("external_agent").unwrap(),
+            ACP_MODE_EXTERNAL_AGENT
+        );
+    }
+
+    #[test]
+    fn rejects_invalid_mode() {
+        let err = normalize_active_mode("other").unwrap_err();
+        assert!(err.to_string().contains("Invalid active_mode"));
+    }
 }

@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use anyhow::Result;
 use which::which;
 
+use crate::config::AcpConfig;
 use crate::types::AcpDetectedAgent;
 
 struct KnownAgent {
@@ -96,6 +97,26 @@ pub fn detect_agents() -> Result<Vec<AcpDetectedAgent>> {
     Ok(detected)
 }
 
+pub fn resolve_active_agent_command(
+    cfg: &AcpConfig,
+    detected: &[AcpDetectedAgent],
+) -> Option<String> {
+    if cfg.active_mode != crate::config::ACP_MODE_EXTERNAL_AGENT {
+        return None;
+    }
+    let active_id = cfg.active_agent.as_deref()?;
+    detected
+        .iter()
+        .find(|agent| agent.id == active_id && agent.available)
+        .map(|agent| {
+            agent
+                .path
+                .as_ref()
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_else(|| agent.command.clone())
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -118,5 +139,32 @@ mod tests {
         let path = find_agent_binary("acp-detect-cmd");
         assert_eq!(path.as_deref(), Some(cmd_path.as_path()));
         let _ = std::fs::remove_file(&cmd_path);
+    }
+
+    #[test]
+    fn resolves_active_agent_command_from_config() {
+        let cfg = AcpConfig {
+            active_mode: crate::config::ACP_MODE_EXTERNAL_AGENT.to_string(),
+            active_agent: Some("codex".to_string()),
+        };
+        let detected = vec![
+            AcpDetectedAgent {
+                id: "codex".to_string(),
+                name: "Codex CLI".to_string(),
+                command: "codex".to_string(),
+                available: true,
+                path: None,
+            },
+            AcpDetectedAgent {
+                id: "gemini".to_string(),
+                name: "Gemini CLI".to_string(),
+                command: "gemini".to_string(),
+                available: false,
+                path: None,
+            },
+        ];
+
+        let resolved = resolve_active_agent_command(&cfg, &detected);
+        assert_eq!(resolved.as_deref(), Some("codex"));
     }
 }
