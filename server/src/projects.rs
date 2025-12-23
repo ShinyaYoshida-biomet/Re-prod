@@ -1,3 +1,4 @@
+use crate::acp::AcpService;
 use crate::handlers::stream_buffer::StreamBuffer;
 use anyhow::{anyhow, Context, Result};
 use reprod_core::{
@@ -140,6 +141,7 @@ pub struct ProjectRuntime {
     pub r_context_tool: Arc<RContextTool>,
     pub r_executor: Arc<Mutex<RExecutor>>,
     pub plot_history: Arc<Mutex<PlotHistoryManager>>,
+    pub acp: Arc<AcpService>,
 }
 
 impl ProjectRuntime {
@@ -187,6 +189,7 @@ impl ProjectRuntime {
 
         let filesystem_root = descriptor.root_path.clone();
         let (run_events, _) = broadcast::channel(1024);
+        let acp = Arc::new(AcpService::new(descriptor.root_path.clone()));
         Ok(Self {
             descriptor,
             timeline,
@@ -198,6 +201,7 @@ impl ProjectRuntime {
             r_context_tool: Arc::new(RContextTool::new()),
             r_executor: Arc::new(Mutex::new(r_executor)),
             plot_history,
+            acp,
         })
     }
 }

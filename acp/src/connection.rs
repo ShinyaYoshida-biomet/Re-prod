@@ -20,9 +20,12 @@ use tokio::{
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 use tracing::error;
 
-use crate::acp::{
+use crate::{
     client::ReprodAcpClient,
-    types::{AcpPermissionDecision, AcpPermissionOption, AcpPermissionRequestPayload},
+    types::{
+        AcpPermissionDecision, AcpPermissionDecisionScope, AcpPermissionOption,
+        AcpPermissionRequestPayload,
+    },
 };
 
 enum AcpRequest {
@@ -50,6 +53,7 @@ pub struct AcpConnection {
 pub struct PermissionDecisionMessage {
     pub request_id: String,
     pub outcome: RequestPermissionOutcome,
+    pub remember_scope: Option<AcpPermissionDecisionScope>,
 }
 
 impl AcpConnection {
@@ -73,12 +77,15 @@ impl AcpConnection {
         let pending_permissions: Arc<
             Mutex<HashMap<String, oneshot::Sender<RequestPermissionOutcome>>>,
         > = Arc::new(Mutex::new(HashMap::new()));
+        let decision_meta: Arc<Mutex<HashMap<String, AcpPermissionDecisionScope>>> =
+            Arc::new(Mutex::new(HashMap::new()));
 
         let handler = ReprodAcpClient::new(
             workspace_root,
             notif_tx,
             permission_request_tx,
             pending_permissions.clone(),
+            decision_meta.clone(),
         );
         let (request_tx, mut request_rx) = tokio::sync::mpsc::unbounded_channel();
         let (init_tx, init_rx) = oneshot::channel();
@@ -147,8 +154,12 @@ impl AcpConnection {
 
         tokio::spawn({
             let pending = pending_permissions.clone();
+            let decision_meta = decision_meta.clone();
             async move {
                 while let Some(decision) = permission_response_rx.recv().await {
+                    if let Some(scope) = decision.remember_scope.clone() {
+                        decision_meta.lock().await.insert(decision.request_id.clone(), scope);
+                    }
                     let sender = { pending.lock().await.remove(&decision.request_id) };
                     if let Some(tx) = sender {
                         let _ = tx.send(decision.outcome);
@@ -259,7 +270,7 @@ impl TryFrom<AcpPermissionDecision> for PermissionDecisionMessage {
 
     fn try_from(value: AcpPermissionDecision) -> Result<Self, Self::Error> {
         let outcome = match value.outcome {
-            crate::acp::types::AcpPermissionDecisionOutcome::Cancelled => {
+            crate::types::AcpPermissionDecisionOutcome::Cancelled => {
                 RequestPermissionOutcome::Cancelled
             }
             _ => {
@@ -273,6 +284,7 @@ impl TryFrom<AcpPermissionDecision> for PermissionDecisionMessage {
         Ok(Self {
             request_id: value.request_id,
             outcome,
+            remember_scope: value.remember_scope,
         })
     }
 }
@@ -311,7 +323,7 @@ mod tests {
     fn converts_decision_into_protocol_message() {
         let decision = AcpPermissionDecision {
             request_id: "req-1".to_string(),
-            outcome: crate::acp::types::AcpPermissionDecisionOutcome::AllowOnce,
+            outcome: crate::types::AcpPermissionDecisionOutcome::AllowOnce,
             option_id: Some("opt-1".to_string()),
         };
 
@@ -329,7 +341,7 @@ mod tests {
     fn converts_cancelled_decision() {
         let decision = AcpPermissionDecision {
             request_id: "req-2".to_string(),
-            outcome: crate::acp::types::AcpPermissionDecisionOutcome::Cancelled,
+            outcome: crate::types::AcpPermissionDecisionOutcome::Cancelled,
             option_id: None,
         };
 

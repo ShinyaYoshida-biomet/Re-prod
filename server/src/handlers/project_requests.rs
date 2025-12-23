@@ -8,6 +8,7 @@ use super::common::{error_response, WSRequest, WSResponse};
 use super::runtime_fs::restart_fs_watcher;
 use super::{build_project_opened_response, send_responses, AppState};
 use crate::projects::{ProjectRuntime, RuntimeBroadcastEvent};
+use reprod_acp::types::{AcpPermissionRequestPayload, AcpSessionUpdateEnvelope};
 use reprod_core::fs::FileSystemEvent;
 use tokio::sync::mpsc as tokio_mpsc;
 
@@ -18,6 +19,8 @@ pub async fn handle_project_request(
     state: &AppState,
     current_runtime: &mut Arc<ProjectRuntime>,
     run_event_rx: &mut broadcast::Receiver<RuntimeBroadcastEvent>,
+    acp_update_rx: &mut broadcast::Receiver<AcpSessionUpdateEnvelope>,
+    acp_permission_rx: &mut broadcast::Receiver<AcpPermissionRequestPayload>,
     fs_watcher: &mut Option<FsWatcherHandle>,
     fs_event_tx: &tokio_mpsc::UnboundedSender<FileSystemEvent>,
     fs_events_closed: &mut bool,
@@ -33,6 +36,8 @@ pub async fn handle_project_request(
                 state,
                 current_runtime,
                 run_event_rx,
+                acp_update_rx,
+                acp_permission_rx,
                 fs_watcher,
                 fs_event_tx,
                 fs_events_closed,
@@ -51,6 +56,8 @@ pub async fn handle_project_request(
                     state,
                     current_runtime,
                     run_event_rx,
+                    acp_update_rx,
+                    acp_permission_rx,
                     fs_watcher,
                     fs_event_tx,
                     fs_events_closed,
@@ -68,6 +75,8 @@ pub async fn handle_project_request(
                         state,
                         current_runtime,
                         run_event_rx,
+                        acp_update_rx,
+                        acp_permission_rx,
                         fs_watcher,
                         fs_event_tx,
                         fs_events_closed,
@@ -89,6 +98,8 @@ pub async fn handle_project_request(
                     state,
                     current_runtime,
                     run_event_rx,
+                    acp_update_rx,
+                    acp_permission_rx,
                     fs_watcher,
                     fs_event_tx,
                     fs_events_closed,
@@ -139,6 +150,8 @@ async fn switch_runtime(
     state: &AppState,
     current_runtime: &mut Arc<ProjectRuntime>,
     run_event_rx: &mut broadcast::Receiver<RuntimeBroadcastEvent>,
+    acp_update_rx: &mut broadcast::Receiver<AcpSessionUpdateEnvelope>,
+    acp_permission_rx: &mut broadcast::Receiver<AcpPermissionRequestPayload>,
     fs_watcher: &mut Option<FsWatcherHandle>,
     fs_event_tx: &tokio_mpsc::UnboundedSender<FileSystemEvent>,
     fs_events_closed: &mut bool,
@@ -149,6 +162,8 @@ async fn switch_runtime(
         Ok(runtime) => {
             *current_runtime = runtime;
             *run_event_rx = current_runtime.run_events.subscribe();
+            *acp_update_rx = current_runtime.acp.subscribe_session_updates().await;
+            *acp_permission_rx = current_runtime.acp.subscribe_permission_requests().await;
             restart_fs_watcher(current_runtime, fs_watcher, fs_event_tx, fs_events_closed);
 
             let responses = vec![build_project_opened_response(state, current_runtime).await];

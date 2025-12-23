@@ -1,11 +1,11 @@
 use std::{collections::HashMap, path::PathBuf, process::Stdio, time::Duration};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use tokio::process::{Child, Command};
 use tokio::time::sleep;
 use tracing::{debug, error};
 
-use crate::acp::detection::find_agent_binary;
+use crate::detection::find_agent_binary;
 
 pub struct ProcessConfig {
     pub command: String,

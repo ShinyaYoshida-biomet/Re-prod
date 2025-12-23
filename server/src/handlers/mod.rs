@@ -7,6 +7,7 @@ use axum::{
     response::Response,
 };
 use project_requests::handle_project_request;
+use reprod_acp::types::{AcpPermissionRequestPayload, AcpSessionUpdateEnvelope};
 use reprod_core::{
     executor::ensure_blocks, fs::FileSystemEvent, project::ProjectRecord, ArtifactInfo,
     ExecutionEvent, ExecutionRequest, ExecutionResult, RunOutputChunk, RunStatus, RunStream,
@@ -20,6 +21,7 @@ use tokio::sync::{broadcast, mpsc};
 use tokio::time::{Duration, Instant};
 use uuid::Uuid;
 
+mod acp_handler;
 mod ai_handler;
 mod common;
 mod export_handler;
@@ -34,6 +36,10 @@ mod tool_handler;
 pub use common::AppState;
 
 use crate::projects::RuntimeBroadcastEvent;
+use acp_handler::{
+    handle_acp_permission_decision, handle_acp_session_cancel, handle_acp_session_create,
+    handle_acp_session_prompt,
+};
 use ai_handler::handle_ai_message;
 use common::{error_response, WSRequest, WSResponse};
 use export_handler::handle_export_request;
@@ -67,6 +73,8 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
         fs_event_tx.clone(),
     ));
     let mut fs_events_closed = false;
+    let mut acp_update_rx = current_runtime.acp.subscribe_session_updates().await;
+    let mut acp_permission_rx = current_runtime.acp.subscribe_permission_requests().await;
 
     let _ = send_responses(
         &mut socket,
@@ -82,6 +90,38 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                 }
                 if maybe_event.is_none() {
                     fs_events_closed = true;
+                }
+            }
+            acp_update = acp_update_rx.recv() => {
+                match acp_update {
+                    Ok(payload) => {
+                        if !send_responses(&mut socket, vec![WSResponse::AcpSessionUpdate { session_id: payload.session_id, update: payload.update }]).await {
+                            break 'ws_loop;
+                        }
+                    }
+                    Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                        tracing::warn!(
+                            "ACP session updates lagged; dropped {} events",
+                            skipped
+                        );
+                    }
+                    Err(broadcast::error::RecvError::Closed) => {}
+                }
+            }
+            acp_permission = acp_permission_rx.recv() => {
+                match acp_permission {
+                    Ok(request) => {
+                        if !send_responses(&mut socket, vec![WSResponse::AcpPermissionRequest { request }]).await {
+                            break 'ws_loop;
+                        }
+                    }
+                    Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                        tracing::warn!(
+                            "ACP permission stream lagged; dropped {} prompts",
+                            skipped
+                        );
+                    }
+                    Err(broadcast::error::RecvError::Closed) => {}
                 }
             }
             run_event = run_event_rx.recv() => {
@@ -112,6 +152,8 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                     &state,
                     &mut current_runtime,
                     &mut run_event_rx,
+                    &mut acp_update_rx,
+                    &mut acp_permission_rx,
                     &mut fs_watcher,
                     &fs_event_tx,
                     &mut fs_events_closed,
@@ -134,6 +176,8 @@ async fn handle_ws_text(
     state: &AppState,
     current_runtime: &mut Arc<ProjectRuntime>,
     run_event_rx: &mut broadcast::Receiver<RuntimeBroadcastEvent>,
+    acp_update_rx: &mut broadcast::Receiver<AcpSessionUpdateEnvelope>,
+    acp_permission_rx: &mut broadcast::Receiver<AcpPermissionRequestPayload>,
     fs_watcher: &mut Option<FsWatcherHandle>,
     fs_event_tx: &tokio_mpsc::UnboundedSender<FileSystemEvent>,
     fs_events_closed: &mut bool,
@@ -147,6 +191,8 @@ async fn handle_ws_text(
                     state,
                     current_runtime,
                     run_event_rx,
+                    acp_update_rx,
+                    acp_permission_rx,
                     fs_watcher,
                     fs_event_tx,
                     fs_events_closed,
@@ -247,6 +293,17 @@ async fn handle_ws_request(
             Ok(events) => build_run_state_responses(runtime, events).await,
             Err(e) => error_response(format!("Run query failed: {}", e)),
         },
+        WSRequest::AcpSessionCreate => handle_acp_session_create(runtime).await,
+        WSRequest::AcpSessionPrompt {
+            session_id,
+            messages,
+        } => handle_acp_session_prompt(runtime, &session_id, &messages).await,
+        WSRequest::AcpSessionCancel { session_id } => {
+            handle_acp_session_cancel(runtime, &session_id).await
+        }
+        WSRequest::AcpPermissionDecision { decision } => {
+            handle_acp_permission_decision(runtime, decision).await
+        }
         _ => Vec::new(),
     }
 }

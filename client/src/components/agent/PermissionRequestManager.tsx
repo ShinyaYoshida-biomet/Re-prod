@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AcpPermissionOption, AcpPermissionRequestPayload } from "@/types/generated";
 import { ACP_FEATURE_ENABLED, IS_TAURI } from "@/constants/features";
+import { socketService } from "@/services/socket";
 
 type DecisionOutcome = "AllowOnce" | "AllowAlways" | "RejectOnce" | "RejectAlways" | "Cancelled";
 
@@ -11,11 +12,13 @@ export function PermissionRequestManager(): JSX.Element | null {
 	const [remember, setRemember] = useState(false);
 	const allowButtonRef = useRef<HTMLButtonElement | null>(null);
 
-	const enabled = ACP_FEATURE_ENABLED && IS_TAURI;
+	const tauriEnabled = ACP_FEATURE_ENABLED && IS_TAURI;
+	const serverEnabled = ACP_FEATURE_ENABLED && !IS_TAURI;
+	const enabled = ACP_FEATURE_ENABLED;
 	const pending = queue[0] ?? null;
 
 	useEffect(() => {
-		if (!enabled) return;
+		if (!tauriEnabled) return;
 
 		let unsubscribe: (() => void) | undefined;
 		void import("@tauri-apps/api/event")
@@ -37,7 +40,18 @@ export function PermissionRequestManager(): JSX.Element | null {
 				unsubscribe();
 			}
 		};
-	}, [enabled]);
+	}, [tauriEnabled]);
+
+	useEffect(() => {
+		if (!serverEnabled) return;
+		const unsubscribe = socketService.on("acp://permission-request", (message) => {
+			setQueue((prev) => [...prev, message.request]);
+			setSelected((prev) => prev ?? message.request.options[0]?.option_id ?? null);
+		});
+		return () => {
+			unsubscribe();
+		};
+	}, [serverEnabled]);
 
 	const optionLabel = (option: AcpPermissionOption) => {
 		const kind = option.kind.replace(/_/g, " ");
@@ -48,14 +62,32 @@ export function PermissionRequestManager(): JSX.Element | null {
 		if (!pending) return;
 
 		try {
-			const { invoke } = await import("@tauri-apps/api/core");
-			await invoke("acp_respond_to_permission", {
-				decision: {
-					request_id: pending.request_id,
-					option_id: outcome === "Cancelled" ? null : optionId,
-					outcome,
-				},
-			});
+			const remember_scope = (() => {
+				const opt = pending.options.find((o) => o.option_id === (optionId ?? ""));
+				if (opt?.kind === "allow_always" || opt?.kind === "reject_always")
+					return "project" as const;
+				return remember ? ("session" as const) : ("none" as const);
+			})();
+			const baseDecision: any = {
+				request_id: pending.request_id,
+				option_id: outcome === "Cancelled" ? null : optionId,
+				outcome,
+			};
+			if (remember_scope !== "none") baseDecision.remember_scope = remember_scope;
+			if (tauriEnabled) {
+				const { invoke } = await import("@tauri-apps/api/core");
+				await invoke("acp_respond_to_permission", {
+					decision: baseDecision,
+				});
+			} else if (serverEnabled) {
+				const sent = socketService.send({
+					type: "acp_permission_decision",
+					decision: baseDecision,
+				});
+				if (!sent) {
+					throw new Error("Failed to send ACP permission decision");
+				}
+			}
 		} catch (error) {
 			console.error("Failed to send permission decision", error);
 		} finally {
@@ -99,13 +131,11 @@ export function PermissionRequestManager(): JSX.Element | null {
 
 	const chooseOptionIdForAllow = () => {
 		if (!pending) return null;
-		if (remember && allowAlwaysOption) return allowAlwaysOption.option_id;
 		return selected ?? pending.options[0]?.option_id ?? null;
 	};
 
 	const chooseOptionIdForDeny = () => {
 		if (!pending) return null;
-		if (remember && rejectAlwaysOption) return rejectAlwaysOption.option_id;
 		if (selectedOption?.kind.startsWith("reject")) return selectedOption.option_id;
 		const rejectOnce = pending.options.find((opt) => opt.kind === "reject_once");
 		return rejectOnce?.option_id ?? selectedOption?.option_id ?? null;

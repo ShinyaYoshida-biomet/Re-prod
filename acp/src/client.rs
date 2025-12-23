@@ -19,7 +19,10 @@ use tokio::sync::{mpsc::UnboundedSender, oneshot, Mutex};
 use tokio::time::timeout;
 use tracing::{error, warn};
 
-use crate::acp::{connection::map_permission_request, types::AcpPermissionRequestPayload};
+use crate::{
+    connection::map_permission_request,
+    types::{AcpPermissionDecisionScope, AcpPermissionRequestPayload},
+};
 
 #[cfg(not(test))]
 const PERMISSION_TIMEOUT: Duration = Duration::from_secs(30);
@@ -34,6 +37,8 @@ pub struct ReprodAcpClient {
     pending_permissions: Arc<Mutex<HashMap<String, oneshot::Sender<RequestPermissionOutcome>>>>,
     trust_store: Arc<Mutex<HashMap<String, TrustDecision>>>,
     trust_path: PathBuf,
+    decision_meta: Arc<Mutex<HashMap<String, AcpPermissionDecisionScope>>>,
+    session_trust: Arc<Mutex<HashMap<String, TrustDecision>>>,
 }
 
 impl ReprodAcpClient {
@@ -42,6 +47,7 @@ impl ReprodAcpClient {
         session_update_tx: UnboundedSender<SessionNotification>,
         permission_request_tx: UnboundedSender<AcpPermissionRequestPayload>,
         pending_permissions: Arc<Mutex<HashMap<String, oneshot::Sender<RequestPermissionOutcome>>>>,
+        decision_meta: Arc<Mutex<HashMap<String, AcpPermissionDecisionScope>>>,
     ) -> Self {
         let trust_path = trust_store_path(&workspace_root);
         let trust_store = Arc::new(Mutex::new(
@@ -54,6 +60,8 @@ impl ReprodAcpClient {
             pending_permissions,
             trust_store,
             trust_path,
+            decision_meta,
+            session_trust: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -77,6 +85,22 @@ impl ReprodAcpClient {
         options: &[PermissionOption],
     ) -> Option<RequestPermissionOutcome> {
         let key = self.build_trust_key(payload);
+        // Session-remembered trust
+        if let Some(decision) = self.session_trust.blocking_lock().get(&key).cloned() {
+            let opt_id = match decision {
+                TrustDecision::Allow => pick_option_id(
+                    options,
+                    &[PermissionOptionKind::AllowOnce, PermissionOptionKind::AllowAlways],
+                ),
+                TrustDecision::Reject => pick_option_id(
+                    options,
+                    &[PermissionOptionKind::RejectOnce, PermissionOptionKind::RejectAlways],
+                ),
+            }?;
+            return Some(RequestPermissionOutcome::Selected(
+                SelectedPermissionOutcome::new(opt_id),
+            ));
+        }
         let store = self.trust_store.blocking_lock();
         match store.get(&key) {
             Some(TrustDecision::Allow) => {
@@ -131,6 +155,35 @@ impl ReprodAcpClient {
             guard.insert(key, decision);
             if let Err(err) = save_trust_store(&self.trust_path, &*guard) {
                 warn!("Failed to persist ACP trust store: {err}");
+            }
+            return;
+        }
+
+        // Session-level remember: if UI indicated session scope, capture AllowOnce/RejectOnce
+        if let Some(scope) = self
+            .decision_meta
+            .lock()
+            .await
+            .remove(&payload.request_id)
+        {
+            if matches!(scope, AcpPermissionDecisionScope::Session) {
+                if let RequestPermissionOutcome::Selected(sel) = outcome {
+                    if let Some(kind) = options
+                        .iter()
+                        .find(|o| o.option_id == sel.option_id)
+                        .map(|o| o.kind)
+                    {
+                        let td = match kind {
+                            PermissionOptionKind::AllowOnce => Some(TrustDecision::Allow),
+                            PermissionOptionKind::RejectOnce => Some(TrustDecision::Reject),
+                            _ => None,
+                        };
+                        if let Some(dec) = td {
+                            let key = self.build_trust_key(payload);
+                            self.session_trust.lock().await.insert(key, dec);
+                        }
+                    }
+                }
             }
         }
     }

@@ -23,7 +23,8 @@ import { useProjectSession } from "@/hooks/useProjectSession";
 import { useSettingsPersistence } from "@/hooks/useSettingsPersistence";
 import { useSocketConnection } from "@/hooks/useSocketConnection";
 import { setupSocketListeners } from "@/core/init/socketListeners";
-import { ACP_FEATURE_ENABLED } from "@/constants/features";
+import { ACP_FEATURE_ENABLED, IS_TAURI } from "@/constants/features";
+import type { AcpDetectedAgent } from "@/types/generated";
 import { PermissionRequestManager } from "@/components/agent/PermissionRequestManager";
 
 function App(): JSX.Element {
@@ -74,19 +75,36 @@ function App(): JSX.Element {
 	}, [fetchSettings]);
 
 	useEffect(() => {
-		const win = window as typeof window & { __TAURI__?: unknown; __TAURI_IPC__?: unknown };
-		if (!ACP_FEATURE_ENABLED || (!win.__TAURI__ && !win.__TAURI_IPC__)) return;
-
+		if (!ACP_FEATURE_ENABLED) return;
 		const bootstrap = async () => {
 			try {
-				const { invoke } = await import("@tauri-apps/api/core");
-				const [cfg, agents] = await Promise.all([
-					invoke<{ active_mode: string; active_agent: string | null }>("acp_get_agent_config"),
-					invoke("acp_detect_agents"),
-				]);
-				setActiveMode((cfg.active_mode as "api" | "external_agent") ?? "api");
-				setActiveAgent(cfg.active_agent);
-				setDetectedAgents(agents as any);
+				if (IS_TAURI) {
+					const { invoke } = await import("@tauri-apps/api/core");
+					const [cfg, agents] = await Promise.all([
+						invoke<{ active_mode: string; active_agent: string | null }>("acp_get_agent_config"),
+						invoke("acp_detect_agents"),
+					]);
+					setActiveMode((cfg.active_mode as "api" | "external_agent") ?? "api");
+					setActiveAgent(cfg.active_agent);
+					setDetectedAgents(agents as any);
+				} else {
+					const [cfgResp, agentsResp] = await Promise.all([
+						fetch("/api/acp/config"),
+						fetch("/api/acp/agents"),
+					]);
+					if (cfgResp.ok) {
+						const cfg = (await cfgResp.json()) as {
+							active_mode: string;
+							active_agent: string | null;
+						};
+						setActiveMode((cfg.active_mode as "api" | "external_agent") ?? "api");
+						setActiveAgent(cfg.active_agent);
+					}
+					if (agentsResp.ok) {
+						const agents = (await agentsResp.json()) as AcpDetectedAgent[];
+						setDetectedAgents(agents);
+					}
+				}
 			} catch (error) {
 				console.error("Failed to bootstrap ACP config", error);
 			}

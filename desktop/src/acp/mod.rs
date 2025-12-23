@@ -1,44 +1,33 @@
-mod client;
 pub mod commands;
-mod config;
-mod connection;
-mod detection;
-mod process;
-mod session;
-pub mod types;
 
-use std::path::{Path, PathBuf};
+pub use reprod_acp::types;
 
-use crate::acp::{
-    connection::{AcpConnection, PermissionDecisionMessage},
-    process::{spawn_agent, AcpChild, ProcessConfig, SpawnedPipes},
-    session::AcpSessionManager,
+use std::path::PathBuf;
+
+use anyhow::Result;
+use reprod_acp::{
+    types::{AcpInitializeResponse, AcpPermissionDecision},
+    AcpGateway, ProcessConfig,
 };
-use agent_client_protocol::{ContentBlock, ContentChunk, SessionNotification, SessionUpdate};
-use anyhow::{anyhow, Result};
 use tauri::{AppHandle, Emitter};
-use tokio::sync::mpsc::UnboundedReceiver;
-use tracing::info;
-use types::{
-    AcpInitializeResponse, AcpPermissionDecision, AcpPermissionRequestPayload, AcpSessionUpdate,
-    AcpSessionUpdate::Done, AcpSessionUpdateEnvelope,
-};
+use tracing::{info, warn};
+
+struct Forwarders {
+    updates: tauri::async_runtime::JoinHandle<()>,
+    permissions: tauri::async_runtime::JoinHandle<()>,
+}
 
 /// Manages the lifecycle of the external ACP agent and simple in-memory sessions.
 pub struct AcpManager {
-    child: Option<AcpChild>,
-    conn: Option<AcpConnection>,
-    workspace_root: PathBuf,
-    sessions: AcpSessionManager,
+    gateway: AcpGateway,
+    forwarders: Option<Forwarders>,
 }
 
 impl AcpManager {
     pub fn new(workspace_root: PathBuf) -> Self {
         Self {
-            child: None,
-            conn: None,
-            workspace_root,
-            sessions: AcpSessionManager::new(),
+            gateway: AcpGateway::new(workspace_root),
+            forwarders: None,
         }
     }
 
@@ -47,179 +36,93 @@ impl AcpManager {
         app_handle: &AppHandle,
         config: ProcessConfig,
     ) -> Result<AcpInitializeResponse> {
-        if self.child.is_some() {
+        if self.gateway.is_running() {
             return Ok(AcpInitializeResponse {
-                workspace_root: self.workspace_root.clone(),
+                workspace_root: self.gateway.workspace_root().to_path_buf(),
                 status: "already_running".to_string(),
             });
         }
 
-        let SpawnedPipes {
-            mut child,
-            reader,
-            writer,
-        } = spawn_agent(config).await?;
-        child.notify_ready().await?;
-
-        let (connection, updates, permission_requests) =
-            AcpConnection::initialize(self.workspace_root.clone(), writer, reader).await?;
-        self.forward_updates(app_handle.clone(), updates);
-        self.forward_permission_requests(app_handle.clone(), permission_requests);
-
-        self.child = Some(child);
-        self.conn = Some(connection);
-        info!("ACP agent spawned");
-
+        let response = self.gateway.initialize(config).await?;
+        self.start_forwarders(app_handle.clone());
+        info!("ACP agent ready");
         app_handle.emit("acp://status", "ready").ok();
-
-        Ok(AcpInitializeResponse {
-            workspace_root: self.workspace_root.clone(),
-            status: "ready".to_string(),
-        })
+        Ok(response)
     }
 
     pub async fn create_session(&mut self) -> Result<String> {
-        let conn = self
-            .conn
-            .as_ref()
-            .ok_or_else(|| anyhow!("ACP connection not initialized"))?;
-
-        let session_id = conn
-            .create_session(self.workspace_root.to_string_lossy().to_string())
-            .await?;
-
-        let id_string = session_id.to_string();
-        self.sessions
-            .register(id_string.clone(), self.workspace_root.clone());
-        Ok(id_string)
+        self.gateway.create_session().await
     }
 
     pub fn session_exists(&self, session_id: &str) -> bool {
-        self.sessions.exists(session_id)
+        self.gateway.session_exists(session_id)
     }
 
     pub fn remove_session(&mut self, session_id: &str) {
-        self.sessions.remove(session_id);
+        self.gateway.remove_session(session_id);
     }
 
     pub async fn cancel(&self, session_id: &str) -> Result<()> {
-        let conn = self
-            .conn
-            .as_ref()
-            .ok_or_else(|| anyhow!("ACP connection not initialized"))?;
-
-        conn.cancel(agent_client_protocol::SessionId::new(
-            session_id.to_string(),
-        ))
-        .await?;
-        Ok(())
+        self.gateway.cancel(session_id).await
     }
 
     pub async fn respond_permission(&self, decision: AcpPermissionDecision) -> Result<()> {
-        let conn = self
-            .conn
-            .as_ref()
-            .ok_or_else(|| anyhow!("ACP connection not initialized"))?;
-        let mapped: PermissionDecisionMessage = decision.try_into()?;
-        conn.respond_permission(mapped).await
+        self.gateway.respond_permission(decision).await
     }
 
-    pub async fn send_prompt(
-        &self,
-        app_handle: &AppHandle,
-        session_id: &str,
-        messages: Vec<String>,
-    ) -> Result<()> {
-        let conn = self
-            .conn
-            .as_ref()
-            .ok_or_else(|| anyhow!("ACP connection not initialized"))?;
-
-        let request = AcpConnection::make_prompt_from_strings(session_id.to_string(), messages);
-        conn.prompt(request).await?;
-        let payload = AcpSessionUpdateEnvelope {
-            session_id: session_id.to_string(),
-            update: Done,
-        };
-        let _ = app_handle.emit("acp://session-update", payload);
-
-        Ok(())
+    pub async fn send_prompt(&self, session_id: &str, messages: Vec<String>) -> Result<()> {
+        self.gateway.send_prompt(session_id, messages).await
     }
 
     pub async fn shutdown(&mut self) {
-        if let Some(mut child) = self.child.take() {
-            child.shutdown().await;
+        if let Some(handles) = self.forwarders.take() {
+            handles.updates.abort();
+            handles.permissions.abort();
         }
+        self.gateway.shutdown().await;
     }
 
-    fn forward_updates(
-        &self,
-        app_handle: AppHandle,
-        updates: UnboundedReceiver<SessionNotification>,
-    ) {
-        tauri::async_runtime::spawn(async move {
-            let mut updates = updates;
-            while let Some(notification) = updates.recv().await {
-                let payload = AcpSessionUpdateEnvelope {
-                    session_id: notification.session_id.to_string(),
-                    update: map_session_update(&notification.update),
-                };
-                let _ = app_handle.emit("acp://session-update", payload);
+    fn start_forwarders(&mut self, app_handle: AppHandle) {
+        if self.forwarders.is_some() {
+            return;
+        }
+
+        let mut updates_rx = self.gateway.subscribe_session_updates();
+        let mut permissions_rx = self.gateway.subscribe_permission_requests();
+        let handle_for_updates = app_handle.clone();
+        let update_handle = tauri::async_runtime::spawn(async move {
+            loop {
+                match updates_rx.recv().await {
+                    Ok(payload) => {
+                        let _ = handle_for_updates.emit("acp://session-update", payload);
+                    }
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
+                        warn!("ACP session update receiver lagged; skipped {skipped} events");
+                    }
+                }
             }
         });
-    }
 
-    fn forward_permission_requests(
-        &self,
-        app_handle: AppHandle,
-        requests: UnboundedReceiver<AcpPermissionRequestPayload>,
-    ) {
-        tauri::async_runtime::spawn(async move {
-            let mut requests = requests;
-            while let Some(request) = requests.recv().await {
-                let _ = app_handle.emit("acp://permission-request", request);
+        let permission_handle = tauri::async_runtime::spawn(async move {
+            loop {
+                match permissions_rx.recv().await {
+                    Ok(request) => {
+                        let _ = app_handle.emit("acp://permission-request", request);
+                    }
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
+                        warn!("ACP permission stream lagged; skipped {skipped} prompts");
+                    }
+                }
             }
+        });
+
+        self.forwarders = Some(Forwarders {
+            updates: update_handle,
+            permissions: permission_handle,
         });
     }
 }
 
-fn map_session_update(update: &SessionUpdate) -> AcpSessionUpdate {
-    match update {
-        SessionUpdate::UserMessageChunk(chunk) => AcpSessionUpdate::UserMessageChunk {
-            text: stringify_chunk(chunk),
-        },
-        SessionUpdate::AgentMessageChunk(chunk) => AcpSessionUpdate::AgentMessageChunk {
-            text: stringify_chunk(chunk),
-        },
-        SessionUpdate::AgentThoughtChunk(chunk) => AcpSessionUpdate::AgentThoughtChunk {
-            text: stringify_chunk(chunk),
-        },
-        SessionUpdate::Plan(plan) => AcpSessionUpdate::AgentThoughtChunk {
-            text: format!("{plan:?}"),
-        },
-        other => AcpSessionUpdate::AgentMessageChunk {
-            text: format!("{other:?}"),
-        },
-    }
-}
-
-fn stringify_chunk(chunk: &ContentChunk) -> String {
-    match &chunk.content {
-        ContentBlock::Text(text) => text.text.clone(),
-        other => format!("{other:?}"),
-    }
-}
-
-/// Build a ProcessConfig using the current workspace root and optional overrides.
-pub fn build_process_config(
-    workspace_root: &Path,
-    command: Option<String>,
-    args: Option<Vec<String>>,
-) -> ProcessConfig {
-    ProcessConfig {
-        command: command.unwrap_or_else(|| "claude-code-acp".to_string()),
-        args: args.unwrap_or_default(),
-        cwd: workspace_root.to_path_buf(),
-        env: Default::default(),
-    }
-}
+pub use reprod_acp::build_process_config;

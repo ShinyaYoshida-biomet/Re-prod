@@ -36,8 +36,10 @@ export function useAIConversation() {
 	const acpReadyRef = useRef(false);
 	const acpStreamsRef = useRef<Map<string, string>>(new Map());
 	const acpUnlistenRef = useRef<(() => void) | null>(null);
-	const acpActive =
-		ACP_FEATURE_ENABLED && IS_TAURI && activeMode === "external_agent" && Boolean(activeAgent);
+	const acpConfigured =
+		ACP_FEATURE_ENABLED && activeMode === "external_agent" && Boolean(activeAgent);
+	const useDesktopAcp = acpConfigured && IS_TAURI;
+	const useServerAcp = acpConfigured && !IS_TAURI;
 
 	const postAssistantMessage = useCallback(
 		(content: string, extras?: Partial<AIMessage>) => {
@@ -86,8 +88,25 @@ export function useAIConversation() {
 		[],
 	);
 
+	const handleSessionUpdate = useCallback(
+		(payload: AcpSessionUpdateEnvelope) => {
+			const streamingId =
+				acpStreamsRef.current.get(payload.session_id) ??
+				(() => {
+					const fallback = createRequestId();
+					startStreamingMessage(fallback);
+					acpStreamsRef.current.set(payload.session_id, fallback);
+					return fallback;
+				})();
+			const text = extractAcpText(payload.update);
+			if (!text) return;
+			appendStreamingChunk(streamingId, text);
+		},
+		[appendStreamingChunk, extractAcpText, startStreamingMessage],
+	);
+
 	useEffect(() => {
-		if (!acpActive) return;
+		if (!useDesktopAcp) return;
 
 		let disposed = false;
 
@@ -98,21 +117,8 @@ export function useAIConversation() {
 			acpUnlistenRef.current = await listen<AcpSessionUpdateEnvelope>(
 				"acp://session-update",
 				(event) => {
-					const payload = event.payload;
-					if (!payload) return;
-
-					const streamingId =
-						acpStreamsRef.current.get(payload.session_id) ??
-						(() => {
-							const fallback = createRequestId();
-							startStreamingMessage(fallback);
-							acpStreamsRef.current.set(payload.session_id, fallback);
-							return fallback;
-						})();
-
-					const text = extractAcpText(payload.update);
-					if (!text) return;
-					appendStreamingChunk(streamingId, text);
+					if (!event.payload) return;
+					handleSessionUpdate(event.payload);
 				},
 			);
 		};
@@ -126,10 +132,28 @@ export function useAIConversation() {
 				acpUnlistenRef.current = null;
 			}
 		};
-	}, [acpActive, appendStreamingChunk, extractAcpText, startStreamingMessage]);
+	}, [handleSessionUpdate, useDesktopAcp]);
+
+	useEffect(() => {
+		if (!useServerAcp) return;
+		const unsubscribe = socketService.on("acp://session-update", (message) => {
+			handleSessionUpdate({ session_id: message.session_id, update: message.update });
+		});
+		return () => {
+			unsubscribe();
+		};
+	}, [handleSessionUpdate, useServerAcp]);
+
+	useEffect(() => {
+		if (!acpConfigured) {
+			acpSessionIdRef.current = null;
+			acpReadyRef.current = false;
+			acpStreamsRef.current.clear();
+		}
+	}, [acpConfigured]);
 
 	const ensureAcpInitialized = useCallback(async () => {
-		if (!acpActive) return false;
+		if (!useDesktopAcp) return false;
 		if (acpReadyRef.current) return true;
 
 		const { invoke } = await import("@tauri-apps/api/core");
@@ -140,24 +164,40 @@ export function useAIConversation() {
 		});
 		acpReadyRef.current = true;
 		return true;
-	}, [acpActive]);
+	}, [useDesktopAcp]);
 
 	const ensureAcpSession = useCallback(async (): Promise<string | null> => {
-		if (!acpActive) return null;
-		if (!acpReadyRef.current) {
-			const ok = await ensureAcpInitialized();
-			if (!ok) return null;
+		if (!acpConfigured) return null;
+		if (useDesktopAcp) {
+			if (!acpReadyRef.current) {
+				const ok = await ensureAcpInitialized();
+				if (!ok) return null;
+			}
+
+			if (acpSessionIdRef.current) {
+				return acpSessionIdRef.current;
+			}
+
+			const { invoke } = await import("@tauri-apps/api/core");
+			const sessionId = await invoke<string>("acp_create_session");
+			acpSessionIdRef.current = sessionId;
+			return sessionId;
 		}
 
-		if (acpSessionIdRef.current) {
-			return acpSessionIdRef.current;
+		if (useServerAcp) {
+			if (acpSessionIdRef.current) {
+				return acpSessionIdRef.current;
+			}
+			const response = await socketService.request(
+				{ type: "acp_session_create" },
+				"acp_session_created",
+			);
+			acpSessionIdRef.current = response.session_id;
+			return response.session_id;
 		}
 
-		const { invoke } = await import("@tauri-apps/api/core");
-		const sessionId = await invoke<string>("acp_create_session");
-		acpSessionIdRef.current = sessionId;
-		return sessionId;
-	}, [acpActive, ensureAcpInitialized]);
+		return null;
+	}, [acpConfigured, ensureAcpInitialized, useDesktopAcp, useServerAcp]);
 
 	const handleStop = useCallback(() => {
 		clearTimeoutRef();
@@ -166,10 +206,16 @@ export function useAIConversation() {
 		if (streamingId) {
 			completeStreamingMessage(streamingId);
 			clearActiveRequest();
-		} else if (acpActive && acpSessionIdRef.current) {
+		} else if (useDesktopAcp && acpSessionIdRef.current) {
 			void import("@tauri-apps/api/core").then(({ invoke }) =>
 				invoke("acp_cancel", { request: { session_id: acpSessionIdRef.current } }),
 			);
+			const acpStreamId = acpStreamsRef.current.get(acpSessionIdRef.current);
+			if (acpStreamId) {
+				completeStreamingMessage(acpStreamId);
+			}
+		} else if (useServerAcp && acpSessionIdRef.current) {
+			socketService.send({ type: "acp_session_cancel", session_id: acpSessionIdRef.current });
 			const acpStreamId = acpStreamsRef.current.get(acpSessionIdRef.current);
 			if (acpStreamId) {
 				completeStreamingMessage(acpStreamId);
@@ -178,7 +224,8 @@ export function useAIConversation() {
 			postAssistantMessage("Request stopped by user.");
 		}
 	}, [
-		acpActive,
+		useDesktopAcp,
+		useServerAcp,
 		clearActiveRequest,
 		clearTimeoutRef,
 		completeStreamingMessage,
@@ -211,7 +258,7 @@ export function useAIConversation() {
 				},
 			];
 
-			if (acpActive) {
+			if (acpConfigured) {
 				const requestId = createRequestId();
 				addAIMessage(userMessage);
 				startStreamingMessage(requestId, mode);
@@ -227,17 +274,28 @@ export function useAIConversation() {
 					acpStreamsRef.current.set(sessionId, requestId);
 					activeRequestRef.current = { id: requestId, dispose: () => undefined };
 
-					const { invoke } = await import("@tauri-apps/api/core");
 					const payload: AcpPromptMessage[] = requestMessages.map((message) => ({
 						role: message.role,
 						content: message.content,
 					}));
-					await invoke("acp_send_prompt", {
-						request: {
+					if (useDesktopAcp) {
+						const { invoke } = await import("@tauri-apps/api/core");
+						await invoke("acp_send_prompt", {
+							request: {
+								session_id: sessionId,
+								messages: payload,
+							},
+						});
+					} else if (useServerAcp) {
+						const sent = socketService.send({
+							type: "acp_session_prompt",
 							session_id: sessionId,
 							messages: payload,
-						},
-					});
+						});
+						if (!sent) {
+							throw new Error("Failed to send ACP prompt");
+						}
+					}
 					completeStreamingMessage(requestId);
 				} catch (error) {
 					const reason = error instanceof Error ? error.message : "Unknown error";
@@ -301,7 +359,7 @@ export function useAIConversation() {
 			};
 		},
 		[
-			acpActive,
+			acpConfigured,
 			addAIMessage,
 			clearActiveRequest,
 			clearTimeoutRef,
@@ -316,6 +374,8 @@ export function useAIConversation() {
 			setAILoading,
 			startStreamingMessage,
 			startTimeout,
+			useDesktopAcp,
+			useServerAcp,
 		],
 	);
 

@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use anyhow::Result;
 use which::which;
 
-use crate::acp::types::AcpDetectedAgent;
+use crate::types::AcpDetectedAgent;
 
 struct KnownAgent {
     id: &'static str,
@@ -86,7 +86,9 @@ pub fn detect_agents() -> Result<Vec<AcpDetectedAgent>> {
         detected.push(AcpDetectedAgent {
             id: agent.id.to_string(),
             name: agent.name.to_string(),
-            command: found_cmd.clone().unwrap_or_else(|| agent.commands[0].to_string()),
+            command: found_cmd
+                .clone()
+                .unwrap_or_else(|| agent.commands[0].to_string()),
             available: found_cmd.is_some(),
             path: found_path,
         });

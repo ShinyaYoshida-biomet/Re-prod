@@ -1,6 +1,9 @@
 use std::sync::{atomic::AtomicU64, Arc};
 
 use crate::projects::ProjectController;
+use reprod_acp::types::{
+    AcpPermissionDecision, AcpPermissionRequestPayload, AcpPromptMessage, AcpSessionUpdate,
+};
 use reprod_core::{
     api::timeline::{
         ExportRMarkdownRequest, ExportRMarkdownResponse, TimelineQueryPayload,
@@ -190,6 +193,17 @@ pub(super) enum WSRequest {
         #[serde(default)]
         limit: Option<usize>,
     },
+    #[serde(rename = "acp_session_create")]
+    AcpSessionCreate,
+    #[serde(rename = "acp_session_prompt")]
+    AcpSessionPrompt {
+        session_id: String,
+        messages: Vec<AcpPromptMessage>,
+    },
+    #[serde(rename = "acp_session_cancel")]
+    AcpSessionCancel { session_id: String },
+    #[serde(rename = "acp_permission_decision")]
+    AcpPermissionDecision { decision: AcpPermissionDecision },
 }
 
 #[derive(serde::Serialize)]
@@ -333,6 +347,17 @@ pub(super) enum WSResponse {
     RunOutput(RunOutputChunk),
     #[serde(rename = "run_finished")]
     RunFinished { run: RunSummary },
+    #[serde(rename = "acp_session_created")]
+    AcpSessionCreated { session_id: String },
+    #[serde(rename = "acp://session-update")]
+    AcpSessionUpdate {
+        session_id: String,
+        update: AcpSessionUpdate,
+    },
+    #[serde(rename = "acp://permission-request")]
+    AcpPermissionRequest {
+        request: AcpPermissionRequestPayload,
+    },
 }
 
 #[allow(dead_code)] // Reserved for future AI planning feature

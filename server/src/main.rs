@@ -1,6 +1,7 @@
 // Allow expect for critical initialization failures where panic is appropriate
 #![allow(clippy::expect_used)]
 
+mod acp;
 mod conversions;
 mod handlers;
 mod http;
@@ -80,6 +81,12 @@ async fn main() {
         .route(
             "/api/tools/execute",
             axum::routing::post(routes::execute_tool),
+        )
+        .route("/api/acp/agents", get(routes::acp_detect_agents))
+        .route("/api/acp/config", get(routes::acp_get_config))
+        .route(
+            "/api/acp/config",
+            axum::routing::put(routes::acp_set_config),
         )
         .route("/ws", get(handlers::ws_handler))
         .layer(

@@ -1,6 +1,12 @@
 import type { TimelineMessage, TimelineQuery, TimelineResponse, TimelineStats } from "./timeline";
 import type { ToolManifest } from "./tools";
 import type {
+	AcpPermissionDecision,
+	AcpPermissionRequestPayload,
+	AcpPromptMessage,
+	AcpSessionUpdateEnvelope,
+} from "./generated";
+import type {
 	AIMode,
 	ChatMessagePayload,
 	CodeBlock,
@@ -132,7 +138,11 @@ export type ClientMessage =
 	| { type: "plot_history_save" }
 	| { type: "plot_history_restore" }
 	| { type: "plot_history_clear" }
-	| { type: "run_query"; limit?: number };
+	| { type: "run_query"; limit?: number }
+	| { type: "acp_session_create" }
+	| { type: "acp_session_prompt"; session_id: string; messages: AcpPromptMessage[] }
+	| { type: "acp_session_cancel"; session_id: string }
+	| { type: "acp_permission_decision"; decision: AcpPermissionDecision };
 
 type TimelineEventPush = Extract<TimelineMessage, { type: "timeline_event_added" }>;
 
@@ -209,6 +219,9 @@ export type ServerMessage =
 	| { type: "run_started"; run: RunSummary }
 	| ({ type: "run_output" } & RunOutputChunk)
 	| { type: "run_finished"; run: RunSummary }
+	| { type: "acp_session_created"; session_id: string }
+	| ({ type: "acp://session-update" } & AcpSessionUpdateEnvelope)
+	| { type: "acp://permission-request"; request: AcpPermissionRequestPayload }
 	| TimelineEventPush;
 
 export type ServerMessageType = ServerMessage["type"];

@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 reprod-core = { workspace = true }
+reprod-acp = { workspace = true }
 
 # Web framework
 axum = { workspace = true }

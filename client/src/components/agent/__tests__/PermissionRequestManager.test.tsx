@@ -8,6 +8,8 @@ vi.mock("@/constants/features", () => ({
 }));
 
 const invokeMock = vi.fn();
+const socketSendMock = vi.fn();
+const socketOnMock = vi.fn().mockReturnValue(() => {});
 let listener: ((event: { payload: any }) => void) | null = null;
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -23,9 +25,18 @@ vi.mock("@tauri-apps/api/event", () => ({
 	},
 }));
 
+vi.mock("@/services/socket", () => ({
+	socketService: {
+		on: (...args: any[]) => socketOnMock(...args),
+		send: (...args: any[]) => socketSendMock(...args),
+	},
+}));
+
 describe("PermissionRequestManager", () => {
 	beforeEach(() => {
 		invokeMock.mockReset();
+		socketSendMock.mockReset();
+		socketOnMock.mockClear();
 		listener = null;
 	});
 

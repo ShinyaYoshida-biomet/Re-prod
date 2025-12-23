@@ -1,12 +1,12 @@
 use std::{path::PathBuf, sync::Arc};
 
-use crate::acp::config::{load_acp_config, save_acp_config};
-use crate::acp::detection::detect_agents;
 use crate::acp::types::{
     AcpAgentConfig, AcpCancelRequest, AcpDetectedAgent, AcpInitializeResponse,
     AcpPermissionDecision, AcpPromptRequest,
 };
 use crate::acp::{build_process_config, AcpManager};
+use reprod_acp::config::{load_acp_config, save_acp_config};
+use reprod_acp::detection::detect_agents;
 use tauri::{AppHandle, State};
 use tokio::sync::Mutex;
 
@@ -65,11 +65,7 @@ pub async fn acp_create_session(state: AcpState<'_>) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn acp_send_prompt(
-    app_handle: AppHandle,
-    state: AcpState<'_>,
-    request: AcpPromptRequest,
-) -> Result<(), String> {
+pub async fn acp_send_prompt(state: AcpState<'_>, request: AcpPromptRequest) -> Result<(), String> {
     let manager = state.lock().await;
     if !manager.session_exists(&request.session_id) {
         return Err("Unknown session".to_string());
@@ -77,7 +73,6 @@ pub async fn acp_send_prompt(
 
     manager
         .send_prompt(
-            &app_handle,
             &request.session_id,
             request.messages.iter().map(|m| m.content.clone()).collect(),
         )
