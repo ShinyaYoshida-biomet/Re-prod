@@ -9,7 +9,7 @@ import { WEBSOCKET_RECONNECT_DELAY, WEBSOCKET_REQUEST_TIMEOUT } from "@/constant
 export type WSRequest = ClientMessage;
 export type WSResponse = ServerMessage;
 
-type MessageHandler = (response: ServerMessage) => void;
+type MessageHandler<T extends ServerMessage = ServerMessage> = (response: T) => void;
 type OneShotHandler = {
 	id: string;
 	handler: MessageHandler;
@@ -21,7 +21,7 @@ type ConnectionStatus = "connected" | "disconnected" | "error";
 class SocketService {
 	private ws: WebSocket | null = null;
 	// Event handlers keyed by response.type (e.g., 'ai_response').
-	private messageHandlers: Map<string, Set<MessageHandler>> = new Map();
+	private messageHandlers: Map<string, Set<MessageHandler<any>>> = new Map();
 	// One-shot handlers for request/response style calls with optional matchers.
 	private oneShotHandlers: OneShotHandler[] = [];
 	private nextOneShotId = 0;
@@ -97,11 +97,14 @@ class SocketService {
 		return this.sendPayload(request);
 	}
 
-	on(event: ServerMessageType | "*", handler: MessageHandler): () => void {
-		const existing = this.messageHandlers.get(event) ?? new Set<MessageHandler>();
-		existing.add(handler);
+	on<TType extends ServerMessageType>(
+		event: TType | "*",
+		handler: (message: ExtractServerMessage<TType>) => void,
+	): () => void {
+		const existing = this.messageHandlers.get(event) ?? new Set<MessageHandler<any>>();
+		existing.add(handler as MessageHandler<any>);
 		this.messageHandlers.set(event, existing);
-		return () => this.off(event, handler);
+		return () => this.off(event, handler as MessageHandler<any>);
 	}
 
 	off(event: ServerMessageType | "*", handler?: MessageHandler): void {
