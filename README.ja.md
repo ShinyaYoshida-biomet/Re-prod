@@ -26,8 +26,7 @@ Re-prod は Rust、Tauri、React/TypeScript を組み合わせたマルチパッ
 
 ### フロントエンド
 
-- `client/` は Monaco ベースのエディタ、統合されたボトムペイン（コンソール・タイムライン・プロットなど）、AI アシスタントを描画する React + TypeScript + Vite アプリケーションです。すべての TypeScript 型は `client/src/types/` に配置され、プロトコル型は ts-rs により Rust から自動生成されます。
-- `scripts/` はオンボーディング、デモ、開発者ワークフローを支援します。
+- `client/` は Monaco ベースのエディタやその他のペインを描画する React + TypeScript + Vite アプリケーションです。すべての TypeScript 型は `client/src/types/` に配置され、プロトコル型は ts-rs により Rust から自動生成されます。
 
 ## 前提条件
 
@@ -35,7 +34,8 @@ Re-prod は Rust、Tauri、React/TypeScript を組み合わせたマルチパッ
 - **Node.js** 18 以上
 - **pnpm** 9 以上 (`corepack enable pnpm` または `npm install -g pnpm`)
 - **R** 4.0+ (`Rscript` が PATH に含まれていること)
-- **Anthropic API キー** (任意、AI 機能用)
+- **AI API キー** (任意、AI 機能用) - Anthropic または OpenAI
+- **書き込み可能なワークスペース**: プロジェクトルートは `.reprod/` にタイムライン/プロット成果物を保存できるよう書き込み可能である必要があります。また、OS の一時ディレクトリ（例: `/tmp/reprod`）も実行時のスクラッチファイル用に書き込み可能である必要があります。
 
 ### mise による簡単セットアップ（推奨）
 
@@ -77,19 +77,22 @@ cargo install tauri-cli --version "^2.0"
 pnpm install
 ```
 
-### 4. (任意) AI 設定
+### 4. アプリケーションの設定（任意）
 
-`~/.reprod/auth.json` を作成し、Anthropic API キーや R のパスを設定します。
+AI 機能を使用するには `~/.reprod/auth.json` を作成します：
 
 ```bash
 mkdir -p ~/.reprod
 cat > ~/.reprod/auth.json <<'EOF'
 {
-  "anthropic_api_key": "your-api-key-here",
+  "anthropic_api_key": "sk-ant-...",
+  "openai_api_key": "sk-proj-...",
   "r_path": "Rscript"
 }
 EOF
 ```
+
+どちらか一方または両方の AI プロバイダーを設定できます。AI 機能を使用するには、少なくとも 1 つの API キーが必要です。
 
 ## アプリケーションの起動
 
@@ -132,7 +135,6 @@ Re-prod/
 ├── server/                    # Axum HTTP/WebSocket API
 ├── client/                    # React + TypeScript フロントエンド
 │   └── src/types/             # TypeScript 型（ts-rs により Rust から自動生成）
-├── scripts/                   # セットアップヘルパー＆git hook
 ├── AGENTS.md                  # AI エージェント開発ガイド
 └── package.json               # pnpm ワークスペース設定 & スクリプト
 ```
