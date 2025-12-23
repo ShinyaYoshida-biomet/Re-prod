@@ -325,6 +325,7 @@ mod tests {
             request_id: "req-1".to_string(),
             outcome: crate::types::AcpPermissionDecisionOutcome::AllowOnce,
             option_id: Some("opt-1".to_string()),
+            remember_scope: None,
         };
 
         let msg = PermissionDecisionMessage::try_from(decision).unwrap();
@@ -343,6 +344,7 @@ mod tests {
             request_id: "req-2".to_string(),
             outcome: crate::types::AcpPermissionDecisionOutcome::Cancelled,
             option_id: None,
+            remember_scope: None,
         };
 
         let msg = PermissionDecisionMessage::try_from(decision).unwrap();
