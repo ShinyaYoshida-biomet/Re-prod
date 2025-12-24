@@ -141,6 +141,15 @@ pub fn global_auth_path() -> Result<PathBuf> {
 }
 
 fn legacy_auth_path() -> Option<PathBuf> {
+    if let Ok(home) = env::var("HOME") {
+        return Some(PathBuf::from(home).join(LEGACY_DIR_NAME).join("auth.json"));
+    }
+    #[cfg(windows)]
+    {
+        if let Ok(home) = env::var("USERPROFILE") {
+            return Some(PathBuf::from(home).join(LEGACY_DIR_NAME).join("auth.json"));
+        }
+    }
     dirs::home_dir().map(|home| home.join(LEGACY_DIR_NAME).join("auth.json"))
 }
 
