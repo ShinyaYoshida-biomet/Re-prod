@@ -15,6 +15,7 @@ use reprod_core::{
     ToolManifest,
 };
 use serde::Deserialize;
+use tracing::info;
 
 pub async fn health() -> &'static str {
     "OK"
@@ -183,10 +184,12 @@ pub async fn set_provider(
 
 
 pub async fn acp_detect_agents() -> Resp<Vec<AcpDetectedAgent>> {
+    info!("Detecting ACP agents");
     detect_agents().map(Json).map_err(err_500)
 }
 
 pub async fn acp_get_config() -> Resp<AcpAgentConfig> {
+    info!("Fetching ACP config");
     load_acp_config()
         .map(|cfg| AcpAgentConfig {
             active_mode: cfg.active_mode,
@@ -203,6 +206,11 @@ pub struct SetAcpConfigRequest {
 }
 
 pub async fn acp_set_config(Json(payload): Json<SetAcpConfigRequest>) -> Resp<AcpAgentConfig> {
+    info!(
+        active_mode = %payload.active_mode,
+        active_agent = ?payload.active_agent,
+        "Saving ACP config"
+    );
     let normalized_mode =
         normalize_active_mode(&payload.active_mode).map_err(|err| err_400(err.to_string()))?;
 
@@ -224,6 +232,11 @@ pub async fn acp_set_config(Json(payload): Json<SetAcpConfigRequest>) -> Resp<Ac
     }
 
     save_acp_config(&cfg).map_err(err_500)?;
+    info!(
+        active_mode = %cfg.active_mode,
+        active_agent = ?cfg.active_agent,
+        "Saved ACP config"
+    );
 
     Ok(Json(AcpAgentConfig {
         active_mode: cfg.active_mode,

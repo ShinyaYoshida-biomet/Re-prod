@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use anyhow::{bail, Result};
 use reprod_core::config::app_config_dir;
 use serde::{Deserialize, Serialize};
+use tracing::{error, info, warn};
 
 pub const ACP_MODE_API: &str = "api";
 pub const ACP_MODE_EXTERNAL_AGENT: &str = "external_agent";
@@ -33,11 +34,26 @@ fn config_path() -> Result<PathBuf> {
 
 pub fn load_acp_config() -> Result<AcpConfig> {
     let path = config_path()?;
+    info!(path = %path.display(), "Loading ACP config");
     if path.exists() {
-        let content = std::fs::read_to_string(&path)?;
-        let cfg: AcpConfig = serde_json::from_str(&content)?;
+        let content = match std::fs::read_to_string(&path) {
+            Ok(content) => content,
+            Err(err) => {
+                error!(path = %path.display(), error = %err, "Failed to read ACP config");
+                return Err(err.into());
+            }
+        };
+        let cfg: AcpConfig = match serde_json::from_str(&content) {
+            Ok(cfg) => cfg,
+            Err(err) => {
+                error!(path = %path.display(), error = %err, "Failed to parse ACP config");
+                return Err(err.into());
+            }
+        };
+        info!(path = %path.display(), "Loaded ACP config");
         Ok(cfg)
     } else {
+        warn!(path = %path.display(), "ACP config not found; using defaults");
         Ok(AcpConfig::default())
     }
 }
@@ -47,8 +63,18 @@ pub fn save_acp_config(cfg: &AcpConfig) -> Result<()> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    let content = serde_json::to_string_pretty(cfg)?;
-    std::fs::write(path, content)?;
+    let content = match serde_json::to_string_pretty(cfg) {
+        Ok(content) => content,
+        Err(err) => {
+            error!(path = %path.display(), error = %err, "Failed to serialize ACP config");
+            return Err(err.into());
+        }
+    };
+    if let Err(err) = std::fs::write(&path, content) {
+        error!(path = %path.display(), error = %err, "Failed to write ACP config");
+        return Err(err.into());
+    }
+    info!(path = %path.display(), "Saved ACP config");
     Ok(())
 }
 

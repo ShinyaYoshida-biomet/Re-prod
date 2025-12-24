@@ -10,6 +10,7 @@ use reprod_acp::config::{load_acp_config, normalize_active_mode, save_acp_config
 use reprod_acp::AcpRuntime;
 use reprod_acp::detection::{detect_agents, resolve_active_agent_command};
 use tauri::{AppHandle, State};
+use tracing::info;
 use tokio::sync::Mutex;
 
 pub type SharedAcpManager = Arc<Mutex<AcpManager>>;
@@ -29,7 +30,15 @@ pub async fn acp_initialize(
 
     let acp_cfg = load_acp_config().unwrap_or_default();
     let detected = detect_agents().unwrap_or_default();
+    let command_override = command.clone();
     let resolved_command = command.or_else(|| resolve_active_agent_command(&acp_cfg, &detected));
+    info!(
+        workspace_root = %root.display(),
+        command_override = ?command_override,
+        resolved_command = ?resolved_command,
+        args = ?args,
+        "Initializing ACP"
+    );
 
     let cfg = build_process_config(&root, resolved_command, args);
 
@@ -92,6 +101,7 @@ pub async fn acp_detect_agents() -> Result<Vec<AcpDetectedAgent>, String> {
 
 #[tauri::command]
 pub async fn acp_get_agent_config() -> Result<AcpAgentConfig, String> {
+    info!("Fetching ACP config");
     load_acp_config()
         .map(|cfg| AcpAgentConfig {
             active_mode: cfg.active_mode,
@@ -105,6 +115,11 @@ pub async fn acp_set_agent_config(
     active_mode: String,
     active_agent: Option<String>,
 ) -> Result<AcpAgentConfig, String> {
+    info!(
+        active_mode = %active_mode,
+        active_agent = ?active_agent,
+        "Saving ACP config"
+    );
     let mut cfg = load_acp_config().unwrap_or_default();
     let normalized_mode = normalize_active_mode(&active_mode).map_err(|err| err.to_string())?;
 
@@ -116,6 +131,11 @@ pub async fn acp_set_agent_config(
     };
 
     save_acp_config(&cfg).map_err(|err| err.to_string())?;
+    info!(
+        active_mode = %cfg.active_mode,
+        active_agent = ?cfg.active_agent,
+        "Saved ACP config"
+    );
 
     Ok(AcpAgentConfig {
         active_mode: cfg.active_mode,

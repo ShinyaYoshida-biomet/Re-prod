@@ -13,6 +13,17 @@ import { useAITimeout } from "./useAITimeout";
 
 const STREAM_TIMEOUT_MS = 45000;
 
+const describeError = (error: unknown): string => {
+	if (typeof error === "string") return error;
+	if (error instanceof Error) return error.message;
+	try {
+		const serialized = JSON.stringify(error);
+		return serialized === "{}" ? "Unknown error" : serialized;
+	} catch {
+		return "Unknown error";
+	}
+};
+
 export function useAIConversation() {
 	const messages = useStore((state) => state.ai.messages);
 	const isLoading = useStore((state) => state.ai.isLoading);
@@ -213,7 +224,7 @@ export function useAIConversation() {
 					await externalAgentClient.prompt(sessionId, payload);
 					completeStreamingMessage(requestId);
 				} catch (error) {
-					const reason = error instanceof Error ? error.message : "Unknown error";
+					const reason = describeError(error);
 					completeStreamingMessage(requestId, `ACP request failed: ${reason}`);
 				} finally {
 					setAILoading(false);

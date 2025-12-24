@@ -3,7 +3,7 @@ use std::{collections::HashMap, path::PathBuf, process::Stdio, time::Duration};
 use anyhow::{anyhow, Result};
 use tokio::process::{Child, Command};
 use tokio::time::sleep;
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
 use crate::detection::find_agent_binary;
 
@@ -50,6 +50,13 @@ pub async fn spawn_agent(config: ProcessConfig) -> Result<SpawnedPipes> {
     let command_path = find_agent_binary(&config.command)
         .ok_or_else(|| anyhow!("Agent binary not found: {}", config.command))?;
 
+    info!(
+        command = %config.command,
+        command_path = %command_path.display(),
+        cwd = %config.cwd.display(),
+        args = ?config.args,
+        "Spawning ACP agent"
+    );
     let mut cmd = Command::new(command_path);
     cmd.args(config.args);
     cmd.current_dir(config.cwd);
@@ -60,7 +67,10 @@ pub async fn spawn_agent(config: ProcessConfig) -> Result<SpawnedPipes> {
 
     let mut child = cmd
         .spawn()
-        .map_err(|err| anyhow!("Failed to spawn ACP agent: {err}"))?;
+        .map_err(|err| {
+            error!(error = %err, "Failed to spawn ACP agent");
+            anyhow!("Failed to spawn ACP agent: {err}")
+        })?;
 
     let stdout = child
         .stdout

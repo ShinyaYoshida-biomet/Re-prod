@@ -33,6 +33,11 @@ impl AcpService {
 
     async fn ensure_agent_running(&self) -> Result<()> {
         let command = resolve_agent_command()?;
+        info!(
+            command = %command,
+            workspace = %self.workspace_root.display(),
+            "Resolved ACP agent command"
+        );
         let mut gateway = self.gateway.lock().await;
         let config = build_process_config(&self.workspace_root, Some(command), None);
         let response = gateway.initialize(config).await?;
