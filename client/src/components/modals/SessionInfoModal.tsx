@@ -102,7 +102,7 @@ export function SessionInfoModal({ open, onClose }: SessionInfoModalProps): JSX.
 		onSuccess: () => setLastUpdated(Date.now()),
 	});
 
-	const sessionInfo = data?.sessionInfo ?? null;
+	const sessionInfo = data?.sessionInfo;
 	const displayError = error || data?.warning || null;
 
 	const totalRuns = execution.history.length;
@@ -113,7 +113,7 @@ export function SessionInfoModal({ open, onClose }: SessionInfoModalProps): JSX.
 	const lastRunEntry = execution.history.length
 		? execution.history[execution.history.length - 1]
 		: null;
-	const lastRunTimestamp = lastRunEntry?.timestamp ?? null;
+	const lastRunTimestamp = lastRunEntry?.timestamp;
 
 	useEffect(() => {
 		if (!open) {

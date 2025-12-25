@@ -45,7 +45,7 @@ export function ExternalAgentSettingsPane(): JSX.Element {
 			]);
 			setDetectedAgents(agents);
 			setActiveMode((config.active_mode as "api" | "external_agent") ?? "api");
-			setActiveAgent(config.active_agent ?? null);
+			setActiveAgent(config.active_agent);
 		}
 		return null;
 	}, [enabled, setDetectedAgents, setActiveMode, setActiveAgent]);
