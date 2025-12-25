@@ -1,7 +1,8 @@
 import type { AcpAgentConfig, AcpDetectedAgent } from "@/types/generated";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { ACP_FEATURE_ENABLED, IS_TAURI } from "@/constants/features";
 import { useStore } from "@/core";
+import { useAsyncState } from "@/hooks/useAsyncState";
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 	const response = await fetch(url, init);
@@ -18,7 +19,6 @@ export function ExternalAgentSettingsPane(): JSX.Element {
 	const setActiveMode = useStore((state) => state.setActiveMode);
 	const setActiveAgent = useStore((state) => state.setActiveAgent);
 	const setDetectedAgents = useStore((state) => state.setDetectedAgents);
-	const [loading, setLoading] = useState(false);
 	const enabled = ACP_FEATURE_ENABLED;
 	const isWindows = typeof navigator !== "undefined" && navigator.userAgent.includes("Windows");
 
@@ -27,39 +27,38 @@ export function ExternalAgentSettingsPane(): JSX.Element {
 		[detectedAgents],
 	);
 
-	const fetchAgents = async () => {
-		if (!enabled) return;
-		setLoading(true);
-		try {
-			if (IS_TAURI) {
-				const { invoke } = await import("@tauri-apps/api/core");
-				const [agents, config] = await Promise.all([
-					invoke<AcpDetectedAgent[]>("acp_detect_agents"),
-					invoke<{ active_mode: string; active_agent: string | null }>("acp_get_agent_config"),
-				]);
-				setDetectedAgents(agents);
-				setActiveMode((config.active_mode as "api" | "external_agent") ?? "api");
-				setActiveAgent(config.active_agent);
-			} else {
-				const [agents, config] = await Promise.all([
-					fetchJson<AcpDetectedAgent[]>("/api/acp/agents"),
-					fetchJson<AcpAgentConfig>("/api/acp/config"),
-				]);
-				setDetectedAgents(agents);
-				setActiveMode((config.active_mode as "api" | "external_agent") ?? "api");
-				setActiveAgent(config.active_agent ?? null);
-			}
-		} catch (error) {
-			console.error("Failed to load ACP agents/config", error);
-		} finally {
-			setLoading(false);
+	const fetchAgentsAsync = useCallback(async () => {
+		if (!enabled) return null;
+		if (IS_TAURI) {
+			const { invoke } = await import("@tauri-apps/api/core");
+			const [agents, config] = await Promise.all([
+				invoke<AcpDetectedAgent[]>("acp_detect_agents"),
+				invoke<{ active_mode: string; active_agent: string | null }>("acp_get_agent_config"),
+			]);
+			setDetectedAgents(agents);
+			setActiveMode((config.active_mode as "api" | "external_agent") ?? "api");
+			setActiveAgent(config.active_agent);
+		} else {
+			const [agents, config] = await Promise.all([
+				fetchJson<AcpDetectedAgent[]>("/api/acp/agents"),
+				fetchJson<AcpAgentConfig>("/api/acp/config"),
+			]);
+			setDetectedAgents(agents);
+			setActiveMode((config.active_mode as "api" | "external_agent") ?? "api");
+			setActiveAgent(config.active_agent ?? null);
 		}
-	};
+		return null;
+	}, [enabled, setDetectedAgents, setActiveMode, setActiveAgent]);
+
+	const { loading, execute: fetchAgents } = useAsyncState(fetchAgentsAsync, {
+		onError: (error) => console.error("Failed to load ACP agents/config", error),
+	});
 
 	useEffect(() => {
-		void fetchAgents();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [enabled]);
+		if (enabled) {
+			void fetchAgents();
+		}
+	}, [enabled, fetchAgents]);
 
 	const persistConfig = async (mode: "api" | "external_agent", agent: string | null) => {
 		if (!enabled) return;
