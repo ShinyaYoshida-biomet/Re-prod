@@ -32,36 +32,40 @@ fn config_path() -> Result<PathBuf> {
     Ok(app_config_dir()?.join("acp.json"))
 }
 
-pub fn load_acp_config() -> Result<AcpConfig> {
-    let path = config_path()?;
-    info!(path = %path.display(), "Loading ACP config");
-    if path.exists() {
-        let content = match std::fs::read_to_string(&path) {
-            Ok(content) => content,
-            Err(err) => {
-                error!(path = %path.display(), error = %err, "Failed to read ACP config");
-                return Err(err.into());
-            }
-        };
-        let cfg: AcpConfig = match serde_json::from_str(&content) {
-            Ok(cfg) => cfg,
-            Err(err) => {
-                error!(path = %path.display(), error = %err, "Failed to parse ACP config");
-                return Err(err.into());
-            }
-        };
-        info!(path = %path.display(), "Loaded ACP config");
-        Ok(cfg)
-    } else {
-        warn!(path = %path.display(), "ACP config not found; using defaults");
-        Ok(AcpConfig::default())
-    }
+fn fallback_config_path() -> Option<PathBuf> {
+    std::env::current_dir()
+        .ok()
+        .map(|root| root.join(".reprod").join("acp.json"))
 }
 
-pub fn save_acp_config(cfg: &AcpConfig) -> Result<()> {
-    let path = config_path()?;
+fn read_config_from_path(path: &PathBuf) -> Result<AcpConfig> {
+    let content = match std::fs::read_to_string(path) {
+        Ok(content) => content,
+        Err(err) => {
+            error!(path = %path.display(), error = %err, "Failed to read ACP config");
+            return Err(err.into());
+        }
+    };
+    let cfg: AcpConfig = match serde_json::from_str(&content) {
+        Ok(cfg) => cfg,
+        Err(err) => {
+            error!(path = %path.display(), error = %err, "Failed to parse ACP config");
+            return Err(err.into());
+        }
+    };
+    Ok(cfg)
+}
+
+fn write_config_to_path(path: &PathBuf, cfg: &AcpConfig) -> Result<()> {
     if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
+        if let Err(err) = std::fs::create_dir_all(parent) {
+            error!(
+                path = %path.display(),
+                error = %err,
+                "Failed to create ACP config directory"
+            );
+            return Err(err.into());
+        }
     }
     let content = match serde_json::to_string_pretty(cfg) {
         Ok(content) => content,
@@ -70,11 +74,63 @@ pub fn save_acp_config(cfg: &AcpConfig) -> Result<()> {
             return Err(err.into());
         }
     };
-    if let Err(err) = std::fs::write(&path, content) {
+    if let Err(err) = std::fs::write(path, content) {
         error!(path = %path.display(), error = %err, "Failed to write ACP config");
         return Err(err.into());
     }
-    info!(path = %path.display(), "Saved ACP config");
+    Ok(())
+}
+
+pub fn load_acp_config() -> Result<AcpConfig> {
+    let primary = config_path().ok();
+    if let Some(path) = primary {
+        info!(path = %path.display(), "Loading ACP config");
+        if path.exists() {
+            let cfg = read_config_from_path(&path)?;
+            info!(path = %path.display(), "Loaded ACP config");
+            return Ok(cfg);
+        }
+        warn!(path = %path.display(), "ACP config not found; checking fallback");
+    } else {
+        warn!("ACP config path unavailable; checking fallback");
+    }
+
+    if let Some(fallback) = fallback_config_path() {
+        info!(path = %fallback.display(), "Loading ACP config (fallback)");
+        if fallback.exists() {
+            let cfg = read_config_from_path(&fallback)?;
+            info!(path = %fallback.display(), "Loaded ACP config (fallback)");
+            return Ok(cfg);
+        }
+        warn!(
+            path = %fallback.display(),
+            "ACP config not found in fallback; using defaults"
+        );
+    } else {
+        warn!("ACP fallback config path unavailable; using defaults");
+    }
+
+    Ok(AcpConfig::default())
+}
+
+pub fn save_acp_config(cfg: &AcpConfig) -> Result<()> {
+    let primary = config_path().ok();
+    if let Some(path) = primary {
+        info!(path = %path.display(), "Saving ACP config");
+        if write_config_to_path(&path, cfg).is_ok() {
+            info!(path = %path.display(), "Saved ACP config");
+            return Ok(());
+        }
+        warn!(path = %path.display(), "Failed to save ACP config; trying fallback");
+    } else {
+        warn!("ACP config path unavailable; trying fallback");
+    }
+
+    let fallback = fallback_config_path()
+        .ok_or_else(|| anyhow::anyhow!("ACP fallback config path unavailable"))?;
+    info!(path = %fallback.display(), "Saving ACP config (fallback)");
+    write_config_to_path(&fallback, cfg)?;
+    info!(path = %fallback.display(), "Saved ACP config (fallback)");
     Ok(())
 }
 
@@ -93,6 +149,28 @@ pub fn is_external_mode(mode: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use reprod_core::config::APP_DIR_ENV;
+    use std::{env, fs, sync::Mutex};
+
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    fn with_env_lock<T>(f: impl FnOnce() -> T) -> T {
+        let _guard = ENV_LOCK.lock().unwrap();
+        f()
+    }
+
+    fn set_env_var(key: &str, value: &str) -> Option<String> {
+        let prev = env::var(key).ok();
+        env::set_var(key, value);
+        prev
+    }
+
+    fn restore_env_var(key: &str, prev: Option<String>) {
+        match prev {
+            Some(val) => env::set_var(key, val),
+            None => env::remove_var(key),
+        }
+    }
 
     #[test]
     fn normalizes_active_mode() {
@@ -107,5 +185,67 @@ mod tests {
     fn rejects_invalid_mode() {
         let err = normalize_active_mode("other").unwrap_err();
         assert!(err.to_string().contains("Invalid active_mode"));
+    }
+
+    #[test]
+    fn loads_from_fallback_when_primary_missing() {
+        with_env_lock(|| {
+            let temp = env::temp_dir().join(format!("acp-fallback-{}", std::process::id()));
+            let _ = fs::remove_dir_all(&temp);
+            fs::create_dir_all(&temp).unwrap();
+
+            let prev_dir = env::current_dir().unwrap();
+            env::set_current_dir(&temp).unwrap();
+
+            let app_dir = temp.join("appdata");
+            let prev_app = set_env_var(APP_DIR_ENV, app_dir.to_string_lossy().as_ref());
+
+            let fallback_dir = temp.join(".reprod");
+            fs::create_dir_all(&fallback_dir).unwrap();
+            fs::write(
+                fallback_dir.join("acp.json"),
+                r#"{"active_mode":"external_agent","active_agent":"codex"}"#,
+            )
+            .unwrap();
+
+            let cfg = load_acp_config().unwrap();
+            assert_eq!(cfg.active_mode, ACP_MODE_EXTERNAL_AGENT);
+            assert_eq!(cfg.active_agent.as_deref(), Some("codex"));
+
+            restore_env_var(APP_DIR_ENV, prev_app);
+            env::set_current_dir(prev_dir).unwrap();
+            let _ = fs::remove_dir_all(&temp);
+        });
+    }
+
+    #[test]
+    fn saves_to_fallback_when_primary_invalid() {
+        with_env_lock(|| {
+            let temp = env::temp_dir().join(format!("acp-fallback-save-{}", std::process::id()));
+            let _ = fs::remove_dir_all(&temp);
+            fs::create_dir_all(&temp).unwrap();
+
+            let prev_dir = env::current_dir().unwrap();
+            env::set_current_dir(&temp).unwrap();
+
+            let invalid_root = temp.join("notadir");
+            fs::write(&invalid_root, "not a dir").unwrap();
+            let prev_app = set_env_var(APP_DIR_ENV, invalid_root.to_string_lossy().as_ref());
+
+            let cfg = AcpConfig {
+                active_mode: ACP_MODE_EXTERNAL_AGENT.to_string(),
+                active_agent: Some("codex".to_string()),
+            };
+            save_acp_config(&cfg).unwrap();
+
+            let fallback_path = temp.join(".reprod").join("acp.json");
+            let content = fs::read_to_string(fallback_path).unwrap();
+            assert!(content.contains("\"active_mode\""));
+            assert!(content.contains("\"external_agent\""));
+
+            restore_env_var(APP_DIR_ENV, prev_app);
+            env::set_current_dir(prev_dir).unwrap();
+            let _ = fs::remove_dir_all(&temp);
+        });
     }
 }
