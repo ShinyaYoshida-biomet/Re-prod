@@ -111,6 +111,7 @@ pub struct AcpDetectedAgent {
 pub struct AcpAgentConfig {
     pub active_mode: String,
     pub active_agent: Option<String>,
+    pub active_agent_command: Option<String>,
 }
 
 #[cfg(test)]

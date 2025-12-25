@@ -526,7 +526,7 @@ mod tests {
             std::process::id()
         ));
         let _ = std::fs::create_dir_all(&config_root);
-        std::env::set_var("REPROD_APP_DIR", &config_root);
+        std::env::set_var(reprod_core::config::APP_DIR_ENV, &config_root);
 
         let workspace = std::env::temp_dir().join("acp-client-trust");
         let _ = std::fs::create_dir_all(&workspace);

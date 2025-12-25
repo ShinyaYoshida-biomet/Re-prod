@@ -6,9 +6,12 @@ use crate::acp::types::{
 };
 use crate::acp::runtime::DesktopAcpRuntime;
 use crate::acp::{build_process_config, AcpManager};
-use reprod_acp::config::{load_acp_config, normalize_active_mode, save_acp_config, ACP_MODE_API};
-use reprod_acp::AcpRuntime;
+use reprod_acp::config::{
+    load_acp_config, normalize_active_mode, save_acp_config, ACP_MODE_API,
+    ACP_MODE_EXTERNAL_AGENT,
+};
 use reprod_acp::detection::{detect_agents, resolve_active_agent_command};
+use reprod_acp::AcpRuntime;
 use tauri::{AppHandle, State};
 use tracing::info;
 use tokio::sync::Mutex;
@@ -32,8 +35,17 @@ pub async fn acp_initialize(
     let detected = detect_agents().unwrap_or_default();
     let command_override = command.clone();
     let resolved_command = command.or_else(|| resolve_active_agent_command(&acp_cfg, &detected));
+    if acp_cfg.active_mode == ACP_MODE_EXTERNAL_AGENT
+        && command_override.is_none()
+        && resolved_command.is_none()
+    {
+        return Err("Selected ACP agent unavailable; refresh detection and reselect".to_string());
+    }
     info!(
         workspace_root = %root.display(),
+        active_mode = %acp_cfg.active_mode,
+        active_agent = ?acp_cfg.active_agent,
+        active_agent_command = ?acp_cfg.active_agent_command,
         command_override = ?command_override,
         resolved_command = ?resolved_command,
         args = ?args,
@@ -106,6 +118,7 @@ pub async fn acp_get_agent_config() -> Result<AcpAgentConfig, String> {
         .map(|cfg| AcpAgentConfig {
             active_mode: cfg.active_mode,
             active_agent: cfg.active_agent,
+            active_agent_command: cfg.active_agent_command,
         })
         .map_err(|err| err.to_string())
 }
@@ -124,21 +137,29 @@ pub async fn acp_set_agent_config(
     let normalized_mode = normalize_active_mode(&active_mode).map_err(|err| err.to_string())?;
 
     cfg.active_mode = normalized_mode.clone();
-    cfg.active_agent = if normalized_mode == ACP_MODE_API {
-        None
-    } else {
-        active_agent
-    };
+    cfg.active_agent = None;
+    cfg.active_agent_command = None;
+    if normalized_mode != ACP_MODE_API {
+        let selected = active_agent
+            .clone()
+            .ok_or_else(|| "active_agent must be set for external_agent mode".to_string())?;
+        let detected = detect_agents().map_err(|err| err.to_string())?;
+        cfg.active_agent = Some(selected);
+        cfg.active_agent_command = resolve_active_agent_command(&cfg, &detected)
+            .ok_or_else(|| "ACP agent unavailable or not detected".to_string())?;
+    }
 
     save_acp_config(&cfg).map_err(|err| err.to_string())?;
     info!(
         active_mode = %cfg.active_mode,
         active_agent = ?cfg.active_agent,
+        active_agent_command = ?cfg.active_agent_command,
         "Saved ACP config"
     );
 
     Ok(AcpAgentConfig {
         active_mode: cfg.active_mode,
         active_agent: cfg.active_agent,
+        active_agent_command: cfg.active_agent_command,
     })
 }

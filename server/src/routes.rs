@@ -194,6 +194,7 @@ pub async fn acp_get_config() -> Resp<AcpAgentConfig> {
         .map(|cfg| AcpAgentConfig {
             active_mode: cfg.active_mode,
             active_agent: cfg.active_agent,
+            active_agent_command: cfg.active_agent_command,
         })
         .map(Json)
         .map_err(err_500)
@@ -216,31 +217,31 @@ pub async fn acp_set_config(Json(payload): Json<SetAcpConfigRequest>) -> Resp<Ac
 
     let mut cfg = load_acp_config().unwrap_or_else(|_| Default::default());
     cfg.active_mode = normalized_mode.clone();
-    cfg.active_agent = payload.active_agent.clone();
-    if normalized_mode == ACP_MODE_API {
-        cfg.active_agent = None;
-    } else {
-        let selected = cfg
+    cfg.active_agent = None;
+    cfg.active_agent_command = None;
+    if normalized_mode != ACP_MODE_API {
+        let selected = payload
             .active_agent
             .clone()
             .ok_or_else(|| err_400("active_agent must be set for external_agent mode"))?;
         let detected = detect_agents().map_err(err_500)?;
-        if resolve_active_agent_command(&cfg, &detected).is_none() {
-            return Err(err_400(format!("ACP agent unavailable: {selected}")));
-        }
-        cfg.active_agent = Some(selected);
+        cfg.active_agent = Some(selected.clone());
+        cfg.active_agent_command = resolve_active_agent_command(&cfg, &detected)
+            .ok_or_else(|| err_400(format!("ACP agent unavailable: {selected}")))?;
     }
 
     save_acp_config(&cfg).map_err(err_500)?;
     info!(
         active_mode = %cfg.active_mode,
         active_agent = ?cfg.active_agent,
+        active_agent_command = ?cfg.active_agent_command,
         "Saved ACP config"
     );
 
     Ok(Json(AcpAgentConfig {
         active_mode: cfg.active_mode,
         active_agent: cfg.active_agent,
+        active_agent_command: cfg.active_agent_command,
     }))
 }
 

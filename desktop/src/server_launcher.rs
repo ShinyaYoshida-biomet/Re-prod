@@ -1,5 +1,4 @@
 use std::{
-    env,
     net::TcpListener,
     path::{Path, PathBuf},
     process::{Child, Command},
@@ -7,6 +6,7 @@ use std::{
 };
 
 use reqwest::StatusCode;
+use reprod_core::config::{server_binary_override, PORT_ENV};
 use thiserror::Error;
 use tokio::time::sleep;
 
@@ -72,8 +72,7 @@ fn find_available_port() -> u16 {
 }
 
 fn server_binary_path() -> Option<PathBuf> {
-    if let Ok(custom) = env::var("REPROD_SERVER_PATH") {
-        let path = PathBuf::from(custom);
+    if let Some(path) = server_binary_override() {
         if path.exists() {
             return Some(path);
         }
@@ -135,7 +134,7 @@ pub async fn launch_server() -> Result<ServerHandle, ServerLaunchError> {
     }
 
     let mut child = Command::new(&binary)
-        .env("REPROD_PORT", port.to_string())
+        .env(PORT_ENV, port.to_string())
         .spawn()
         .map_err(|err| ServerLaunchError::SpawnFailed(err.to_string()))?;
 

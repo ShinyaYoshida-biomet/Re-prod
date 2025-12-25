@@ -1,19 +1,20 @@
 use std::path::PathBuf;
 
 use anyhow::{bail, Result};
-use reprod_core::config::app_config_dir;
+use reprod_core::config::{app_config_dir, workspace_root_override};
 use serde::{Deserialize, Serialize};
 use tracing::{error, info, warn};
 
 pub const ACP_MODE_API: &str = "api";
 pub const ACP_MODE_EXTERNAL_AGENT: &str = "external_agent";
-const ACP_FALLBACK_ROOT_ENV: &str = "REPROD_WORKSPACE_ROOT";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AcpConfig {
     #[serde(default = "default_mode")]
     pub active_mode: String,
     pub active_agent: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub active_agent_command: Option<String>,
 }
 
 fn default_mode() -> String {
@@ -25,6 +26,7 @@ impl Default for AcpConfig {
         Self {
             active_mode: default_mode(),
             active_agent: None,
+            active_agent_command: None,
         }
     }
 }
@@ -34,11 +36,8 @@ fn config_path() -> Result<PathBuf> {
 }
 
 fn fallback_config_path() -> Option<PathBuf> {
-    if let Ok(root) = std::env::var(ACP_FALLBACK_ROOT_ENV) {
-        return Some(PathBuf::from(root).join(".reprod").join("acp.json"));
-    }
-    std::env::current_dir()
-        .ok()
+    workspace_root_override()
+        .or_else(|| std::env::current_dir().ok())
         .map(|root| root.join(".reprod").join("acp.json"))
 }
 
@@ -153,7 +152,7 @@ pub fn is_external_mode(mode: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use reprod_core::config::APP_DIR_ENV;
+    use reprod_core::config::{APP_DIR_ENV, WORKSPACE_ROOT_ENV};
     use std::{env, fs, sync::Mutex};
 
     static ENV_LOCK: Mutex<()> = Mutex::new(());
@@ -200,7 +199,7 @@ mod tests {
 
             let app_dir = temp.join("appdata");
             let prev_app = set_env_var(APP_DIR_ENV, app_dir.to_string_lossy().as_ref());
-            let prev_root = set_env_var(ACP_FALLBACK_ROOT_ENV, temp.to_string_lossy().as_ref());
+            let prev_root = set_env_var(WORKSPACE_ROOT_ENV, temp.to_string_lossy().as_ref());
 
             let fallback_dir = temp.join(".reprod");
             fs::create_dir_all(&fallback_dir).unwrap();
@@ -214,7 +213,7 @@ mod tests {
             assert_eq!(cfg.active_mode, ACP_MODE_EXTERNAL_AGENT);
             assert_eq!(cfg.active_agent.as_deref(), Some("codex"));
 
-            restore_env_var(ACP_FALLBACK_ROOT_ENV, prev_root);
+            restore_env_var(WORKSPACE_ROOT_ENV, prev_root);
             restore_env_var(APP_DIR_ENV, prev_app);
         });
     }
