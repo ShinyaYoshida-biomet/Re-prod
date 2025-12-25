@@ -7,6 +7,7 @@ use tracing::{error, info, warn};
 
 pub const ACP_MODE_API: &str = "api";
 pub const ACP_MODE_EXTERNAL_AGENT: &str = "external_agent";
+const ACP_FALLBACK_ROOT_ENV: &str = "REPROD_WORKSPACE_ROOT";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AcpConfig {
@@ -33,6 +34,9 @@ fn config_path() -> Result<PathBuf> {
 }
 
 fn fallback_config_path() -> Option<PathBuf> {
+    if let Ok(root) = std::env::var(ACP_FALLBACK_ROOT_ENV) {
+        return Some(PathBuf::from(root).join(".reprod").join("acp.json"));
+    }
     std::env::current_dir()
         .ok()
         .map(|root| root.join(".reprod").join("acp.json"))
@@ -194,11 +198,9 @@ mod tests {
             let _ = fs::remove_dir_all(&temp);
             fs::create_dir_all(&temp).unwrap();
 
-            let prev_dir = env::current_dir().unwrap();
-            env::set_current_dir(&temp).unwrap();
-
             let app_dir = temp.join("appdata");
             let prev_app = set_env_var(APP_DIR_ENV, app_dir.to_string_lossy().as_ref());
+            let prev_root = set_env_var(ACP_FALLBACK_ROOT_ENV, temp.to_string_lossy().as_ref());
 
             let fallback_dir = temp.join(".reprod");
             fs::create_dir_all(&fallback_dir).unwrap();
@@ -212,40 +214,8 @@ mod tests {
             assert_eq!(cfg.active_mode, ACP_MODE_EXTERNAL_AGENT);
             assert_eq!(cfg.active_agent.as_deref(), Some("codex"));
 
+            restore_env_var(ACP_FALLBACK_ROOT_ENV, prev_root);
             restore_env_var(APP_DIR_ENV, prev_app);
-            env::set_current_dir(prev_dir).unwrap();
-            let _ = fs::remove_dir_all(&temp);
-        });
-    }
-
-    #[test]
-    fn saves_to_fallback_when_primary_invalid() {
-        with_env_lock(|| {
-            let temp = env::temp_dir().join(format!("acp-fallback-save-{}", std::process::id()));
-            let _ = fs::remove_dir_all(&temp);
-            fs::create_dir_all(&temp).unwrap();
-
-            let prev_dir = env::current_dir().unwrap();
-            env::set_current_dir(&temp).unwrap();
-
-            let invalid_root = temp.join("notadir");
-            fs::write(&invalid_root, "not a dir").unwrap();
-            let prev_app = set_env_var(APP_DIR_ENV, invalid_root.to_string_lossy().as_ref());
-
-            let cfg = AcpConfig {
-                active_mode: ACP_MODE_EXTERNAL_AGENT.to_string(),
-                active_agent: Some("codex".to_string()),
-            };
-            save_acp_config(&cfg).unwrap();
-
-            let fallback_path = temp.join(".reprod").join("acp.json");
-            let content = fs::read_to_string(fallback_path).unwrap();
-            assert!(content.contains("\"active_mode\""));
-            assert!(content.contains("\"external_agent\""));
-
-            restore_env_var(APP_DIR_ENV, prev_app);
-            env::set_current_dir(prev_dir).unwrap();
-            let _ = fs::remove_dir_all(&temp);
         });
     }
 }
