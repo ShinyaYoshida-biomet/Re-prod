@@ -8,14 +8,10 @@ use tracing::{info, warn};
 
 use reprod_core::config::{acp_auto_download_enabled, app_config_dir};
 
-const CODEX_ACP_REPO: &str = "zed-industries/codex-acp";
+use crate::agents::{AgentDescriptor, AgentDownload, GithubReleaseSpec};
+
 const ACP_AGENT_DIR: &str = "acp_agents";
 const USER_AGENT: &str = "reprod-acp";
-
-#[cfg(windows)]
-const CODEX_ACP_BIN: &str = "codex-acp.exe";
-#[cfg(not(windows))]
-const CODEX_ACP_BIN: &str = "codex-acp";
 
 #[derive(Debug, Deserialize)]
 struct GithubRelease {
@@ -29,47 +25,73 @@ struct GithubAsset {
     browser_download_url: String,
 }
 
-pub async fn ensure_codex_acp_available() -> Result<Option<PathBuf>> {
+pub async fn ensure_agent_available(agent: &AgentDescriptor) -> Result<Option<PathBuf>> {
     if !acp_auto_download_enabled() {
         return Ok(None);
     }
 
-    if let Some(path) = cached_codex_acp()? {
+    let Some(download) = agent.download else {
+        return Ok(None);
+    };
+
+    match download {
+        AgentDownload::GithubRelease(spec) => ensure_github_release_available(agent, spec).await,
+    }
+}
+
+async fn ensure_github_release_available(
+    agent: &AgentDescriptor,
+    spec: GithubReleaseSpec,
+) -> Result<Option<PathBuf>> {
+    if let Some(path) = cached_agent_binary(agent.id, spec.binary_name)? {
         return Ok(Some(path));
     }
 
-    info!("Codex ACP not found; downloading latest release");
-    let release = fetch_latest_release().await?;
+    info!(agent = agent.name, "ACP agent not found; downloading latest release");
+    let release = fetch_latest_release(spec.repo, agent.name).await?;
     let target = host_target()?;
-    let asset = select_asset(&release, &target).ok_or_else(|| {
+    let asset = select_asset(&release, &target, spec.asset_prefix).ok_or_else(|| {
         let names: Vec<String> = release.assets.iter().map(|asset| asset.name.clone()).collect();
         anyhow!(
-            "Codex ACP asset not found for target {target}. Available assets: {names:?}"
+            "ACP asset not found for agent {agent} target {target}. Available assets: {names:?}",
+            agent = agent.name
         )
     })?;
-    let bin_path = download_and_install(&release, asset).await?;
+    let bin_path = download_and_install(agent, spec, &release, asset).await?;
     Ok(Some(bin_path))
 }
 
-fn cache_root() -> Result<PathBuf> {
-    Ok(app_config_dir()?.join(ACP_AGENT_DIR).join("codex-acp"))
+fn cache_root(agent_id: &str) -> Result<PathBuf> {
+    Ok(app_config_dir()?.join(ACP_AGENT_DIR).join(agent_id))
 }
 
-fn current_bin_path(root: &Path) -> PathBuf {
-    root.join("current").join(CODEX_ACP_BIN)
+fn platform_binary_name(base: &str) -> String {
+    #[cfg(windows)]
+    {
+        format!("{base}.exe")
+    }
+    #[cfg(not(windows))]
+    {
+        base.to_string()
+    }
 }
 
-fn cached_codex_acp() -> Result<Option<PathBuf>> {
-    let root = cache_root()?;
-    let current = current_bin_path(&root);
+fn current_bin_path(root: &Path, bin_name: &str) -> PathBuf {
+    root.join("current").join(bin_name)
+}
+
+fn cached_agent_binary(agent_id: &str, binary_name: &str) -> Result<Option<PathBuf>> {
+    let root = cache_root(agent_id)?;
+    let bin_name = platform_binary_name(binary_name);
+    let current = current_bin_path(&root, &bin_name);
     if current.exists() {
         return Ok(Some(current));
     }
     Ok(None)
 }
 
-async fn fetch_latest_release() -> Result<GithubRelease> {
-    let url = format!("https://api.github.com/repos/{CODEX_ACP_REPO}/releases/latest");
+async fn fetch_latest_release(repo: &str, agent_name: &str) -> Result<GithubRelease> {
+    let url = format!("https://api.github.com/repos/{repo}/releases/latest");
     let client = Client::new();
     let response = client
         .get(url)
@@ -77,17 +99,17 @@ async fn fetch_latest_release() -> Result<GithubRelease> {
         .header("Accept", "application/vnd.github+json")
         .send()
         .await
-        .context("Failed to fetch latest Codex ACP release")?;
+        .with_context(|| format!("Failed to fetch latest {agent_name} release"))?;
     if !response.status().is_success() {
         bail!(
-            "Failed to fetch latest Codex ACP release: HTTP {}",
+            "Failed to fetch latest {agent_name} release: HTTP {}",
             response.status()
         );
     }
     response
         .json::<GithubRelease>()
         .await
-        .context("Failed to parse Codex ACP release metadata")
+        .with_context(|| format!("Failed to parse {agent_name} release metadata"))
 }
 
 fn host_target() -> Result<String> {
@@ -105,14 +127,19 @@ fn host_target() -> Result<String> {
     Ok(target.to_string())
 }
 
-fn select_asset<'a>(release: &'a GithubRelease, target: &str) -> Option<&'a GithubAsset> {
+fn select_asset<'a>(
+    release: &'a GithubRelease,
+    target: &str,
+    asset_prefix: &str,
+) -> Option<&'a GithubAsset> {
     let target_lower = target.to_lowercase();
+    let prefix_lower = asset_prefix.to_lowercase();
     let mut candidates: Vec<&GithubAsset> = release
         .assets
         .iter()
         .filter(|asset| {
             let name = asset.name.to_lowercase();
-            name.contains("codex-acp") && name.contains(&target_lower)
+            name.contains(&prefix_lower) && name.contains(&target_lower)
         })
         .collect();
 
@@ -120,7 +147,7 @@ fn select_asset<'a>(release: &'a GithubRelease, target: &str) -> Option<&'a Gith
         candidates = release
             .assets
             .iter()
-            .filter(|asset| asset.name.to_lowercase().contains("codex-acp"))
+            .filter(|asset| asset.name.to_lowercase().contains(&prefix_lower))
             .collect();
     }
 
@@ -132,8 +159,13 @@ fn select_asset<'a>(release: &'a GithubRelease, target: &str) -> Option<&'a Gith
     candidates.into_iter().next()
 }
 
-async fn download_and_install(release: &GithubRelease, asset: &GithubAsset) -> Result<PathBuf> {
-    let root = cache_root()?;
+async fn download_and_install(
+    agent: &AgentDescriptor,
+    spec: GithubReleaseSpec,
+    release: &GithubRelease,
+    asset: &GithubAsset,
+) -> Result<PathBuf> {
+    let root = cache_root(agent.id)?;
     let version_dir = root.join(&release.tag_name);
     fs::create_dir_all(&version_dir)?;
 
@@ -144,24 +176,28 @@ async fn download_and_install(release: &GithubRelease, asset: &GithubAsset) -> R
         .header("User-Agent", USER_AGENT)
         .send()
         .await
-        .context("Failed to download Codex ACP binary")?;
+        .with_context(|| format!("Failed to download {} binary", agent.name))?;
     if !response.status().is_success() {
         bail!(
-            "Failed to download Codex ACP binary: HTTP {}",
+            "Failed to download {} binary: HTTP {}",
+            agent.name,
             response.status()
         );
     }
     let bytes = response.bytes().await?;
     fs::write(&tmp_path, &bytes)?;
 
+    let bin_name = platform_binary_name(spec.binary_name);
     let bin_path = if asset.name.ends_with(".zip") {
         extract_zip(&tmp_path, &version_dir)?;
-        find_binary(&version_dir).ok_or_else(|| anyhow!("codex-acp binary not found in zip"))?
+        find_binary(&version_dir, &bin_name)
+            .ok_or_else(|| anyhow!("{bin_name} binary not found in zip"))?
     } else if asset.name.ends_with(".tar.gz") || asset.name.ends_with(".tgz") {
         extract_tar_gz(&tmp_path, &version_dir)?;
-        find_binary(&version_dir).ok_or_else(|| anyhow!("codex-acp binary not found in tar.gz"))?
+        find_binary(&version_dir, &bin_name)
+            .ok_or_else(|| anyhow!("{bin_name} binary not found in tar.gz"))?
     } else {
-        let bin_path = version_dir.join(CODEX_ACP_BIN);
+        let bin_path = version_dir.join(&bin_name);
         fs::write(&bin_path, &bytes)?;
         bin_path
     };
@@ -174,14 +210,15 @@ async fn download_and_install(release: &GithubRelease, asset: &GithubAsset) -> R
 
     let current_dir = root.join("current");
     fs::create_dir_all(&current_dir)?;
-    let current_bin = current_bin_path(&root);
+    let current_bin = current_bin_path(&root, &bin_name);
     fs::copy(&bin_path, &current_bin)?;
     ensure_executable(&current_bin)?;
 
     info!(
         path = %current_bin.display(),
         version = release.tag_name.as_str(),
-        "Codex ACP cached"
+        agent = agent.name,
+        "ACP agent cached"
     );
 
     Ok(current_bin)
@@ -221,7 +258,7 @@ fn extract_tar_gz(archive_path: &Path, dest: &Path) -> Result<()> {
     Ok(())
 }
 
-fn find_binary(root: &Path) -> Option<PathBuf> {
+fn find_binary(root: &Path, bin_name: &str) -> Option<PathBuf> {
     let mut stack = vec![root.to_path_buf()];
     while let Some(dir) = stack.pop() {
         let entries = fs::read_dir(&dir).ok()?;
@@ -229,7 +266,7 @@ fn find_binary(root: &Path) -> Option<PathBuf> {
             let path = entry.path();
             if path.is_dir() {
                 stack.push(path);
-            } else if path.file_name().and_then(|name| name.to_str()) == Some(CODEX_ACP_BIN) {
+            } else if path.file_name().and_then(|name| name.to_str()) == Some(bin_name) {
                 return Some(path);
             }
         }

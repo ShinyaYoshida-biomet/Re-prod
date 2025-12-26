@@ -3,34 +3,11 @@ use std::path::{Path, PathBuf};
 use anyhow::Result;
 use which::which;
 
+use crate::agents::{AgentDescriptor, AGENTS};
 use crate::config::AcpConfig;
-use crate::download::ensure_codex_acp_available;
+use crate::download::ensure_agent_available;
 use crate::types::AcpDetectedAgent;
 use crate::config::ACP_MODE_EXTERNAL_AGENT;
-
-struct KnownAgent {
-    id: &'static str,
-    name: &'static str,
-    commands: &'static [&'static str],
-}
-
-const KNOWN_AGENTS: &[KnownAgent] = &[
-    KnownAgent {
-        id: "claude-code-acp",
-        name: "Claude Code (ACP)",
-        commands: &["claude-code-acp"],
-    },
-    KnownAgent {
-        id: "codex",
-        name: "Codex CLI (ACP Adapter)",
-        commands: &["codex-acp"],
-    },
-    KnownAgent {
-        id: "gemini",
-        name: "Gemini CLI",
-        commands: &["gemini", "gemini-cli"],
-    },
-];
 
 /// Locate an agent binary, honoring absolute/path-like inputs and Windows `.cmd` fallbacks.
 pub fn find_agent_binary(command: &str) -> Option<PathBuf> {
@@ -75,7 +52,7 @@ pub fn find_agent_binary(command: &str) -> Option<PathBuf> {
 
 pub async fn detect_agents() -> Result<Vec<AcpDetectedAgent>> {
     let mut detected = Vec::new();
-    for agent in KNOWN_AGENTS {
+    for agent in AGENTS {
         let mut found_cmd = None;
         let mut found_path: Option<PathBuf> = None;
         for &cmd in agent.commands {
@@ -86,8 +63,8 @@ pub async fn detect_agents() -> Result<Vec<AcpDetectedAgent>> {
             }
         }
 
-        if found_cmd.is_none() && agent.id == "codex" {
-            if let Some(path) = ensure_codex_acp_available().await? {
+        if found_cmd.is_none() {
+            if let Some(path) = ensure_agent_available(agent).await? {
                 found_cmd = Some(agent.commands[0].to_string());
                 found_path = Some(path);
             }
@@ -114,7 +91,7 @@ pub fn resolve_active_agent_command(
         return None;
     }
     let active_id = cfg.active_agent.as_deref()?;
-    let known = KNOWN_AGENTS.iter().find(|agent| agent.id == active_id)?;
+    let known = AGENTS.iter().find(|agent| agent.id == active_id)?;
     if let Some(command) = cfg.active_agent_command.as_deref() {
         if command_matches_agent(command, known) {
             return Some(command.to_string());
@@ -132,7 +109,7 @@ pub fn resolve_active_agent_command(
         })
 }
 
-fn command_matches_agent(command: &str, agent: &KnownAgent) -> bool {
+fn command_matches_agent(command: &str, agent: &AgentDescriptor) -> bool {
     let name = Path::new(command)
         .file_name()
         .and_then(|candidate| candidate.to_str())
