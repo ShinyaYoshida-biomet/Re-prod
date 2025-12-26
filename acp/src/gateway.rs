@@ -75,7 +75,14 @@ impl AcpGateway {
         child.notify_ready().await?;
 
         let (connection, updates, permission_requests) =
-            AcpConnection::initialize(self.workspace_root.clone(), writer, reader).await?;
+            match AcpConnection::initialize(self.workspace_root.clone(), writer, reader).await {
+                Ok(result) => result,
+                Err(err) => {
+                    warn!(error = %err, "ACP initialize failed; shutting down agent");
+                    child.shutdown().await;
+                    return Err(err);
+                }
+            };
         self.forward_updates(updates);
         self.forward_permission_requests(permission_requests);
 

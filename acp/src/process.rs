@@ -1,7 +1,9 @@
 use std::{collections::HashMap, path::PathBuf, process::Stdio, time::Duration};
 
 use anyhow::{anyhow, Result};
-use tokio::process::{Child, Command};
+use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::process::{Child, ChildStderr, Command};
+use tokio::task::JoinHandle;
 use tokio::time::sleep;
 use tracing::{debug, error, info};
 
@@ -22,11 +24,12 @@ pub struct SpawnedPipes {
 
 pub struct AcpChild {
     child: Child,
+    stderr_task: Option<JoinHandle<()>>,
 }
 
 impl AcpChild {
-    pub fn new(child: Child) -> Result<Self> {
-        Ok(Self { child })
+    pub fn new(child: Child, stderr_task: Option<JoinHandle<()>>) -> Result<Self> {
+        Ok(Self { child, stderr_task })
     }
 
     pub async fn notify_ready(&mut self) -> Result<()> {
@@ -40,10 +43,33 @@ impl AcpChild {
         if let Some(id) = self.child.id() {
             debug!("Shutting down ACP child process pid={}", id);
         }
+        if let Some(handle) = self.stderr_task.take() {
+            handle.abort();
+        }
         if let Err(err) = self.child.kill().await {
             error!("Failed to kill ACP child process: {err}");
         }
     }
+}
+
+fn spawn_stderr_logger(stderr: ChildStderr) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        let mut lines = BufReader::new(stderr).lines();
+        loop {
+            match lines.next_line().await {
+                Ok(Some(line)) => {
+                    if !line.trim().is_empty() {
+                        info!(message = %line, "ACP agent stderr");
+                    }
+                }
+                Ok(None) => break,
+                Err(err) => {
+                    error!("Failed to read ACP agent stderr: {err}");
+                    break;
+                }
+            }
+        }
+    })
 }
 
 pub async fn spawn_agent(config: ProcessConfig) -> Result<SpawnedPipes> {
@@ -72,6 +98,7 @@ pub async fn spawn_agent(config: ProcessConfig) -> Result<SpawnedPipes> {
             anyhow!("Failed to spawn ACP agent: {err}")
         })?;
 
+    let stderr_task = child.stderr.take().map(spawn_stderr_logger);
     let stdout = child
         .stdout
         .take()
@@ -82,7 +109,7 @@ pub async fn spawn_agent(config: ProcessConfig) -> Result<SpawnedPipes> {
         .ok_or_else(|| anyhow!("Failed to take agent stdin"))?;
 
     Ok(SpawnedPipes {
-        child: AcpChild::new(child)?,
+        child: AcpChild::new(child, stderr_task)?,
         reader: stdout,
         writer: stdin,
     })
