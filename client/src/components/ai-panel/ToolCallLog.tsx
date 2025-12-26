@@ -4,11 +4,12 @@ interface Props {
 	logs?: ToolCallLogEntry[];
 }
 
-const STATUS_LABEL: Record<ToolCallLogEntry["status"], string> = {
-	pending: "Pending",
-	running: "Running",
-	done: "Completed",
-	error: "Error",
+// RStudio-style minimal status icons (no colors, just symbols)
+const STATUS_ICON: Record<ToolCallLogEntry["status"], string> = {
+	pending: "○",
+	running: "◐",
+	done: "✓",
+	error: "✗",
 };
 
 export function ToolCallLog({ logs }: Props): JSX.Element | null {
@@ -18,34 +19,25 @@ export function ToolCallLog({ logs }: Props): JSX.Element | null {
 
 	return (
 		<div className="ai-tool-log">
-			<div className="ai-tool-log__title">Tool activity</div>
-			<ul>
-				{logs.map((log) => (
-					<li key={log.id}>
-						<details open={log.status === "running"}>
-							<summary>
-								<span className="ai-tool-log__tool">{log.name ?? log.id}</span>
-								<span className={`ai-tool-log__status is-${log.status}`}>
-									{STATUS_LABEL[log.status]}
-								</span>
-							</summary>
-							{log.input && (
-								<div className="ai-tool-log__block">
-									<div className="ai-tool-log__label">Input</div>
-									<pre>{JSON.stringify(log.input, null, 2)}</pre>
-								</div>
-							)}
-							{log.output && (
-								<div className="ai-tool-log__block">
-									<div className="ai-tool-log__label">Output</div>
-									<pre>{JSON.stringify(log.output, null, 2)}</pre>
-								</div>
-							)}
-							{log.error && <div className="ai-tool-log__error">{log.error}</div>}
-						</details>
-					</li>
-				))}
-			</ul>
+			{logs.map((log) => (
+				<details key={log.id} className="ai-tool-call" open={log.status === "running"}>
+					<summary className="ai-tool-call__summary">
+						<span className="ai-tool-call__status-icon">{STATUS_ICON[log.status]}</span>
+						<span className="ai-tool-call__title">{log.name || log.id}</span>
+						{log.locations && log.locations.length > 0 && (
+							<span className="ai-tool-call__location">{log.locations[0]}</span>
+						)}
+					</summary>
+					{log.output && (
+						<pre className="ai-tool-call__output">
+							{typeof log.output === "object" && "text" in log.output
+								? String(log.output.text)
+								: JSON.stringify(log.output, null, 2)}
+						</pre>
+					)}
+					{log.error && <pre className="ai-tool-call__error">{log.error}</pre>}
+				</details>
+			))}
 		</div>
 	);
 }

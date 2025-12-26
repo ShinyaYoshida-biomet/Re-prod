@@ -5,8 +5,9 @@
  */
 
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "@/core/state/store";
+import { useListNavigation } from "@/hooks/useListNavigation";
 import { useMenuSections } from "@/hooks/useMenuSections";
 import type { ConnectionIndicatorProps, MenuItem, MenuSectionComponentProps } from "@/types/menu";
 
@@ -90,24 +91,24 @@ function MenuSectionComponent({
 		}
 	};
 
-	const getFocusableItems = (): HTMLButtonElement[] => {
+	const getFocusableItems = useCallback((): HTMLButtonElement[] => {
 		if (!menuRef.current) return [];
 		return Array.from(
 			menuRef.current.querySelectorAll<HTMLButtonElement>(
 				'button[role="menuitem"]:not([disabled])',
 			),
 		);
-	};
+	}, []);
 
-	const focusFirstItem = () => {
+	const focusFirstItem = useCallback(() => {
 		const items = getFocusableItems();
 		items[0]?.focus();
-	};
+	}, [getFocusableItems]);
 
-	const focusLastItem = () => {
+	const focusLastItem = useCallback(() => {
 		const items = getFocusableItems();
 		items[items.length - 1]?.focus();
-	};
+	}, [getFocusableItems]);
 
 	const handleButtonClick = (event: ReactMouseEvent<HTMLButtonElement>) => {
 		event.preventDefault();
@@ -142,50 +143,12 @@ function MenuSectionComponent({
 		}
 	};
 
-	const handleMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-		const items = getFocusableItems();
-		if (items.length === 0) {
-			if (event.key === "Escape") {
-				event.preventDefault();
-				closeMenu(true);
-			}
-			return;
-		}
-
-		const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement);
-
-		switch (event.key) {
-			case "ArrowDown": {
-				event.preventDefault();
-				const nextIndex = (currentIndex + 1) % items.length;
-				items[nextIndex]?.focus();
-				break;
-			}
-			case "ArrowUp": {
-				event.preventDefault();
-				const nextIndex = (currentIndex - 1 + items.length) % items.length;
-				items[nextIndex]?.focus();
-				break;
-			}
-			case "Home":
-				event.preventDefault();
-				items[0]?.focus();
-				break;
-			case "End":
-				event.preventDefault();
-				items[items.length - 1]?.focus();
-				break;
-			case "Escape":
-				event.preventDefault();
-				closeMenu(true);
-				break;
-			case "Tab":
-				closeMenu();
-				break;
-			default:
-				break;
-		}
-	};
+	const handleMenuKeyDown = useListNavigation({
+		getItems: getFocusableItems,
+		onEscape: (focusButton) => closeMenu(focusButton),
+		onTab: () => closeMenu(),
+		wrap: true,
+	});
 
 	const handleMouseEnter = () => {
 		if (anyMenuOpen && !isOpen) {

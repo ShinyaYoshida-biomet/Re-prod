@@ -1,17 +1,37 @@
-import type { AIMessage, AIMode } from "@/types";
-import type { AcpPromptMessage, AcpSessionUpdateEnvelope } from "@/types/generated";
-import { ACP_FEATURE_ENABLED } from "@/constants/features";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ACP_FEATURE_ENABLED } from "@/constants/features";
 import { useStore } from "@/core";
 import { buildPromptWithContext, createRequestId } from "@/core/ai/promptUtils";
-import { aiMessages } from "@/services/messageBuilders";
 import { getExternalAgentClient } from "@/services/externalAgentClient";
+import { aiMessages } from "@/services/messageBuilders";
 import { socketService } from "@/services/socket";
+import type { AIMessage, AIMode, ToolCallLog } from "@/types";
+import type { AcpPromptMessage, AcpSessionUpdateEnvelope } from "@/types/generated";
 import { useAICodeApplication } from "./useAICodeApplication";
 import { useAIStreaming } from "./useAIStreaming";
 import { useAITimeout } from "./useAITimeout";
 
 const STREAM_TIMEOUT_MS = 45000;
+
+const describeError = (error: unknown): string => {
+	if (typeof error === "string") return error;
+	if (error instanceof Error) return error.message;
+	try {
+		const serialized = JSON.stringify(error);
+		return serialized === "{}" ? "Unknown error" : serialized;
+	} catch {
+		return "Unknown error";
+	}
+};
+
+const mapAcpStatus = (acpStatus: string): ToolCallLog["status"] => {
+	const lower = acpStatus.toLowerCase();
+	if (lower.includes("progress") || lower.includes("pending")) return "running";
+	if (lower.includes("completed") || lower.includes("done")) return "done";
+	if (lower.includes("failed") || lower.includes("error") || lower.includes("rejected"))
+		return "error";
+	return "pending";
+};
 
 export function useAIConversation() {
 	const messages = useStore((state) => state.ai.messages);
@@ -24,6 +44,7 @@ export function useAIConversation() {
 	const startStreamingMessage = useStore((state) => state.startStreamingMessage);
 	const setAILoading = useStore((state) => state.setAILoading);
 	const completeStreamingMessage = useStore((state) => state.completeStreamingMessage);
+	const recordToolEvent = useStore((state) => state.recordToolEvent);
 	const editorContent = useStore((state) => state.editor.content);
 	const editorFilepath = useStore((state) => state.editor.filepath);
 	const consoleHistory = useStore((state) => state.execution.results);
@@ -96,11 +117,40 @@ export function useAIConversation() {
 					acpStreamsRef.current.set(payload.session_id, fallback);
 					return fallback;
 				})();
-			const text = extractAcpText(payload.update);
+
+			const update = payload.update;
+
+			// Handle ToolCall
+			if (typeof update === "object" && update !== null && "ToolCall" in update) {
+				const toolCall = update.ToolCall;
+				recordToolEvent(streamingId, {
+					id: toolCall.id,
+					name: toolCall.title,
+					status: mapAcpStatus(toolCall.status),
+					kind: toolCall.kind,
+					locations: toolCall.locations,
+				});
+				return;
+			}
+
+			// Handle ToolCallUpdate
+			if (typeof update === "object" && update !== null && "ToolCallUpdate" in update) {
+				const toolUpdate = update.ToolCallUpdate;
+				recordToolEvent(streamingId, {
+					id: toolUpdate.id,
+					name: "", // Will be merged with existing
+					status: toolUpdate.status ? mapAcpStatus(toolUpdate.status) : "running",
+					output: toolUpdate.content ? { text: toolUpdate.content } : undefined,
+				});
+				return;
+			}
+
+			// Handle text chunks
+			const text = extractAcpText(update);
 			if (!text) return;
 			appendStreamingChunk(streamingId, text);
 		},
-		[appendStreamingChunk, extractAcpText, startStreamingMessage],
+		[appendStreamingChunk, extractAcpText, recordToolEvent, startStreamingMessage],
 	);
 
 	useEffect(() => {
@@ -213,7 +263,7 @@ export function useAIConversation() {
 					await externalAgentClient.prompt(sessionId, payload);
 					completeStreamingMessage(requestId);
 				} catch (error) {
-					const reason = error instanceof Error ? error.message : "Unknown error";
+					const reason = describeError(error);
 					completeStreamingMessage(requestId, `ACP request failed: ${reason}`);
 				} finally {
 					setAILoading(false);

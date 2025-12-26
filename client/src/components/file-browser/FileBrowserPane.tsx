@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { IconFile } from "@/components/icons/IconFile";
 import {
 	IconChevronDown,
@@ -10,8 +10,9 @@ import {
 } from "@/components/shared";
 import { useFileSystemStore, useStore } from "@/core";
 import { normalizeRelativePath, normalizeSeparators, ROOT_PATH } from "@/core/pathUtils";
-import { useFileSystemData } from "@/hooks/useFileSystemData";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { useFileBrowserState } from "@/hooks/useFileBrowserState";
+import { useFileSystemData } from "@/hooks/useFileSystemData";
 import { type FileEntry, fileSystem } from "@/services/fileSystem";
 import {
 	alertWorkspaceNotReady,
@@ -21,18 +22,6 @@ import {
 
 const ROOT_LABEL = "Workspace";
 const DRAG_DATA_MIME = "application/x-reprod-paths";
-
-type ClipboardState = {
-	mode: "copy" | "cut";
-	paths: string[];
-} | null;
-
-type ContextMenuState = {
-	x: number;
-	y: number;
-	path: string;
-	isDir: boolean;
-} | null;
 
 interface TreeNode extends FileEntry {
 	depth: number;
@@ -170,11 +159,20 @@ export function FileBrowserPane(): JSX.Element {
 	const setActivePath = useFileSystemStore((state) => state.setActivePath);
 	const workspaceRoot = useFileSystemStore((state) => state.workspaceRoot);
 
-	const [clipboard, setClipboard] = useState<ClipboardState>(null);
-	const [anchorPath, setAnchorPath] = useState<string | null>(null);
-	const [focusedPath, setFocusedPath] = useState<string | null>(null);
-	const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
-	const [dragOverPath, setDragOverPath] = useState<string | null>(null);
+	const {
+		state: uiState,
+		setClipboard,
+		clearClipboard,
+		setAnchorPath,
+		setFocusedPath,
+		setSelection,
+		showContextMenu,
+		hideContextMenu,
+		setDragOverPath,
+	} = useFileBrowserState();
+	const { clipboard, selection, contextMenu, dragOverPath } = uiState;
+	const { anchorPath, focusedPath } = selection;
+
 	const { dialogState, showConfirm, handleConfirm, handleCancel } = useConfirmDialog();
 
 	const nodes = useMemo(
@@ -182,18 +180,16 @@ export function FileBrowserPane(): JSX.Element {
 		[files, expandedFolders, pendingFolders],
 	);
 
-	const closeContextMenu = useCallback(() => setContextMenu(null), []);
-
 	useEffect(() => {
 		if (!contextMenu) return;
-		const close = () => closeContextMenu();
+		const close = () => hideContextMenu();
 		window.addEventListener("click", close);
 		window.addEventListener("contextmenu", close);
 		return () => {
 			window.removeEventListener("click", close);
 			window.removeEventListener("contextmenu", close);
 		};
-	}, [contextMenu, closeContextMenu]);
+	}, [contextMenu, hideContextMenu]);
 
 	const refreshParents = useCallback(
 		async (paths: Iterable<string>) => {
@@ -338,19 +334,19 @@ export function FileBrowserPane(): JSX.Element {
 			if (!selectedFiles.has(node.path)) {
 				selectSinglePath(node.path);
 			}
-			setContextMenu({
+			showContextMenu({
 				x: event.clientX,
 				y: event.clientY,
 				path: node.path,
 				isDir: node.is_dir,
 			});
 		},
-		[selectedFiles, selectSinglePath],
+		[selectedFiles, selectSinglePath, showContextMenu],
 	);
 
 	const handleCreateEntry = useCallback(
 		async (targetPath: string, isDir: boolean, targetIsFolder = true) => {
-			closeContextMenu();
+			hideContextMenu();
 			const defaultName = isDir ? "New Folder" : "New File.R";
 			const name = window.prompt(`Enter ${isDir ? "folder" : "file"} name`, defaultName);
 			if (!name) return;
@@ -371,12 +367,12 @@ export function FileBrowserPane(): JSX.Element {
 				);
 			}
 		},
-		[closeContextMenu, refreshPath, toast],
+		[hideContextMenu, refreshPath, toast],
 	);
 
 	const handleRename = useCallback(
 		async (path: string) => {
-			closeContextMenu();
+			hideContextMenu();
 			const currentName = getNameFromPath(path);
 			const parent = getParentPath(path);
 			const newName = window.prompt("Enter new name", currentName);
@@ -389,7 +385,7 @@ export function FileBrowserPane(): JSX.Element {
 				alertFileOperationError(toast, `Failed to rename: ${(error as Error).message}`);
 			}
 		},
-		[closeContextMenu, refreshPath, toast],
+		[hideContextMenu, refreshPath, toast],
 	);
 
 	const handleDeleteClick = useCallback(async () => {
@@ -417,16 +413,16 @@ export function FileBrowserPane(): JSX.Element {
 
 		await refreshParents(targets);
 		clearSelection();
-		closeContextMenu();
-	}, [selectedFiles, showConfirm, refreshParents, clearSelection, closeContextMenu, toast]);
+		hideContextMenu();
+	}, [selectedFiles, showConfirm, refreshParents, clearSelection, hideContextMenu, toast]);
 
 	const handleCopyCut = useCallback(
 		(mode: "copy" | "cut") => {
 			if (!selectedFiles.size) return;
 			setClipboard({ mode, paths: Array.from(selectedFiles) });
-			closeContextMenu();
+			hideContextMenu();
 		},
-		[selectedFiles, closeContextMenu],
+		[selectedFiles, hideContextMenu],
 	);
 
 	const performTransfer = useCallback(
@@ -472,11 +468,11 @@ export function FileBrowserPane(): JSX.Element {
 					: ROOT_PATH);
 			await performTransfer(clipboard.paths, destination, clipboard.mode);
 			if (clipboard.mode === "cut") {
-				setClipboard(null);
+				clearClipboard();
 			}
-			closeContextMenu();
+			hideContextMenu();
 		},
-		[clipboard, contextMenu, closeContextMenu, performTransfer],
+		[clipboard, contextMenu, hideContextMenu, performTransfer, clearClipboard],
 	);
 
 	const handleCopyPath = useCallback(
@@ -492,22 +488,22 @@ export function FileBrowserPane(): JSX.Element {
 			} catch (error) {
 				// Silent failure - clipboard operation failed
 			}
-			closeContextMenu();
+			hideContextMenu();
 		},
-		[closeContextMenu, resolveAbsolutePath],
+		[hideContextMenu, resolveAbsolutePath],
 	);
 
 	const handleRevealInFinder = useCallback(
 		async (path: string) => {
 			if (!workspaceRoot) {
-				closeContextMenu();
+				hideContextMenu();
 				alertWorkspaceNotReady(toast);
 				return;
 			}
 			const absolute = resolveAbsolutePath(path);
 			const tauriWindow = window as TauriWindow;
 			const shell = tauriWindow.__TAURI__?.shell;
-			closeContextMenu();
+			hideContextMenu();
 			if (shell?.open) {
 				try {
 					await shell.open(absolute);
@@ -523,7 +519,7 @@ export function FileBrowserPane(): JSX.Element {
 				alertDesktopOnlyFeature(toast, "Reveal");
 			}
 		},
-		[closeContextMenu, resolveAbsolutePath, workspaceRoot, toast],
+		[hideContextMenu, resolveAbsolutePath, workspaceRoot, toast],
 	);
 
 	const handleNodeDragStart = useCallback(
@@ -842,8 +838,7 @@ export function FileBrowserPane(): JSX.Element {
 				onKeyDown={handleKeyDown}
 				onClick={() => {
 					clearSelection();
-					setFocusedPath(null);
-					setAnchorPath(null);
+					setSelection(null, null);
 					setActivePath(null);
 				}}
 				onDragOver={handleRootDragOver}

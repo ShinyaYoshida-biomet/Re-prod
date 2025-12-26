@@ -104,10 +104,7 @@ async fn main() {
             projects: projects.clone(),
         });
 
-    let port = std::env::var("REPROD_PORT")
-        .ok()
-        .and_then(|val| val.parse::<u16>().ok())
-        .unwrap_or(3001);
+    let port = reprod_core::config::server_port_override().unwrap_or(3001);
     let addr = format!("127.0.0.1:{}", port);
     let listener = tokio::net::TcpListener::bind(&addr)
         .await

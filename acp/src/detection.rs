@@ -3,32 +3,11 @@ use std::path::{Path, PathBuf};
 use anyhow::Result;
 use which::which;
 
+use crate::agents::{AgentDescriptor, AGENTS};
 use crate::config::AcpConfig;
+use crate::download::ensure_agent_available;
 use crate::types::AcpDetectedAgent;
-
-struct KnownAgent {
-    id: &'static str,
-    name: &'static str,
-    commands: &'static [&'static str],
-}
-
-const KNOWN_AGENTS: &[KnownAgent] = &[
-    KnownAgent {
-        id: "claude-code-acp",
-        name: "Claude Code (ACP)",
-        commands: &["claude-code-acp"],
-    },
-    KnownAgent {
-        id: "codex",
-        name: "Codex CLI",
-        commands: &["codex", "codex-cli"],
-    },
-    KnownAgent {
-        id: "gemini",
-        name: "Gemini CLI",
-        commands: &["gemini", "gemini-cli"],
-    },
-];
+use crate::config::ACP_MODE_EXTERNAL_AGENT;
 
 /// Locate an agent binary, honoring absolute/path-like inputs and Windows `.cmd` fallbacks.
 pub fn find_agent_binary(command: &str) -> Option<PathBuf> {
@@ -71,9 +50,9 @@ pub fn find_agent_binary(command: &str) -> Option<PathBuf> {
     None
 }
 
-pub fn detect_agents() -> Result<Vec<AcpDetectedAgent>> {
+pub async fn detect_agents() -> Result<Vec<AcpDetectedAgent>> {
     let mut detected = Vec::new();
-    for agent in KNOWN_AGENTS {
+    for agent in AGENTS {
         let mut found_cmd = None;
         let mut found_path: Option<PathBuf> = None;
         for &cmd in agent.commands {
@@ -81,6 +60,13 @@ pub fn detect_agents() -> Result<Vec<AcpDetectedAgent>> {
                 found_cmd = Some(cmd.to_string());
                 found_path = Some(path);
                 break;
+            }
+        }
+
+        if found_cmd.is_none() {
+            if let Some(path) = ensure_agent_available(agent).await? {
+                found_cmd = Some(agent.commands[0].to_string());
+                found_path = Some(path);
             }
         }
 
@@ -101,10 +87,16 @@ pub fn resolve_active_agent_command(
     cfg: &AcpConfig,
     detected: &[AcpDetectedAgent],
 ) -> Option<String> {
-    if cfg.active_mode != crate::config::ACP_MODE_EXTERNAL_AGENT {
+    if cfg.active_mode != ACP_MODE_EXTERNAL_AGENT {
         return None;
     }
     let active_id = cfg.active_agent.as_deref()?;
+    let known = AGENTS.iter().find(|agent| agent.id == active_id)?;
+    if let Some(command) = cfg.active_agent_command.as_deref() {
+        if command_matches_agent(command, known) {
+            return Some(command.to_string());
+        }
+    }
     detected
         .iter()
         .find(|agent| agent.id == active_id && agent.available)
@@ -115,6 +107,17 @@ pub fn resolve_active_agent_command(
                 .map(|p| p.to_string_lossy().to_string())
                 .unwrap_or_else(|| agent.command.clone())
         })
+}
+
+fn command_matches_agent(command: &str, agent: &AgentDescriptor) -> bool {
+    let name = Path::new(command)
+        .file_name()
+        .and_then(|candidate| candidate.to_str())
+        .unwrap_or(command);
+    agent
+        .commands
+        .iter()
+        .any(|allowed| allowed.eq_ignore_ascii_case(name))
 }
 
 #[cfg(test)]
@@ -146,12 +149,13 @@ mod tests {
         let cfg = AcpConfig {
             active_mode: crate::config::ACP_MODE_EXTERNAL_AGENT.to_string(),
             active_agent: Some("codex".to_string()),
+            active_agent_command: None,
         };
         let detected = vec![
             AcpDetectedAgent {
                 id: "codex".to_string(),
-                name: "Codex CLI".to_string(),
-                command: "codex".to_string(),
+                name: "Codex CLI (ACP Adapter)".to_string(),
+                command: "codex-acp".to_string(),
                 available: true,
                 path: None,
             },
@@ -165,6 +169,25 @@ mod tests {
         ];
 
         let resolved = resolve_active_agent_command(&cfg, &detected);
-        assert_eq!(resolved.as_deref(), Some("codex"));
+        assert_eq!(resolved.as_deref(), Some("codex-acp"));
+    }
+
+    #[test]
+    fn resolves_active_agent_command_override() {
+        let cfg = AcpConfig {
+            active_mode: crate::config::ACP_MODE_EXTERNAL_AGENT.to_string(),
+            active_agent: Some("codex".to_string()),
+            active_agent_command: Some("/opt/bin/codex-acp".to_string()),
+        };
+        let detected = vec![AcpDetectedAgent {
+            id: "codex".to_string(),
+            name: "Codex CLI (ACP Adapter)".to_string(),
+            command: "codex-acp".to_string(),
+            available: false,
+            path: None,
+        }];
+
+        let resolved = resolve_active_agent_command(&cfg, &detected);
+        assert_eq!(resolved.as_deref(), Some("/opt/bin/codex-acp"));
     }
 }

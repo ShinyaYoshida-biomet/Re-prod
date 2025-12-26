@@ -1,95 +1,57 @@
+/* RStudio-inspired minimal tool log styling */
+/* Design principles: monochrome, minimal borders, no backgrounds, monospace */
+
 .ai-tool-log {
-	margin-top: 12px;
-	border: 1px solid var(--border-medium);
-	border-radius: 12px;
-	background: var(--bg-primary);
+	margin: 8px 0;
 }
 
-.ai-tool-log__title {
-	font-size: 12px;
-	font-weight: 600;
-	padding: 10px 14px 0 14px;
-	color: var(--text-secondary);
-	text-transform: uppercase;
-	letter-spacing: 0.08em;
+.ai-tool-call {
+	border: 1px solid #ccc;
+	margin: 4px 0;
+	padding: 4px;
+	font-family: monospace;
 }
 
-.ai-tool-log ul {
-	list-style: none;
-	margin: 0;
-	padding: 0 14px 10px 14px;
-}
-
-.ai-tool-log li + li {
-	border-top: 1px solid var(--border-light);
-}
-
-.ai-tool-log details {
-	padding: 10px 0;
-}
-
-.ai-tool-log summary {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
+.ai-tool-call__summary {
 	cursor: pointer;
-	font-size: 12px;
-	font-weight: 600;
-	color: var(--text-primary);
-}
-
-.ai-tool-log__tool {
-	display: inline-flex;
+	padding: 2px 4px;
+	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: 4px;
+	list-style: none;
 }
 
-.ai-tool-log__status {
-	font-size: 11px;
-	text-transform: uppercase;
-	letter-spacing: 0.08em;
+.ai-tool-call__summary::-webkit-details-marker {
+	display: none;
 }
 
-.ai-tool-log__status.is-running {
-	color: var(--phylo-orange);
+.ai-tool-call__status-icon {
+	margin-right: 4px;
+	color: #666;
+	font-size: 14px;
 }
 
-.ai-tool-log__status.is-done {
-	color: var(--phylo-adenine-strong);
+.ai-tool-call__title {
+	font-weight: 500;
+	color: #000;
 }
 
-.ai-tool-log__status.is-pending {
-	color: var(--text-muted);
+.ai-tool-call__location {
+	margin-left: 8px;
+	color: #999;
+	font-size: 0.9em;
 }
 
-.ai-tool-log__status.is-error {
-	color: var(--phylo-error-dark);
-}
-
-.ai-tool-log__block {
-	margin-top: 8px;
-}
-
-.ai-tool-log__label {
-	font-size: 11px;
-	font-weight: 600;
-	color: var(--text-secondary);
-	text-transform: uppercase;
-	margin-bottom: 4px;
-}
-
-.ai-tool-log__block pre {
-	margin: 0;
-	padding: 8px;
-	background: rgba(15, 23, 42, 0.04);
-	border-radius: 8px;
-	font-size: 11px;
-	overflow-x: auto;
-}
-
-.ai-tool-log__error {
-	margin-top: 8px;
+.ai-tool-call__output,
+.ai-tool-call__error {
+	margin: 4px 0 0 0;
+	padding: 4px;
+	border-top: 1px solid #eee;
+	font-family: monospace;
+	white-space: pre-wrap;
 	font-size: 12px;
-	color: var(--phylo-error-darker-alt);
-	font-weight: 600;
+}
+
+.ai-tool-call__error {
+	color: #c00;
 }

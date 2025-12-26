@@ -116,6 +116,9 @@ impl AcpConnection {
                             .initialize(InitializeRequest::new(ProtocolVersion::LATEST))
                             .await
                             .context("ACP initialize failed");
+                        if let Err(ref err) = init_result {
+                            error!(error = ?err, "ACP initialize failed");
+                        }
 
                         if init_tx.send(init_result).is_err() {
                             return;

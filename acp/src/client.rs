@@ -404,9 +404,35 @@ mod tests {
         PermissionOption, PermissionOptionId, PermissionOptionKind, SelectedPermissionOutcome,
         SessionId, ToolCallId, ToolCallUpdate, ToolCallUpdateFields,
     };
+    use reprod_core::config::APP_DIR_ENV;
     use std::collections::HashMap;
-    use std::sync::Arc;
+    use std::env;
+    use std::sync::{Arc, Mutex as StdMutex};
     use tokio::task::LocalSet;
+
+    static ENV_LOCK: StdMutex<()> = StdMutex::new(());
+
+    struct EnvVarGuard {
+        key: &'static str,
+        prev: Option<String>,
+    }
+
+    impl EnvVarGuard {
+        fn set(key: &'static str, value: &str) -> Self {
+            let prev = env::var(key).ok();
+            env::set_var(key, value);
+            Self { key, prev }
+        }
+    }
+
+    impl Drop for EnvVarGuard {
+        fn drop(&mut self) {
+            match self.prev.take() {
+                Some(value) => env::set_var(self.key, value),
+                None => env::remove_var(self.key),
+            }
+        }
+    }
 
     #[tokio::test(flavor = "current_thread")]
     async fn forwards_permission_and_awaits_decision() {
@@ -520,13 +546,15 @@ mod tests {
 
     #[tokio::test(flavor = "current_thread")]
     async fn applies_trust_store_decisions() {
+        let _env_lock = ENV_LOCK.lock().unwrap();
         // Ensure trust store writes to a predictable, writable location for the test
         let config_root = std::env::temp_dir().join(format!(
             "reprod-config-{}",
             std::process::id()
         ));
         let _ = std::fs::create_dir_all(&config_root);
-        std::env::set_var("REPROD_APP_DIR", &config_root);
+        let _app_dir =
+            EnvVarGuard::set(APP_DIR_ENV, config_root.to_string_lossy().as_ref());
 
         let workspace = std::env::temp_dir().join("acp-client-trust");
         let _ = std::fs::create_dir_all(&workspace);

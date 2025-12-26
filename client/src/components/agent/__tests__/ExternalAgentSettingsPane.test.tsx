@@ -68,8 +68,8 @@ describe("ExternalAgentSettingsPane", () => {
 
 		await waitFor(() =>
 			expect(invokeMock).toHaveBeenCalledWith("acp_set_agent_config", {
-				active_mode: "external_agent",
-				active_agent: "claude",
+				activeMode: "external_agent",
+				activeAgent: "claude",
 			}),
 		);
 		expect(useStore.getState().activeAgent).toBe("claude");

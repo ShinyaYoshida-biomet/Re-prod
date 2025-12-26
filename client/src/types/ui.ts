@@ -169,6 +169,9 @@ export interface ToolCallLog {
 	error?: string;
 	startedAt?: number;
 	finishedAt?: number;
+	// ACP-specific fields
+	kind?: string;
+	locations?: string[];
 }
 
 // UI State Types

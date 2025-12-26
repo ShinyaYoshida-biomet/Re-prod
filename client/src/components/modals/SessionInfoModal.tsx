@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { IconInfo, IconRefresh } from "@/components/shared";
 import { buildExecutionRequest, useStore } from "@/core";
+import { useAsyncState } from "@/hooks/useAsyncState";
 import {
 	ExecutionServiceError,
 	executeRequestAwaitRunCompletion,
@@ -17,6 +18,11 @@ interface ParsedSessionInfo {
 	rVersion?: string;
 	packages: Array<{ name: string; version?: string }>;
 	rawOutput: string;
+}
+
+interface SessionInfoResult {
+	sessionInfo: ParsedSessionInfo;
+	warning?: string;
 }
 
 const SESSION_INFO_COMMAND = "sessionInfo()";
@@ -61,22 +67,9 @@ export function SessionInfoModal({ open, onClose }: SessionInfoModalProps): JSX.
 	const settings = useStore((state) => state.settings);
 	const execution = useStore((state) => state.execution);
 	const isConnected = useStore((state) => state.isConnected);
-	const [sessionInfo, setSessionInfo] = useState<ParsedSessionInfo | null>(null);
-	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState<string | null>(null);
 	const [lastUpdated, setLastUpdated] = useState<number | null>(null);
 
-	const totalRuns = execution.history.length;
-	const totalErrors = useMemo(
-		() => execution.history.filter((result) => !result.success).length,
-		[execution.history],
-	);
-	const lastRunEntry = execution.history.length
-		? execution.history[execution.history.length - 1]
-		: null;
-	const lastRunTimestamp = lastRunEntry?.timestamp ?? null;
-
-	const fetchSessionInfo = useCallback(async () => {
+	const fetchSessionInfoAsync = useCallback(async (): Promise<SessionInfoResult> => {
 		const request = buildExecutionRequest({
 			target: {
 				code: SESSION_INFO_COMMAND,
@@ -88,27 +81,39 @@ export function SessionInfoModal({ open, onClose }: SessionInfoModalProps): JSX.
 			filepath: undefined,
 		});
 
-		setLoading(true);
-		setError(null);
-
 		try {
 			const completion = await executeRequestAwaitRunCompletion(request);
-			setSessionInfo(parseSessionInfoOutput(completion.stdout || ""));
-			setLastUpdated(Date.now());
-			if (completion.run.error) {
-				setError(completion.run.error);
-			} else if (completion.stderr) {
-				setError(completion.stderr);
-			}
+			const sessionInfo = parseSessionInfoOutput(completion.stdout || "");
+			const warning = completion.run.error || completion.stderr || undefined;
+			return { sessionInfo, warning };
 		} catch (err) {
 			const message =
 				err instanceof ExecutionServiceError ? err.message : "Unable to fetch session information.";
-			setError(message);
-			setSessionInfo(null);
-		} finally {
-			setLoading(false);
+			throw new Error(message);
 		}
 	}, []);
+
+	const {
+		data,
+		loading,
+		error,
+		execute: fetchSessionInfo,
+	} = useAsyncState(fetchSessionInfoAsync, {
+		onSuccess: () => setLastUpdated(Date.now()),
+	});
+
+	const sessionInfo = data?.sessionInfo;
+	const displayError = error || data?.warning || null;
+
+	const totalRuns = execution.history.length;
+	const totalErrors = useMemo(
+		() => execution.history.filter((result) => !result.success).length,
+		[execution.history],
+	);
+	const lastRunEntry = execution.history.length
+		? execution.history[execution.history.length - 1]
+		: null;
+	const lastRunTimestamp = lastRunEntry?.timestamp;
 
 	useEffect(() => {
 		if (!open) {
@@ -192,7 +197,7 @@ export function SessionInfoModal({ open, onClose }: SessionInfoModalProps): JSX.
 					)}
 				</div>
 			</div>
-			{error && <div className="session-info-error">{error}</div>}
+			{displayError && <div className="session-info-error">{displayError}</div>}
 			{sessionInfo?.rawOutput && (
 				<div className="session-info-output">
 					<div className="session-info-output-header">Raw sessionInfo() output</div>

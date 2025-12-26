@@ -1,6 +1,8 @@
+pub mod agents;
 pub mod client;
 pub mod config;
 pub mod connection;
+mod download;
 pub mod detection;
 pub mod gateway;
 pub mod process;
