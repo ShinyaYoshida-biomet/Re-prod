@@ -32,7 +32,7 @@ impl AcpService {
     }
 
     async fn ensure_agent_running(&self) -> Result<()> {
-        let command = resolve_agent_command()?;
+        let command = resolve_agent_command().await?;
         info!(
             command = %command,
             workspace = %self.workspace_root.display(),
@@ -183,12 +183,12 @@ impl RateLimiter {
     }
 }
 
-fn resolve_agent_command() -> Result<String> {
+async fn resolve_agent_command() -> Result<String> {
     let cfg = load_acp_config().unwrap_or_else(|_| Default::default());
     if !is_external_mode(&cfg.active_mode) {
         bail!("External agent mode not enabled");
     }
-    let detected = detect_agents()?;
+    let detected = detect_agents().await?;
     resolve_active_agent_command(&cfg, &detected).ok_or_else(|| {
         anyhow!("Selected ACP agent unavailable or not set for external_agent mode")
     })

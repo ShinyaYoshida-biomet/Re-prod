@@ -185,7 +185,7 @@ pub async fn set_provider(
 
 pub async fn acp_detect_agents() -> Resp<Vec<AcpDetectedAgent>> {
     info!("Detecting ACP agents");
-    detect_agents().map(Json).map_err(err_500)
+    detect_agents().await.map(Json).map_err(err_500)
 }
 
 pub async fn acp_get_config() -> Resp<AcpAgentConfig> {
@@ -224,7 +224,7 @@ pub async fn acp_set_config(Json(payload): Json<SetAcpConfigRequest>) -> Resp<Ac
             .active_agent
             .clone()
             .ok_or_else(|| err_400("active_agent must be set for external_agent mode"))?;
-        let detected = detect_agents().map_err(err_500)?;
+        let detected = detect_agents().await.map_err(err_500)?;
         cfg.active_agent = Some(selected.clone());
         cfg.active_agent_command = Some(
             resolve_active_agent_command(&cfg, &detected)

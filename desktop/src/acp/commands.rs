@@ -32,7 +32,7 @@ pub async fn acp_initialize(
         .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
 
     let acp_cfg = load_acp_config().unwrap_or_default();
-    let detected = detect_agents().unwrap_or_default();
+    let detected = detect_agents().await.unwrap_or_default();
     let command_override = command.clone();
     let resolved_command = command.or_else(|| resolve_active_agent_command(&acp_cfg, &detected));
     if acp_cfg.active_mode == ACP_MODE_EXTERNAL_AGENT
@@ -108,7 +108,7 @@ pub async fn acp_respond_to_permission(
 
 #[tauri::command]
 pub async fn acp_detect_agents() -> Result<Vec<AcpDetectedAgent>, String> {
-    detect_agents().map_err(|err| err.to_string())
+    detect_agents().await.map_err(|err| err.to_string())
 }
 
 #[tauri::command]
@@ -143,7 +143,7 @@ pub async fn acp_set_agent_config(
         let selected = active_agent
             .clone()
             .ok_or_else(|| "active_agent must be set for external_agent mode".to_string())?;
-        let detected = detect_agents().map_err(|err| err.to_string())?;
+        let detected = detect_agents().await.map_err(|err| err.to_string())?;
         cfg.active_agent = Some(selected);
         cfg.active_agent_command = Some(
             resolve_active_agent_command(&cfg, &detected)

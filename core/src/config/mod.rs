@@ -6,6 +6,7 @@ pub const APP_DIR_ENV: &str = "REPROD_APP_DIR";
 pub const WORKSPACE_ROOT_ENV: &str = "REPROD_WORKSPACE_ROOT";
 pub const SERVER_PATH_ENV: &str = "REPROD_SERVER_PATH";
 pub const PORT_ENV: &str = "REPROD_PORT";
+pub const ACP_AUTO_DOWNLOAD_ENV: &str = "REPROD_ACP_AUTO_DOWNLOAD";
 const LEGACY_DIR_NAME: &str = ".reprod";
 const APP_DIR_NAME: &str = "Re-prod";
 
@@ -149,6 +150,16 @@ pub fn server_binary_override() -> Option<PathBuf> {
 
 pub fn server_port_override() -> Option<u16> {
     env::var(PORT_ENV).ok().and_then(|value| value.parse().ok())
+}
+
+pub fn acp_auto_download_enabled() -> bool {
+    match env::var(ACP_AUTO_DOWNLOAD_ENV) {
+        Ok(value) => {
+            let value = value.trim();
+            value == "1" || value.eq_ignore_ascii_case("true") || value.eq_ignore_ascii_case("yes")
+        }
+        Err(_) => true,
+    }
 }
 
 pub fn global_auth_path() -> Result<PathBuf> {

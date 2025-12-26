@@ -4,6 +4,7 @@ use anyhow::Result;
 use which::which;
 
 use crate::config::AcpConfig;
+use crate::download::ensure_codex_acp_available;
 use crate::types::AcpDetectedAgent;
 use crate::config::ACP_MODE_EXTERNAL_AGENT;
 
@@ -72,7 +73,7 @@ pub fn find_agent_binary(command: &str) -> Option<PathBuf> {
     None
 }
 
-pub fn detect_agents() -> Result<Vec<AcpDetectedAgent>> {
+pub async fn detect_agents() -> Result<Vec<AcpDetectedAgent>> {
     let mut detected = Vec::new();
     for agent in KNOWN_AGENTS {
         let mut found_cmd = None;
@@ -82,6 +83,13 @@ pub fn detect_agents() -> Result<Vec<AcpDetectedAgent>> {
                 found_cmd = Some(cmd.to_string());
                 found_path = Some(path);
                 break;
+            }
+        }
+
+        if found_cmd.is_none() && agent.id == "codex" {
+            if let Some(path) = ensure_codex_acp_available().await? {
+                found_cmd = Some(agent.commands[0].to_string());
+                found_path = Some(path);
             }
         }
 
