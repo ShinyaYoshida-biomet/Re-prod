@@ -145,8 +145,10 @@ pub async fn acp_set_agent_config(
             .ok_or_else(|| "active_agent must be set for external_agent mode".to_string())?;
         let detected = detect_agents().map_err(|err| err.to_string())?;
         cfg.active_agent = Some(selected);
-        cfg.active_agent_command = resolve_active_agent_command(&cfg, &detected)
-            .ok_or_else(|| "ACP agent unavailable or not detected".to_string())?;
+        cfg.active_agent_command = Some(
+            resolve_active_agent_command(&cfg, &detected)
+                .ok_or_else(|| "ACP agent unavailable or not detected".to_string())?,
+        );
     }
 
     save_acp_config(&cfg).map_err(|err| err.to_string())?;

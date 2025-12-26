@@ -226,8 +226,10 @@ pub async fn acp_set_config(Json(payload): Json<SetAcpConfigRequest>) -> Resp<Ac
             .ok_or_else(|| err_400("active_agent must be set for external_agent mode"))?;
         let detected = detect_agents().map_err(err_500)?;
         cfg.active_agent = Some(selected.clone());
-        cfg.active_agent_command = resolve_active_agent_command(&cfg, &detected)
-            .ok_or_else(|| err_400(format!("ACP agent unavailable: {selected}")))?;
+        cfg.active_agent_command = Some(
+            resolve_active_agent_command(&cfg, &detected)
+                .ok_or_else(|| err_400(format!("ACP agent unavailable: {selected}")))?,
+        );
     }
 
     save_acp_config(&cfg).map_err(err_500)?;
