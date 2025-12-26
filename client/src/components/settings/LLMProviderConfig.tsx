@@ -4,6 +4,15 @@ import { useSettingsStore } from "../../core/state/slices/settingsStore";
 import { TEST_STATUS_RESET_DELAY } from "../../constants/timeouts";
 import "./LLMProviderConfig.css";
 
+const TestStatus = {
+	IDLE: "idle",
+	TESTING: "testing",
+	SUCCESS: "success",
+	FAILED: "failed",
+} as const;
+
+type TestStatus = (typeof TestStatus)[keyof typeof TestStatus];
+
 interface Props {
 	providerName: string;
 	displayName: string;
@@ -26,7 +35,7 @@ export const LLMProviderConfig: React.FC<Props> = ({
 	const { setApiKey, testConnection } = useSettingsStore();
 	const [apiKey, setLocalApiKey] = useState("");
 	const [isEditing, setIsEditing] = useState(!isConfigured);
-	const [testStatus, setTestStatus] = useState<"idle" | "testing" | "success" | "failed">("idle");
+	const [testStatus, setTestStatus] = useState<TestStatus>(TestStatus.IDLE);
 
 	const handleSave = async () => {
 		if (!apiKey) return;
@@ -36,10 +45,10 @@ export const LLMProviderConfig: React.FC<Props> = ({
 	};
 
 	const handleTest = async () => {
-		setTestStatus("testing");
+		setTestStatus(TestStatus.TESTING);
 		const success = await testConnection(providerName);
-		setTestStatus(success ? "success" : "failed");
-		setTimeout(() => setTestStatus("idle"), TEST_STATUS_RESET_DELAY);
+		setTestStatus(success ? TestStatus.SUCCESS : TestStatus.FAILED);
+		setTimeout(() => setTestStatus(TestStatus.IDLE), TEST_STATUS_RESET_DELAY);
 	};
 
 	return (
@@ -81,7 +90,7 @@ export const LLMProviderConfig: React.FC<Props> = ({
 				<div className="input-group">
 					<select
 						value={activeModel}
-						disabled={!isConfigured || testStatus === "testing"}
+						disabled={!isConfigured || testStatus === TestStatus.TESTING}
 						onChange={(e) => onModelChange(e.target.value)}
 						className="model-select"
 					>
@@ -98,13 +107,13 @@ export const LLMProviderConfig: React.FC<Props> = ({
 				<button
 					className={`btn test-button ${testStatus}`}
 					onClick={handleTest}
-					disabled={!isConfigured || isEditing || testStatus === "testing"}
+					disabled={!isConfigured || isEditing || testStatus === TestStatus.TESTING}
 				>
-					{testStatus === "testing"
+					{testStatus === TestStatus.TESTING
 						? "Testing..."
-						: testStatus === "success"
+						: testStatus === TestStatus.SUCCESS
 							? "✓ Working"
-							: testStatus === "failed"
+							: testStatus === TestStatus.FAILED
 								? "✗ Failed"
 								: "Test Connection"}
 				</button>
