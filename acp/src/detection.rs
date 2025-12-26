@@ -21,8 +21,8 @@ const KNOWN_AGENTS: &[KnownAgent] = &[
     },
     KnownAgent {
         id: "codex",
-        name: "Codex CLI",
-        commands: &["codex", "codex-cli"],
+        name: "Codex CLI (ACP Adapter)",
+        commands: &["codex-acp"],
     },
     KnownAgent {
         id: "gemini",
@@ -169,8 +169,8 @@ mod tests {
         let detected = vec![
             AcpDetectedAgent {
                 id: "codex".to_string(),
-                name: "Codex CLI".to_string(),
-                command: "codex".to_string(),
+                name: "Codex CLI (ACP Adapter)".to_string(),
+                command: "codex-acp".to_string(),
                 available: true,
                 path: None,
             },
@@ -192,12 +192,12 @@ mod tests {
         let cfg = AcpConfig {
             active_mode: crate::config::ACP_MODE_EXTERNAL_AGENT.to_string(),
             active_agent: Some("codex".to_string()),
-            active_agent_command: Some("/opt/bin/codex".to_string()),
+            active_agent_command: Some("/opt/bin/codex-acp".to_string()),
         };
         let detected = vec![AcpDetectedAgent {
             id: "codex".to_string(),
-            name: "Codex CLI".to_string(),
-            command: "codex".to_string(),
+            name: "Codex CLI (ACP Adapter)".to_string(),
+            command: "codex-acp".to_string(),
             available: false,
             path: None,
         }];
