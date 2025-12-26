@@ -184,7 +184,7 @@ mod tests {
         ];
 
         let resolved = resolve_active_agent_command(&cfg, &detected);
-        assert_eq!(resolved.as_deref(), Some("codex"));
+        assert_eq!(resolved.as_deref(), Some("codex-acp"));
     }
 
     #[test]
@@ -203,6 +203,6 @@ mod tests {
         }];
 
         let resolved = resolve_active_agent_command(&cfg, &detected);
-        assert_eq!(resolved.as_deref(), Some("/opt/bin/codex"));
+        assert_eq!(resolved.as_deref(), Some("/opt/bin/codex-acp"));
     }
 }
