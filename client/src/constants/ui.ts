@@ -40,3 +40,15 @@ export const ZOOM = {
 	 */
 	STEP: 0.1,
 } as const;
+
+/**
+ * Test connection status states for LLM provider configuration
+ */
+export const TestStatus = {
+	IDLE: "idle",
+	TESTING: "testing",
+	SUCCESS: "success",
+	FAILED: "failed",
+} as const;
+
+export type TestStatus = (typeof TestStatus)[keyof typeof TestStatus];

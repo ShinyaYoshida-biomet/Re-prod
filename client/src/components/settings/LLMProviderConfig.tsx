@@ -2,16 +2,8 @@ import type React from "react";
 import { useState } from "react";
 import { useSettingsStore } from "../../core/state/slices/settingsStore";
 import { TEST_STATUS_RESET_DELAY } from "../../constants/timeouts";
+import { TestStatus } from "../../constants/ui";
 import "./LLMProviderConfig.css";
-
-const TestStatus = {
-	IDLE: "idle",
-	TESTING: "testing",
-	SUCCESS: "success",
-	FAILED: "failed",
-} as const;
-
-type TestStatus = (typeof TestStatus)[keyof typeof TestStatus];
 
 interface Props {
 	providerName: string;
