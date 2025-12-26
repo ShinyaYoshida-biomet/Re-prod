@@ -32,10 +32,32 @@ pub struct AcpSessionUpdateEnvelope {
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "../../client/src/types/generated/")]
+pub struct AcpAvailableCommand {
+    pub name: String,
+    pub description: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
 pub enum AcpSessionUpdate {
     UserMessageChunk { text: String },
     AgentMessageChunk { text: String },
     AgentThoughtChunk { text: String },
+    ToolCall {
+        id: String,
+        title: String,
+        kind: String,
+        status: String,
+        locations: Vec<String>,
+    },
+    ToolCallUpdate {
+        id: String,
+        status: Option<String>,
+        content: Option<String>,
+    },
+    AvailableCommands {
+        commands: Vec<AcpAvailableCommand>,
+    },
     Done,
 }
 
@@ -124,6 +146,7 @@ mod tests {
         AcpPromptMessage::export().unwrap();
         AcpPromptRequest::export().unwrap();
         AcpSessionUpdateEnvelope::export().unwrap();
+        AcpAvailableCommand::export().unwrap();
         AcpSessionUpdate::export().unwrap();
         AcpCancelRequest::export().unwrap();
         AcpPermissionOption::export().unwrap();

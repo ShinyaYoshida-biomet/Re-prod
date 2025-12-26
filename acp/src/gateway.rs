@@ -206,11 +206,60 @@ fn map_session_update(update: &SessionUpdate) -> AcpSessionUpdate {
         SessionUpdate::AgentThoughtChunk(chunk) => AcpSessionUpdate::AgentThoughtChunk {
             text: stringify_chunk(chunk),
         },
+        SessionUpdate::ToolCall(tool_call) => AcpSessionUpdate::ToolCall {
+            id: tool_call.tool_call_id.to_string(),
+            title: tool_call.title.clone(),
+            kind: format!("{:?}", tool_call.kind),
+            status: format!("{:?}", tool_call.status),
+            locations: tool_call
+                .locations
+                .iter()
+                .map(|loc| loc.path.to_string_lossy().to_string())
+                .collect(),
+        },
+        SessionUpdate::ToolCallUpdate(tool_call_update) => {
+            let content = tool_call_update.fields.content.as_ref().and_then(|blocks| {
+                if blocks.is_empty() {
+                    None
+                } else {
+                    Some(
+                        blocks
+                            .iter()
+                            .map(|block| format!("{block:?}"))
+                            .collect::<Vec<_>>()
+                            .join("\n"),
+                    )
+                }
+            });
+
+            AcpSessionUpdate::ToolCallUpdate {
+                id: tool_call_update.tool_call_id.to_string(),
+                status: tool_call_update
+                    .fields
+                    .status
+                    .as_ref()
+                    .map(|s| format!("{s:?}")),
+                content,
+            }
+        }
+        SessionUpdate::AvailableCommandsUpdate(commands_update) => {
+            AcpSessionUpdate::AvailableCommands {
+                commands: commands_update
+                    .available_commands
+                    .iter()
+                    .map(|cmd| crate::types::AcpAvailableCommand {
+                        name: cmd.name.clone(),
+                        description: cmd.description.clone(),
+                    })
+                    .collect(),
+            }
+        }
         SessionUpdate::Plan(plan) => AcpSessionUpdate::AgentThoughtChunk {
             text: format!("{plan:?}"),
         },
-        other => AcpSessionUpdate::AgentMessageChunk {
-            text: format!("{other:?}"),
+        SessionUpdate::CurrentModeUpdate(_) => AcpSessionUpdate::Done,
+        _ => AcpSessionUpdate::AgentMessageChunk {
+            text: format!("{update:?}"),
         },
     }
 }
