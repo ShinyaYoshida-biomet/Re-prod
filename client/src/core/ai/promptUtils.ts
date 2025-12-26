@@ -1,4 +1,5 @@
 import type { ExecutionLogEntry } from "@/types";
+import { formatDateTime } from "@/utils/time";
 
 /**
  * Set of code change actions that should be applied to remote files
@@ -31,7 +32,7 @@ const truncateText = (value: string, maxLength: number): string =>
 
 const formatConsoleEntry = (entry: ExecutionLogEntry): string => {
 	const lines = [
-		`- [${new Date(entry.timestamp).toLocaleString()}] ${entry.success ? "success" : "error"} in ${entry.duration}ms`,
+		`- [${formatDateTime(entry.timestamp)}] ${entry.success ? "success" : "error"} in ${entry.duration}ms`,
 	];
 
 	if (entry.stdout?.trim()) {
