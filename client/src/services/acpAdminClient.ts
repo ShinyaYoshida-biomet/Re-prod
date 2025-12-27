@@ -1,5 +1,6 @@
 import type { AcpAgentConfig, AcpDetectedAgent } from "@/types/generated";
 import { IS_TAURI } from "@/constants/features";
+import { getApiBaseUrl } from "@/constants/urls";
 
 export type AcpMode = "api" | "external_agent";
 
@@ -53,15 +54,15 @@ class DesktopAcpAdminClient implements AcpAdminClient {
 
 class WebAcpAdminClient implements AcpAdminClient {
 	async detectAgents(): Promise<AcpDetectedAgent[]> {
-		return fetchJson<AcpDetectedAgent[]>("/api/acp/agents");
+		return fetchJson<AcpDetectedAgent[]>(`${getApiBaseUrl()}/acp/agents`);
 	}
 
 	async getConfig(): Promise<AcpAgentConfig> {
-		return fetchJson<AcpAgentConfig>("/api/acp/config");
+		return fetchJson<AcpAgentConfig>(`${getApiBaseUrl()}/acp/config`);
 	}
 
 	async setConfig(mode: AcpMode, agent: string | null): Promise<AcpAgentConfig> {
-		return fetchJson<AcpAgentConfig>("/api/acp/config", {
+		return fetchJson<AcpAgentConfig>(`${getApiBaseUrl()}/acp/config`, {
 			method: "PUT",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ active_mode: mode, active_agent: agent }),
