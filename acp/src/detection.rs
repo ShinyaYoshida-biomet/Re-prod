@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use which::which;
+use tracing::warn;
 
 use crate::agents::{AgentDescriptor, AGENTS};
 use crate::config::AcpConfig;
@@ -64,9 +65,19 @@ pub async fn detect_agents() -> Result<Vec<AcpDetectedAgent>> {
         }
 
         if found_cmd.is_none() {
-            if let Some(path) = ensure_agent_available(agent).await? {
-                found_cmd = Some(agent.commands[0].to_string());
-                found_path = Some(path);
+            match ensure_agent_available(agent).await {
+                Ok(Some(path)) => {
+                    found_cmd = Some(agent.commands[0].to_string());
+                    found_path = Some(path);
+                }
+                Ok(None) => {}
+                Err(err) => {
+                    warn!(
+                        agent = agent.name,
+                        error = %err,
+                        "ACP agent download failed; skipping"
+                    );
+                }
             }
         }
 
