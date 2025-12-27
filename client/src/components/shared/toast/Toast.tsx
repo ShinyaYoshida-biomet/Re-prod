@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import { IconXCircle } from "../icons";
 
-export type ToastSeverity = "info" | "success" | "warning" | "error";
+export const ToastSeverity = {
+	INFO: "info",
+	SUCCESS: "success",
+	WARNING: "warning",
+	ERROR: "error",
+} as const;
+
+export type ToastSeverity = (typeof ToastSeverity)[keyof typeof ToastSeverity];
 
 export interface ToastProps {
 	id: string;
@@ -65,13 +72,13 @@ export function Toast({ id, message, severity, duration = 4000, onDismiss }: Toa
 
 function getIcon(severity: ToastSeverity): string {
 	switch (severity) {
-		case "success":
+		case ToastSeverity.SUCCESS:
 			return "✓";
-		case "error":
+		case ToastSeverity.ERROR:
 			return "✕";
-		case "warning":
+		case ToastSeverity.WARNING:
 			return "⚠";
-		case "info":
+		case ToastSeverity.INFO:
 		default:
 			return "ℹ";
 	}

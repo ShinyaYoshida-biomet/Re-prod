@@ -1,4 +1,4 @@
-import type { ToastSeverity } from "@/components/shared";
+import { ToastSeverity } from "@/components/shared";
 
 type ToastFunction = (
 	message: string,
@@ -30,7 +30,7 @@ export function unregisterToastFunction(): void {
  */
 export function showToast(
 	message: string,
-	severity: ToastSeverity = "info",
+	severity: ToastSeverity = ToastSeverity.INFO,
 	options?: { duration?: number },
 ): void {
 	if (globalShowToast) {
@@ -41,17 +41,17 @@ export function showToast(
 }
 
 export function showInfo(message: string, options?: { duration?: number }): void {
-	showToast(message, "info", options);
+	showToast(message, ToastSeverity.INFO, options);
 }
 
 export function showSuccess(message: string, options?: { duration?: number }): void {
-	showToast(message, "success", options);
+	showToast(message, ToastSeverity.SUCCESS, options);
 }
 
 export function showWarning(message: string, options?: { duration?: number }): void {
-	showToast(message, "warning", options);
+	showToast(message, ToastSeverity.WARNING, options);
 }
 
 export function showError(message: string, options?: { duration?: number }): void {
-	showToast(message, "error", options);
+	showToast(message, ToastSeverity.ERROR, options);
 }
