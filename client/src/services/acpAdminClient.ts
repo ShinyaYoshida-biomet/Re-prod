@@ -54,15 +54,15 @@ class DesktopAcpAdminClient implements AcpAdminClient {
 
 class WebAcpAdminClient implements AcpAdminClient {
 	async detectAgents(): Promise<AcpDetectedAgent[]> {
-		return fetchJson<AcpDetectedAgent[]>(`${getApiBaseUrl()}/acp/agents`);
+		return fetchJson<AcpDetectedAgent[]>(getAcpApiUrl("agents"));
 	}
 
 	async getConfig(): Promise<AcpAgentConfig> {
-		return fetchJson<AcpAgentConfig>(`${getApiBaseUrl()}/acp/config`);
+		return fetchJson<AcpAgentConfig>(getAcpApiUrl("config"));
 	}
 
 	async setConfig(mode: AcpMode, agent: string | null): Promise<AcpAgentConfig> {
-		return fetchJson<AcpAgentConfig>(`${getApiBaseUrl()}/acp/config`, {
+		return fetchJson<AcpAgentConfig>(getAcpApiUrl("config"), {
 			method: "PUT",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ active_mode: mode, active_agent: agent }),
@@ -82,3 +82,5 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 	}
 	return (await response.json()) as T;
 }
+
+const getAcpApiUrl = (path: string): string => `${getApiBaseUrl()}/acp/${path}`;
