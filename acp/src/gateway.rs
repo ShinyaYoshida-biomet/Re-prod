@@ -151,10 +151,14 @@ impl AcpGateway {
             .ok_or_else(|| anyhow!("ACP connection not initialized"))?;
 
         let request = AcpConnection::make_prompt_from_strings(session_id.to_string(), messages);
+        // The prompt() call awaits the agent's PromptResponse, which comes when
+        // the agent signals EndTurn. Meanwhile, session updates (text chunks,
+        // tool calls, etc.) flow through forward_updates() independently.
+        // Only after prompt() returns do we send Done to signal turn completion.
         conn.prompt(request).await?;
         let payload = AcpSessionUpdateEnvelope {
             session_id: session_id.to_string(),
-            update: Done,
+            update: AcpSessionUpdate::Done,
         };
         let _ = self.updates_tx.send(payload);
         Ok(())
