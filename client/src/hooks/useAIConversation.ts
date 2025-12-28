@@ -8,7 +8,8 @@ import { getExternalAgentClient } from "@/services/externalAgentClient";
 import { aiMessages } from "@/services/messageBuilders";
 import { socketService } from "@/services/socket";
 import type { AIMessage, AIMode, PlanStep, ToolCallLog } from "@/types";
-import type { AcpPlanStep, AcpPromptMessage, AcpSessionUpdateEnvelope } from "@/types/generated";
+import type { AcpPromptMessage, AcpSessionUpdateEnvelope } from "@/types/generated";
+import type { AcpPlanStep } from "@/types/generated/AcpPlanStep";
 import { useAICodeApplication } from "./useAICodeApplication";
 import { useAIStreaming } from "./useAIStreaming";
 import { useAITimeout } from "./useAITimeout";
@@ -116,7 +117,7 @@ export function useAIConversation() {
 			id: step.id,
 			title: step.title,
 			status: step.status,
-			kind: step.kind ?? undefined,
+			kind: step.kind === "plan" ? "plan" : undefined,
 			error: step.error ?? undefined,
 			startedAt: step.started_at !== null ? Number(step.started_at) : undefined,
 			finishedAt: step.finished_at !== null ? Number(step.finished_at) : undefined,
