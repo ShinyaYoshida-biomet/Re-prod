@@ -122,24 +122,27 @@ impl EditService {
             if &old_sha256 != expected {
                 let new_text = derive_new_text(&old_text, &request)?;
                 let unified_diff = unified_diff(&request.path, &old_text, &new_text);
+                let new_sha256 = sha256_hex(&new_text);
+                let old_sha256_snapshot = old_sha256.clone();
+                let new_text_snapshot = new_text.clone();
                 let structured_edits = match request.operation {
                     EditOperation::ApplyEdits => request.edits.clone().unwrap_or_default(),
                     _ => vec![TextEdit {
                         range: full_range(&old_text),
-                        text: new_text.clone(),
+                        text: new_text_snapshot.clone(),
                     }],
                 };
                 return Ok(EditTextFileResult {
                     status: EditStatus::Conflict,
                     path: request.path,
                     old_text: old_text.clone(),
-                    new_text,
-                    old_sha256,
-                    new_sha256: sha256_hex(&new_text),
+                    new_text: new_text_snapshot,
+                    old_sha256: old_sha256.clone(),
+                    new_sha256,
                     structured_edits,
                     unified_diff,
                     conflict: Some(EditConflict {
-                        current_sha256: old_sha256.clone(),
+                        current_sha256: old_sha256_snapshot,
                         current_text: old_text,
                     }),
                 });
