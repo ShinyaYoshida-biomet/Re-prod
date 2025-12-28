@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ACP_FEATURE_ENABLED } from "@/constants/features";
 import { useStore } from "@/core";
+import { extractCodeBlocks } from "@/core/ai/codeBlockUtils";
 import { buildPromptWithContext, createRequestId } from "@/core/ai/promptUtils";
+import { getAcpSystemPrompts } from "@/core/ai/systemPrompts";
 import { getExternalAgentClient } from "@/services/externalAgentClient";
 import { aiMessages } from "@/services/messageBuilders";
 import { socketService } from "@/services/socket";
-import type { AIMessage, AIMode, ToolCallLog } from "@/types";
-import type { AcpPromptMessage, AcpSessionUpdateEnvelope } from "@/types/generated";
+import type { AIMessage, AIMode, PlanStep, ToolCallLog } from "@/types";
+import type { AcpPlanStep, AcpPromptMessage, AcpSessionUpdateEnvelope } from "@/types/generated";
 import { useAICodeApplication } from "./useAICodeApplication";
 import { useAIStreaming } from "./useAIStreaming";
 import { useAITimeout } from "./useAITimeout";
@@ -39,6 +41,7 @@ export function useAIConversation() {
 	const activeMode = useStore((state) => state.activeMode);
 	const activeAgent = useStore((state) => state.activeAgent);
 	const appendStreamingChunk = useStore((state) => state.appendStreamingChunk);
+	const updateStreamingPlan = useStore((state) => state.updateStreamingPlan);
 
 	const addAIMessage = useStore((state) => state.addAIMessage);
 	const startStreamingMessage = useStore((state) => state.startStreamingMessage);
@@ -96,8 +99,9 @@ export function useAIConversation() {
 
 	const extractAcpText = useCallback(
 		(update: AcpSessionUpdateEnvelope["update"]): string | null => {
-			const [variant, value] = Object.entries(update ?? {})[0] ?? [];
-			if (!variant || !value) return null;
+			if (typeof update !== "object" || update === null) return null;
+			if (!("AgentMessageChunk" in update)) return null;
+			const value = update.AgentMessageChunk;
 			if (typeof value === "object" && "text" in value) {
 				const candidate = (value as { text?: unknown }).text;
 				return typeof candidate === "string" ? candidate : null;
@@ -105,6 +109,34 @@ export function useAIConversation() {
 			return null;
 		},
 		[],
+	);
+
+	const mapAcpPlanSteps = useCallback((steps: AcpPlanStep[]): PlanStep[] => {
+		return steps.map((step) => ({
+			id: step.id,
+			title: step.title,
+			status: step.status,
+			kind: step.kind ?? undefined,
+			error: step.error ?? undefined,
+			startedAt: step.started_at !== null ? Number(step.started_at) : undefined,
+			finishedAt: step.finished_at !== null ? Number(step.finished_at) : undefined,
+			waitingReason: step.waiting_reason ?? undefined,
+		}));
+	}, []);
+
+	const finalizeAcpStream = useCallback(
+		(streamingId: string) => {
+			const { ai } = useStore.getState();
+			const message = ai.messages.find(
+				(entry) => entry.streamingId === streamingId || entry.id === streamingId,
+			);
+			const finalContent = message?.content ?? "";
+			const codeBlocks = extractCodeBlocks(finalContent);
+			completeStreamingMessage(streamingId, finalContent, { codeBlocks });
+			setAILoading(false);
+			clearActiveRequest();
+		},
+		[clearActiveRequest, completeStreamingMessage, setAILoading],
 	);
 
 	const handleSessionUpdate = useCallback(
@@ -119,6 +151,16 @@ export function useAIConversation() {
 				})();
 
 			const update = payload.update;
+
+			if (update === "Done") {
+				finalizeAcpStream(streamingId);
+				return;
+			}
+
+			if (typeof update === "object" && update !== null && "Plan" in update) {
+				updateStreamingPlan(streamingId, mapAcpPlanSteps(update.Plan.steps));
+				return;
+			}
 
 			// Handle ToolCall
 			if (typeof update === "object" && update !== null && "ToolCall" in update) {
@@ -150,7 +192,15 @@ export function useAIConversation() {
 			if (!text) return;
 			appendStreamingChunk(streamingId, text);
 		},
-		[appendStreamingChunk, extractAcpText, recordToolEvent, startStreamingMessage],
+		[
+			appendStreamingChunk,
+			extractAcpText,
+			finalizeAcpStream,
+			mapAcpPlanSteps,
+			recordToolEvent,
+			startStreamingMessage,
+			updateStreamingPlan,
+		],
 	);
 
 	useEffect(() => {
@@ -260,13 +310,13 @@ export function useAIConversation() {
 						role: message.role,
 						content: message.content,
 					}));
-					await externalAgentClient.prompt(sessionId, payload);
-					completeStreamingMessage(requestId);
+					const systemPrompts = getAcpSystemPrompts(mode);
+					await externalAgentClient.prompt(sessionId, [...systemPrompts, ...payload]);
 				} catch (error) {
 					const reason = describeError(error);
 					completeStreamingMessage(requestId, `ACP request failed: ${reason}`);
-				} finally {
 					setAILoading(false);
+				} finally {
 					clearActiveRequest();
 				}
 				return;

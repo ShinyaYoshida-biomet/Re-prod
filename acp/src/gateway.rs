@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
 
-use agent_client_protocol::{ContentBlock, ContentChunk, SessionNotification, SessionUpdate};
+use agent_client_protocol::{
+    ContentBlock, ContentChunk, PlanEntryStatus, SessionNotification, SessionUpdate,
+};
 use anyhow::{anyhow, Result};
 use tokio::sync::{broadcast, mpsc::UnboundedReceiver};
 use tracing::{info, warn};
@@ -10,8 +12,8 @@ use crate::{
     process::{spawn_agent, AcpChild, ProcessConfig, SpawnedPipes},
     session::AcpSessionManager,
     types::{
-        AcpInitializeResponse, AcpPermissionDecision, AcpPermissionRequestPayload,
-        AcpSessionUpdate, AcpSessionUpdate::Done, AcpSessionUpdateEnvelope,
+        AcpInitializeResponse, AcpPermissionDecision, AcpPermissionRequestPayload, AcpPlanStep,
+        AcpPlanStepStatus, AcpSessionUpdate, AcpSessionUpdate::Done, AcpSessionUpdateEnvelope,
     },
 };
 
@@ -206,6 +208,9 @@ fn map_session_update(update: &SessionUpdate) -> AcpSessionUpdate {
         SessionUpdate::AgentThoughtChunk(chunk) => AcpSessionUpdate::AgentThoughtChunk {
             text: stringify_chunk(chunk),
         },
+        SessionUpdate::Plan(plan) => AcpSessionUpdate::Plan {
+            steps: map_plan_steps(plan),
+        },
         SessionUpdate::ToolCall(tool_call) => AcpSessionUpdate::ToolCall {
             id: tool_call.tool_call_id.to_string(),
             title: tool_call.title.clone(),
@@ -254,13 +259,38 @@ fn map_session_update(update: &SessionUpdate) -> AcpSessionUpdate {
                     .collect(),
             }
         }
-        SessionUpdate::Plan(plan) => AcpSessionUpdate::AgentThoughtChunk {
-            text: format!("{plan:?}"),
+        SessionUpdate::CurrentModeUpdate(update) => AcpSessionUpdate::AgentThoughtChunk {
+            text: format!("mode: {}", update.current_mode_id),
         },
-        SessionUpdate::CurrentModeUpdate(_) => AcpSessionUpdate::Done,
         _ => AcpSessionUpdate::AgentMessageChunk {
             text: format!("{update:?}"),
         },
+    }
+}
+
+fn map_plan_steps(plan: &agent_client_protocol::Plan) -> Vec<AcpPlanStep> {
+    plan.entries
+        .iter()
+        .enumerate()
+        .map(|(index, entry)| AcpPlanStep {
+            id: format!("plan-{}", index + 1),
+            title: entry.content.clone(),
+            status: map_plan_status(&entry.status),
+            kind: Some("plan".to_string()),
+            error: None,
+            started_at: None,
+            finished_at: None,
+            waiting_reason: None,
+        })
+        .collect()
+}
+
+fn map_plan_status(status: &PlanEntryStatus) -> AcpPlanStepStatus {
+    match status {
+        PlanEntryStatus::Pending => AcpPlanStepStatus::Pending,
+        PlanEntryStatus::InProgress => AcpPlanStepStatus::Running,
+        PlanEntryStatus::Completed => AcpPlanStepStatus::Done,
+        _ => AcpPlanStepStatus::Pending,
     }
 }
 
