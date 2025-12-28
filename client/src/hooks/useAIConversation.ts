@@ -12,6 +12,7 @@ import { useAICodeApplication } from "./useAICodeApplication";
 import { useAssistantEventAdapter } from "./useAssistantEventAdapter";
 import { useAIStreaming } from "./useAIStreaming";
 import { useAITimeout } from "./useAITimeout";
+import { usePromptHistory } from "./usePromptHistory";
 
 const STREAM_TIMEOUT_MS = 45000;
 
@@ -55,6 +56,12 @@ export function useAIConversation() {
 
 	const [input, setInput] = useState("");
 	const activeRequestRef = useRef<{ id: string; dispose: () => void } | null>(null);
+
+	const promptHistory = usePromptHistory({
+		messages,
+		currentInput: input,
+		setInput,
+	});
 	const acpSessionIdRef = useRef<string | null>(null);
 	const acpStreamsRef = useRef<Map<string, string>>(new Map());
 	const acpConfigured =
@@ -379,5 +386,6 @@ export function useAIConversation() {
 		handleAsk,
 		handleStop,
 		handleApplyCode,
+		promptHistory,
 	};
 }

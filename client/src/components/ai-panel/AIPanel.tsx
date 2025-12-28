@@ -16,8 +16,16 @@ interface AIPanelProps {
 }
 
 export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(({ hasConfiguredProvider }, ref) => {
-	const { input, setInput, messages, isLoading, handleAsk, handleStop, handleApplyCode } =
-		useAIConversation();
+	const {
+		input,
+		setInput,
+		messages,
+		isLoading,
+		handleAsk,
+		handleStop,
+		handleApplyCode,
+		promptHistory,
+	} = useAIConversation();
 	const availableCommands = useStore((state) => state.ai.availableCommands);
 
 	const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -74,10 +82,55 @@ export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(({ hasConfiguredProv
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+		const textarea = e.currentTarget;
+		const { selectionStart, selectionEnd } = textarea;
+		const isAtStart = selectionStart === 0 && selectionEnd === 0;
+		const isAtEnd = selectionStart === input.length && selectionEnd === input.length;
+		const hasSelection = selectionStart !== selectionEnd;
+
+		// Arrow Up - Navigate to previous prompt
+		if (e.key === "ArrowUp" && !e.shiftKey && !e.altKey && !e.metaKey) {
+			// Only trigger if cursor is at the start (or input is empty)
+			if ((isAtStart || input.length === 0) && !hasSelection) {
+				if (promptHistory.navigateUp()) {
+					e.preventDefault();
+					// Move cursor to end of restored prompt
+					requestAnimationFrame(() => {
+						textarea.selectionStart = textarea.value.length;
+						textarea.selectionEnd = textarea.value.length;
+					});
+				}
+			}
+			return;
+		}
+
+		// Arrow Down - Navigate to next prompt
+		if (e.key === "ArrowDown" && !e.shiftKey && !e.altKey && !e.metaKey) {
+			// Only trigger if cursor is at the end (or input is empty)
+			if ((isAtEnd || input.length === 0) && !hasSelection) {
+				if (promptHistory.navigateDown()) {
+					e.preventDefault();
+					// Move cursor to end
+					requestAnimationFrame(() => {
+						textarea.selectionStart = textarea.value.length;
+						textarea.selectionEnd = textarea.value.length;
+					});
+				}
+			}
+			return;
+		}
+
+		// Enter - Send message
 		if (e.key === "Enter" && !e.shiftKey && !e.altKey && !e.metaKey) {
 			e.preventDefault();
 			handleSend(mode);
+			return;
 		}
+	};
+
+	const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+		setInput(e.target.value);
+		promptHistory.resetNavigation();
 	};
 
 	return (
@@ -136,7 +189,7 @@ export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(({ hasConfiguredProv
 							placeholder={placeholder}
 							aria-label={placeholder}
 							value={input}
-							onChange={(e) => setInput(e.target.value)}
+							onChange={handleInputChange}
 							onKeyDown={handleKeyDown}
 							disabled={isLoading}
 							rows={5}
