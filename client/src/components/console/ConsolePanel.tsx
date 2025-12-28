@@ -3,6 +3,7 @@ import { useConsolePanelState } from "@/hooks/useConsolePanelState";
 import { formatClockTime } from "@/utils/time";
 import type { ConsoleTabId } from "@/types/panels";
 import { formatDateTime } from "@/utils/time";
+import { classNames } from "@/utils/classNames";
 
 interface ConsolePanelProps {
 	view: ConsoleTabId;
@@ -110,7 +111,12 @@ export function ConsolePanel({ view }: ConsolePanelProps): JSX.Element {
 										<div className="history-header">
 											<span className="history-number">#{index + 1}</span>
 											<span className="history-time">{formatDateTime(result.timestamp)}</span>
-											<span className={`history-status ${result.success ? "success" : "error"}`}>
+											<span
+												className={classNames(
+													"history-status",
+													result.success ? "success" : "error",
+												)}
+											>
 												{result.success ? (
 													<IconCheckCircle width={14} height={14} aria-hidden />
 												) : (

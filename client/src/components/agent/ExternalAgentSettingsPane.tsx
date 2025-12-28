@@ -3,6 +3,7 @@ import { ACP_FEATURE_ENABLED } from "@/constants/features";
 import { useStore } from "@/core";
 import { useAsyncState } from "@/hooks/useAsyncState";
 import { getAcpAdminClient } from "@/services/acpAdminClient";
+import { classNames } from "@/utils/classNames";
 
 export function ExternalAgentSettingsPane(): JSX.Element {
 	const activeMode = useStore((state) => state.activeMode);
@@ -113,7 +114,10 @@ export function ExternalAgentSettingsPane(): JSX.Element {
 					</div>
 					<div className="agent-list">
 						{detectedAgents.map((agent) => (
-							<label key={agent.id} className={`agent-row ${!agent.available ? "disabled" : ""}`}>
+							<label
+								key={agent.id}
+								className={classNames("agent-row", !agent.available && "disabled")}
+							>
 								<input
 									type="radio"
 									name="agent-select"

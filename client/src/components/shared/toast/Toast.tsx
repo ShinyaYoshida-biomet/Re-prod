@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { IconXCircle } from "../icons";
+import { classNames } from "@/utils/classNames";
 
 export const ToastSeverity = {
 	INFO: "info",
@@ -47,7 +48,7 @@ export function Toast({ id, message, severity, duration = 4000, onDismiss }: Toa
 
 	return (
 		<div
-			className={`toast toast-${severity} ${isExiting ? "toast-exiting" : ""}`}
+			className={classNames("toast", `toast-${severity}`, isExiting && "toast-exiting")}
 			role="alert"
 			aria-live="polite"
 			aria-atomic="true"

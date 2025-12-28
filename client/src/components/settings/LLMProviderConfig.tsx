@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useSettingsStore } from "../../core/state/slices/settingsStore";
 import { TEST_STATUS_RESET_DELAY } from "../../constants/timeouts";
 import { TestStatus } from "../../constants/ui";
+import { classNames } from "@/utils/classNames";
 import "./LLMProviderConfig.css";
 
 interface Props {
@@ -97,7 +98,7 @@ export const LLMProviderConfig: React.FC<Props> = ({
 
 			<div className="actions-row">
 				<button
-					className={`btn test-button ${testStatus}`}
+					className={classNames("btn", "test-button", testStatus)}
 					onClick={handleTest}
 					disabled={!isConfigured || isEditing || testStatus === TestStatus.TESTING}
 				>

@@ -2,6 +2,7 @@ import type { AIMessage, CodeBlock } from "@/types";
 import { AIPlanCard } from "./AIPlanCard";
 import { CodeBlockWithApply } from "./CodeBlockWithApply";
 import { ToolCallLog } from "./ToolCallLog";
+import { classNames } from "@/utils/classNames";
 
 interface Props {
 	message: AIMessage;
@@ -26,7 +27,7 @@ export function StreamingMessage({ message, onApplyCode }: Props): JSX.Element {
 
 	return (
 		<div
-			className={`message message-${message.role}`}
+			className={classNames("message", `message-${message.role}`)}
 			data-streaming={isStreaming ? "true" : "false"}
 		>
 			<div className="message-header">

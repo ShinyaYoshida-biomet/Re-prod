@@ -1,6 +1,7 @@
 import { useStore } from "@/core";
 import { useSettingsStore } from "@/core/state/slices/settingsStore";
 import { commandRegistry } from "@/core/commands/registry";
+import { classNames } from "@/utils/classNames";
 
 // Removed StatusBarProps interface as it's now empty/unused
 // interface StatusBarProps {
@@ -40,10 +41,16 @@ export function StatusBar(): JSX.Element {
 			<div className="statusbar-right">
 				<button
 					type="button"
-					className={`statusbar-item statusbar-ai ${isActiveProviderConfigured ? "configured" : "warning"}`}
+					className={classNames(
+						"statusbar-item",
+						"statusbar-ai",
+						isActiveProviderConfigured ? "configured" : "warning",
+					)}
 					onClick={handleOpenSettings}
 				>
-					<span className={`statusbar-dot ${isActiveProviderConfigured ? "ok" : "warn"}`} />
+					<span
+						className={classNames("statusbar-dot", isActiveProviderConfigured ? "ok" : "warn")}
+					/>
 					<span>{providerStatusLabel}</span>
 				</button>
 				{execution.isRunning && (
