@@ -20,6 +20,7 @@ tokio-util = { version = "0.7", features = ["compat"] }
 tracing = { workspace = true }
 which = "6.0"
 zip = { version = "2.2", default-features = false, features = ["deflate"] }
+uuid = { workspace = true }
 
 [lints]
 workspace = true

@@ -5,6 +5,7 @@
 pub mod ai;
 pub mod api;
 pub mod config;
+pub mod edit;
 pub mod error;
 pub mod execution_repository;
 pub mod executor;
@@ -19,6 +20,7 @@ pub mod timeline;
 pub mod tools;
 
 // Re-export protocol types (for API boundaries)
+pub use edit::*;
 pub use error::*;
 pub use protocol::*;
 

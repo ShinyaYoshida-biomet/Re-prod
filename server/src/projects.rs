@@ -3,6 +3,7 @@ use crate::handlers::stream_buffer::StreamBuffer;
 use anyhow::{anyhow, Context, Result};
 use reprod_core::{
     ai::tools::{FileSystemTool, RContextTool},
+    edit::EditService,
     execution_repository::{ExecutionRepository, TimelineExecutionRepository},
     fs::FileSystem,
     plot_history::PlotHistoryEntry,
@@ -138,6 +139,7 @@ pub struct ProjectRuntime {
     pub run_events: broadcast::Sender<RuntimeBroadcastEvent>,
     pub file_system: Arc<FileSystem>,
     pub filesystem_tool: Arc<FileSystemTool>,
+    pub edit_service: Arc<EditService>,
     pub r_context_tool: Arc<RContextTool>,
     pub r_executor: Arc<Mutex<RExecutor>>,
     pub plot_history: Arc<Mutex<PlotHistoryManager>>,
@@ -198,6 +200,7 @@ impl ProjectRuntime {
             run_events,
             file_system: Arc::new(FileSystem::new(&filesystem_root)),
             filesystem_tool: Arc::new(FileSystemTool::new(filesystem_root)),
+            edit_service: Arc::new(EditService::new(descriptor.root_path.clone())),
             r_context_tool: Arc::new(RContextTool::new()),
             r_executor: Arc::new(Mutex::new(r_executor)),
             plot_history,

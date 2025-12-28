@@ -8,7 +8,6 @@ use reprod_core::{
     },
     ChatMessage,
 };
-use serde_json::json;
 
 use super::{
     common::{
@@ -123,10 +122,10 @@ pub(super) async fn handle_ai_message(
 
                         let tool_result = execute_ai_tool_call(tool_call, runtime).await;
                         match tool_result {
-                            Ok(content) => {
+                            Ok(result) => {
                                 log.status = ToolLogStatus::Done;
-                                log.output = Some(json!({ "result": content }));
-                                tool_results.push((tool_call.id.clone(), content));
+                                log.output = Some(result.output.clone());
+                                tool_results.push((tool_call.id.clone(), result.summary));
                             }
                             Err(err) => {
                                 log.status = ToolLogStatus::Error;
