@@ -25,6 +25,8 @@ export * from "./ToolResult";
 export * from "./AcpInitializeResponse";
 export * from "./AcpPromptMessage";
 export * from "./AcpPromptRequest";
+export * from "./AcpAvailableCommand";
+export * from "./AcpPlanStep";
 export * from "./AcpSessionUpdate";
 export * from "./AcpSessionUpdateEnvelope";
 export * from "./AcpCancelRequest";

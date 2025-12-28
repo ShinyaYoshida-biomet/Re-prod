@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ACP_FEATURE_ENABLED } from "@/constants/features";
 import { useStore } from "@/core";
+import { extractCodeBlocks } from "@/core/ai/codeBlockUtils";
 import { buildPromptWithContext, createRequestId } from "@/core/ai/promptUtils";
 import { getExternalAgentClient } from "@/services/externalAgentClient";
 import { aiMessages } from "@/services/messageBuilders";
 import { socketService } from "@/services/socket";
-import type { AIMessage, AIMode, ToolCallLog } from "@/types";
+import type { AIMessage, AIMode, PlanStepKind, ToolCallLog } from "@/types";
 import type { AcpPromptMessage, AcpSessionUpdateEnvelope } from "@/types/generated";
 import { useAICodeApplication } from "./useAICodeApplication";
 import { useAIStreaming } from "./useAIStreaming";
@@ -107,6 +108,15 @@ export function useAIConversation() {
 		[],
 	);
 
+	const updateStreamingPlan = useStore((state) => state.updateStreamingPlan);
+	const getStreamingContent = useCallback((streamingId: string): string => {
+		const state = useStore.getState();
+		const msg = state.ai.messages.find(
+			(m) => m.streamingId === streamingId || m.id === streamingId,
+		);
+		return msg?.content ?? "";
+	}, []);
+
 	const handleSessionUpdate = useCallback(
 		(payload: AcpSessionUpdateEnvelope) => {
 			const streamingId =
@@ -119,6 +129,36 @@ export function useAIConversation() {
 				})();
 
 			const update = payload.update;
+
+			// Handle Done - complete the streaming message with code block extraction
+			if (update === "Done") {
+				const content = getStreamingContent(streamingId);
+				const codeBlocks = extractCodeBlocks(content);
+				completeStreamingMessage(streamingId, undefined, { codeBlocks });
+				setAILoading(false);
+				acpStreamsRef.current.delete(payload.session_id);
+				return;
+			}
+
+			// Handle Plan updates
+			if (typeof update === "object" && update !== null && "Plan" in update) {
+				const plan = update.Plan;
+				const validKinds: PlanStepKind[] = ["todo", "peek", "exec", "plan"];
+				updateStreamingPlan(
+					streamingId,
+					plan.steps.map((step) => ({
+						id: step.id,
+						title: step.title,
+						status: step.status.toLowerCase() as "pending" | "running" | "done" | "error",
+						kind:
+							step.kind && validKinds.includes(step.kind as PlanStepKind)
+								? (step.kind as PlanStepKind)
+								: undefined,
+						error: step.error ?? undefined,
+					})),
+				);
+				return;
+			}
 
 			// Handle ToolCall
 			if (typeof update === "object" && update !== null && "ToolCall" in update) {
@@ -150,7 +190,16 @@ export function useAIConversation() {
 			if (!text) return;
 			appendStreamingChunk(streamingId, text);
 		},
-		[appendStreamingChunk, extractAcpText, recordToolEvent, startStreamingMessage],
+		[
+			appendStreamingChunk,
+			completeStreamingMessage,
+			extractAcpText,
+			getStreamingContent,
+			recordToolEvent,
+			setAILoading,
+			startStreamingMessage,
+			updateStreamingPlan,
+		],
 	);
 
 	useEffect(() => {
@@ -260,13 +309,15 @@ export function useAIConversation() {
 						role: message.role,
 						content: message.content,
 					}));
+					// Note: We do NOT call completeStreamingMessage here.
+					// The streaming completion is triggered by the Done signal
+					// received in handleSessionUpdate when the agent finishes.
 					await externalAgentClient.prompt(sessionId, payload);
-					completeStreamingMessage(requestId);
 				} catch (error) {
 					const reason = describeError(error);
 					completeStreamingMessage(requestId, `ACP request failed: ${reason}`);
-				} finally {
 					setAILoading(false);
+				} finally {
 					clearActiveRequest();
 				}
 				return;

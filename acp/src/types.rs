@@ -39,6 +39,18 @@ pub struct AcpAvailableCommand {
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "../../client/src/types/generated/")]
+pub struct AcpPlanStep {
+    pub id: String,
+    pub title: String,
+    pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
 pub enum AcpSessionUpdate {
     UserMessageChunk { text: String },
     AgentMessageChunk { text: String },
@@ -54,6 +66,9 @@ pub enum AcpSessionUpdate {
         id: String,
         status: Option<String>,
         content: Option<String>,
+    },
+    Plan {
+        steps: Vec<AcpPlanStep>,
     },
     AvailableCommands {
         commands: Vec<AcpAvailableCommand>,
@@ -147,6 +162,7 @@ mod tests {
         AcpPromptRequest::export().unwrap();
         AcpSessionUpdateEnvelope::export().unwrap();
         AcpAvailableCommand::export().unwrap();
+        AcpPlanStep::export().unwrap();
         AcpSessionUpdate::export().unwrap();
         AcpCancelRequest::export().unwrap();
         AcpPermissionOption::export().unwrap();
