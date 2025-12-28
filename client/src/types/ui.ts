@@ -174,6 +174,11 @@ export interface ToolCallLog {
 	locations?: string[];
 }
 
+export interface AvailableCommand {
+	name: string;
+	description: string;
+}
+
 // UI State Types
 export interface LayoutState {
 	editorWidth: number;
@@ -200,6 +205,7 @@ export interface AIState {
 	messages: AIMessage[];
 	isLoading: boolean;
 	suggestions: string[];
+	availableCommands: AvailableCommand[];
 }
 
 export interface AIMessage {

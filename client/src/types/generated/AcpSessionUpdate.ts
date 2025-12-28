@@ -14,8 +14,20 @@ export type AcpSessionUpdate =
 				kind: string;
 				status: string;
 				locations: Array<string>;
+				input: unknown;
+				output: unknown;
+				error: string | null;
 			};
 	  }
-	| { ToolCallUpdate: { id: string; status: string | null; content: string | null } }
+	| {
+			ToolCallUpdate: {
+				id: string;
+				status: string | null;
+				content: string | null;
+				input: unknown;
+				output: unknown;
+				error: string | null;
+			};
+	  }
 	| { AvailableCommands: { commands: Array<AcpAvailableCommand> } }
 	| "Done";

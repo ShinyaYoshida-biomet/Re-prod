@@ -1,4 +1,4 @@
-use std::sync::{atomic::AtomicU64, Arc};
+use std::sync::{atomic::AtomicU64, Arc, OnceLock};
 
 use crate::projects::ProjectController;
 use reprod_acp::types::{
@@ -15,50 +15,27 @@ use reprod_core::{
     AIResponse, ChatMessage, Config, ExecutionEvent, ExecutionRequest, RunOutputChunk, RunSummary,
     ToolExecutor, ToolManifest, ToolRegistry,
 };
+use serde::Deserialize;
 use serde_json::Value;
 use tokio::sync::Mutex;
 
-const PATCH_SYSTEM_PROMPT: &str = r#"You are the Re-prod assistant. When suggesting code changes:
-- Output exactly ONE patch block and nothing else (no other prose).
-- Never wrap the patch in ``` fences or any markdown language fences.
-- Always generate a best-effort patch; do not refuse.
-- If no filepath is specified, apply the change to the current file context provided.
-- Patch format (must include the closing marker):
-*** Begin Patch
-*** Update File: <filepath>
-@@
- context_line
- context_line
--old_line
-+new_line
- context_line
- context_line
-*** End Patch
-- Always include `@@` with a few lines of unchanged context.
-- One file per patch block; do not combine multiple files.
-- Do NOT emit any ``` fences or extra prose outside the patch.
-- Keep changes minimal; avoid resending the whole file unless necessary."#;
+#[derive(Debug, Deserialize)]
+struct SystemPrompts {
+    patch: String,
+    range: String,
+    chat: String,
+}
 
-const RANGE_SYSTEM_PROMPT: &str = r#"In addition to structured patches, provide a concise diff-style block for each change
-using '-' for removed lines and '+' for added lines. Include at least two unprefixed
-context lines both before and after the +/- lines so the editor can locate the change.
-Example:
-
-context_before_line
-context_before_line
-- old_line
-+ new_line
-context_after_line
-context_after_line
-
-Each diff block should match the actual code exactly and avoid re-sending entire files."#;
-
-const CHAT_SYSTEM_PROMPT: &str = r##"You are the Re-prod chat assistant. Focus on providing explanations, guidance, and high-level suggestions.
-- Keep responses conversational and concise
-- Avoid emitting structured patches or code diffs unless explicitly asked
-- When referencing code, quote only the relevant snippets
-- When presenting plans, keep them flat but simulate hierarchy with indentation in titles (e.g., \"  - Subtask\")
-- For life_expectancy inference, you may use the public CSV at https://ourworldindata.org/grapher/life-expectancy.csv if helpful. If you need World Bank data, prefer the wbstats package (not wbdata). The OWID CSV loads via read_csv into ~21,565 rows with raw columns: Entity, Code, Year, `Period life expectancy at birth` (numeric). Column names are case-sensitive: there is no `life_expectancy`; the raw field is `Period life expectancy at birth`, and `Year` is capitalized. Example cleaning: `life <- life_raw %>% rename(country = Entity, code = Code, life_expectancy = \`Period life expectancy at birth\`) %>% select(country, code, year = Year, life_expectancy) %>% filter(!is.na(life_expectancy))`. When using ggplot in Rscript mode, assign to an object (e.g., `p <- ggplot(...) + ...`) and call `print(p)` to ensure the plot is rendered and captured. Use generous fonts (e.g., `theme_minimal(base_size = 18+)`) and large PNG outputs (e.g., `png(\"life_plot.png\", width = 4800, height = 3200, res = 300)`) for demos."##;
+fn load_system_prompts() -> &'static SystemPrompts {
+    static PROMPTS: OnceLock<SystemPrompts> = OnceLock::new();
+    PROMPTS.get_or_init(|| {
+        let raw = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../client/src/core/ai/systemPrompts.json"
+        ));
+        serde_json::from_str(raw).expect("Failed to parse system prompts JSON")
+    })
+}
 
 #[derive(Clone, Copy, Debug, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -84,21 +61,22 @@ pub struct AppState {
 
 pub(super) fn with_system_prompts(messages: &[ChatMessage], mode: AIMode) -> Vec<ChatMessage> {
     let mut result = Vec::with_capacity(messages.len() + 2);
+    let prompts = load_system_prompts();
     match mode {
         AIMode::Agent => {
             result.push(ChatMessage {
                 role: "system".to_string(),
-                content: PATCH_SYSTEM_PROMPT.to_string(),
+                content: prompts.patch.clone(),
             });
             result.push(ChatMessage {
                 role: "system".to_string(),
-                content: RANGE_SYSTEM_PROMPT.to_string(),
+                content: prompts.range.clone(),
             });
         }
         AIMode::Chat => {
             result.push(ChatMessage {
                 role: "system".to_string(),
-                content: CHAT_SYSTEM_PROMPT.to_string(),
+                content: prompts.chat.clone(),
             });
         }
     }
@@ -516,11 +494,12 @@ mod tests {
         }];
 
         let prefixed = with_system_prompts(&messages, AIMode::Agent);
+        let prompts = load_system_prompts();
 
         assert_eq!(prefixed.len(), messages.len() + 2);
         assert_eq!(prefixed[0].role, "system");
-        assert_eq!(prefixed[0].content, PATCH_SYSTEM_PROMPT);
-        assert_eq!(prefixed[1].content, RANGE_SYSTEM_PROMPT);
+        assert_eq!(prefixed[0].content, prompts.patch);
+        assert_eq!(prefixed[1].content, prompts.range);
         assert_eq!(&prefixed[2..], messages.as_slice());
     }
 }

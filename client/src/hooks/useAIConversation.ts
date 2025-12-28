@@ -7,7 +7,7 @@ import { getAcpSystemPrompts } from "@/core/ai/systemPrompts";
 import { getExternalAgentClient } from "@/services/externalAgentClient";
 import { aiMessages } from "@/services/messageBuilders";
 import { socketService } from "@/services/socket";
-import type { AIMessage, AIMode, PlanStep, ToolCallLog } from "@/types";
+import type { AIMessage, AIMode, AvailableCommand, PlanStep, ToolCallLog } from "@/types";
 import type { AcpPromptMessage, AcpSessionUpdateEnvelope } from "@/types/generated";
 import type { AcpPlanStep } from "@/types/generated/AcpPlanStep";
 import { useAICodeApplication } from "./useAICodeApplication";
@@ -36,6 +36,14 @@ const mapAcpStatus = (acpStatus: string): ToolCallLog["status"] => {
 	return "pending";
 };
 
+const toToolPayload = (value: unknown): Record<string, unknown> | undefined => {
+	if (value === null || value === undefined) return undefined;
+	if (typeof value === "object" && !Array.isArray(value)) {
+		return value as Record<string, unknown>;
+	}
+	return { value };
+};
+
 export function useAIConversation() {
 	const messages = useStore((state) => state.ai.messages);
 	const isLoading = useStore((state) => state.ai.isLoading);
@@ -43,6 +51,7 @@ export function useAIConversation() {
 	const activeAgent = useStore((state) => state.activeAgent);
 	const appendStreamingChunk = useStore((state) => state.appendStreamingChunk);
 	const updateStreamingPlan = useStore((state) => state.updateStreamingPlan);
+	const setAvailableCommands = useStore((state) => state.setAvailableCommands);
 
 	const addAIMessage = useStore((state) => state.addAIMessage);
 	const startStreamingMessage = useStore((state) => state.startStreamingMessage);
@@ -163,15 +172,30 @@ export function useAIConversation() {
 				return;
 			}
 
+			if (typeof update === "object" && update !== null && "AvailableCommands" in update) {
+				const commands: AvailableCommand[] = update.AvailableCommands.commands.map((command) => ({
+					name: command.name,
+					description: command.description,
+				}));
+				setAvailableCommands(commands);
+				return;
+			}
+
 			// Handle ToolCall
 			if (typeof update === "object" && update !== null && "ToolCall" in update) {
 				const toolCall = update.ToolCall;
+				const status = mapAcpStatus(toolCall.status);
 				recordToolEvent(streamingId, {
 					id: toolCall.id,
 					name: toolCall.title,
-					status: mapAcpStatus(toolCall.status),
+					status,
 					kind: toolCall.kind,
 					locations: toolCall.locations,
+					input: toToolPayload(toolCall.input),
+					output: toToolPayload(toolCall.output),
+					error: toolCall.error ?? undefined,
+					startedAt: status === "running" ? Date.now() : undefined,
+					finishedAt: status === "done" || status === "error" ? Date.now() : undefined,
 				});
 				return;
 			}
@@ -179,11 +203,17 @@ export function useAIConversation() {
 			// Handle ToolCallUpdate
 			if (typeof update === "object" && update !== null && "ToolCallUpdate" in update) {
 				const toolUpdate = update.ToolCallUpdate;
+				const status = toolUpdate.status ? mapAcpStatus(toolUpdate.status) : "running";
 				recordToolEvent(streamingId, {
 					id: toolUpdate.id,
 					name: "", // Will be merged with existing
-					status: toolUpdate.status ? mapAcpStatus(toolUpdate.status) : "running",
-					output: toolUpdate.content ? { text: toolUpdate.content } : undefined,
+					status,
+					output: toToolPayload(
+						toolUpdate.output ?? (toolUpdate.content ? { text: toolUpdate.content } : undefined),
+					),
+					input: toToolPayload(toolUpdate.input),
+					error: toolUpdate.error ?? undefined,
+					finishedAt: status === "done" || status === "error" ? Date.now() : undefined,
 				});
 				return;
 			}
@@ -199,6 +229,7 @@ export function useAIConversation() {
 			finalizeAcpStream,
 			mapAcpPlanSteps,
 			recordToolEvent,
+			setAvailableCommands,
 			startStreamingMessage,
 			updateStreamingPlan,
 		],
@@ -218,8 +249,9 @@ export function useAIConversation() {
 		if (!acpConfigured) {
 			acpSessionIdRef.current = null;
 			acpStreamsRef.current.clear();
+			setAvailableCommands([]);
 		}
-	}, [acpConfigured]);
+	}, [acpConfigured, setAvailableCommands]);
 
 	const ensureAcpSession = useCallback(async (): Promise<string | null> => {
 		if (!acpConfigured || !externalAgentClient) return null;

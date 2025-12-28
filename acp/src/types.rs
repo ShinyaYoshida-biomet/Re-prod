@@ -78,11 +78,27 @@ pub enum AcpSessionUpdate {
         kind: String,
         status: String,
         locations: Vec<String>,
+        #[ts(type = "unknown")]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        input: Option<serde_json::Value>,
+        #[ts(type = "unknown")]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        output: Option<serde_json::Value>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        error: Option<String>,
     },
     ToolCallUpdate {
         id: String,
         status: Option<String>,
         content: Option<String>,
+        #[ts(type = "unknown")]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        input: Option<serde_json::Value>,
+        #[ts(type = "unknown")]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        output: Option<serde_json::Value>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        error: Option<String>,
     },
     AvailableCommands {
         commands: Vec<AcpAvailableCommand>,
