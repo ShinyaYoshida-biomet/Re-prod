@@ -51,23 +51,6 @@ pub(super) async fn execute_ai_tool_call(
     runtime: &Arc<ProjectRuntime>,
 ) -> Result<ToolCallOutcome, String> {
     match tool_call.name.as_str() {
-        "read_file" => {
-            let request: ReadFileRequest = serde_json::from_value(tool_call.input.clone())
-                .map_err(|e| format!("Invalid request: {}", e))?;
-
-            let result = runtime
-                .edit_service
-                .read_text_file(&request.path)
-                .await
-                .map_err(|e| e.to_string())?;
-
-            let output = serde_json::to_value(result)
-                .map_err(|e| format!("Failed to serialize read result: {}", e))?;
-            Ok(ToolCallOutcome {
-                output: output.clone(),
-                summary: output.to_string(),
-            })
-        }
         "read_text_file" => {
             let request: ReadTextFileRequest = serde_json::from_value(tool_call.input.clone())
                 .map_err(|e| format!("Invalid request: {}", e))?;
@@ -83,34 +66,6 @@ pub(super) async fn execute_ai_tool_call(
             Ok(ToolCallOutcome {
                 output: output.clone(),
                 summary: output.to_string(),
-            })
-        }
-        "write_file" => {
-            let request: WriteFileRequest = serde_json::from_value(tool_call.input.clone())
-                .map_err(|e| format!("Invalid request: {}", e))?;
-
-            let edit_request = EditTextFileRequest {
-                path: request.path,
-                operation: EditOperation::Replace,
-                expected_sha256: None,
-                new_text: Some(request.content),
-                edits: None,
-            };
-            let result = runtime
-                .edit_service
-                .edit_text_file(edit_request)
-                .await
-                .map_err(|e| e.to_string())?;
-            let summary = if result.unified_diff.is_empty() {
-                serde_json::to_string(&result).unwrap_or_default()
-            } else {
-                result.unified_diff.clone()
-            };
-            let output = serde_json::to_value(result)
-                .map_err(|e| format!("Failed to serialize edit result: {}", e))?;
-            Ok(ToolCallOutcome {
-                output,
-                summary,
             })
         }
         "write_text_file" => {
