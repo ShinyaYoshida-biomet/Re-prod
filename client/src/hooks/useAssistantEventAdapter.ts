@@ -1,10 +1,9 @@
 import { useCallback } from "react";
 import { useStore } from "@/core";
 import { extractCodeBlocks } from "@/core/ai/codeBlockUtils";
-import type { AvailableCommand, PlanStep, ToolCallLog } from "@/types";
+import type { PlanStep, ToolCallLog } from "@/types";
 import type { AcpPlanStep } from "@/types/generated/AcpPlanStep";
 import type { AcpSessionUpdate } from "@/types/generated/AcpSessionUpdate";
-import type { AcpAvailableCommand } from "@/types/generated/AcpAvailableCommand";
 
 type AcpToolCall = Extract<AcpSessionUpdate, { ToolCall: unknown }>["ToolCall"];
 type AcpToolCallUpdate = Extract<AcpSessionUpdate, { ToolCallUpdate: unknown }>["ToolCallUpdate"];
@@ -32,7 +31,6 @@ export const useAssistantEventAdapter = () => {
 	const recordToolEvent = useStore((state) => state.recordToolEvent);
 	const completeStreamingMessage = useStore((state) => state.completeStreamingMessage);
 	const setAILoading = useStore((state) => state.setAILoading);
-	const setAvailableCommands = useStore((state) => state.setAvailableCommands);
 
 	const appendChunk = useCallback(
 		(streamingId: string, chunk: string) => {
@@ -111,17 +109,6 @@ export const useAssistantEventAdapter = () => {
 		};
 	}, []);
 
-	const updateAvailableCommands = useCallback(
-		(commands: AcpAvailableCommand[]) => {
-			const mapped: AvailableCommand[] = commands.map((command) => ({
-				name: command.name,
-				description: command.description,
-			}));
-			setAvailableCommands(mapped);
-		},
-		[setAvailableCommands],
-	);
-
 	return {
 		appendChunk,
 		updatePlan,
@@ -130,6 +117,5 @@ export const useAssistantEventAdapter = () => {
 		mapPlanSteps,
 		mapToolCall,
 		mapToolCallUpdate,
-		updateAvailableCommands,
 	};
 };

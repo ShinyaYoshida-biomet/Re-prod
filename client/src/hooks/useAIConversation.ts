@@ -50,7 +50,6 @@ export function useAIConversation() {
 		mapToolCall,
 		mapToolCallUpdate,
 		recordTool,
-		updateAvailableCommands,
 		updatePlan,
 	} = useAssistantEventAdapter();
 
@@ -152,11 +151,6 @@ export function useAIConversation() {
 				return;
 			}
 
-			if (typeof update === "object" && update !== null && "AvailableCommands" in update) {
-				updateAvailableCommands(update.AvailableCommands.commands);
-				return;
-			}
-
 			// Handle ToolCall
 			if (typeof update === "object" && update !== null && "ToolCall" in update) {
 				recordTool(streamingId, mapToolCall(update.ToolCall));
@@ -183,7 +177,6 @@ export function useAIConversation() {
 			mapToolCallUpdate,
 			recordTool,
 			startStreamingMessage,
-			updateAvailableCommands,
 			updatePlan,
 		],
 	);
@@ -202,9 +195,8 @@ export function useAIConversation() {
 		if (!acpConfigured) {
 			acpSessionIdRef.current = null;
 			acpStreamsRef.current.clear();
-			updateAvailableCommands([]);
 		}
-	}, [acpConfigured, updateAvailableCommands]);
+	}, [acpConfigured]);
 
 	const ensureAcpSession = useCallback(async (): Promise<string | null> => {
 		if (!acpConfigured || !externalAgentClient) return null;

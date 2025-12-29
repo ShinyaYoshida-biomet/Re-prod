@@ -1,11 +1,4 @@
-import type {
-	AIMessage,
-	AIMode,
-	AvailableCommand,
-	CodeBlock,
-	PlanStep,
-	ToolCallLog,
-} from "@/types";
+import type { AIMessage, AIMode, CodeBlock, PlanStep, ToolCallLog } from "@/types";
 import type { StateCreator } from "zustand";
 
 type StreamingExtras = {
@@ -71,7 +64,6 @@ export interface AIState {
 		messages: AIMessage[];
 		isLoading: boolean;
 		suggestions: string[];
-		availableCommands: AvailableCommand[];
 		patchMatchFailures: number;
 		patchMatchStatus: PatchMatchStatus;
 	};
@@ -82,7 +74,6 @@ export interface AIState {
 	clearAIMessages: () => void;
 	setAIMessages: (messages: AIMessage[]) => void;
 	setAISuggestions: (suggestions: string[]) => void;
-	setAvailableCommands: (commands: AvailableCommand[]) => void;
 	recordPatchMatchFailure: (reason: string, id: string) => void;
 	recordPatchMatchSuccess: () => void;
 	startStreamingMessage: (streamingId: string, mode?: AIMode) => void;
@@ -101,7 +92,6 @@ export const createAISlice: StateCreator<AIState> = (set) => ({
 		messages: [],
 		isLoading: false,
 		suggestions: [],
-		availableCommands: [],
 		patchMatchFailures: 0,
 		patchMatchStatus: { lastFailureId: null, lastFailureReason: null },
 	},
@@ -126,10 +116,6 @@ export const createAISlice: StateCreator<AIState> = (set) => ({
 	setAISuggestions: (suggestions) =>
 		set((state) => ({
 			ai: { ...state.ai, suggestions },
-		})),
-	setAvailableCommands: (commands) =>
-		set((state) => ({
-			ai: { ...state.ai, availableCommands: commands },
 		})),
 	recordPatchMatchFailure: (reason, id) =>
 		set((state) => ({
