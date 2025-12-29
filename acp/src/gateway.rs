@@ -15,7 +15,7 @@ use crate::{
     session::AcpSessionManager,
     types::{
         AcpInitializeResponse, AcpPermissionDecision, AcpPermissionRequestPayload, AcpPlanStep,
-        AcpPlanStepStatus, AcpSessionUpdate, AcpSessionUpdate::Done, AcpSessionUpdateEnvelope,
+        AcpPlanStepStatus, AcpSessionUpdate, AcpSessionUpdateEnvelope,
     },
 };
 
