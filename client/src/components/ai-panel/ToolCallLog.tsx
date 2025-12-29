@@ -1,5 +1,6 @@
 import type { ToolCallLog as ToolCallLogEntry } from "@/types";
-import { ToolCallDiffPreview } from "./ToolCallDiffPreview";
+import { extractDiffFromToolOutput } from "@/core/ai/diffArtifacts";
+import { DiffPreview } from "./DiffPreview";
 
 interface Props {
 	logs?: ToolCallLogEntry[];
@@ -31,37 +32,16 @@ export function ToolCallLog({ logs }: Props): JSX.Element | null {
 					</summary>
 					{log.output &&
 						(() => {
-							const candidate =
-								typeof log.output === "object" &&
-								log.output !== null &&
-								"result" in log.output &&
-								typeof log.output.result === "object" &&
-								log.output.result !== null
-									? (log.output.result as Record<string, unknown>)
-									: log.output;
-
-							if (
-								typeof candidate === "object" &&
-								candidate !== null &&
-								"old_text" in candidate &&
-								"new_text" in candidate
-							) {
-								const oldText = String((candidate as { old_text?: unknown }).old_text ?? "");
-								const newText = String((candidate as { new_text?: unknown }).new_text ?? "");
-								const unifiedDiff = (candidate as { unified_diff?: unknown }).unified_diff;
-								const status = (candidate as { status?: unknown }).status;
+							const diff = extractDiffFromToolOutput(log.output);
+							if (diff) {
 								return (
 									<>
-										{status === "conflict" && (
+										{diff.status === "conflict" && (
 											<pre className="ai-tool-call__error">
 												Conflict detected. Reload the file and retry the edit.
 											</pre>
 										)}
-										<ToolCallDiffPreview
-											oldText={oldText}
-											newText={newText}
-											unifiedDiff={typeof unifiedDiff === "string" ? unifiedDiff : undefined}
-										/>
+										<DiffPreview diff={diff} />
 									</>
 								);
 							}
