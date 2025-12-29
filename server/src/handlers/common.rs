@@ -1,7 +1,7 @@
 use std::sync::{atomic::AtomicU64, Arc, OnceLock};
 
 use crate::projects::ProjectController;
-use reprod_acp::types::{
+use reprod_core::acp::types::{
     AcpPermissionDecision, AcpPermissionRequestPayload, AcpPromptMessage, AcpSessionUpdate,
 };
 use reprod_core::{

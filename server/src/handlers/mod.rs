@@ -7,7 +7,7 @@ use axum::{
     response::Response,
 };
 use project_requests::handle_project_request;
-use reprod_acp::types::{AcpPermissionRequestPayload, AcpSessionUpdateEnvelope};
+use reprod_core::acp::types::{AcpPermissionRequestPayload, AcpSessionUpdateEnvelope};
 use reprod_core::{
     executor::ensure_blocks, fs::FileSystemEvent, project::ProjectRecord, ArtifactInfo,
     ExecutionEvent, ExecutionRequest, ExecutionResult, RunOutputChunk, RunStatus, RunStream,

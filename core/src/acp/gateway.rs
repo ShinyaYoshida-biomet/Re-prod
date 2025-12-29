@@ -9,7 +9,7 @@ use serde_json::Value;
 use tokio::sync::{broadcast, mpsc::UnboundedReceiver};
 use tracing::{info, warn};
 
-use crate::{
+use super::{
     connection::{AcpConnection, PermissionDecisionMessage},
     process::{spawn_agent, AcpChild, ProcessConfig, SpawnedPipes},
     session::AcpSessionManager,
@@ -276,7 +276,7 @@ fn map_session_update(update: &SessionUpdate) -> AcpSessionUpdate {
                 commands: commands_update
                     .available_commands
                     .iter()
-                    .map(|cmd| crate::types::AcpAvailableCommand {
+                    .map(|cmd| super::types::AcpAvailableCommand {
                         name: cmd.name.clone(),
                         description: cmd.description.clone(),
                     })

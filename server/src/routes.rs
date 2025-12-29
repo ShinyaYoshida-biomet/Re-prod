@@ -5,7 +5,7 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use reprod_acp::{
+use reprod_core::acp::{
     config::{load_acp_config, normalize_active_mode, save_acp_config, ACP_MODE_API},
     detection::{detect_agents, resolve_active_agent_command},
     types::{AcpAgentConfig, AcpDetectedAgent},

@@ -6,9 +6,9 @@ use reqwest::Client;
 use serde::Deserialize;
 use tracing::{info, warn};
 
-use reprod_core::config::{acp_auto_download_enabled, app_config_dir};
+use crate::config::{acp_auto_download_enabled, app_config_dir};
 
-use crate::agents::{AgentDescriptor, AgentDownload, GithubReleaseSpec};
+use super::agents::{AgentDescriptor, AgentDownload, GithubReleaseSpec};
 
 const ACP_AGENT_DIR: &str = "acp_agents";
 const USER_AGENT: &str = "reprod-acp";

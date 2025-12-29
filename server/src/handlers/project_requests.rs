@@ -8,7 +8,7 @@ use super::common::{error_response, WSRequest, WSResponse};
 use super::runtime_fs::restart_fs_watcher;
 use super::{build_project_opened_response, send_responses, AppState};
 use crate::projects::{ProjectRuntime, RuntimeBroadcastEvent};
-use reprod_acp::types::{AcpPermissionRequestPayload, AcpSessionUpdateEnvelope};
+use reprod_core::acp::types::{AcpPermissionRequestPayload, AcpSessionUpdateEnvelope};
 use reprod_core::fs::FileSystemEvent;
 use tokio::sync::mpsc as tokio_mpsc;
 

@@ -1,6 +1,5 @@
 [workspace]
 members = [
-    "acp",
     "core",
     "desktop",
     "server",
@@ -17,7 +16,6 @@ rust-version = "1.77.2"
 [workspace.dependencies]
 # Internal crates
 reprod-core = { path = "core" }
-reprod-acp = { path = "acp" }
 
 # Async runtime
 tokio = { version = "1.42", features = ["full"] }

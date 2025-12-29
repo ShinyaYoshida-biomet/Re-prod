@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[ts(export, export_to = "../../../client/src/types/generated/")]
 pub struct AcpInitializeResponse {
     #[ts(type = "string")]
     pub workspace_root: std::path::PathBuf,
@@ -10,28 +10,28 @@ pub struct AcpInitializeResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[ts(export, export_to = "../../../client/src/types/generated/")]
 pub struct AcpPromptMessage {
     pub role: String,
     pub content: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[ts(export, export_to = "../../../client/src/types/generated/")]
 pub struct AcpPromptRequest {
     pub session_id: String,
     pub messages: Vec<AcpPromptMessage>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[ts(export, export_to = "../../../client/src/types/generated/")]
 pub struct AcpSessionUpdateEnvelope {
     pub session_id: String,
     pub update: AcpSessionUpdate,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[ts(export, export_to = "../../../client/src/types/generated/")]
 pub struct AcpAvailableCommand {
     pub name: String,
     pub description: String,
@@ -39,7 +39,7 @@ pub struct AcpAvailableCommand {
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "lowercase")]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[ts(export, export_to = "../../../client/src/types/generated/")]
 pub enum AcpPlanStepStatus {
     Pending,
     Running,
@@ -48,7 +48,7 @@ pub enum AcpPlanStepStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[ts(export, export_to = "../../../client/src/types/generated/")]
 pub struct AcpPlanStep {
     pub id: String,
     pub title: String,
@@ -66,7 +66,7 @@ pub struct AcpPlanStep {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[ts(export, export_to = "../../../client/src/types/generated/")]
 pub enum AcpSessionUpdate {
     UserMessageChunk { text: String },
     AgentMessageChunk { text: String },
@@ -107,13 +107,13 @@ pub enum AcpSessionUpdate {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[ts(export, export_to = "../../../client/src/types/generated/")]
 pub struct AcpCancelRequest {
     pub session_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[ts(export, export_to = "../../../client/src/types/generated/")]
 pub struct AcpPermissionOption {
     pub option_id: String,
     pub name: String,
@@ -121,7 +121,7 @@ pub struct AcpPermissionOption {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[ts(export, export_to = "../../../client/src/types/generated/")]
 pub struct AcpPermissionRequestPayload {
     pub request_id: String,
     pub session_id: String,
@@ -135,7 +135,7 @@ pub struct AcpPermissionRequestPayload {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[ts(export, export_to = "../../../client/src/types/generated/")]
 pub enum AcpPermissionDecisionOutcome {
     AllowOnce,
     AllowAlways,
@@ -145,7 +145,7 @@ pub enum AcpPermissionDecisionOutcome {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[ts(export, export_to = "../../../client/src/types/generated/")]
 pub struct AcpPermissionDecision {
     pub request_id: String,
     pub outcome: AcpPermissionDecisionOutcome,
@@ -156,7 +156,7 @@ pub struct AcpPermissionDecision {
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "lowercase")]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[ts(export, export_to = "../../../client/src/types/generated/")]
 pub enum AcpPermissionDecisionScope {
     None,
     Session,
@@ -164,7 +164,7 @@ pub enum AcpPermissionDecisionScope {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[ts(export, export_to = "../../../client/src/types/generated/")]
 pub struct AcpDetectedAgent {
     pub id: String,
     pub name: String,
@@ -174,7 +174,7 @@ pub struct AcpDetectedAgent {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[ts(export, export_to = "../../../client/src/types/generated/")]
 pub struct AcpAgentConfig {
     pub active_mode: String,
     pub active_agent: Option<String>,

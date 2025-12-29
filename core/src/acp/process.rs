@@ -7,7 +7,7 @@ use tokio::task::JoinHandle;
 use tokio::time::sleep;
 use tracing::{debug, error, info};
 
-use crate::detection::find_agent_binary;
+use super::detection::find_agent_binary;
 
 pub struct ProcessConfig {
     pub command: String,

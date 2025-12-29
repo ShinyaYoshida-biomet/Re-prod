@@ -2,6 +2,7 @@
 // and panicking is the correct behavior
 #![allow(clippy::expect_used)]
 
+pub mod acp;
 pub mod ai;
 pub mod api;
 pub mod config;

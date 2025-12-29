@@ -13,13 +13,13 @@ use agent_client_protocol::{
 };
 use anyhow::{anyhow, bail, Context, Result};
 use dunce::canonicalize;
-use reprod_core::config::app_config_dir;
+use crate::config::app_config_dir;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc::UnboundedSender, oneshot, Mutex};
 use tokio::time::timeout;
 use tracing::{error, warn};
 
-use crate::{
+use super::{
     connection::map_permission_request,
     types::{AcpPermissionDecisionScope, AcpPermissionRequestPayload},
 };
@@ -404,7 +404,7 @@ mod tests {
         PermissionOption, PermissionOptionId, PermissionOptionKind, SelectedPermissionOutcome,
         SessionId, ToolCallId, ToolCallUpdate, ToolCallUpdateFields,
     };
-    use reprod_core::config::APP_DIR_ENV;
+    use crate::config::APP_DIR_ENV;
     use std::collections::HashMap;
     use std::env;
     use std::sync::{Arc, Mutex as StdMutex};

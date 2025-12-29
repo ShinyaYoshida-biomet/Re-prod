@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use reprod_acp::runtime::AcpRuntime;
-use reprod_acp::types::{
+use reprod_core::acp::runtime::AcpRuntime;
+use reprod_core::acp::types::{
 	AcpPermissionDecision, AcpPermissionRequestPayload, AcpSessionUpdateEnvelope,
 };
 use tokio::sync::{broadcast, Mutex};

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, bail, Result};
-use reprod_acp::{
+use reprod_core::acp::{
     build_process_config,
     config::{is_external_mode, load_acp_config},
     detection::{detect_agents, resolve_active_agent_command},

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use super::common::{error_response, single_response, with_system_prompts, AIMode, WSResponse};
 use crate::projects::ProjectRuntime;
-use reprod_acp::types::{AcpPermissionDecision, AcpPromptMessage};
+use reprod_core::acp::types::{AcpPermissionDecision, AcpPromptMessage};
 use reprod_core::ChatMessage;
 
 pub async fn handle_acp_session_create(runtime: &Arc<ProjectRuntime>) -> Vec<WSResponse> {

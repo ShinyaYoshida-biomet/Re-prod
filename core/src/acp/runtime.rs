@@ -1,7 +1,7 @@
 use anyhow::Result;
 use tokio::sync::broadcast;
 
-use crate::types::{AcpPermissionDecision, AcpPermissionRequestPayload, AcpSessionUpdateEnvelope};
+use super::types::{AcpPermissionDecision, AcpPermissionRequestPayload, AcpSessionUpdateEnvelope};
 
 #[async_trait::async_trait]
 pub trait AcpRuntime: Send + Sync {

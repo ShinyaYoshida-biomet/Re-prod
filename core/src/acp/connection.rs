@@ -20,7 +20,7 @@ use tokio::{
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 use tracing::error;
 
-use crate::{
+use super::{
     client::ReprodAcpClient,
     types::{
         AcpPermissionDecision, AcpPermissionDecisionScope, AcpPermissionOption,
@@ -273,7 +273,7 @@ impl TryFrom<AcpPermissionDecision> for PermissionDecisionMessage {
 
     fn try_from(value: AcpPermissionDecision) -> Result<Self, Self::Error> {
         let outcome = match value.outcome {
-            crate::types::AcpPermissionDecisionOutcome::Cancelled => {
+            super::types::AcpPermissionDecisionOutcome::Cancelled => {
                 RequestPermissionOutcome::Cancelled
             }
             _ => {
@@ -326,7 +326,7 @@ mod tests {
     fn converts_decision_into_protocol_message() {
         let decision = AcpPermissionDecision {
             request_id: "req-1".to_string(),
-            outcome: crate::types::AcpPermissionDecisionOutcome::AllowOnce,
+            outcome: super::types::AcpPermissionDecisionOutcome::AllowOnce,
             option_id: Some("opt-1".to_string()),
             remember_scope: None,
         };
@@ -345,7 +345,7 @@ mod tests {
     fn converts_cancelled_decision() {
         let decision = AcpPermissionDecision {
             request_id: "req-2".to_string(),
-            outcome: crate::types::AcpPermissionDecisionOutcome::Cancelled,
+            outcome: super::types::AcpPermissionDecisionOutcome::Cancelled,
             option_id: None,
             remember_scope: None,
         };

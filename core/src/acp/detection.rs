@@ -4,11 +4,11 @@ use anyhow::Result;
 use which::which;
 use tracing::warn;
 
-use crate::agents::{AgentDescriptor, AGENTS};
-use crate::config::AcpConfig;
-use crate::download::ensure_agent_available;
-use crate::types::AcpDetectedAgent;
-use crate::config::ACP_MODE_EXTERNAL_AGENT;
+use super::agents::{AgentDescriptor, AGENTS};
+use super::config::AcpConfig;
+use super::download::ensure_agent_available;
+use super::types::AcpDetectedAgent;
+use super::config::ACP_MODE_EXTERNAL_AGENT;
 
 /// Locate an agent binary, honoring absolute/path-like inputs and Windows `.cmd` fallbacks.
 pub fn find_agent_binary(command: &str) -> Option<PathBuf> {
