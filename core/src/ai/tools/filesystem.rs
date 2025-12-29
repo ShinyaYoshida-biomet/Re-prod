@@ -25,6 +25,19 @@ pub struct WriteFileRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct ReadTextFileRequest {
+    pub path: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WriteTextFileRequest {
+    pub path: String,
+    pub content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expected_sha256: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ListFilesRequest {
     pub path: Option<String>,
 }
@@ -220,6 +233,20 @@ pub fn get_filesystem_tools() -> Vec<Value> {
             }
         },
         {
+            "name": "read_text_file",
+            "description": "Read the contents of a file in the workspace and return text plus sha256 (ACP-compatible name).",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Relative path to the file within workspace (e.g., 'data/input.csv')"
+                    }
+                },
+                "required": ["path"]
+            }
+        },
+        {
             "name": "write_file",
             "description": "Write content to a file in the workspace (legacy). Prefer edit_text_file for structured edits and diff output.",
             "input_schema": {
@@ -232,6 +259,28 @@ pub fn get_filesystem_tools() -> Vec<Value> {
                     "content": {
                         "type": "string",
                         "description": "Content to write to the file"
+                    }
+                },
+                "required": ["path", "content"]
+            }
+        },
+        {
+            "name": "write_text_file",
+            "description": "Write content to a file in the workspace (ACP-compatible name). Returns unified diff output.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Relative path to the file within workspace (e.g., 'output/results.txt')"
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "Content to write to the file"
+                    },
+                    "expected_sha256": {
+                        "type": "string",
+                        "description": "Optional SHA-256 of the file content from read_text_file for conflict detection"
                     }
                 },
                 "required": ["path", "content"]
