@@ -16,16 +16,7 @@ interface AIPanelProps {
 }
 
 export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(({ hasConfiguredProvider }, ref) => {
-	const {
-		input,
-		setInput,
-		messages,
-		isLoading,
-		handleAsk,
-		handleStop,
-		handleApplyCode,
-		promptHistory,
-	} = useAIConversation();
+	const { aiState, aiActions, promptHistory } = useAIConversation();
 	const availableCommands = useStore((state) => state.ai.availableCommands);
 
 	const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -40,7 +31,7 @@ export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(({ hasConfiguredProv
 
 	useEffect(() => {
 		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-	}, [messages]);
+	}, [aiState.messages]);
 
 	// Auto-resize textarea
 	useEffect(() => {
@@ -55,7 +46,7 @@ export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(({ hasConfiguredProv
 		adjustHeight();
 		textarea.addEventListener("input", adjustHeight);
 		return () => textarea.removeEventListener("input", adjustHeight);
-	}, [input]);
+	}, [aiState.input]);
 
 	const [mode, setMode] = useState<AIMode>("agent");
 	const placeholder = mode === "agent" ? "Describe a task..." : "Ask a question...";
@@ -78,20 +69,21 @@ export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(({ hasConfiguredProv
 		}
 
 		setShowApiKeyError(false);
-		handleAsk(selectedMode);
+		aiActions.ask(selectedMode);
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
 		const textarea = e.currentTarget;
 		const { selectionStart, selectionEnd } = textarea;
 		const isAtStart = selectionStart === 0 && selectionEnd === 0;
-		const isAtEnd = selectionStart === input.length && selectionEnd === input.length;
+		const isAtEnd =
+			selectionStart === aiState.input.length && selectionEnd === aiState.input.length;
 		const hasSelection = selectionStart !== selectionEnd;
 
 		// Arrow Up - Navigate to previous prompt
 		if (e.key === "ArrowUp" && !e.shiftKey && !e.altKey && !e.metaKey) {
 			// Only trigger if cursor is at the start (or input is empty)
-			if ((isAtStart || input.length === 0) && !hasSelection) {
+			if ((isAtStart || aiState.input.length === 0) && !hasSelection) {
 				if (promptHistory.navigateUp()) {
 					e.preventDefault();
 					// Move cursor to end of restored prompt
@@ -107,7 +99,7 @@ export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(({ hasConfiguredProv
 		// Arrow Down - Navigate to next prompt
 		if (e.key === "ArrowDown" && !e.shiftKey && !e.altKey && !e.metaKey) {
 			// Only trigger if cursor is at the end (or input is empty)
-			if ((isAtEnd || input.length === 0) && !hasSelection) {
+			if ((isAtEnd || aiState.input.length === 0) && !hasSelection) {
 				if (promptHistory.navigateDown()) {
 					e.preventDefault();
 					// Move cursor to end
@@ -129,7 +121,7 @@ export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(({ hasConfiguredProv
 	};
 
 	const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-		setInput(e.target.value);
+		aiActions.setInput(e.target.value);
 		promptHistory.resetNavigation();
 	};
 
@@ -154,19 +146,19 @@ export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(({ hasConfiguredProv
 					</div>
 				)}
 				<div className="ai-messages">
-					{messages.length === 0 ? (
+					{aiState.messages.length === 0 ? (
 						<div className="ai-welcome">
 							<h3>AI Assistant</h3>
 							<p>Ask me anything about R programming, data analysis, or visualization.</p>
 						</div>
 					) : (
 						<>
-							{messages.map((message) =>
+							{aiState.messages.map((message) =>
 								message.role === "assistant" ? (
 									<StreamingMessage
 										key={message.id}
 										message={message}
-										onApplyCode={handleApplyCode}
+										onApplyCode={aiActions.applyCode}
 									/>
 								) : (
 									<div key={message.id} className="message message-user">
@@ -188,10 +180,10 @@ export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(({ hasConfiguredProv
 							className="ai-input"
 							placeholder={placeholder}
 							aria-label={placeholder}
-							value={input}
+							value={aiState.input}
 							onChange={handleInputChange}
 							onKeyDown={handleKeyDown}
-							disabled={isLoading}
+							disabled={aiState.isLoading}
 							rows={5}
 						/>
 						<div className="input-controls-bar">
@@ -200,7 +192,7 @@ export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(({ hasConfiguredProv
 									className="mode-dropdown"
 									value={mode}
 									onChange={(e) => setMode(e.target.value as AIMode)}
-									disabled={isLoading}
+									disabled={aiState.isLoading}
 									aria-label="AI interaction mode"
 								>
 									<option value="agent">Agent</option>
@@ -208,11 +200,11 @@ export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(({ hasConfiguredProv
 								</select>
 							</div>
 							<div className="input-controls-right">
-								{isLoading ? (
+								{aiState.isLoading ? (
 									<button
 										type="button"
 										className="icon-btn stop-btn"
-										onClick={handleStop}
+										onClick={aiActions.stop}
 										title="Stop generation (Esc)"
 										aria-label="Stop generation"
 									>
@@ -223,7 +215,7 @@ export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(({ hasConfiguredProv
 										type="button"
 										className="send-btn"
 										onClick={() => handleSend(mode)}
-										disabled={!input.trim()}
+										disabled={!aiState.input.trim()}
 										title="Send message (Enter)"
 										aria-label="Send message"
 									>

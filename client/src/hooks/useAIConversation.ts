@@ -16,6 +16,19 @@ import { usePromptHistory } from "./usePromptHistory";
 
 const STREAM_TIMEOUT_MS = 45000;
 
+export interface AIState {
+	input: string;
+	messages: AIMessage[];
+	isLoading: boolean;
+}
+
+export interface AIActions {
+	setInput: (value: string) => void;
+	ask: (mode?: AIMode) => Promise<void>;
+	stop: () => void;
+	applyCode: (code: string) => void;
+}
+
 const describeError = (error: unknown): string => {
 	if (typeof error === "string") return error;
 	if (error instanceof Error) return error.message;
@@ -379,13 +392,17 @@ export function useAIConversation() {
 	);
 
 	return {
-		input,
-		setInput,
-		messages,
-		isLoading,
-		handleAsk,
-		handleStop,
-		handleApplyCode,
+		aiState: {
+			input,
+			messages,
+			isLoading,
+		},
+		aiActions: {
+			setInput,
+			ask: handleAsk,
+			stop: handleStop,
+			applyCode: handleApplyCode,
+		},
 		promptHistory,
 	};
 }
