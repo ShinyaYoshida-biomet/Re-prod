@@ -13,3 +13,6 @@ pub mod types;
 pub use gateway::{build_process_config, AcpGateway};
 pub use process::{AcpChild, ProcessConfig, SpawnedPipes};
 pub use runtime::AcpRuntime;
+
+#[cfg(test)]
+mod test_support;

@@ -538,13 +538,12 @@ mod tests {
         PermissionOption, PermissionOptionId, PermissionOptionKind, SelectedPermissionOutcome,
         SessionId, ToolCallId, ToolCallUpdate, ToolCallUpdateFields,
     };
+    use crate::test_support::ENV_LOCK;
     use reprod_core::config::APP_DIR_ENV;
     use std::collections::HashMap;
     use std::env;
-    use std::sync::{Arc, Mutex as StdMutex};
+    use std::sync::Arc;
     use tokio::task::LocalSet;
-
-    static ENV_LOCK: StdMutex<()> = StdMutex::new(());
 
     struct EnvVarGuard {
         key: &'static str,
