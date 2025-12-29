@@ -49,24 +49,32 @@ function reducer(state: ExportDialogState, action: ExportDialogAction): ExportDi
 	}
 }
 
-interface UseExportDialogReturn {
+interface UseExportDialogState {
 	format: ExportDialogFormat;
-	setFormat: (next: ExportDialogFormat) => void;
 	mode: ExportRMarkdownRequestPayload["mode"];
-	setMode: (next: ExportRMarkdownRequestPayload["mode"]) => void;
 	options: ExportDialogOptions;
-	setOption: (key: ExportOptionKey, value: boolean) => void;
 	codeFolding: CodeFolding;
-	setCodeFolding: (next: CodeFolding) => void;
 	pdfOptions: ExportPdfOptions;
-	setPdfOption: <TKey extends ExportPdfOptionKey>(key: TKey, value: ExportPdfOptions[TKey]) => void;
 	documentPath: string;
-	setDocumentPath: (value: string) => void;
 	outputPath: string;
-	setOutputPath: (value: string) => void;
 	exporting: boolean;
 	error: string;
+}
+
+interface UseExportDialogActions {
+	setFormat: (next: ExportDialogFormat) => void;
+	setMode: (next: ExportRMarkdownRequestPayload["mode"]) => void;
+	setOption: (key: ExportOptionKey, value: boolean) => void;
+	setCodeFolding: (next: CodeFolding) => void;
+	setPdfOption: <TKey extends ExportPdfOptionKey>(key: TKey, value: ExportPdfOptions[TKey]) => void;
+	setDocumentPath: (value: string) => void;
+	setOutputPath: (value: string) => void;
 	handleExport: () => Promise<void>;
+}
+
+interface UseExportDialogReturn {
+	state: UseExportDialogState;
+	actions: UseExportDialogActions;
 }
 
 interface UseExportDialogProps {
@@ -197,22 +205,26 @@ export function useExportDialog({ open, onClose }: UseExportDialogProps): UseExp
 	}, [format, mode, options, codeFolding, pdfOptions, documentPath, outputPath, onClose]);
 
 	return {
-		format,
-		setFormat: (next) => dispatch({ type: "set-format", payload: next }),
-		mode,
-		setMode: (next) => dispatch({ type: "set-mode", payload: next }),
-		options,
-		setOption,
-		codeFolding,
-		setCodeFolding: (next) => dispatch({ type: "set-code-folding", payload: next }),
-		pdfOptions,
-		setPdfOption,
-		documentPath,
-		setDocumentPath: (value) => dispatch({ type: "set-document-path", payload: value }),
-		outputPath,
-		setOutputPath: (value) => dispatch({ type: "set-output-path", payload: value }),
-		exporting,
-		error,
-		handleExport,
+		state: {
+			format,
+			mode,
+			options,
+			codeFolding,
+			pdfOptions,
+			documentPath,
+			outputPath,
+			exporting,
+			error,
+		},
+		actions: {
+			setFormat: (next) => dispatch({ type: "set-format", payload: next }),
+			setMode: (next) => dispatch({ type: "set-mode", payload: next }),
+			setOption,
+			setCodeFolding: (next) => dispatch({ type: "set-code-folding", payload: next }),
+			setPdfOption,
+			setDocumentPath: (value) => dispatch({ type: "set-document-path", payload: value }),
+			setOutputPath: (value) => dispatch({ type: "set-output-path", payload: value }),
+			handleExport,
+		},
 	};
 }

@@ -5,15 +5,9 @@ import { PlotHistoryPanel } from "@/components/plot-history";
 import { useBottomPaneState } from "@/hooks/useBottomPaneState";
 
 export function BottomPane(): JSX.Element {
-	const {
-		tabs,
-		activeTab,
-		setActiveTab,
-		navigation,
-		goToPreviousPlot,
-		goToNextPlot,
-		clearExecutionResults,
-	} = useBottomPaneState();
+	const { state, actions } = useBottomPaneState();
+	const { tabs, activeTab, navigation } = state;
+	const { setActiveTab, goToPreviousPlot, goToNextPlot, clearExecutionResults } = actions;
 
 	const { selectedPlotIndex, totalPlots } = navigation;
 	const showClear = activeTab === "console" || activeTab === "history";

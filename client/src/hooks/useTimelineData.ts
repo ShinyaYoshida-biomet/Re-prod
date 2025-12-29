@@ -9,7 +9,30 @@ import {
 } from "@/services/timelineService";
 import { getErrorMessage } from "@/utils/error";
 
-export function useTimelineData() {
+interface UseTimelineDataState {
+	events: ExecutionEventPayload[];
+	total: number;
+	hasMore: boolean;
+	loading: boolean;
+	error: string | null;
+	filters: any;
+	sort: any;
+	stats: TimelineStats | null;
+	statsLoading: boolean;
+}
+
+interface UseTimelineDataActions {
+	loadMore: () => void;
+	setFilters: (filters: any) => void;
+	setSort: (sort: any) => void;
+}
+
+interface UseTimelineDataReturn {
+	state: UseTimelineDataState;
+	actions: UseTimelineDataActions;
+}
+
+export function useTimelineData(): UseTimelineDataReturn {
 	const {
 		events,
 		total,
@@ -143,17 +166,21 @@ export function useTimelineData() {
 	}, [isConnected, filters, addEvent]);
 
 	return {
-		events,
-		total,
-		hasMore,
-		loading,
-		error,
-		filters,
-		sort,
-		loadMore,
-		setFilters,
-		setSort,
-		stats,
-		statsLoading,
+		state: {
+			events,
+			total,
+			hasMore,
+			loading,
+			error,
+			filters,
+			sort,
+			stats,
+			statsLoading,
+		},
+		actions: {
+			loadMore,
+			setFilters,
+			setSort,
+		},
 	};
 }

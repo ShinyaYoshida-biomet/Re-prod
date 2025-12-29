@@ -17,11 +17,14 @@ const isTauriAvailable =
 			(window as typeof window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__,
 	);
 
-interface UseTerminalResult {
-	state: TerminalState;
+interface UseTerminalState {
+	terminalState: TerminalState;
 	isAvailable: boolean;
 	error: string | null;
 	errorDetail: string | null;
+}
+
+interface UseTerminalActions {
 	createSession: () => Promise<void>;
 	closeSession: (sessionId: string) => Promise<void>;
 	setActiveSession: (sessionId: string) => void;
@@ -31,8 +34,13 @@ interface UseTerminalResult {
 	unregisterOutputHandler: (sessionId: string) => void;
 }
 
+interface UseTerminalResult {
+	state: UseTerminalState;
+	actions: UseTerminalActions;
+}
+
 export function useTerminal(): UseTerminalResult {
-	const [state, setState] = useState<TerminalState>({
+	const [terminalState, setTerminalState] = useState<TerminalState>({
 		sessions: [],
 		activeSessionId: null,
 	});
@@ -43,7 +51,7 @@ export function useTerminal(): UseTerminalResult {
 	const processesRef = useRef(new Map<string, SimplePty>());
 
 	const addSession = useCallback((sessionId: string, title: string) => {
-		setState((prev) => ({
+		setTerminalState((prev) => ({
 			sessions: [
 				...prev.sessions.map((session) => ({ ...session, isActive: false })),
 				{ id: sessionId, title, isActive: true },
@@ -53,7 +61,7 @@ export function useTerminal(): UseTerminalResult {
 	}, []);
 
 	const removeSession = useCallback((sessionId: string) => {
-		setState((prev) => {
+		setTerminalState((prev) => {
 			const sessions = prev.sessions.filter((session) => session.id !== sessionId);
 			const nextActive =
 				prev.activeSessionId === sessionId
@@ -75,7 +83,7 @@ export function useTerminal(): UseTerminalResult {
 	}, []);
 
 	const setActiveSession = useCallback((sessionId: string) => {
-		setState((prev) => ({
+		setTerminalState((prev) => ({
 			sessions: prev.sessions.map((session) => ({
 				...session,
 				isActive: session.id === sessionId,
@@ -180,17 +188,21 @@ export function useTerminal(): UseTerminalResult {
 	useEffect(() => {}, []);
 
 	return {
-		state,
-		isAvailable: isTauriAvailable,
-		error,
-		errorDetail,
-		createSession,
-		closeSession,
-		setActiveSession,
-		writeToSession,
-		resizeSession,
-		registerOutputHandler,
-		unregisterOutputHandler,
+		state: {
+			terminalState,
+			isAvailable: isTauriAvailable,
+			error,
+			errorDetail,
+		},
+		actions: {
+			createSession,
+			closeSession,
+			setActiveSession,
+			writeToSession,
+			resizeSession,
+			registerOutputHandler,
+			unregisterOutputHandler,
+		},
 	};
 }
 

@@ -159,8 +159,9 @@ export function FileBrowserPane(): JSX.Element {
 	const setActivePath = useFileSystemStore((state) => state.setActivePath);
 	const workspaceRoot = useFileSystemStore((state) => state.workspaceRoot);
 
+	const { state, actions } = useFileBrowserState();
+	const { fileBrowserState: uiState } = state;
 	const {
-		state: uiState,
 		setClipboard,
 		clearClipboard,
 		setAnchorPath,
@@ -169,7 +170,7 @@ export function FileBrowserPane(): JSX.Element {
 		showContextMenu,
 		hideContextMenu,
 		setDragOverPath,
-	} = useFileBrowserState();
+	} = actions;
 	const { clipboard, selection, contextMenu, dragOverPath } = uiState;
 	const { anchorPath, focusedPath } = selection;
 
