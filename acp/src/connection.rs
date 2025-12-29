@@ -1,8 +1,8 @@
 use agent_client_protocol::{
-    Agent, CancelNotification, ClientSideConnection, ContentBlock, InitializeRequest,
-    NewSessionRequest, PermissionOptionKind, PromptRequest, PromptResponse, ProtocolVersion,
-    RequestPermissionOutcome, RequestPermissionRequest, SelectedPermissionOutcome, SessionId,
-    SessionNotification,
+    Agent, CancelNotification, ClientCapabilities, ClientSideConnection, ContentBlock,
+    FileSystemCapability, InitializeRequest, NewSessionRequest, PermissionOptionKind,
+    PromptRequest, PromptResponse, ProtocolVersion, RequestPermissionOutcome,
+    RequestPermissionRequest, SelectedPermissionOutcome, SessionId, SessionNotification,
 };
 use anyhow::{anyhow, Context, Result};
 use std::collections::HashMap;
@@ -113,7 +113,18 @@ impl AcpConnection {
                         });
 
                         let init_result = conn
-                            .initialize(InitializeRequest::new(ProtocolVersion::LATEST))
+                            .initialize(
+                                InitializeRequest::new(ProtocolVersion::LATEST)
+                                    .client_capabilities(
+                                        ClientCapabilities::new()
+                                            .fs(
+                                                FileSystemCapability::new()
+                                                    .read_text_file(true)
+                                                    .write_text_file(true),
+                                            )
+                                            .terminal(false),
+                                    ),
+                            )
                             .await
                             .context("ACP initialize failed");
                         if let Err(ref err) = init_result {
