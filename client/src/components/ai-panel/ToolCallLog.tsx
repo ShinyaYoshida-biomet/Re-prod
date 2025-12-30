@@ -60,26 +60,29 @@ const renderSearchResults = (results: SearchResult[]): JSX.Element => {
 		<div className="ai-tool-call__search">
 			<div className="ai-tool-call__search-meta">{results.length} result(s)</div>
 			<ul className="ai-tool-call__search-list">
-				{results.map((result, index) => (
-					<li key={`${result.uri}-${index}`} className="ai-tool-call__search-item">
-						{result.title ? (
-							<a
-								className="ai-tool-call__search-title"
-								href={result.uri}
-								target="_blank"
-								rel="noreferrer"
-							>
-								{result.title}
-							</a>
-						) : (
-							<span className="ai-tool-call__search-title">{result.uri}</span>
-						)}
-						{result.uri && <div className="ai-tool-call__search-uri">{result.uri}</div>}
-						{result.description && (
-							<div className="ai-tool-call__search-desc">{result.description}</div>
-						)}
-					</li>
-				))}
+				{results.map((result, index) => {
+					const label = result.title || result.uri;
+					return (
+						<li key={`${result.uri}-${index}`} className="ai-tool-call__search-item">
+							{result.uri ? (
+								<a
+									className="ai-tool-call__search-title"
+									href={result.uri}
+									target="_blank"
+									rel="noreferrer"
+								>
+									{label}
+								</a>
+							) : (
+								<span className="ai-tool-call__search-title">{label}</span>
+							)}
+							{result.uri && <div className="ai-tool-call__search-uri">{result.uri}</div>}
+							{result.description && (
+								<div className="ai-tool-call__search-desc">{result.description}</div>
+							)}
+						</li>
+					);
+				})}
 			</ul>
 		</div>
 	);
