@@ -1,13 +1,8 @@
-import type {
-	ExportRMarkdownRequestPayload,
-	ExportRMarkdownResponsePayload,
-	ServerMessage,
-} from "shared";
-import { exportMessages } from "@/services/messageBuilders";
+import type { ExportRMarkdownRequestPayload, ExportRMarkdownResponsePayload } from "@/types";
+import type { DataTransport } from "@/repositories/core/DataTransport";
+import { ExportRepository, ExportRepositoryError } from "@/repositories/ExportRepository";
+import { WebSocketTransport } from "@/repositories/core/WebSocketTransport";
 import { socketService } from "@/services/socket";
-
-const exportMatcher = (message: ServerMessage) =>
-	message.type === "export_rmarkdown_response" || message.type === "error";
 
 export class ExportServiceError extends Error {
 	constructor(message: string) {
@@ -16,53 +11,23 @@ export class ExportServiceError extends Error {
 	}
 }
 
+export function createExportService(transport: DataTransport): ExportRepository {
+	return new ExportRepository(transport);
+}
+
+const defaultRepository = createExportService(new WebSocketTransport(socketService));
+
 export async function exportRMarkdown(
 	payload: ExportRMarkdownRequestPayload,
 	timeoutMs = 30000,
 ): Promise<ExportRMarkdownResponsePayload> {
-	return new Promise<ExportRMarkdownResponsePayload>((resolve, reject) => {
-		let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-		const cleanup = () => {
-			if (timeoutId) {
-				clearTimeout(timeoutId);
-			}
-		};
-
-		timeoutId = setTimeout(() => {
-			timeoutId = null;
-			reject(new ExportServiceError("Export timeout - please check server logs"));
-		}, timeoutMs);
-
-		const didSend = socketService.send(
-			exportMessages.exportRMarkdown(payload),
-			(message) => {
-				cleanup();
-
-				if (message.type === "export_rmarkdown_response") {
-					const { response } = message;
-					if (response.success) {
-						resolve(response);
-						return;
-					}
-
-					reject(new ExportServiceError(response.error || "Export failed"));
-					return;
-				}
-
-				if (message.type === "error") {
-					reject(new ExportServiceError(message.message || "Export failed"));
-					return;
-				}
-
-				reject(new ExportServiceError("Export failed"));
-			},
-			exportMatcher,
-		);
-
-		if (!didSend) {
-			cleanup();
-			reject(new ExportServiceError("WebSocket not connected"));
+	try {
+		return await defaultRepository.exportRMarkdown(payload, timeoutMs);
+	} catch (e) {
+		if (e instanceof ExportRepositoryError) {
+			throw new ExportServiceError(e.message);
 		}
-	});
+		const message = e instanceof Error ? e.message : "Export failed";
+		throw new ExportServiceError(message);
+	}
 }

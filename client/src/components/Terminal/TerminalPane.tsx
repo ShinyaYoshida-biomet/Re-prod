@@ -6,11 +6,9 @@ import { TerminalSession } from "./TerminalSession";
 const TERMINAL_NEW_EVENT = "terminal:new";
 
 export function TerminalPane(): JSX.Element {
+	const { state, actions } = useTerminal();
+	const { terminalState, isAvailable, error, errorDetail } = state;
 	const {
-		state,
-		isAvailable,
-		error,
-		errorDetail,
 		createSession,
 		closeSession,
 		setActiveSession,
@@ -18,9 +16,9 @@ export function TerminalPane(): JSX.Element {
 		resizeSession,
 		registerOutputHandler,
 		unregisterOutputHandler,
-	} = useTerminal();
+	} = actions;
 
-	const { sessions, activeSessionId } = state;
+	const { sessions, activeSessionId } = terminalState;
 	const didBootstrapRef = useRef(false);
 
 	const sessionTabs = useMemo(

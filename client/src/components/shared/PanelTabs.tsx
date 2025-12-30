@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { classNames } from "@/utils/classNames";
 
 export interface PanelTabItem<T extends string> {
 	id: T;
@@ -19,7 +20,7 @@ export function PanelTabs<T extends string>({
 	onSelect,
 	className,
 }: PanelTabsProps<T>): JSX.Element {
-	const containerClass = ["tabs", className].filter(Boolean).join(" ");
+	const containerClass = classNames("tabs", className);
 
 	return (
 		<div className={containerClass}>
@@ -30,7 +31,7 @@ export function PanelTabs<T extends string>({
 					<button
 						key={item.id}
 						type="button"
-						className={`tab${isActive ? " active" : ""}`}
+						className={classNames("tab", isActive && "active")}
 						onClick={() => onSelect(item.id)}
 						disabled={item.disabled}
 					>

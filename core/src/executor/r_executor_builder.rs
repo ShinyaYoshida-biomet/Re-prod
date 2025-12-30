@@ -16,6 +16,7 @@ pub struct RExecutorBuilder {
     pub(crate) command_runner: Arc<dyn CommandRunner>,
     pub(crate) plot_history: Option<Arc<AsyncMutex<PlotHistoryManager>>>,
     pub(crate) persistent_mode: bool,
+    pub(crate) record_runs: bool,
 }
 
 impl RExecutorBuilder {
@@ -28,6 +29,7 @@ impl RExecutorBuilder {
             command_runner: Arc::new(ProcessCommandRunner::default()),
             plot_history: None,
             persistent_mode: false,
+            record_runs: true,
         }
     }
 
@@ -70,6 +72,13 @@ impl RExecutorBuilder {
         self
     }
 
+    /// Disable writing execution events to the configured timeline sink.
+    /// Callers that persist runs elsewhere (e.g., server-side repositories) can opt out to avoid duplicate records.
+    pub fn disable_run_recording(mut self) -> Self {
+        self.record_runs = false;
+        self
+    }
+
     pub fn build(self) -> RExecutor {
         let command_runner: Arc<dyn CommandRunner> = if self.persistent_mode {
             Arc::new(PersistentProcessCommandRunner::new(
@@ -88,6 +97,7 @@ impl RExecutorBuilder {
             command_runner,
             plot_history: self.plot_history,
             persistent_mode: self.persistent_mode,
+            record_runs: self.record_runs,
         }
     }
 }

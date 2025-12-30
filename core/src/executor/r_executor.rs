@@ -1,15 +1,18 @@
 use std::{path::PathBuf, sync::Arc, time::Instant};
 
 use crate::executor::command_runner::{CommandRunner, ProcessCommandRunner};
-use crate::executor::output_parser::parse_command_output;
+use crate::executor::output_parser::{is_internal_line, parse_command_output};
 use crate::graphics::plot_capture::PlotCapture;
 use crate::plot_history::{
     PlotHistoryEntry, PlotHistoryManager, DEFAULT_PLOT_HEIGHT, DEFAULT_PLOT_WIDTH,
 };
-use crate::{EnvironmentSnapshot, ExecutionEvent, ExecutionRequest, ExecutionResult};
+use crate::{
+    executor::execution_utils::now_ms, EnvironmentSnapshot, ExecutionEvent, ExecutionRequest,
+    ExecutionResult, RunOutputChunk, RunStream,
+};
 use anyhow::Result;
 use tokio::fs;
-use tokio::sync::Mutex as AsyncMutex;
+use tokio::sync::{mpsc, Mutex as AsyncMutex};
 use tracing::info;
 use uuid::Uuid;
 
@@ -25,6 +28,7 @@ pub struct RExecutor {
     pub(crate) command_runner: Arc<dyn CommandRunner>,
     pub(crate) plot_history: Option<Arc<AsyncMutex<PlotHistoryManager>>>,
     pub(crate) persistent_mode: bool,
+    pub(crate) record_runs: bool,
 }
 
 impl RExecutor {
@@ -37,6 +41,7 @@ impl RExecutor {
             command_runner: Arc::new(ProcessCommandRunner::default()),
             plot_history: None,
             persistent_mode: false,
+            record_runs: true,
         }
     }
 
@@ -53,7 +58,7 @@ impl RExecutor {
     }
 
     pub async fn execute(&self, request: ExecutionRequest) -> Result<ExecutionResult> {
-        let (result, _, _) = self.execute_with_event_with_history(request).await?;
+        let (result, _, _, _) = self.execute_with_event_with_history(request).await?;
         Ok(result)
     }
 
@@ -61,14 +66,46 @@ impl RExecutor {
         &self,
         request: ExecutionRequest,
     ) -> Result<(ExecutionResult, ExecutionEvent)> {
-        let (result, event, _) = self.execute_with_event_with_history(request).await?;
+        let (result, event, _, _) = self.execute_with_event_with_history(request).await?;
         Ok((result, event))
     }
 
     pub async fn execute_with_event_with_history(
         &self,
         request: ExecutionRequest,
+    ) -> Result<(
+        ExecutionResult,
+        ExecutionEvent,
+        Vec<PlotHistoryEntry>,
+        Vec<RunOutputChunk>,
+    )> {
+        self.execute_with_event_with_history_internal(request, None, None)
+            .await
+    }
+
+    pub async fn execute_with_event_with_history_streaming(
+        &self,
+        request: ExecutionRequest,
+        run_id: &str,
+        output_tx: mpsc::UnboundedSender<RunOutputChunk>,
     ) -> Result<(ExecutionResult, ExecutionEvent, Vec<PlotHistoryEntry>)> {
+        let (result, event, history, _) = self
+            .execute_with_event_with_history_internal(request, Some(run_id), Some(output_tx))
+            .await?;
+        Ok((result, event, history))
+    }
+
+    async fn execute_with_event_with_history_internal(
+        &self,
+        request: ExecutionRequest,
+        run_id: Option<&str>,
+        output_tx: Option<mpsc::UnboundedSender<RunOutputChunk>>,
+    ) -> Result<(
+        ExecutionResult,
+        ExecutionEvent,
+        Vec<PlotHistoryEntry>,
+        Vec<RunOutputChunk>,
+    )> {
         let start = Instant::now();
 
         let mut blocks = ensure_blocks(&request);
@@ -102,9 +139,45 @@ impl RExecutor {
         );
         fs::write(&script_path, &wrapped_code).await?;
 
+        let mut streamed_stdout: Vec<String> = Vec::new();
+        let mut streamed_stderr: Vec<String> = Vec::new();
+
+        let mut streamed_chunks: Vec<RunOutputChunk> = Vec::new();
+        let run_id = run_id.map(str::to_string);
+
         let command_output = self
             .command_runner
-            .run(&self.r_path, &script_path, &self.working_dir)
+            .run_streaming(
+                &self.r_path,
+                &script_path,
+                &self.working_dir,
+                &mut |line: String, is_stdout: bool| {
+                    let at_ms = now_ms();
+                    if is_internal_line(&line) {
+                        return;
+                    }
+                    let chunk = RunOutputChunk {
+                        run_id: run_id.clone().unwrap_or_default(),
+                        stream: if is_stdout {
+                            RunStream::Stdout
+                        } else {
+                            RunStream::Stderr
+                        },
+                        chunk: line.clone(),
+                        at_ms,
+                    };
+                    if let Some(tx) = output_tx.as_ref() {
+                        let _ = tx.send(chunk.clone());
+                    }
+                    if is_stdout {
+                        streamed_stdout.push(line.clone());
+                        streamed_chunks.push(chunk);
+                    } else {
+                        streamed_stderr.push(line.clone());
+                        streamed_chunks.push(chunk);
+                    }
+                },
+            )
             .await?;
 
         let captures = plot_capture
@@ -114,7 +187,14 @@ impl RExecutor {
 
         let _ = fs::remove_file(&script_path).await;
 
-        let parsed_output = parse_command_output(&command_output);
+        // If streaming captured any lines, prefer them for display to preserve ordering.
+        let mut parsed_output = parse_command_output(&command_output);
+        if !streamed_stdout.is_empty() {
+            parsed_output.stdout_raw = streamed_stdout.join("\n");
+        }
+        if !streamed_stderr.is_empty() {
+            parsed_output.stderr_raw = streamed_stderr.join("\n");
+        }
         info!(
             target: "reprod.r.exec",
             stdout = %parsed_output.stdout_raw,
@@ -133,9 +213,11 @@ impl RExecutor {
 
         let environment = self.environment_snapshot();
         let event = build_event(&request, &result, environment.clone(), blocks.clone());
-        self.timeline.record(event.clone()).await?;
+        if self.record_runs {
+            self.timeline.record(event.clone()).await?;
+        }
 
-        Ok((result, event, history_entries))
+        Ok((result, event, history_entries, streamed_chunks))
     }
 
     pub async fn interrupt(&self) -> Result<bool> {
@@ -197,7 +279,7 @@ if (length(dev.list()) > 0) {
         Ok(())
     }
 
-    fn environment_snapshot(&self) -> EnvironmentSnapshot {
+    pub fn environment_snapshot(&self) -> EnvironmentSnapshot {
         EnvironmentSnapshot {
             r_path: self.r_path.clone(),
             working_dir: self.working_dir.to_string_lossy().into_owned(),

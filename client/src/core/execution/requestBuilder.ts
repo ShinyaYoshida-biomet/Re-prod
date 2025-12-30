@@ -4,7 +4,7 @@ import type {
 	ExecutionContextPayload,
 	ExecutionRequestPayload,
 	ExecutionSource,
-} from "@shared/types";
+} from "@/types";
 import type { ExecutionTarget } from "./cellExecution";
 import type { Cell } from "./cellParser";
 

@@ -1,35 +1,93 @@
-import type { AIMessage, AppSettings, ExecutionLogEntry } from "@shared/types";
 import { useStore } from "@/core";
-import { extractCodeBlocks } from "@/core/ai/codeBlockUtils";
+import { useFileSystemStore } from "@/core/fileSystemStore";
+import type { ViewData } from "@/core/state/slices/viewSlice";
+import { fileSystem } from "@/services/fileSystem";
 import { queryTimeline } from "@/services/timelineService";
+import { getErrorMessage } from "@/utils/error";
 
-const SNAPSHOT_VERSION = 1;
+const SNAPSHOT_VERSION = 2;
 const STORAGE_FILENAME = () =>
 	`reprod-session-${new Date().toISOString().replace(/[:]/g, "-")}.json`;
+
+export const DEFAULT_VIEW_STATE: ViewData = {
+	panes: {
+		files: true,
+		editor: true,
+		assistant: true,
+	},
+	modals: {
+		export: false,
+		shortcuts: false,
+		about: false,
+		sessionInfo: false,
+		settings: false,
+		projects: false,
+	},
+	zoom: 1,
+};
 
 export interface SessionSnapshot {
 	version: number;
 	savedAt: number;
-	editor: {
-		content: string;
-		filepath: string;
+	editor?: {
+		filepath: string | null;
 	};
-	executionHistory: ExecutionLogEntry[];
-	settings: AppSettings;
-	aiMessages: AIMessage[];
+	view?: ViewData;
 }
 
-const normalizeAIMessages = (messages: AIMessage[]): AIMessage[] =>
-	messages.map((message) => {
-		if (message.codeBlocks && message.codeBlocks.length > 0) {
-			return message;
-		}
+const mergeViewState = (view?: ViewData): ViewData => ({
+	panes: { ...DEFAULT_VIEW_STATE.panes, ...(view?.panes ?? {}) },
+	modals: { ...DEFAULT_VIEW_STATE.modals, ...(view?.modals ?? {}) },
+	zoom: view?.zoom ?? DEFAULT_VIEW_STATE.zoom,
+});
 
-		const fallbackText = message.content || message.code || "";
-		const codeBlocks = fallbackText ? extractCodeBlocks(fallbackText) : [];
+const applyViewState = (view?: ViewData): void => {
+	const merged = mergeViewState(view);
+	useStore.setState((state) => ({
+		...state,
+		view: {
+			panes: { ...state.view.panes, ...merged.panes },
+			modals: { ...state.view.modals, ...merged.modals },
+			zoom: merged.zoom,
+		},
+	}));
+	useStore.getState().setZoomLevel(merged.zoom);
+};
 
-		return codeBlocks.length ? { ...message, codeBlocks } : message;
-	});
+const resetDomainState = (): void => {
+	const state = useStore.getState();
+	state.clearAIMessages();
+	state.resetExecutionState();
+	state.reset();
+};
+
+const restoreEditorFromFilesystem = async (filepath: string | null): Promise<void> => {
+	const normalizedPath = filepath ?? "";
+	useFileSystemStore.getState().setActivePath(normalizedPath || null);
+
+	if (!normalizedPath) {
+		useStore.setState((state) => ({
+			editor: { ...state.editor, content: "", filepath: "", isDirty: false },
+		}));
+		return;
+	}
+
+	useStore.setState((state) => ({
+		editor: { ...state.editor, content: "", filepath: normalizedPath, isDirty: false },
+	}));
+
+	try {
+		const content = await fileSystem.readFile(normalizedPath);
+		useStore.setState((state) => ({
+			editor: { ...state.editor, content, filepath: normalizedPath, isDirty: false },
+		}));
+	} catch (error) {
+		console.error("Failed to load file from filesystem", error);
+		useStore.setState((state) => ({
+			editor: { ...state.editor, content: "", filepath: normalizedPath, isDirty: false },
+		}));
+	}
+};
 
 export function getSessionSnapshot(): SessionSnapshot {
 	const state = useStore.getState();
@@ -37,12 +95,9 @@ export function getSessionSnapshot(): SessionSnapshot {
 		version: SNAPSHOT_VERSION,
 		savedAt: Date.now(),
 		editor: {
-			content: state.editor.content,
-			filepath: state.editor.filepath,
+			filepath: state.editor.filepath || null,
 		},
-		executionHistory: state.execution.history,
-		settings: state.settings,
-		aiMessages: normalizeAIMessages(state.ai.messages),
+		view: mergeViewState(state.view),
 	};
 }
 
@@ -71,29 +126,32 @@ export function importSessionSnapshot(): void {
 		try {
 			const text = await file.text();
 			const data = JSON.parse(text) as SessionSnapshot;
-			applySessionSnapshot(data);
+			await applySessionSnapshot(data);
 		} catch (error) {
-			window.alert("Unable to load session snapshot. Ensure the file is valid JSON.");
+			const { showError } = await import("./toastService");
+			showError("Unable to load session snapshot. Ensure the file is valid JSON.");
 		}
 	};
 
 	input.click();
 }
 
-export function applySessionSnapshot(snapshot: SessionSnapshot): void {
+export async function applySessionSnapshot(snapshot: SessionSnapshot): Promise<boolean> {
 	if (snapshot.version !== SNAPSHOT_VERSION) {
-		window.alert("Session snapshot version is not compatible with this build.");
-		return;
+		const { showError } = await import("./toastService");
+		showError("Session snapshot version is not compatible with this build.");
+		resetDomainState();
+		applyViewState();
+		await restoreEditorFromFilesystem(snapshot.editor?.filepath ?? null);
+		void refreshTimelineData();
+		return false;
 	}
 
-	const state = useStore.getState();
-	state.setEditorContent(snapshot.editor.content);
-	state.setEditorFilepath(snapshot.editor.filepath);
-	state.setEditorIsDirty(false);
-	state.loadExecutionHistory(snapshot.executionHistory ?? []);
-	state.updateSettings(snapshot.settings);
-	state.setAIMessages(normalizeAIMessages(snapshot.aiMessages ?? []));
+	resetDomainState();
+	applyViewState(snapshot.view);
+	await restoreEditorFromFilesystem(snapshot.editor?.filepath ?? null);
 	void refreshTimelineData();
+	return true;
 }
 
 export async function refreshTimelineData(): Promise<void> {
@@ -110,6 +168,6 @@ export async function refreshTimelineData(): Promise<void> {
 		});
 		setEvents(response.events, response.total, response.hasMore);
 	} catch (error) {
-		setError(error instanceof Error ? error.message : "Failed to refresh timeline");
+		setError(getErrorMessage(error, "Failed to refresh timeline"));
 	}
 }

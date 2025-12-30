@@ -4,14 +4,14 @@
 	--modal-overlay-bg: rgba(8, 13, 23, 0.7);
 	--modal-backdrop-filter: blur(4px);
 
-	--modal-bg: #1a1f2a;
+	--modal-bg: var(--phylo-modal-bg-dark);
 	--modal-border-color: rgba(255, 255, 255, 0.08);
 	--modal-border-subtle: rgba(255, 255, 255, 0.06);
 	--modal-radius: 14px;
 	--modal-shadow: 0 20px 80px rgba(0, 0, 0, 0.45);
-	--modal-text-color: #f4f6fb;
+	--modal-text-color: var(--phylo-modal-text-light);
 	--modal-subtext-color: rgba(255, 255, 255, 0.65);
-	--modal-accent: #8ab4ff;
+	--modal-accent: var(--phylo-cytosine-light);
 	--modal-header-padding: 20px 24px 16px;
 	--modal-body-padding: 20px 24px 24px;
 	--modal-body-font-size: 1rem;
@@ -36,31 +36,31 @@
 	--modal-overlay-bg: rgba(0, 0, 0, 0.25);
 	--modal-backdrop-filter: none;
 	--modal-bg: var(--bg-primary);
-	--modal-border-color: #cccccc;
-	--modal-border-subtle: #e0e0e0;
+	--modal-border-color: var(--phylo-border-color);
+	--modal-border-subtle: var(--phylo-border-color-light);
 	--modal-radius: 3px;
 	--modal-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-	--modal-text-color: #333333;
-	--modal-subtext-color: #666666;
-	--modal-accent: #3b82f6;
+	--modal-text-color: var(--phylo-text-primary);
+	--modal-subtext-color: var(--phylo-text-secondary);
+	--modal-accent: var(--phylo-cytosine);
 	--modal-header-padding: 12px 16px;
 	--modal-body-padding: 16px;
 	--modal-body-font-size: 12px;
 	--modal-footer-padding: 12px 16px;
 	--modal-title-size: 12px;
 	--modal-title-weight: 600;
-	--modal-title-color: #333333;
+	--modal-title-color: var(--phylo-text-primary);
 	--modal-icon-size: 16px;
 
-	--modal-surface-bg: #f5f5f5;
-	--modal-surface-border: #e0e0e0;
+	--modal-surface-bg: var(--phylo-bg-secondary);
+	--modal-surface-border: var(--phylo-border-color-light);
 	--modal-surface-radius: var(--modal-radius);
-	--modal-contrast-bg: #f5f5f5;
-	--modal-contrast-border: #e0e0e0;
-	--modal-card-border: #e8e8e8;
-	--modal-card-bg: #f5f5f5;
+	--modal-contrast-bg: var(--phylo-bg-secondary);
+	--modal-contrast-border: var(--phylo-border-color-light);
+	--modal-card-border: var(--phylo-bg-tertiary);
+	--modal-card-bg: var(--phylo-bg-secondary);
 	--modal-card-radius: var(--modal-radius);
-	--modal-muted-color: #666666;
+	--modal-muted-color: var(--phylo-text-secondary);
 }
 
 .modal-overlay {

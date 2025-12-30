@@ -1,9 +1,9 @@
 import Editor, { type Monaco } from "@monaco-editor/react";
-import type { CodeBlock, CodeRange } from "@shared/types";
+import type { CodeBlock, CodeRange } from "@/types";
 import type { editor as MonacoEditor } from "monaco-editor";
 import type { ForwardedRef } from "react";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
-import { ConfirmDialog, IconPlay, IconPlayCircle } from "@/components/shared";
+import { ConfirmDialog, IconPlay, IconPlayCircle, useToast } from "@/components/shared";
 import { useStore } from "@/core";
 import { computeTargetRange, findCodeInEditor, matchPatchChunk } from "@/core/ai/contextMatcher";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
@@ -14,6 +14,7 @@ import type { EditorRef } from "./editorRef";
 import { commandRegistry } from "@/core/commands/registry";
 
 function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Element {
+	const toast = useToast();
 	const editor = useStore((state) => state.editor);
 	const execution = useStore((state) => state.execution);
 	const settings = useStore((state) => state.settings);
@@ -31,10 +32,12 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	const { dialogState, showConfirm, handleConfirm, handleCancel } = useConfirmDialog();
 
 	const cells = useEditorCells(editor.content, editor.filepath);
-	const { executingCellIndex, handleRunAll, handleRunCurrentCell } = useEditorExecution({
+	const { state, actions } = useEditorExecution({
 		editorRef: monacoEditorRef,
 		cells,
 	});
+	const { executingCellIndex } = state;
+	const { handleRunAll, handleRunCurrentCell } = actions;
 
 	useEditorDecorations(monacoEditorRef, cells, {
 		showCellDecorations: settings.showCellDecorations,
@@ -245,7 +248,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 							hasExplicitContext &&
 							typeof window !== "undefined"
 						) {
-							window.alert(contextAlertMessage);
+							toast.showError(contextAlertMessage);
 						}
 					}
 					return false;

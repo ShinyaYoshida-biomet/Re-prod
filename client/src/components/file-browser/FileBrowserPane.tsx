@@ -1,25 +1,28 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { IconFile } from "@/components/icons/IconFile";
-import { IconChevronDown, IconChevronRight, IconFolder, IconPlus } from "@/components/shared";
+import {
+	IconChevronDown,
+	IconChevronRight,
+	IconFolder,
+	IconPlus,
+	ConfirmDialog,
+	useToast,
+} from "@/components/shared";
 import { useFileSystemStore, useStore } from "@/core";
 import { normalizeRelativePath, normalizeSeparators, ROOT_PATH } from "@/core/pathUtils";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { useFileBrowserState } from "@/hooks/useFileBrowserState";
 import { useFileSystemData } from "@/hooks/useFileSystemData";
 import { type FileEntry, fileSystem } from "@/services/fileSystem";
+import {
+	alertWorkspaceNotReady,
+	alertFileOperationError,
+	alertDesktopOnlyFeature,
+} from "@/utils/fileBrowserAlerts";
+import { getErrorMessage } from "@/utils/error";
 
 const ROOT_LABEL = "Workspace";
 const DRAG_DATA_MIME = "application/x-reprod-paths";
-
-type ClipboardState = {
-	mode: "copy" | "cut";
-	paths: string[];
-} | null;
-
-type ContextMenuState = {
-	x: number;
-	y: number;
-	path: string;
-	isDir: boolean;
-} | null;
 
 interface TreeNode extends FileEntry {
 	depth: number;
@@ -141,6 +144,7 @@ const useEditorActions = () => {
 
 export function FileBrowserPane(): JSX.Element {
 	useFileSystemData();
+	const toast = useToast();
 	const { setEditorContent, setEditorFilepath, setEditorIsDirty } = useEditorActions();
 	const files = useFileSystemStore((state) => state.files);
 	const expandedFolders = useFileSystemStore((state) => state.expandedFolders);
@@ -156,29 +160,38 @@ export function FileBrowserPane(): JSX.Element {
 	const setActivePath = useFileSystemStore((state) => state.setActivePath);
 	const workspaceRoot = useFileSystemStore((state) => state.workspaceRoot);
 
-	const [clipboard, setClipboard] = useState<ClipboardState>(null);
-	const [anchorPath, setAnchorPath] = useState<string | null>(null);
-	const [focusedPath, setFocusedPath] = useState<string | null>(null);
-	const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
-	const [dragOverPath, setDragOverPath] = useState<string | null>(null);
+	const { state, actions } = useFileBrowserState();
+	const { fileBrowserState: uiState } = state;
+	const {
+		setClipboard,
+		clearClipboard,
+		setAnchorPath,
+		setFocusedPath,
+		setSelection,
+		showContextMenu,
+		hideContextMenu,
+		setDragOverPath,
+	} = actions;
+	const { clipboard, selection, contextMenu, dragOverPath } = uiState;
+	const { anchorPath, focusedPath } = selection;
+
+	const { dialogState, showConfirm, handleConfirm, handleCancel } = useConfirmDialog();
 
 	const nodes = useMemo(
 		() => buildTree(files, expandedFolders, pendingFolders),
 		[files, expandedFolders, pendingFolders],
 	);
 
-	const closeContextMenu = useCallback(() => setContextMenu(null), []);
-
 	useEffect(() => {
 		if (!contextMenu) return;
-		const close = () => closeContextMenu();
+		const close = () => hideContextMenu();
 		window.addEventListener("click", close);
 		window.addEventListener("contextmenu", close);
 		return () => {
 			window.removeEventListener("click", close);
 			window.removeEventListener("contextmenu", close);
 		};
-	}, [contextMenu, closeContextMenu]);
+	}, [contextMenu, hideContextMenu]);
 
 	const refreshParents = useCallback(
 		async (paths: Iterable<string>) => {
@@ -254,9 +267,7 @@ export function FileBrowserPane(): JSX.Element {
 	const openInSystemViewer = useCallback(
 		async (path: string) => {
 			if (!workspaceRoot) {
-				window.alert(
-					"Workspace root is not available yet. Please try again after the project loads.",
-				);
+				alertWorkspaceNotReady(toast);
 				return;
 			}
 			const absolute = resolveAbsolutePath(path);
@@ -282,12 +293,12 @@ export function FileBrowserPane(): JSX.Element {
 
 			try {
 				await navigator.clipboard.writeText(absolute);
-				window.alert("Could not open the file. Path copied to clipboard.");
+				toast.showWarning("Could not open the file. Path copied to clipboard.");
 			} catch (error) {
-				window.alert("Could not open the file.");
+				toast.showError("Could not open the file.");
 			}
 		},
-		[resolveAbsolutePath, workspaceRoot],
+		[resolveAbsolutePath, workspaceRoot, toast],
 	);
 
 	const handleNodeDoubleClick = useCallback(
@@ -312,10 +323,13 @@ export function FileBrowserPane(): JSX.Element {
 				setEditorFilepath(node.path);
 				setEditorIsDirty(false);
 			} catch (error) {
-				window.alert(`Failed to open file: ${(error as Error).message}`);
+				alertFileOperationError(
+					toast,
+					`Failed to open file: ${getErrorMessage(error, "Unknown error")}`,
+				);
 			}
 		},
-		[openInSystemViewer, setEditorContent, setEditorFilepath, setEditorIsDirty],
+		[openInSystemViewer, setEditorContent, setEditorFilepath, setEditorIsDirty, toast],
 	);
 
 	const handleContextMenu = useCallback(
@@ -325,19 +339,19 @@ export function FileBrowserPane(): JSX.Element {
 			if (!selectedFiles.has(node.path)) {
 				selectSinglePath(node.path);
 			}
-			setContextMenu({
+			showContextMenu({
 				x: event.clientX,
 				y: event.clientY,
 				path: node.path,
 				isDir: node.is_dir,
 			});
 		},
-		[selectedFiles, selectSinglePath],
+		[selectedFiles, selectSinglePath, showContextMenu],
 	);
 
 	const handleCreateEntry = useCallback(
 		async (targetPath: string, isDir: boolean, targetIsFolder = true) => {
-			closeContextMenu();
+			hideContextMenu();
 			const defaultName = isDir ? "New Folder" : "New File.R";
 			const name = window.prompt(`Enter ${isDir ? "folder" : "file"} name`, defaultName);
 			if (!name) return;
@@ -352,16 +366,18 @@ export function FileBrowserPane(): JSX.Element {
 				}
 				await refreshPath(parent || ROOT_PATH);
 			} catch (error) {
-				window.alert(`Failed to create ${isDir ? "folder" : "file"}: ${(error as Error).message}`);
-				window.alert(`Failed to create ${isDir ? "folder" : "file"}: ${(error as Error).message}`);
+				alertFileOperationError(
+					toast,
+					`Failed to create ${isDir ? "folder" : "file"}: ${getErrorMessage(error, "Unknown error")}`,
+				);
 			}
 		},
-		[closeContextMenu, refreshPath],
+		[hideContextMenu, refreshPath, toast],
 	);
 
 	const handleRename = useCallback(
 		async (path: string) => {
-			closeContextMenu();
+			hideContextMenu();
 			const currentName = getNameFromPath(path);
 			const parent = getParentPath(path);
 			const newName = window.prompt("Enter new name", currentName);
@@ -371,41 +387,53 @@ export function FileBrowserPane(): JSX.Element {
 				await fileSystem.renamePath(path, destination);
 				await refreshPath(parent);
 			} catch (error) {
-				window.alert(`Failed to rename: ${(error as Error).message}`);
-				window.alert(`Failed to rename: ${(error as Error).message}`);
+				alertFileOperationError(
+					toast,
+					`Failed to rename: ${getErrorMessage(error, "Unknown error")}`,
+				);
 			}
 		},
-		[closeContextMenu, refreshPath],
+		[hideContextMenu, refreshPath, toast],
 	);
 
-	const handleDeleteSelected = useCallback(async () => {
+	const handleDeleteClick = useCallback(async () => {
 		if (!selectedFiles.size) return;
-		const confirmDelete = window.confirm(
-			`Delete ${selectedFiles.size} item${selectedFiles.size > 1 ? "s" : ""}?`,
+
+		const targets = Array.from(selectedFiles);
+
+		const confirmed = await showConfirm(
+			"Delete Files",
+			`Are you sure you want to delete ${targets.length} item${targets.length > 1 ? "s" : ""}? This action cannot be undone.`,
 		);
-		if (!confirmDelete) {
+
+		if (!confirmed) {
 			return;
 		}
-		const targets = Array.from(selectedFiles);
+
+		// Deletion logic
 		for (const path of targets) {
 			try {
 				await fileSystem.deletePath(path);
 			} catch (error) {
-				window.alert(`Failed to delete ${path}: ${(error as Error).message}`);
+				alertFileOperationError(
+					toast,
+					`Failed to delete ${path}: ${getErrorMessage(error, "Unknown error")}`,
+				);
 			}
 		}
+
 		await refreshParents(targets);
 		clearSelection();
-		closeContextMenu();
-	}, [selectedFiles, refreshParents, clearSelection, closeContextMenu]);
+		hideContextMenu();
+	}, [selectedFiles, showConfirm, refreshParents, clearSelection, hideContextMenu, toast]);
 
 	const handleCopyCut = useCallback(
 		(mode: "copy" | "cut") => {
 			if (!selectedFiles.size) return;
 			setClipboard({ mode, paths: Array.from(selectedFiles) });
-			closeContextMenu();
+			hideContextMenu();
 		},
-		[selectedFiles, closeContextMenu],
+		[selectedFiles, hideContextMenu],
 	);
 
 	const performTransfer = useCallback(
@@ -425,8 +453,9 @@ export function FileBrowserPane(): JSX.Element {
 						await fileSystem.copyPath(path, destPath);
 					}
 				} catch (error) {
-					window.alert(
-						`Failed to ${mode === "copy" ? "copy" : "move"} ${name}: ${(error as Error).message}`,
+					alertFileOperationError(
+						toast,
+						`Failed to ${mode === "copy" ? "copy" : "move"} ${name}: ${getErrorMessage(error, "Unknown error")}`,
 					);
 				}
 			}
@@ -435,7 +464,7 @@ export function FileBrowserPane(): JSX.Element {
 				await refreshParents(targets);
 			}
 		},
-		[refreshPath, refreshParents],
+		[refreshPath, refreshParents, toast],
 	);
 
 	const handlePaste = useCallback(
@@ -450,11 +479,11 @@ export function FileBrowserPane(): JSX.Element {
 					: ROOT_PATH);
 			await performTransfer(clipboard.paths, destination, clipboard.mode);
 			if (clipboard.mode === "cut") {
-				setClipboard(null);
+				clearClipboard();
 			}
-			closeContextMenu();
+			hideContextMenu();
 		},
-		[clipboard, contextMenu, closeContextMenu, performTransfer],
+		[clipboard, contextMenu, hideContextMenu, performTransfer, clearClipboard],
 	);
 
 	const handleCopyPath = useCallback(
@@ -470,24 +499,22 @@ export function FileBrowserPane(): JSX.Element {
 			} catch (error) {
 				// Silent failure - clipboard operation failed
 			}
-			closeContextMenu();
+			hideContextMenu();
 		},
-		[closeContextMenu, resolveAbsolutePath],
+		[hideContextMenu, resolveAbsolutePath],
 	);
 
 	const handleRevealInFinder = useCallback(
 		async (path: string) => {
 			if (!workspaceRoot) {
-				closeContextMenu();
-				window.alert(
-					"Workspace root is not available yet. Please try again after the project loads.",
-				);
+				hideContextMenu();
+				alertWorkspaceNotReady(toast);
 				return;
 			}
 			const absolute = resolveAbsolutePath(path);
 			const tauriWindow = window as TauriWindow;
 			const shell = tauriWindow.__TAURI__?.shell;
-			closeContextMenu();
+			hideContextMenu();
 			if (shell?.open) {
 				try {
 					await shell.open(absolute);
@@ -498,12 +525,12 @@ export function FileBrowserPane(): JSX.Element {
 			}
 			try {
 				await navigator.clipboard.writeText(absolute);
-				window.alert("Reveal is only available in the desktop build. Path copied to clipboard.");
+				alertDesktopOnlyFeature(toast, "Reveal", true);
 			} catch (error) {
-				window.alert("Reveal is only available in the desktop build.");
+				alertDesktopOnlyFeature(toast, "Reveal");
 			}
 		},
-		[closeContextMenu, resolveAbsolutePath, workspaceRoot],
+		[hideContextMenu, resolveAbsolutePath, workspaceRoot, toast],
 	);
 
 	const handleNodeDragStart = useCallback(
@@ -652,7 +679,7 @@ export function FileBrowserPane(): JSX.Element {
 				case "Backspace":
 				case "Delete":
 					event.preventDefault();
-					await handleDeleteSelected();
+					handleDeleteClick();
 					break;
 				default:
 					break;
@@ -662,7 +689,7 @@ export function FileBrowserPane(): JSX.Element {
 			expandedFolders,
 			focusedPath,
 			handleCopyCut,
-			handleDeleteSelected,
+			handleDeleteClick,
 			handleNodeDoubleClick,
 			handlePaste,
 			nodes,
@@ -697,7 +724,7 @@ export function FileBrowserPane(): JSX.Element {
 				<button type="button" onClick={() => handleRename(menuTarget.path)}>
 					Rename
 				</button>
-				<button type="button" onClick={handleDeleteSelected}>
+				<button type="button" onClick={handleDeleteClick}>
 					Delete
 				</button>
 				<hr />
@@ -796,6 +823,7 @@ export function FileBrowserPane(): JSX.Element {
 						type="button"
 						className="btn btn-icon"
 						title="New File"
+						aria-label="Create new file"
 						onClick={() => handleCreateEntry(ROOT_PATH, false, true)}
 					>
 						<IconPlus width={14} height={14} />
@@ -804,6 +832,7 @@ export function FileBrowserPane(): JSX.Element {
 						type="button"
 						className="btn btn-icon"
 						title="New Folder"
+						aria-label="Create new folder"
 						onClick={() => handleCreateEntry(ROOT_PATH, true, true)}
 					>
 						<IconFolder width={14} height={14} />
@@ -820,8 +849,7 @@ export function FileBrowserPane(): JSX.Element {
 				onKeyDown={handleKeyDown}
 				onClick={() => {
 					clearSelection();
-					setFocusedPath(null);
-					setAnchorPath(null);
+					setSelection(null, null);
 					setActivePath(null);
 				}}
 				onDragOver={handleRootDragOver}
@@ -856,6 +884,15 @@ export function FileBrowserPane(): JSX.Element {
 				<div className="file-tree">{nodes.map((node) => renderNode(node))}</div>
 			</div>
 			{renderContextMenu()}
+			<ConfirmDialog
+				open={dialogState.open}
+				title={dialogState.title}
+				message={dialogState.message}
+				confirmLabel="Delete"
+				cancelLabel="Cancel"
+				onConfirm={handleConfirm}
+				onCancel={handleCancel}
+			/>
 		</div>
 	);
 }

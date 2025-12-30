@@ -1,4 +1,4 @@
-import type { ExecutionEventPayload, TimelineQuery } from "shared";
+import type { ExecutionEventPayload, TimelineQuery } from "@/types";
 import type { StateCreator } from "zustand";
 
 export interface TimelineState {

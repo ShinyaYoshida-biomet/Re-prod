@@ -1,11 +1,13 @@
 import { useMemo } from "react";
-import { IconBarChart, IconTrash } from "@/components/shared";
+import { IconBarChart, IconTrash, ConfirmDialog } from "@/components/shared";
 import { useStore } from "@/core";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { deletePlot, exportPlot } from "@/services/plotHistoryService";
 import { formatClockTime } from "@/utils/time";
 
 export function PlotHistoryPanel(): JSX.Element {
 	const plotHistory = useStore((state) => state.plotHistory);
+	const { dialogState, showConfirm, handleConfirm, handleCancel } = useConfirmDialog();
 
 	const activePlot = useMemo(() => {
 		const byId = plotHistory.items.find((plot) => plot.id === plotHistory.activePlotId);
@@ -13,10 +15,17 @@ export function PlotHistoryPanel(): JSX.Element {
 		return plotHistory.items.length > 0 ? plotHistory.items[plotHistory.items.length - 1] : null;
 	}, [plotHistory.activePlotId, plotHistory.items]);
 
-	const handleDelete = (plotId: string) => {
-		if (!window.confirm("Delete this plot from history?")) {
+	const handleDeleteClick = async (plotId: string) => {
+		const confirmed = await showConfirm(
+			"Delete Plot",
+			"Are you sure you want to delete this plot? This action cannot be undone.",
+		);
+
+		if (!confirmed) {
 			return;
 		}
+
+		// Delete the plot
 		void deletePlot(plotId).catch(() => {});
 	};
 
@@ -66,7 +75,7 @@ export function PlotHistoryPanel(): JSX.Element {
 							</button>
 							<button
 								className="btn btn-danger"
-								onClick={() => handleDelete(activePlot.id)}
+								onClick={() => handleDeleteClick(activePlot.id)}
 								title="Delete plot from history"
 							>
 								<IconTrash width={14} height={14} aria-hidden /> Delete
@@ -84,6 +93,15 @@ export function PlotHistoryPanel(): JSX.Element {
 					<img src={activePlot.data} alt="Active plot" className="plot-image" loading="lazy" />
 				</div>
 			)}
+			<ConfirmDialog
+				open={dialogState.open}
+				title={dialogState.title}
+				message={dialogState.message}
+				confirmLabel="Delete"
+				cancelLabel="Cancel"
+				onConfirm={handleConfirm}
+				onCancel={handleCancel}
+			/>
 		</div>
 	);
 }

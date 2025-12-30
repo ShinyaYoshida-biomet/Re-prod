@@ -1,12 +1,8 @@
-import type { ExecutionRequestPayload, ExecutionResultPayload } from "@shared/types";
-import type { ServerMessage } from "shared";
-import { executionMessages } from "@/services/messageBuilders";
+import type { ExecutionRequestPayload, RunSummary } from "@/types";
+import type { DataTransport } from "@/repositories/core/DataTransport";
+import { ExecutionRepository } from "@/repositories/ExecutionRepository";
+import { WebSocketTransport } from "@/repositories/core/WebSocketTransport";
 import { socketService } from "./socket";
-
-type ExecutionSuccessMessage = Extract<ServerMessage, { type: "execution_result" }>;
-
-const executionMatcher = (message: ServerMessage): boolean =>
-	message.type === "execution_result" || message.type === "error";
 
 export class ExecutionServiceError extends Error {
 	constructor(message: string) {
@@ -15,38 +11,83 @@ export class ExecutionServiceError extends Error {
 	}
 }
 
-export interface ExecuteResponse {
-	raw: ExecutionSuccessMessage;
-	result: ExecutionResultPayload;
+function toExecutionServiceError(e: unknown, fallbackMessage: string): ExecutionServiceError {
+	const message = e instanceof Error ? e.message : fallbackMessage;
+	return new ExecutionServiceError(message);
+}
+
+export function createExecutionService(transport: DataTransport): {
+	executeRequest: (request: ExecutionRequestPayload) => Promise<void>;
+	executeRequestAwaitRunCompletion: (request: ExecutionRequestPayload) => Promise<RunCompletion>;
+	interruptExecution: () => Promise<boolean>;
+	restartSession: () => Promise<void>;
+} {
+	const repository = new ExecutionRepository(transport);
+
+	return {
+		async executeRequest(request: ExecutionRequestPayload): Promise<void> {
+			try {
+				repository.execute(request);
+			} catch (e) {
+				throw toExecutionServiceError(e, "Execution request failed");
+			}
+		},
+
+		async executeRequestAwaitRunCompletion(
+			request: ExecutionRequestPayload,
+		): Promise<RunCompletion> {
+			try {
+				return await repository.executeAndAwait(request);
+			} catch (e) {
+				throw toExecutionServiceError(e, "Execution failed");
+			}
+		},
+
+		async interruptExecution(): Promise<boolean> {
+			try {
+				return await repository.interrupt();
+			} catch (e) {
+				throw toExecutionServiceError(e, "Failed to interrupt execution");
+			}
+		},
+
+		async restartSession(): Promise<void> {
+			try {
+				await repository.restartSession();
+			} catch (e) {
+				throw toExecutionServiceError(e, "Failed to restart session");
+			}
+		},
+	};
 }
 
 /**
- * Dispatch an execution request to the backend and resolve with the resulting
- * payload. All socket coordination lives here so UI layers do not have to
- * wire callbacks manually.
+ * Dispatch an execution request to the backend.
+ * The store will be updated via run_* websocket events; no response is awaited here.
  */
-export async function executeRequest(request: ExecutionRequestPayload): Promise<ExecuteResponse> {
-	return new Promise<ExecuteResponse>((resolve, reject) => {
-		const didSend = socketService.send(
-			executionMessages.execute(request),
-			(message) => {
-				if (message.type === "execution_result") {
-					resolve({ raw: message, result: message.result });
-					return;
-				}
-
-				if (message.type === "error") {
-					reject(new ExecutionServiceError(message.message));
-					return;
-				}
-
-				reject(new ExecutionServiceError(`Unexpected execution response: ${message.type}`));
-			},
-			executionMatcher,
-		);
-
-		if (!didSend) {
-			reject(new ExecutionServiceError("WebSocket is not connected"));
-		}
-	});
+export async function executeRequest(request: ExecutionRequestPayload): Promise<void> {
+	return defaultService.executeRequest(request);
 }
+
+export interface RunCompletion {
+	runId: string;
+	stdout: string;
+	stderr: string;
+	run: RunSummary;
+}
+
+export async function executeRequestAwaitRunCompletion(
+	request: ExecutionRequestPayload,
+): Promise<RunCompletion> {
+	return defaultService.executeRequestAwaitRunCompletion(request);
+}
+
+export async function interruptExecution(): Promise<boolean> {
+	return defaultService.interruptExecution();
+}
+
+export async function restartSession(): Promise<void> {
+	return defaultService.restartSession();
+}
+
+const defaultService = createExecutionService(new WebSocketTransport(socketService));

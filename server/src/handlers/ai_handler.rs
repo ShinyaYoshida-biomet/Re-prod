@@ -4,11 +4,10 @@ use crate::projects::ProjectRuntime;
 use reprod_core::{
     ai::{
         self,
-        tools::{get_console_tools, get_filesystem_tools, get_r_context_tools},
+        tools::{get_console_tools, get_filesystem_tools, get_r_context_tools, get_web_search_tools},
     },
     ChatMessage,
 };
-use serde_json::json;
 
 use super::{
     common::{
@@ -26,7 +25,7 @@ const PLAN_STEP_EXECUTE: &str = "execute-task";
 const PLAN_STEP_SUMMARIZE: &str = "summarize";
 
 fn build_initial_plan() -> Vec<PlanStepPayload> {
-    let mut steps = vec![
+    let steps = vec![
         PlanStepPayload::new(PLAN_STEP_DISPATCH, "Plan request", Some("plan".to_string())),
         PlanStepPayload::new(
             PLAN_STEP_FETCH,
@@ -91,6 +90,7 @@ pub(super) async fn handle_ai_message(
         let mut tools = get_filesystem_tools();
         tools.extend(get_r_context_tools());
         tools.extend(get_console_tools());
+        tools.extend(get_web_search_tools());
         let mut responses = Vec::new();
 
         // Mark fetch/inspect/execute phases as running in order as we start tool processing.
@@ -123,10 +123,10 @@ pub(super) async fn handle_ai_message(
 
                         let tool_result = execute_ai_tool_call(tool_call, runtime).await;
                         match tool_result {
-                            Ok(content) => {
+                            Ok(result) => {
                                 log.status = ToolLogStatus::Done;
-                                log.output = Some(json!({ "result": content }));
-                                tool_results.push((tool_call.id.clone(), content));
+                                log.output = Some(result.output.clone());
+                                tool_results.push((tool_call.id.clone(), result.summary));
                             }
                             Err(err) => {
                                 log.status = ToolLogStatus::Error;
@@ -172,10 +172,12 @@ pub(super) async fn handle_ai_message(
                                 &stream_id,
                                 final_response,
                             ));
-                            if let Some(exec) = plan.iter_mut().find(|s| s.id == PLAN_STEP_EXECUTE) {
+                            if let Some(exec) = plan.iter_mut().find(|s| s.id == PLAN_STEP_EXECUTE)
+                            {
                                 exec.mark_status(PlanStepStatus::Done);
                             }
-                            if let Some(sum) = plan.iter_mut().find(|s| s.id == PLAN_STEP_SUMMARIZE) {
+                            if let Some(sum) = plan.iter_mut().find(|s| s.id == PLAN_STEP_SUMMARIZE)
+                            {
                                 sum.mark_status(PlanStepStatus::Done);
                             }
                             push_plan_update(&mut responses, &stream_id, &plan);
@@ -185,7 +187,8 @@ pub(super) async fn handle_ai_message(
                             responses.push(WSResponse::Error {
                                 message: format!("Failed to get final response: {}", e),
                             });
-                            if let Some(exec) = plan.iter_mut().find(|s| s.id == PLAN_STEP_EXECUTE) {
+                            if let Some(exec) = plan.iter_mut().find(|s| s.id == PLAN_STEP_EXECUTE)
+                            {
                                 exec.error = Some(format!("Failed to get final response: {}", e));
                                 exec.mark_status(PlanStepStatus::Error);
                             }

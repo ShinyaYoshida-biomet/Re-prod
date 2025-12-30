@@ -23,11 +23,10 @@
 			"@/hooks/*": ["client/src/hooks/*"],
 			"@/utils/*": ["client/src/utils/*"],
 			"@/css/*": ["client/src/css/*"],
-			"@server/*": ["server/src/*"],
-			"@shared/*": ["shared/src/*"]
+			"@server/*": ["server/src/*"]
 		},
-		"rootDirs": ["client/src", "server/src", "shared/src"]
+		"rootDirs": ["client/src", "server/src"]
 	},
-	"include": ["client/src", "server/src", "shared/src"],
+	"include": ["client/src", "server/src"],
 	"references": [{ "path": "client/tsconfig.node.json" }]
 }

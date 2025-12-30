@@ -2,11 +2,12 @@
 // Allow expect for critical initialization failures where panic is appropriate
 #![allow(clippy::expect_used)]
 
+mod acp;
 mod commands;
 mod server_launcher;
 mod terminal;
 
-use crate::{server_launcher::launch_server, terminal::TerminalManager};
+use crate::{acp::AcpManager, server_launcher::launch_server, terminal::TerminalManager};
 use reprod_core::{Config, RExecutor};
 use std::sync::Arc;
 
@@ -29,6 +30,8 @@ async fn main() {
     let r_executor = Arc::new(Mutex::new(RExecutor::new(temp_dir, config.r_path.clone())));
     let terminal_manager = Arc::new(TerminalManager::new());
     let config_state = Arc::new(Mutex::new(config));
+    let workspace_root = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+    let acp_state = Arc::new(Mutex::new(AcpManager::new(workspace_root)));
 
     // Start the bundled Axum server as a sidecar so the frontend can connect.
     let server_handle = launch_server()
@@ -41,6 +44,7 @@ async fn main() {
         .manage(terminal_manager)
         .manage(config_state)
         .manage(server_state.clone())
+        .manage(acp_state.clone())
         .plugin(tauri_plugin_pty::init())
         .invoke_handler(tauri::generate_handler![
             commands::execute_r_code,
@@ -52,11 +56,20 @@ async fn main() {
             commands::resize_terminal,
             commands::close_terminal_session,
             commands::get_server_port,
+            acp::commands::acp_initialize,
+            acp::commands::acp_create_session,
+            acp::commands::acp_send_prompt,
+            acp::commands::acp_cancel,
+            acp::commands::acp_respond_to_permission,
+            acp::commands::acp_detect_agents,
+            acp::commands::acp_get_agent_config,
+            acp::commands::acp_set_agent_config,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
     let server_for_shutdown = server_state;
+    let acp_for_shutdown = acp_state;
 
     app.run(move |_app_handle, event| {
         if matches!(
@@ -64,8 +77,13 @@ async fn main() {
             tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit
         ) {
             let server_for_shutdown = server_for_shutdown.clone();
+            let acp_for_shutdown = acp_for_shutdown.clone();
             tauri::async_runtime::spawn(async move {
                 let mut guard = server_for_shutdown.lock().await;
+                guard.shutdown().await;
+            });
+            tauri::async_runtime::spawn(async move {
+                let mut guard = acp_for_shutdown.lock().await;
                 guard.shutdown().await;
             });
         }

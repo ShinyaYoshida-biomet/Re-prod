@@ -345,12 +345,12 @@
 
 /* Stop button - danger color */
 .icon-btn.stop-btn {
-	background-color: #dc4c3f;
+	background-color: var(--phylo-error-alt);
 	color: white;
 }
 
 .icon-btn.stop-btn:hover:not(:disabled) {
-	background-color: #c73f33;
+	background-color: var(--phylo-error-alt-dark);
 }
 
 /* Auto-resize textarea behavior */

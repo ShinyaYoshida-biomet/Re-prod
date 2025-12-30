@@ -1,6 +1,7 @@
 // Allow expect for critical initialization failures where panic is appropriate
 #![allow(clippy::expect_used)]
 
+mod acp;
 mod conversions;
 mod handlers;
 mod http;
@@ -81,6 +82,12 @@ async fn main() {
             "/api/tools/execute",
             axum::routing::post(routes::execute_tool),
         )
+        .route("/api/acp/agents", get(routes::acp_detect_agents))
+        .route("/api/acp/config", get(routes::acp_get_config))
+        .route(
+            "/api/acp/config",
+            axum::routing::put(routes::acp_set_config),
+        )
         .route("/ws", get(handlers::ws_handler))
         .layer(
             CorsLayer::new()
@@ -97,10 +104,7 @@ async fn main() {
             projects: projects.clone(),
         });
 
-    let port = std::env::var("REPROD_PORT")
-        .ok()
-        .and_then(|val| val.parse::<u16>().ok())
-        .unwrap_or(3001);
+    let port = reprod_core::config::server_port_override().unwrap_or(3001);
     let addr = format!("127.0.0.1:{}", port);
     let listener = tokio::net::TcpListener::bind(&addr)
         .await

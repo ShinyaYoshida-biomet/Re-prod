@@ -74,11 +74,11 @@
 
 /* Light theme for xterm */
 .terminal-session__term .xterm {
-	background-color: #f6f7fb;
-	color: #111827;
+	background-color: var(--phylo-bg-github-light);
+	color: var(--phylo-text-dark);
 }
 
 .terminal-session__term .xterm .xterm-viewport,
 .terminal-session__term .xterm .xterm-screen {
-	background-color: #f6f7fb;
+	background-color: var(--phylo-bg-github-light);
 }

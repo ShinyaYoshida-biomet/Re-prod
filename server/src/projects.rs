@@ -1,33 +1,151 @@
+use crate::acp::AcpService;
+use crate::handlers::stream_buffer::StreamBuffer;
 use anyhow::{anyhow, Context, Result};
 use reprod_core::{
     ai::tools::{FileSystemTool, RContextTool},
-    executor::timeline::JsonTimeline,
+    edit::EditService,
+    execution_repository::{ExecutionRepository, TimelineExecutionRepository},
     fs::FileSystem,
+    plot_history::PlotHistoryEntry,
     plot_history::PlotHistoryManager,
+    timeline::JsonTimeline,
+    web_search::{cloud_provider::CloudWebSearchProvider, WebSearchRegistry},
 };
 use reprod_core::{
     project::{
         default_config_path, default_registry_path, locate_config, ProjectConfig,
         ProjectDescriptor, ProjectRecord, ProjectRegistry,
     },
-    Config, RExecutor,
+    Config, ExecutionEvent, RExecutor, RunOutputChunk, RunSummary,
 };
+use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
     process::Command,
     sync::Arc,
 };
-use tokio::sync::Mutex;
+use tokio::sync::{broadcast, Mutex};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct SessionSnapshot {
+    version: u32,
+    saved_at: u64,
+    #[serde(default)]
+    editor: SessionEditor,
+    #[serde(default)]
+    view: SessionView,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct SessionEditor {
+    #[serde(default)]
+    filepath: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct SessionView {
+    #[serde(default)]
+    panes: SessionPanes,
+    #[serde(default)]
+    modals: SessionModals,
+    #[serde(default = "default_zoom")]
+    zoom: f32,
+}
+
+impl Default for SessionView {
+    fn default() -> Self {
+        Self {
+            panes: SessionPanes::default(),
+            modals: SessionModals::default(),
+            zoom: default_zoom(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct SessionPanes {
+    #[serde(default = "true_bool")]
+    files: bool,
+    #[serde(default = "true_bool")]
+    editor: bool,
+    #[serde(default = "true_bool")]
+    assistant: bool,
+}
+
+impl Default for SessionPanes {
+    fn default() -> Self {
+        Self {
+            files: true,
+            editor: true,
+            assistant: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct SessionModals {
+    #[serde(default)]
+    export: bool,
+    #[serde(default)]
+    shortcuts: bool,
+    #[serde(default)]
+    about: bool,
+    #[serde(default)]
+    session_info: bool,
+    #[serde(default)]
+    settings: bool,
+    #[serde(default)]
+    projects: bool,
+}
+
+fn true_bool() -> bool {
+    true
+}
+
+fn default_zoom() -> f32 {
+    1.0
+}
+
+#[derive(Debug, Clone)]
+pub enum RuntimeBroadcastEvent {
+    RunStarted {
+        run: RunSummary,
+    },
+    RunOutput {
+        chunk: RunOutputChunk,
+    },
+    RunFinished {
+        run: RunSummary,
+    },
+    TimelineEventAdded {
+        event: ExecutionEvent,
+    },
+    PlotHistoryUpdated {
+        active_plot_id: Option<String>,
+        plots: Vec<PlotHistoryEntry>,
+    },
+}
 
 pub struct ProjectRuntime {
     pub descriptor: ProjectDescriptor,
     pub timeline: Arc<JsonTimeline>,
+    pub execution_repo: Arc<dyn ExecutionRepository>,
+    pub stream_buffer: Arc<Mutex<StreamBuffer>>,
+    pub run_events: broadcast::Sender<RuntimeBroadcastEvent>,
     pub file_system: Arc<FileSystem>,
     pub filesystem_tool: Arc<FileSystemTool>,
+    pub edit_service: Arc<EditService>,
     pub r_context_tool: Arc<RContextTool>,
     pub r_executor: Arc<Mutex<RExecutor>>,
     pub plot_history: Arc<Mutex<PlotHistoryManager>>,
+    pub acp: Arc<AcpService>,
+    pub web_search_registry: Arc<Mutex<WebSearchRegistry>>,
 }
 
 impl ProjectRuntime {
@@ -50,6 +168,9 @@ impl ProjectRuntime {
         });
         let timeline = Arc::new(timeline);
 
+        let execution_repo: Arc<dyn ExecutionRepository> =
+            Arc::new(TimelineExecutionRepository::new(timeline.clone()));
+
         let plot_history_path = descriptor.root_path.join(".reprod").join("plots");
         let plot_history_manager = PlotHistoryManager::new(plot_history_path)?;
         let plot_history = Arc::new(Mutex::new(plot_history_manager));
@@ -67,17 +188,42 @@ impl ProjectRuntime {
             .with_plot_history(plot_history.clone())
             .with_working_dir(descriptor.root_path.clone())
             .use_persistent_mode()
+            .disable_run_recording()
             .build();
 
         let filesystem_root = descriptor.root_path.clone();
+        let (run_events, _) = broadcast::channel(1024);
+        let acp = Arc::new(AcpService::new(descriptor.root_path.clone()));
+        let web_search_registry = Arc::new(Mutex::new(WebSearchRegistry::new()));
+        match CloudWebSearchProvider::from_env() {
+            Ok(Some(provider)) => {
+                if let Ok(mut registry) = web_search_registry.try_lock() {
+                    registry.register_provider(provider);
+                } else {
+                    tracing::warn!("Web search registry locked during initialization");
+                }
+            }
+            Ok(None) => {
+                tracing::info!("Web search provider not configured; skipping initialization");
+            }
+            Err(error) => {
+                tracing::warn!("Failed to initialize web search provider: {}", error);
+            }
+        }
         Ok(Self {
             descriptor,
             timeline,
+            execution_repo,
+            stream_buffer: Arc::new(Mutex::new(StreamBuffer::new())),
+            run_events,
             file_system: Arc::new(FileSystem::new(&filesystem_root)),
-            filesystem_tool: Arc::new(FileSystemTool::new(filesystem_root)),
+            filesystem_tool: Arc::new(FileSystemTool::new(filesystem_root.clone())),
+            edit_service: Arc::new(EditService::new(filesystem_root)),
             r_context_tool: Arc::new(RContextTool::new()),
             r_executor: Arc::new(Mutex::new(r_executor)),
             plot_history,
+            acp,
+            web_search_registry,
         })
     }
 }
@@ -259,9 +405,22 @@ impl ProjectController {
         }
         let content = std::fs::read_to_string(&state_path)
             .with_context(|| format!("Failed to read {}", state_path.display()))?;
-        let value =
+        let value: serde_json::Value =
             serde_json::from_str(&content).context("Failed to parse project state document")?;
-        Ok(Some(value))
+
+        match serde_json::from_value::<SessionSnapshot>(value) {
+            Ok(snapshot) => Ok(Some(
+                serde_json::to_value(snapshot).context("Failed to serialize project state")?,
+            )),
+            Err(error) => {
+                tracing::warn!(
+                    "Ignoring invalid project state for {}: {}",
+                    runtime.descriptor.config.id,
+                    error
+                );
+                Ok(None)
+            }
+        }
     }
 
     pub async fn save_state(&self, project_id: &str, payload: serde_json::Value) -> Result<()> {
@@ -279,8 +438,10 @@ impl ProjectController {
                 )
             })?;
         }
+        let snapshot: SessionSnapshot = serde_json::from_value(payload)
+            .context("Project state payload contains unsupported fields")?;
         let content =
-            serde_json::to_string_pretty(&payload).context("Failed to serialize project state")?;
+            serde_json::to_string_pretty(&snapshot).context("Failed to serialize project state")?;
         std::fs::write(&state_path, content)
             .with_context(|| format!("Failed to write {}", state_path.display()))
     }

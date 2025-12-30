@@ -1,74 +1,35 @@
 import type {
 	ExecutionEventPayload,
-	ServerMessage,
 	TimelineQuery,
 	TimelineResponse,
 	TimelineStats,
-} from "shared";
-import { timelineMessages } from "@/services/messageBuilders";
+} from "@/types";
+import type { DataTransport } from "@/repositories/core/DataTransport";
+import { TimelineRepository } from "@/repositories/TimelineRepository";
+import { WebSocketTransport } from "@/repositories/core/WebSocketTransport";
 import { socketService } from "./socket";
 
-const timelineMatcher = (message: ServerMessage): boolean =>
-	message.type === "timeline_response" || message.type === "error";
+export function createTimelineService(transport: DataTransport): {
+	queryTimeline: (query: TimelineQuery) => Promise<TimelineResponse>;
+	getTimelineStats: () => Promise<TimelineStats>;
+	subscribeToTimelineEvents: (handler: (event: ExecutionEventPayload) => void) => () => void;
+} {
+	const repository = new TimelineRepository(transport);
 
-export async function queryTimeline(query: TimelineQuery): Promise<TimelineResponse> {
-	return new Promise((resolve, reject) => {
-		const didSend = socketService.send(
-			timelineMessages.query(query),
-			(message) => {
-				if (message.type === "timeline_response") {
-					resolve(message.data);
-					return;
+	return {
+		queryTimeline: (query) => repository.query(query),
+		getTimelineStats: () => repository.stats(),
+		subscribeToTimelineEvents: (handler) =>
+			transport.on("timeline_event_added", (message) => {
+				if (message.type === "timeline_event_added") {
+					handler(message.event);
 				}
-
-				if (message.type === "error") {
-					reject(new Error(message.message));
-					return;
-				}
-
-				reject(new Error(`Unexpected timeline response: ${message.type}`));
-			},
-			timelineMatcher,
-		);
-
-		if (!didSend) {
-			reject(new Error("Timeline request failed: WebSocket is not connected."));
-		}
-	});
+			}),
+	};
 }
 
-export async function getTimelineStats(): Promise<TimelineStats> {
-	return new Promise((resolve, reject) => {
-		const didSend = socketService.send(
-			timelineMessages.statsQuery(),
-			(message) => {
-				if (message.type === "timeline_stats_response") {
-					resolve(message.stats);
-					return;
-				}
+const defaultService = createTimelineService(new WebSocketTransport(socketService));
 
-				if (message.type === "error") {
-					reject(new Error(message.message));
-					return;
-				}
-
-				reject(new Error(`Unexpected timeline stats response: ${message.type}`));
-			},
-			(message) => message.type === "timeline_stats_response" || message.type === "error",
-		);
-
-		if (!didSend) {
-			reject(new Error("Timeline stats request failed: WebSocket is not connected."));
-		}
-	});
-}
-
-export function subscribeToTimelineEvents(
-	handler: (event: ExecutionEventPayload) => void,
-): () => void {
-	return socketService.on("timeline_event_added", (message) => {
-		if (message.type === "timeline_event_added") {
-			handler(message.event);
-		}
-	});
-}
+export const queryTimeline = defaultService.queryTimeline;
+export const getTimelineStats = defaultService.getTimelineStats;
+export const subscribeToTimelineEvents = defaultService.subscribeToTimelineEvents;

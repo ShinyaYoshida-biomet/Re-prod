@@ -2,6 +2,8 @@ import { IconBarChart, IconCheckCircle, IconXCircle } from "@/components/shared"
 import { useConsolePanelState } from "@/hooks/useConsolePanelState";
 import { formatClockTime } from "@/utils/time";
 import type { ConsoleTabId } from "@/types/panels";
+import { formatDateTime } from "@/utils/time";
+import { classNames } from "@/utils/classNames";
 
 interface ConsolePanelProps {
 	view: ConsoleTabId;
@@ -10,11 +12,38 @@ interface ConsolePanelProps {
 export function ConsolePanel({ view }: ConsolePanelProps): JSX.Element {
 	const { execution, consoleEndRef } = useConsolePanelState();
 
+	const handlePlotsClick = (index: number, result: (typeof execution.results)[0]) => {
+		const previousPlots = execution.results
+			.slice(0, index)
+			.reduce((sum, r) => sum + r.plots.length, 0);
+		const targetPlotId = result.plots[0]?.id;
+
+		window.dispatchEvent(
+			new CustomEvent("focusPlot", {
+				detail: { plotIndex: previousPlots, plotId: targetPlotId },
+			}),
+		);
+	};
+
+	const handlePlotsKeyDown =
+		(index: number, result: (typeof execution.results)[0]) => (e: React.KeyboardEvent) => {
+			if (e.key === "Enter" || e.key === " ") {
+				e.preventDefault();
+				e.stopPropagation();
+				handlePlotsClick(index, result);
+			}
+		};
+
 	return (
 		<div className="panel panel--transparent console-panel">
 			<div className="panel-content console-content">
 				{view === "console" && (
 					<div className="console-output">
+						{execution.lastError && (
+							<div className="console-error-banner" role="alert">
+								{execution.lastError}
+							</div>
+						)}
 						{execution.results.length === 0 ? (
 							<div className="console-welcome">
 								<p>Console ready. Run R code to see output here.</p>
@@ -51,18 +80,8 @@ export function ConsolePanel({ view }: ConsolePanelProps): JSX.Element {
 										{result.plots.length > 0 && (
 											<div
 												className="console-plots-info clickable"
-												onClick={() => {
-													const previousPlots = execution.results
-														.slice(0, index)
-														.reduce((sum, r) => sum + r.plots.length, 0);
-													const targetPlotId = result.plots[0]?.id;
-
-													window.dispatchEvent(
-														new CustomEvent("focusPlot", {
-															detail: { plotIndex: previousPlots, plotId: targetPlotId },
-														}),
-													);
-												}}
+												onClick={() => handlePlotsClick(index, result)}
+												onKeyDown={handlePlotsKeyDown(index, result)}
 												role="button"
 												tabIndex={0}
 												title="Click to view plot"
@@ -91,10 +110,13 @@ export function ConsolePanel({ view }: ConsolePanelProps): JSX.Element {
 									<div key={index} className="history-item">
 										<div className="history-header">
 											<span className="history-number">#{index + 1}</span>
-											<span className="history-time">
-												{new Date(result.timestamp).toLocaleString()}
-											</span>
-											<span className={`history-status ${result.success ? "success" : "error"}`}>
+											<span className="history-time">{formatDateTime(result.timestamp)}</span>
+											<span
+												className={classNames(
+													"history-status",
+													result.success ? "success" : "error",
+												)}
+											>
 												{result.success ? (
 													<IconCheckCircle width={14} height={14} aria-hidden />
 												) : (

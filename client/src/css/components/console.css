@@ -11,6 +11,18 @@
 	background: var(--bg-primary);
 }
 
+.console-error-banner {
+	margin-bottom: 12px;
+	padding: 10px 12px;
+	border-radius: 10px;
+	border: 1px solid var(--border-medium);
+	background: rgba(220, 76, 63, 0.08);
+	color: var(--error-color);
+	font-size: 12px;
+	line-height: 1.4;
+	white-space: pre-wrap;
+}
+
 .console-welcome {
 	color: var(--text-secondary);
 	font-style: italic;

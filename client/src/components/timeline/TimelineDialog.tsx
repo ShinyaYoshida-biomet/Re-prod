@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from "react";
-import type { ExecutionEventPayload } from "shared";
+import type { ExecutionEventPayload } from "@/types";
 
 import { useStore } from "@/core";
 import { useTimelineData } from "@/hooks/useTimelineData";
@@ -38,20 +38,9 @@ export const TimelineDialog = forwardRef<TimelineDialogRef, TimelineDialogProps>
 			onClose?.();
 		}, [onClose]);
 
-		const {
-			events,
-			total,
-			hasMore,
-			loading,
-			error,
-			filters,
-			sort,
-			setFilters,
-			setSort,
-			loadMore,
-			stats,
-			statsLoading,
-		} = useTimelineData();
+		const { state, actions } = useTimelineData();
+		const { events, total, hasMore, loading, error, filters, sort, stats, statsLoading } = state;
+		const { setFilters, setSort, loadMore } = actions;
 
 		const editorRef = useStore((state) => state.editorRef);
 

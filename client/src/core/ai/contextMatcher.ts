@@ -1,4 +1,4 @@
-import type { CodeRange, PatchChunk } from "@shared/types";
+import type { CodeRange, PatchChunk } from "@/types";
 
 const normalizeLine = (line: string): string => line.trim();
 const normalizeSnippet = (lines: string[]): string[] => {

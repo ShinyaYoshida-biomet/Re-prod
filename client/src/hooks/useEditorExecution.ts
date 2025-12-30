@@ -1,4 +1,3 @@
-import type { ExecutionLogEntry, ExecutionResultPayload } from "@shared/types";
 import type { editor as MonacoEditor } from "monaco-editor";
 import type { MutableRefObject } from "react";
 import { useCallback, useState } from "react";
@@ -18,55 +17,41 @@ interface UseEditorExecutionProps {
 	cells: Cell[];
 }
 
-const normalizeResult = (result: ExecutionResultPayload, code: string): ExecutionLogEntry => ({
-	code,
-	stdout: result.output,
-	stderr: result.error || "",
-	plots: result.plots.map((plot) => ({
-		id: plot.id || plot.filename || `plot-${plot.index}`,
-		path: plot.storage_path || plot.filename,
-		storagePath: plot.storage_path || null,
-		data: plot.base64_data.startsWith("data:")
-			? plot.base64_data
-			: `data:image/png;base64,${plot.base64_data}`,
-		timestamp: plot.timestamp ?? Date.now(),
-		width: plot.width ?? null,
-		height: plot.height ?? null,
-		code: plot.code ?? null,
-	})),
-	timestamp: Date.now(),
-	duration: result.execution_time_ms,
-	success: result.success,
-});
+interface UseEditorExecutionState {
+	executingCellIndex: number | null;
+}
 
-const normalizeFailure = (message: string, code: string): ExecutionLogEntry => ({
-	code,
-	stdout: "",
-	stderr: message,
-	plots: [],
-	timestamp: Date.now(),
-	duration: 0,
-	success: false,
-});
+interface UseEditorExecutionActions {
+	handleRunAll: () => void;
+	handleRunCurrentCell: () => void;
+	handleRunCellAndMoveNext: () => void;
+}
 
-export function useEditorExecution({ editorRef, cells }: UseEditorExecutionProps) {
+interface UseEditorExecutionReturn {
+	state: UseEditorExecutionState;
+	actions: UseEditorExecutionActions;
+}
+
+export function useEditorExecution({
+	editorRef,
+	cells,
+}: UseEditorExecutionProps): UseEditorExecutionReturn {
 	const editorContent = useStore((state) => state.editor.content);
 	const editorFilepath = useStore((state) => state.editor.filepath);
 	const cursorLine = useStore((state) => state.editor.cursorPosition.line);
 	const setIsRunning = useStore((state) => state.setIsRunning);
-	const addPendingExecution = useStore((state) => state.addPendingExecution);
-	const replacePendingExecution = useStore((state) => state.replacePendingExecution);
+	const setExecutionError = useStore((state) => state.setExecutionError);
 
 	const [executingCellIndex, setExecutingCellIndex] = useState<number | null>(null);
 
 	const executeCode = useCallback(
 		async (target: ExecutionTarget, cellIndex?: number | null) => {
+			setExecutionError(null);
 			setIsRunning(true);
 			if (cellIndex !== undefined && cellIndex !== null) {
 				setExecutingCellIndex(cellIndex);
 			}
 
-			addPendingExecution(target.code);
 			const request = buildExecutionRequest({
 				target,
 				cells,
@@ -75,27 +60,19 @@ export function useEditorExecution({ editorRef, cells }: UseEditorExecutionProps
 			});
 
 			try {
-				const { result } = await executeRequest(request);
-				replacePendingExecution(normalizeResult(result, target.code));
+				await executeRequest(request);
 			} catch (error) {
 				const message =
 					error instanceof ExecutionServiceError
 						? error.message
 						: "Execution failed due to an unexpected error.";
-				replacePendingExecution(normalizeFailure(message, target.code));
+				setExecutionError(message);
+				setIsRunning(false);
 			} finally {
 				setExecutingCellIndex(null);
-				setIsRunning(false);
 			}
 		},
-		[
-			addPendingExecution,
-			replacePendingExecution,
-			cells,
-			editorContent,
-			editorFilepath,
-			setIsRunning,
-		],
+		[cells, editorContent, editorFilepath, setExecutionError, setIsRunning],
 	);
 
 	const handleRunAll = useCallback(() => {
@@ -140,9 +117,13 @@ export function useEditorExecution({ editorRef, cells }: UseEditorExecutionProps
 	}, [cells, cursorLine, editorRef, executeCode]);
 
 	return {
-		executingCellIndex,
-		handleRunAll,
-		handleRunCurrentCell,
-		handleRunCellAndMoveNext,
+		state: {
+			executingCellIndex,
+		},
+		actions: {
+			handleRunAll,
+			handleRunCurrentCell,
+			handleRunCellAndMoveNext,
+		},
 	};
 }

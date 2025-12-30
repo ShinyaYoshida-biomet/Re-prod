@@ -1,4 +1,4 @@
-import type { CodeBlock, CodeChangeAction, CodeRange, SimpleCodeChange } from "@shared/types";
+import type { CodeBlock, CodeChangeAction, CodeRange, SimpleCodeChange } from "@/types";
 import { CodeActionFactory } from "./actions";
 import type { PatchHunk } from "./patchParser";
 import { parsePatchFormat } from "./patchParser";

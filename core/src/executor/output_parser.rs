@@ -39,7 +39,7 @@ pub fn parse_command_output(command_output: &CommandOutput) -> OutputParseResult
     }
 }
 
-fn is_internal_line(line: &str) -> bool {
+pub(crate) fn is_internal_line(line: &str) -> bool {
     const NOISE_PREFIXES: [&str; 5] = [
         "REPROD_PNG_",
         "REPROD_STATE",

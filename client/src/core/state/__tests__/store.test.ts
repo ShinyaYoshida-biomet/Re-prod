@@ -62,10 +62,10 @@ describe("Zustand Store", () => {
 	});
 
 	it("tracks execution results in history", () => {
-		const addExecutionResult = useStore.getState().addExecutionResult;
+		const appendExecutionEntry = useStore.getState().appendExecutionEntry;
 		const result = createExecutionResult();
 
-		addExecutionResult(result);
+		appendExecutionEntry(result);
 
 		const state = useStore.getState();
 		expect(state.execution.results).toHaveLength(1);

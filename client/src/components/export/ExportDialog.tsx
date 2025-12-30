@@ -1,5 +1,6 @@
 import { useExportDialog } from "@/hooks/useExportDialog";
 import { LoadingSpinner } from "@/components/shared";
+import { classNames } from "@/utils/classNames";
 
 interface ExportDialogProps {
 	open: boolean;
@@ -7,25 +8,28 @@ interface ExportDialogProps {
 }
 
 export function ExportDialog({ open, onClose }: ExportDialogProps): JSX.Element | null {
+	const { state, actions } = useExportDialog({ open, onClose });
 	const {
 		format,
-		setFormat,
 		mode,
-		setMode,
 		options,
-		setOption,
 		codeFolding,
-		setCodeFolding,
 		pdfOptions,
-		setPdfOption,
 		documentPath,
-		setDocumentPath,
 		outputPath,
-		setOutputPath,
 		exporting,
 		error,
+	} = state;
+	const {
+		setFormat,
+		setMode,
+		setOption,
+		setCodeFolding,
+		setPdfOption,
+		setDocumentPath,
+		setOutputPath,
 		handleExport,
-	} = useExportDialog({ open, onClose });
+	} = actions;
 
 	if (!open) return null;
 
@@ -63,7 +67,7 @@ export function ExportDialog({ open, onClose }: ExportDialogProps): JSX.Element 
 					</button>
 				</div>
 
-				<div className={`export-dialog-content ${exporting ? "loading" : ""}`}>
+				<div className={classNames("export-dialog-content", exporting && "loading")}>
 					{exporting && (
 						<div className="export-loading-overlay">
 							<LoadingSpinner size="large" message="Exporting..." />

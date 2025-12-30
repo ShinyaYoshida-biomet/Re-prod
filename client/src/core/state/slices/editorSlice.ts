@@ -1,4 +1,4 @@
-import type { CodeBlock } from "@shared/types";
+import type { CodeBlock } from "@/types";
 import type { RefObject } from "react";
 import type { StateCreator } from "zustand";
 import type { EditorRef } from "@/components/editor/editorRef";

@@ -1,4 +1,4 @@
-import type { AIMessage, AIMode, CodeBlock, PlanStep, ToolCallLog } from "@shared/types";
+import type { AIMessage, AIMode, CodeBlock, PlanStep, ToolCallLog } from "@/types";
 import type { StateCreator } from "zustand";
 
 type StreamingExtras = {

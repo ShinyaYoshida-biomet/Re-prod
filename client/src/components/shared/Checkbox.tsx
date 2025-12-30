@@ -1,4 +1,5 @@
 import type React from "react";
+import { classNames } from "@/utils/classNames";
 
 export interface CheckboxProps {
 	label: string;
@@ -27,7 +28,7 @@ export const Checkbox: React.FC<CheckboxProps> = ({
 	return (
 		<label
 			htmlFor={inputId}
-			className={`checkbox ${disabled ? "checkbox--disabled" : ""} ${className}`}
+			className={classNames("checkbox", disabled && "checkbox--disabled", className)}
 		>
 			<input
 				id={inputId}

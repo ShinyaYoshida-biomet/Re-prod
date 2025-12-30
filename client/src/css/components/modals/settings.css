@@ -25,7 +25,7 @@
 
 	--settings-checkbox-size: 18px;
 	--settings-checkbox-accent: auto;
-	--settings-range-accent: #8ab4ff;
+	--settings-range-accent: var(--phylo-cytosine-light);
 
 	--settings-number-hint-size: inherit;
 	--settings-number-hint-color: inherit;
@@ -33,36 +33,36 @@
 }
 
 [data-theme="phylo"] {
-	--settings-section-border: #e0e0e0;
+	--settings-section-border: var(--phylo-border-color-light);
 	--settings-section-radius: 3px;
 	--settings-section-padding: 12px;
-	--settings-section-bg: #f5f5f5;
+	--settings-section-bg: var(--phylo-bg-secondary);
 	--settings-section-gap: 10px;
 
 	--settings-heading-size: 12px;
 	--settings-heading-weight: 700;
-	--settings-heading-color: #333333;
+	--settings-heading-color: var(--phylo-text-primary);
 
 	--settings-row-gap: 12px;
 	--settings-row-font-size: 12px;
 	--settings-hint-size: 10px;
-	--settings-hint-color: #666666;
+	--settings-hint-color: var(--phylo-text-secondary);
 
 	--settings-input-bg: var(--bg-primary);
-	--settings-input-border: #cccccc;
+	--settings-input-border: var(--phylo-border-color);
 	--settings-input-radius: 3px;
 	--settings-input-padding: 6px 8px;
-	--settings-input-color: #333333;
+	--settings-input-color: var(--phylo-text-primary);
 	--settings-input-font-size: 12px;
-	--settings-input-outline: 1px solid #3b82f6;
+	--settings-input-outline: 1px solid var(--phylo-cytosine);
 	--settings-input-outline-offset: -1px;
 
 	--settings-checkbox-size: 14px;
-	--settings-checkbox-accent: #3b82f6;
-	--settings-range-accent: #3b82f6;
+	--settings-checkbox-accent: var(--phylo-cytosine);
+	--settings-range-accent: var(--phylo-cytosine);
 
 	--settings-number-hint-size: 11px;
-	--settings-number-hint-color: #666666;
+	--settings-number-hint-color: var(--phylo-text-secondary);
 	--settings-number-hint-font: ui-monospace, "SF Mono", Consolas, monospace;
 }
 

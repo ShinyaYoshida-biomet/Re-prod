@@ -25,7 +25,7 @@ html {
 
 body {
 	margin: 0;
-	background: #ffffff;
+	background: var(--bg-primary, var(--phylo-white));
 	color: var(--text-primary);
 	font-family: var(--font-family-base);
 	font-size: inherit;

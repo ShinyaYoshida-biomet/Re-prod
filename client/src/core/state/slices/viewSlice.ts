@@ -3,7 +3,7 @@ import type { StateCreator } from "zustand";
 export type ViewPane = "files" | "editor" | "assistant";
 export type ModalType = "export" | "shortcuts" | "about" | "sessionInfo" | "settings" | "projects";
 
-interface ViewData {
+export interface ViewData {
 	panes: Record<ViewPane, boolean>;
 	modals: Record<ModalType, boolean>;
 	zoom: number;

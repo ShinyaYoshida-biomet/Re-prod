@@ -31,7 +31,7 @@ Re-prod is a cross-platform IDE for R and scientific analysis, built as a Rust�
 
 ### Frontend
 
-- `client/` is a React + TypeScript + Vite application that renders a Monaco-powered editor, and other panes.
+- `client/` is a React + TypeScript + Vite application that renders a Monaco-powered editor, and other panes. All TypeScript types are located in `client/src/types/`, with protocol types auto-generated from Rust via ts-rs.
 - `shared/` exports TypeScript types and constants shared across the client, server, and scripts.
 
 ## Prerequisites
@@ -42,6 +42,26 @@ Re-prod is a cross-platform IDE for R and scientific analysis, built as a Rust�
 - **R** (4.0+) with `Rscript` in PATH
 - **AI API key** (optional, for AI features) - Anthropic or OpenAI
 - **Writable workspace**: the project root must be writable so `.reprod/` can store timeline/plot artifacts, and the OS temp dir (e.g., `/tmp/reprod`) must be writable for execution scratch files.
+
+### Quick Setup with mise (Recommended)
+
+For the easiest setup experience, we recommend using [mise](https://mise.jdx.dev/) to automatically manage Rust, Node.js, and pnpm versions:
+
+```bash
+# Install mise (macOS/Linux)
+curl https://mise.run | sh
+
+# Or via Homebrew
+brew install mise
+
+# Navigate to the project directory
+cd re-prod
+
+# Automatically install all required tools
+mise install
+```
+
+The `.mise.toml` file in the project root ensures all contributors use consistent runtime versions, reducing environment-related issues.
 
 ## Installation
 
@@ -117,7 +137,7 @@ Re-prod/
 ├── desktop/                   # Tauri desktop shell + commands
 ├── server/                    # Axum HTTP/WebSocket API
 ├── client/                    # React + TypeScript web frontend
-├── shared/                    # Shared TypeScript metadata
+│   └── src/types/             # TypeScript types (auto-generated from Rust via ts-rs)
 ├── AGENTS.md                  # AI agent coordination guide
 └── package.json               # pnpm workspace config + scripts
 ```
@@ -187,6 +207,35 @@ pnpm -r lint
 ```bash
 pnpm -r build
 ```
+
+### Code Statistics
+
+View lines of code (LOC) statistics using [Tokei](https://github.com/XAMPPRocky/tokei):
+
+**Install Tokei:**
+
+```bash
+# macOS
+brew install tokei
+
+# Linux/macOS (via cargo)
+cargo install tokei
+
+# Or download pre-built binaries from:
+# https://github.com/XAMPPRocky/tokei/releases
+```
+
+**Run LOC count:**
+
+```bash
+# Show detailed statistics
+pnpm loc
+
+# Output as JSON (for scripting)
+pnpm loc:json
+```
+
+**Note:** Tokei must be installed separately and is not included as a dependency. It's used for development metrics only and does not affect production builds.
 
 ### Clean Temporary Files
 

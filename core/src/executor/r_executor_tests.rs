@@ -159,3 +159,44 @@ async fn builder_sets_persistent_and_working_dir() {
     assert!(executor.is_persistent_mode());
     assert_eq!(executor.working_dir(), working_dir.as_path());
 }
+
+#[tokio::test]
+async fn streamed_chunks_exclude_internal_noise_lines() {
+    let temp_dir = tempfile::tempdir().expect("temp dir");
+    let timeline = InMemoryTimeline::new();
+    let runner = MockRunner {
+        output: Mutex::new(CommandOutput {
+            success: true,
+            stdout: b"REPROD_WRAPPER_ENTER: persistent\n[1] \"Hello\"\nREPROD_STATE: PNG_AVAILABLE=TRUE\n".to_vec(),
+            stderr: b"REPROD_PNG_DEVICE: /tmp/x.png\n".to_vec(),
+            interrupted: false,
+        }),
+    };
+
+    let executor = RExecutor::builder(temp_dir.path().to_path_buf(), "Rscript".into())
+        .with_timeline(timeline)
+        .with_command_runner(runner)
+        .build();
+
+    let request = ExecutionRequest {
+        code: "print('Hello')".into(),
+        context: ExecutionContext {
+            source: ExecutionSource::Selection,
+            document_path: Some("analysis.R".into()),
+            cell_index: None,
+            triggered_at_ms: 1,
+            actor: ExecutionActor::User,
+        },
+        blocks: Vec::new(),
+        plot_width: None,
+        plot_height: None,
+    };
+
+    let (_result, _event, _history, chunks) = executor
+        .execute_with_event_with_history(request)
+        .await
+        .expect("execute");
+
+    assert!(chunks.iter().all(|c| !c.chunk.starts_with("REPROD_")));
+    assert!(chunks.iter().any(|c| c.chunk.contains("Hello")));
+}

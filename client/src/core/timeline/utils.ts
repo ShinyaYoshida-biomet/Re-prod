@@ -1,4 +1,4 @@
-import type { ExecutionEventPayload, TimelineQuery, TimelineStats } from "shared";
+import type { ExecutionEventPayload, TimelineQuery, TimelineStats } from "@/types";
 
 export function matchesTimelineFilters(
 	event: ExecutionEventPayload,

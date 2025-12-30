@@ -1,4 +1,4 @@
-import type { CodeFolding, ExportRMarkdownRequestPayload, PdfExportOptions } from "shared";
+import type { CodeFolding, ExportRMarkdownRequestPayload, PdfExportOptions } from "./ws";
 
 export type ExportDialogOptions = Pick<
 	ExportRMarkdownRequestPayload,
@@ -25,10 +25,10 @@ export type ExportPdfOptionKey = keyof ExportPdfOptions;
 
 // TODO: Reproduction Bundle export will be implemented as a separate feature
 // Future: Add "bundle" format with dedicated UI in File > Export > Reproduction Bundle
-export type ExportFormat = "rmarkdown" | "pdf" | "both";
+export type ExportDialogFormat = "rmarkdown" | "pdf" | "both";
 
 export interface ExportDialogState {
-	format: ExportFormat;
+	format: ExportDialogFormat;
 	mode: ExportRMarkdownRequestPayload["mode"];
 	options: ExportDialogOptions;
 	codeFolding: CodeFolding;
@@ -40,7 +40,7 @@ export interface ExportDialogState {
 }
 
 export type ExportDialogAction =
-	| { type: "set-format"; payload: ExportFormat }
+	| { type: "set-format"; payload: ExportDialogFormat }
 	| { type: "set-mode"; payload: ExportRMarkdownRequestPayload["mode"] }
 	| { type: "set-option"; key: ExportOptionKey; value: boolean }
 	| { type: "set-pdf-option"; key: ExportPdfOptionKey; value: ExportPdfOptions[ExportPdfOptionKey] }
@@ -69,7 +69,7 @@ export const exportDialogDefaultPdfOptions: ExportPdfOptions = {
 	latexPreamble: "",
 };
 
-export function adjustOutputPathForFormat(outputPath: string, format: ExportFormat): string {
+export function adjustOutputPathForFormat(outputPath: string, format: ExportDialogFormat): string {
 	const trimmed = outputPath.trim();
 	if (format === "pdf" && trimmed.toLowerCase().endsWith(".rmd")) {
 		return trimmed.replace(/\.rmd$/i, ".pdf");

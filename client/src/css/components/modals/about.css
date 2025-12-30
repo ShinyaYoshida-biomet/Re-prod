@@ -20,7 +20,7 @@
 	--about-tech-span-size: 0.78rem;
 	--about-tech-span-color: rgba(255, 255, 255, 0.65);
 
-	--about-link-color: #8ab4ff;
+	--about-link-color: var(--phylo-cytosine-light);
 	--about-link-font-size: inherit;
 	--about-link-border: none;
 	--about-link-hover-color: currentColor;
@@ -34,31 +34,31 @@
 	--about-grid-gap: 12px;
 	--about-card-padding: 12px;
 	--about-card-radius: 3px;
-	--about-card-border: #e0e0e0;
-	--about-card-bg: #f5f5f5;
+	--about-card-border: var(--phylo-border-color-light);
+	--about-card-bg: var(--phylo-bg-secondary);
 
 	--about-card-title-size: 12px;
 	--about-card-title-weight: 700;
-	--about-card-title-color: #333333;
+	--about-card-title-color: var(--phylo-text-primary);
 
 	--about-metric-size: 14px;
 
 	--about-dl-font-size: 11px;
-	--about-dt-color: #666666;
-	--about-dd-color: #333333;
+	--about-dt-color: var(--phylo-text-secondary);
+	--about-dd-color: var(--phylo-text-primary);
 	--about-dd-font: ui-monospace, "SF Mono", Consolas, monospace;
 
 	--about-tech-strong-size: 11px;
 	--about-tech-span-size: 10px;
-	--about-tech-span-color: #666666;
+	--about-tech-span-color: var(--phylo-text-secondary);
 
-	--about-link-color: #3b82f6;
+	--about-link-color: var(--phylo-cytosine);
 	--about-link-font-size: 12px;
 	--about-link-border: 1px solid transparent;
-	--about-link-hover-color: #3b82f6;
+	--about-link-hover-color: var(--phylo-cytosine);
 
 	--about-note-size: 11px;
-	--about-note-color: #666666;
+	--about-note-color: var(--phylo-text-secondary);
 	--about-note-line-height: 1.4;
 }
 

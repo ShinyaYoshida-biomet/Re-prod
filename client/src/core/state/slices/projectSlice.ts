@@ -1,4 +1,4 @@
-import type { ProjectRecord } from "shared";
+import type { ProjectRecord } from "@/types";
 import type { StateCreator } from "zustand";
 
 export interface ProjectState {

@@ -75,6 +75,20 @@ jobs:
       - name: Run Frontend tests
         run: pnpm --filter client test -- --run
 
+      - name: Install Tokei
+        run: |
+          wget -qO- https://github.com/XAMPPRocky/tokei/releases/download/v12.1.2/tokei-x86_64-unknown-linux-gnu.tar.gz | tar xvz
+          sudo mv tokei /usr/local/bin/
+
+      - name: Generate LOC Statistics
+        run: |
+          echo "## 📊 Lines of Code (LOC) Statistics" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          tokei >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
       - name: Test Summary
         if: always()
         run: |
