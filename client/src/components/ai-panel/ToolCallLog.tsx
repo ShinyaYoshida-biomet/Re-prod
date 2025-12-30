@@ -30,23 +30,27 @@ const isFetchTool = (log: ToolCallLogEntry): boolean => {
 const extractSearchResults = (payload?: Record<string, unknown>): SearchResult[] | null => {
 	if (!payload || !Array.isArray(payload.results)) return null;
 
-	const results = payload.results
-		.map((entry) => {
-			if (!entry || typeof entry !== "object") return null;
-			const record = entry as Record<string, unknown>;
-			const title = typeof record.title === "string" ? record.title : "";
-			const uri = typeof record.uri === "string" ? record.uri : "";
-			const description =
-				typeof record.description === "string"
-					? record.description
-					: typeof record.text === "string"
-						? record.text
-						: undefined;
+	const results: SearchResult[] = [];
+	for (const entry of payload.results) {
+		if (!entry || typeof entry !== "object") continue;
+		const record = entry as Record<string, unknown>;
+		const title = typeof record.title === "string" ? record.title : "";
+		const uri = typeof record.uri === "string" ? record.uri : "";
+		const description =
+			typeof record.description === "string"
+				? record.description
+				: typeof record.text === "string"
+					? record.text
+					: undefined;
 
-			if (!title && !uri) return null;
-			return { title, uri, description };
-		})
-		.filter((entry): entry is SearchResult => Boolean(entry));
+		if (!title && !uri) continue;
+		const result: SearchResult = {
+			title,
+			uri,
+			...(description ? { description } : {}),
+		};
+		results.push(result);
+	}
 
 	return results.length > 0 ? results : null;
 };
