@@ -1,5 +1,6 @@
 import type { CodeBlock } from "@/types";
 import type { CodeActionContext, CodeActionValidation, ICodeAction } from "../ICodeAction";
+import { isEmptyString } from "@/utils/string";
 
 /**
  * Action for creating a new file with content
@@ -14,7 +15,7 @@ export class CreateFileAction implements ICodeAction {
 	}
 
 	validate(codeBlock: CodeBlock): CodeActionValidation {
-		if (!codeBlock.filepath || codeBlock.filepath.trim().length === 0) {
+		if (isEmptyString(codeBlock.filepath)) {
 			return {
 				valid: false,
 				error: "Create file requires a filepath",
@@ -42,7 +43,7 @@ export class CreateFileAction implements ICodeAction {
 			};
 		}
 
-		if (!codeBlock.code || codeBlock.code.trim().length === 0) {
+		if (isEmptyString(codeBlock.code)) {
 			return {
 				valid: false,
 				error: "Cannot create file with empty content",

@@ -1,5 +1,6 @@
 import type { CodeBlock } from "@/types";
 import type { CodeActionContext, CodeActionValidation, ICodeAction } from "./ICodeAction";
+import { isEmptyString } from "@/utils/string";
 
 /**
  * Abstract base class for code actions.
@@ -30,7 +31,7 @@ export abstract class BaseCodeAction implements ICodeAction {
 	 */
 	validate(codeBlock: CodeBlock): CodeActionValidation {
 		// Common validation: check if code content is required
-		if (this.requiresCode() && (!codeBlock.code || codeBlock.code.trim().length === 0)) {
+		if (this.requiresCode() && isEmptyString(codeBlock.code)) {
 			return {
 				valid: false,
 				error: "Cannot apply action with empty content",

@@ -1,6 +1,6 @@
 import type { CodeBlock } from "@/types";
 import type { CodeActionContext, CodeActionValidation, ICodeAction } from "../ICodeAction";
-
+import { isEmptyString } from "@/utils/string";
 /**
  * Action for replacing entire file contents
  */
@@ -11,7 +11,7 @@ export class ReplaceAllAction implements ICodeAction {
 	}
 
 	validate(codeBlock: CodeBlock): CodeActionValidation {
-		if (!codeBlock.code || codeBlock.code.trim().length === 0) {
+		if (isEmptyString(codeBlock.code)) {
 			return {
 				valid: false,
 				error: "Cannot replace with empty content",
