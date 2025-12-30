@@ -3,7 +3,7 @@
 ---
 
 <p align="center">
-[English](README.md) | [日本語](README.ja.md)
+  <a href="README.md">English</a> | <a href="README.ja.md">日本語</a>
 </p>
 
 AI 駆動の R 分析 IDE — RStudio に代わる AI ネイティブな次世代統合開発環境
