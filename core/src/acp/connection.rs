@@ -342,9 +342,11 @@ mod tests {
 
     #[test]
     fn converts_decision_into_protocol_message() {
+        use crate::acp::types::AcpPermissionDecisionOutcome;
+
         let decision = AcpPermissionDecision {
             request_id: "req-1".to_string(),
-            outcome: super::types::AcpPermissionDecisionOutcome::AllowOnce,
+            outcome: AcpPermissionDecisionOutcome::AllowOnce,
             option_id: Some("opt-1".to_string()),
             remember_scope: None,
         };
@@ -361,9 +363,11 @@ mod tests {
 
     #[test]
     fn converts_cancelled_decision() {
+        use crate::acp::types::AcpPermissionDecisionOutcome;
+
         let decision = AcpPermissionDecision {
             request_id: "req-2".to_string(),
-            outcome: super::types::AcpPermissionDecisionOutcome::Cancelled,
+            outcome: AcpPermissionDecisionOutcome::Cancelled,
             option_id: None,
             remember_scope: None,
         };

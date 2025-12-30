@@ -158,7 +158,7 @@ mod tests {
     #[test]
     fn resolves_active_agent_command_from_config() {
         let cfg = AcpConfig {
-            active_mode: crate::config::ACP_MODE_EXTERNAL_AGENT.to_string(),
+            active_mode: ACP_MODE_EXTERNAL_AGENT.to_string(),
             active_agent: Some("codex".to_string()),
             active_agent_command: None,
         };
@@ -186,7 +186,7 @@ mod tests {
     #[test]
     fn resolves_active_agent_command_override() {
         let cfg = AcpConfig {
-            active_mode: crate::config::ACP_MODE_EXTERNAL_AGENT.to_string(),
+            active_mode: ACP_MODE_EXTERNAL_AGENT.to_string(),
             active_agent: Some("codex".to_string()),
             active_agent_command: Some("/opt/bin/codex-acp".to_string()),
         };

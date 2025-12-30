@@ -531,8 +531,8 @@ fn select_timeout_outcome(options: &[PermissionOption]) -> RequestPermissionOutc
 
 #[cfg(test)]
 mod tests {
-    use super::test_support::ENV_LOCK;
     use super::*;
+    use crate::acp::test_support::ENV_LOCK;
     use crate::config::APP_DIR_ENV;
     use agent_client_protocol::{
         PermissionOption, PermissionOptionId, PermissionOptionKind, SelectedPermissionOutcome,
