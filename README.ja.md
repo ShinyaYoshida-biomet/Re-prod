@@ -1,16 +1,22 @@
-[English](README.md) | [日本語](README.ja.md)
+# Re-prod
 
 ---
 
-# Re-prod
+<p align="center">
+[English](README.md) | [日本語](README.ja.md)
+</p>
 
 AI 駆動の R 分析 IDE — RStudio に代わる AI ネイティブな次世代統合開発環境
 
+![image](https://private-user-images.githubusercontent.com/33049408/530954930-95408ef3-14a7-4dec-9cf2-f77598166418.png?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NjcwOTI0NDgsIm5iZiI6MTc2NzA5MjE0OCwicGF0aCI6Ii8zMzA0OTQwOC81MzA5NTQ5MzAtOTU0MDhlZjMtMTRhNy00ZGVjLTljZjItZjc3NTk4MTY2NDE4LnBuZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNTEyMzAlMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjUxMjMwVDEwNTU0OFomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPWE5NjI5NDRjOTljMzliN2FkZDRjZTdkZmQ5ZmRkNGRkN2JlYWM5NDE5NDE5ODc1MzFmMzBjOTY0NTk1MWUxNDgmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.JEjhasFCUhM05dKKykFK9c1TXrpXEU-ENlDCvSxO31g)
+
 ## ミッション
 
-研究者やデータアナリストが、単なる分析のために R パッケージのドキュメントを何時間も読み込み、ツール間を行き来する必要はありません。Re-prod は **R や補助ツールを自然言語に変換** し、AI が複雑な部分を引き受けることで、ユーザーは洞察に集中できる未来を目指しています。
+R は強力ですが、再現性が崩れやすく、環境がドリフトし、研究者は科学的なアイデアに集中する代わりにツールの修正に時間を費やすことになります。この非効率性は、生物学者、統計学者、データサイエンティストを問わず、科学コミュニティにとって大きな機会損失を意味します。
 
-さらに Re-prod は、完全な実行履歴による **再現性の担保** と、継続的なコンテキストスイッチを排除する **エンドツーエンドのワークフロー** を提供します。
+Re-prod は **R や補助ツールを自然言語に変換** し、AI が複雑な部分を処理することで、ユーザーは洞察に集中できるようにします。
+
+さらに、従来の IDE とは異なり、Re-prod は完全な実行履歴を通じて **再現性を保証** します。私たちは、R 分析がすべての人にとってアクセス可能で、再現可能で、効率的な未来を築いています。
 
 ---
 
