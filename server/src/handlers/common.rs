@@ -409,6 +409,8 @@ pub(super) struct ToolLogPayload {
     pub name: String,
     pub status: ToolLogStatus,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub input: Option<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub output: Option<Value>,
@@ -435,12 +437,20 @@ pub(super) fn tool_log_from_call(tool_call: &reprod_core::ToolCall) -> ToolLogPa
         id: tool_call.id.clone(),
         name: tool_call.name.clone(),
         status: ToolLogStatus::Running,
+        kind: tool_kind_from_name(&tool_call.name),
         input: Some(tool_call.input.clone()),
         output: None,
         error: None,
         started_at: Some(now_millis()),
         finished_at: None,
     }
+}
+
+fn tool_kind_from_name(name: &str) -> Option<String> {
+    if name == "web_search" {
+        return Some("Fetch".to_string());
+    }
+    None
 }
 
 pub(super) fn now_millis() -> i64 {

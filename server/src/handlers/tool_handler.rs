@@ -6,7 +6,7 @@ use reprod_core::{
     edit::{EditOperation, EditTextFileRequest},
     ToolCall,
 };
-use serde_json::Value;
+use serde_json::{json, Value};
 
 use super::common::{error_response, single_response, AppState, WSResponse};
 
@@ -198,6 +198,41 @@ pub(super) async fn execute_ai_tool_call(
                 .map_err(|e| e.to_string())?;
 
             let output = serde_json::to_value(&logs).map_err(|e| e.to_string())?;
+            Ok(ToolCallOutcome {
+                summary: output.to_string(),
+                output,
+            })
+        }
+        "web_search" => {
+            let request: WebSearchRequest = serde_json::from_value(tool_call.input.clone())
+                .map_err(|e| format!("Invalid request: {}", e))?;
+            let provider = runtime
+                .web_search_registry
+                .lock()
+                .await
+                .active_provider()
+                .ok_or_else(|| "No web search provider available".to_string())?;
+            let response = provider
+                .search(request.query)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            let results = response
+                .results
+                .into_iter()
+                .map(|result| {
+                    json!({
+                        "title": result.title,
+                        "uri": result.url,
+                        "description": result.text,
+                    })
+                })
+                .collect::<Vec<_>>();
+
+            let output = json!({
+                "results": results,
+                "count": results.len(),
+            });
             Ok(ToolCallOutcome {
                 summary: output.to_string(),
                 output,

@@ -19,6 +19,7 @@ pub mod protocol;
 pub mod terminal;
 pub mod timeline;
 pub mod tools;
+pub mod web_search;
 
 // Re-export protocol types (for API boundaries)
 pub use edit::*;

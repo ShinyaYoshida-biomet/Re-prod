@@ -4,7 +4,7 @@ use crate::projects::ProjectRuntime;
 use reprod_core::{
     ai::{
         self,
-        tools::{get_console_tools, get_filesystem_tools, get_r_context_tools},
+        tools::{get_console_tools, get_filesystem_tools, get_r_context_tools, get_web_search_tools},
     },
     ChatMessage,
 };
@@ -90,6 +90,7 @@ pub(super) async fn handle_ai_message(
         let mut tools = get_filesystem_tools();
         tools.extend(get_r_context_tools());
         tools.extend(get_console_tools());
+        tools.extend(get_web_search_tools());
         let mut responses = Vec::new();
 
         // Mark fetch/inspect/execute phases as running in order as we start tool processing.

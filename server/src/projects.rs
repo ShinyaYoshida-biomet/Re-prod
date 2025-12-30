@@ -9,6 +9,7 @@ use reprod_core::{
     plot_history::PlotHistoryEntry,
     plot_history::PlotHistoryManager,
     timeline::JsonTimeline,
+    web_search::{cloud_provider::CloudWebSearchProvider, WebSearchRegistry},
 };
 use reprod_core::{
     project::{
@@ -144,6 +145,7 @@ pub struct ProjectRuntime {
     pub r_executor: Arc<Mutex<RExecutor>>,
     pub plot_history: Arc<Mutex<PlotHistoryManager>>,
     pub acp: Arc<AcpService>,
+    pub web_search_registry: Arc<Mutex<WebSearchRegistry>>,
 }
 
 impl ProjectRuntime {
@@ -192,6 +194,22 @@ impl ProjectRuntime {
         let filesystem_root = descriptor.root_path.clone();
         let (run_events, _) = broadcast::channel(1024);
         let acp = Arc::new(AcpService::new(descriptor.root_path.clone()));
+        let web_search_registry = Arc::new(Mutex::new(WebSearchRegistry::new()));
+        match CloudWebSearchProvider::from_env() {
+            Ok(Some(provider)) => {
+                if let Ok(mut registry) = web_search_registry.try_lock() {
+                    registry.register_provider(provider);
+                } else {
+                    tracing::warn!("Web search registry locked during initialization");
+                }
+            }
+            Ok(None) => {
+                tracing::info!("Web search provider not configured; skipping initialization");
+            }
+            Err(error) => {
+                tracing::warn!("Failed to initialize web search provider: {}", error);
+            }
+        }
         Ok(Self {
             descriptor,
             timeline,
@@ -205,6 +223,7 @@ impl ProjectRuntime {
             r_executor: Arc::new(Mutex::new(r_executor)),
             plot_history,
             acp,
+            web_search_registry,
         })
     }
 }
