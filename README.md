@@ -290,6 +290,7 @@ Socket connection error
 ## Contributing
 
 Before submitting changes, follow the contribution guidance in [CONTRIBUTING.md](./CONTRIBUTING.md).
+
 日本語版は [CONTRIBUTING.ja.md](./CONTRIBUTING.ja.md) をご覧ください。
 
 ## License
