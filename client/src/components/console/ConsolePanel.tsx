@@ -111,7 +111,6 @@ export function ConsolePanel({ view }: ConsolePanelProps): JSX.Element {
 										<div className="history-header">
 											<span className="history-number">#{index + 1}</span>
 											<span className="history-time">{formatDateTime(result.timestamp)}</span>
-											<span className={`history-status ${result.success ? "success" : "error"}`}>
 											<span
 												className={classNames(
 													"history-status",
