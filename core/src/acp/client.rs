@@ -6,20 +6,27 @@ use std::{
     time::Duration,
 };
 
+use crate::{
+    config::app_config_dir,
+    edit::{EditOperation, EditService, EditStatus, EditTextFileRequest, EditTextFileResult},
+};
 use agent_client_protocol::{
     Client, PermissionOption, PermissionOptionKind, ReadTextFileRequest, ReadTextFileResponse,
     RequestPermissionOutcome, RequestPermissionRequest, RequestPermissionResponse,
-    SelectedPermissionOutcome, SessionNotification, WriteTextFileRequest, WriteTextFileResponse,
+    SelectedPermissionOutcome, SessionNotification, SessionUpdate, ToolCall, ToolCallId,
+    ToolCallLocation, ToolCallStatus, ToolCallUpdate, ToolCallUpdateFields, ToolKind,
+    WriteTextFileRequest, WriteTextFileResponse,
 };
 use anyhow::{anyhow, bail, Context, Result};
 use dunce::canonicalize;
-use reprod_core::config::app_config_dir;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use tokio::sync::{mpsc::UnboundedSender, oneshot, Mutex};
 use tokio::time::timeout;
 use tracing::{error, warn};
+use uuid::Uuid;
 
-use crate::{
+use super::{
     connection::map_permission_request,
     types::{AcpPermissionDecisionScope, AcpPermissionRequestPayload},
 };
@@ -32,6 +39,7 @@ const PERMISSION_TIMEOUT: Duration = Duration::from_millis(200);
 
 pub struct ReprodAcpClient {
     workspace_root: PathBuf,
+    edit_service: Arc<EditService>,
     session_update_tx: UnboundedSender<SessionNotification>,
     permission_request_tx: UnboundedSender<AcpPermissionRequestPayload>,
     pending_permissions: Arc<Mutex<HashMap<String, oneshot::Sender<RequestPermissionOutcome>>>>,
@@ -39,6 +47,7 @@ pub struct ReprodAcpClient {
     trust_path: PathBuf,
     decision_meta: Arc<Mutex<HashMap<String, AcpPermissionDecisionScope>>>,
     session_trust: Arc<Mutex<HashMap<String, TrustDecision>>>,
+    read_snapshots: Arc<Mutex<HashMap<String, String>>>,
 }
 
 impl ReprodAcpClient {
@@ -53,8 +62,10 @@ impl ReprodAcpClient {
         let trust_store = Arc::new(Mutex::new(
             load_trust_store(&trust_path).unwrap_or_default(),
         ));
+        let edit_service = Arc::new(EditService::new(workspace_root.clone()));
         Self {
             workspace_root,
+            edit_service,
             session_update_tx,
             permission_request_tx,
             pending_permissions,
@@ -62,6 +73,7 @@ impl ReprodAcpClient {
             trust_path,
             decision_meta,
             session_trust: Arc::new(Mutex::new(HashMap::new())),
+            read_snapshots: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -79,6 +91,17 @@ impl ReprodAcpClient {
         format!("{base}:{kind}:{location}")
     }
 
+    fn snapshot_key(&self, session_id: &str, path: &Path) -> String {
+        format!("{}:{}", session_id, path.to_string_lossy())
+    }
+
+    fn expected_sha_from_meta(meta: &Option<agent_client_protocol::Meta>) -> Option<String> {
+        meta.as_ref()
+            .and_then(|meta| meta.get("expected_sha256"))
+            .and_then(|value| value.as_str())
+            .map(str::to_string)
+    }
+
     async fn apply_trust(
         &self,
         payload: &AcpPermissionRequestPayload,
@@ -90,11 +113,17 @@ impl ReprodAcpClient {
             let opt_id = match decision {
                 TrustDecision::Allow => pick_option_id(
                     options,
-                    &[PermissionOptionKind::AllowOnce, PermissionOptionKind::AllowAlways],
+                    &[
+                        PermissionOptionKind::AllowOnce,
+                        PermissionOptionKind::AllowAlways,
+                    ],
                 ),
                 TrustDecision::Reject => pick_option_id(
                     options,
-                    &[PermissionOptionKind::RejectOnce, PermissionOptionKind::RejectAlways],
+                    &[
+                        PermissionOptionKind::RejectOnce,
+                        PermissionOptionKind::RejectAlways,
+                    ],
                 ),
             }?;
             return Some(RequestPermissionOutcome::Selected(
@@ -160,12 +189,7 @@ impl ReprodAcpClient {
         }
 
         // Session-level remember: if UI indicated session scope, capture AllowOnce/RejectOnce
-        if let Some(scope) = self
-            .decision_meta
-            .lock()
-            .await
-            .remove(&payload.request_id)
-        {
+        if let Some(scope) = self.decision_meta.lock().await.remove(&payload.request_id) {
             if matches!(scope, AcpPermissionDecisionScope::Session) {
                 if let RequestPermissionOutcome::Selected(sel) = outcome {
                     if let Some(kind) = options
@@ -226,6 +250,56 @@ impl ReprodAcpClient {
         let _ = self.pending_permissions.lock().await.remove(&request_id);
         outcome
     }
+
+    fn emit_edit_tool_update(&self, session_id: &str, path: &Path, result: &EditTextFileResult) {
+        let tool_call_id = ToolCallId::new(format!("fs-edit-{}", Uuid::new_v4()));
+        let location = ToolCallLocation::new(path.to_string_lossy().to_string());
+        let tool_call = ToolCall::new(tool_call_id.clone(), "Edit file")
+            .kind(ToolKind::Edit)
+            .status(ToolCallStatus::InProgress)
+            .locations(vec![location]);
+        let _ = self.session_update_tx.send(SessionNotification::new(
+            session_id.to_string(),
+            SessionUpdate::ToolCall(tool_call),
+        ));
+
+        let output = serde_json::to_value(result)
+            .unwrap_or(Value::String("Failed to serialize edit result".to_string()));
+        let update = ToolCallUpdate::new(
+            tool_call_id,
+            ToolCallUpdateFields::new()
+                .status(ToolCallStatus::Completed)
+                .raw_output(output),
+        );
+        let _ = self.session_update_tx.send(SessionNotification::new(
+            session_id.to_string(),
+            SessionUpdate::ToolCallUpdate(update),
+        ));
+    }
+
+    fn emit_edit_tool_error(&self, session_id: &str, path: &Path, message: &str) {
+        let tool_call_id = ToolCallId::new(format!("fs-edit-{}", Uuid::new_v4()));
+        let location = ToolCallLocation::new(path.to_string_lossy().to_string());
+        let tool_call = ToolCall::new(tool_call_id.clone(), "Edit file")
+            .kind(ToolKind::Edit)
+            .status(ToolCallStatus::InProgress)
+            .locations(vec![location]);
+        let _ = self.session_update_tx.send(SessionNotification::new(
+            session_id.to_string(),
+            SessionUpdate::ToolCall(tool_call),
+        ));
+
+        let update = ToolCallUpdate::new(
+            tool_call_id,
+            ToolCallUpdateFields::new()
+                .status(ToolCallStatus::Failed)
+                .raw_output(Value::String(message.to_string())),
+        );
+        let _ = self.session_update_tx.send(SessionNotification::new(
+            session_id.to_string(),
+            SessionUpdate::ToolCallUpdate(update),
+        ));
+    }
 }
 
 #[async_trait::async_trait(?Send)]
@@ -261,16 +335,43 @@ impl Client for ReprodAcpClient {
     ) -> agent_client_protocol::Result<WriteTextFileResponse> {
         let resolved = ensure_within_workspace(&self.workspace_root, &args.path)
             .map_err(|err| agent_client_protocol::Error::internal_error().data(err.to_string()))?;
+        let relative = workspace_relative_path(&self.workspace_root, &resolved)
+            .map_err(|err| agent_client_protocol::Error::internal_error().data(err.to_string()))?;
 
-        if let Some(parent) = resolved.parent() {
-            tokio::fs::create_dir_all(parent)
-                .await
-                .map_err(agent_client_protocol::Error::into_internal_error)?;
+        let expected_sha = match Self::expected_sha_from_meta(&args.meta) {
+            Some(value) => Some(value),
+            None => {
+                let key = self.snapshot_key(&args.session_id.to_string(), &resolved);
+                self.read_snapshots.lock().await.get(&key).cloned()
+            }
+        };
+
+        let edit_request = EditTextFileRequest {
+            path: relative.clone(),
+            operation: EditOperation::Replace,
+            expected_sha256: expected_sha,
+            new_text: Some(args.content.clone()),
+            edits: None,
+        };
+
+        let result = match self.edit_service.edit_text_file(edit_request).await {
+            Ok(result) => result,
+            Err(err) => {
+                self.emit_edit_tool_error(
+                    &args.session_id.to_string(),
+                    &resolved,
+                    &err.to_string(),
+                );
+                return Err(agent_client_protocol::Error::into_internal_error(err));
+            }
+        };
+
+        self.emit_edit_tool_update(&args.session_id.to_string(), &resolved, &result);
+
+        if matches!(result.status, EditStatus::Conflict) {
+            return Err(agent_client_protocol::Error::internal_error()
+                .data("Conflict detected: file changed since last read. Reload and retry."));
         }
-
-        tokio::fs::write(&resolved, args.content)
-            .await
-            .map_err(agent_client_protocol::Error::into_internal_error)?;
 
         Ok(WriteTextFileResponse::new())
     }
@@ -281,10 +382,20 @@ impl Client for ReprodAcpClient {
     ) -> agent_client_protocol::Result<ReadTextFileResponse> {
         let resolved = ensure_within_workspace(&self.workspace_root, &args.path)
             .map_err(|err| agent_client_protocol::Error::internal_error().data(err.to_string()))?;
-
-        let content = tokio::fs::read_to_string(&resolved)
+        let relative = workspace_relative_path(&self.workspace_root, &resolved)
+            .map_err(|err| agent_client_protocol::Error::internal_error().data(err.to_string()))?;
+        let result = self
+            .edit_service
+            .read_text_file(&relative)
             .await
             .map_err(agent_client_protocol::Error::into_internal_error)?;
+
+        let content = result.text.clone();
+        let snapshot_key = self.snapshot_key(&args.session_id.to_string(), &resolved);
+        self.read_snapshots
+            .lock()
+            .await
+            .insert(snapshot_key, result.sha256);
 
         let (start_line, limit) = match (args.line, args.limit) {
             (None, None) => return Ok(ReadTextFileResponse::new(content)),
@@ -334,6 +445,27 @@ fn ensure_within_workspace(workspace_root: &Path, requested: &Path) -> Result<Pa
     }
 
     Ok(resolved)
+}
+
+fn workspace_relative_path(workspace_root: &Path, resolved: &Path) -> Result<String> {
+    let canonical_root = canonicalize(workspace_root)
+        .with_context(|| format!("Failed to canonicalize workspace root: {workspace_root:?}"))?;
+    let canonical_path = canonicalize(resolved).or_else(|_| {
+        let mut ancestor = resolved;
+        while !ancestor.exists() {
+            ancestor = ancestor
+                .parent()
+                .ok_or_else(|| anyhow!("ACP path has no existing ancestor: {resolved:?}"))?;
+        }
+        let suffix = resolved
+            .strip_prefix(ancestor)
+            .context("ACP path prefix mismatch")?;
+        Ok::<PathBuf, anyhow::Error>(canonicalize(ancestor)?.join(suffix))
+    })?;
+    let relative = canonical_path
+        .strip_prefix(&canonical_root)
+        .with_context(|| "ACP path is outside workspace root")?;
+    Ok(relative.to_string_lossy().to_string())
 }
 
 fn trust_store_path(workspace_root: &Path) -> PathBuf {
@@ -400,17 +532,16 @@ fn select_timeout_outcome(options: &[PermissionOption]) -> RequestPermissionOutc
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::acp::test_support::ENV_LOCK;
+    use crate::config::APP_DIR_ENV;
     use agent_client_protocol::{
         PermissionOption, PermissionOptionId, PermissionOptionKind, SelectedPermissionOutcome,
         SessionId, ToolCallId, ToolCallUpdate, ToolCallUpdateFields,
     };
-    use reprod_core::config::APP_DIR_ENV;
     use std::collections::HashMap;
     use std::env;
-    use std::sync::{Arc, Mutex as StdMutex};
+    use std::sync::Arc;
     use tokio::task::LocalSet;
-
-    static ENV_LOCK: StdMutex<()> = StdMutex::new(());
 
     struct EnvVarGuard {
         key: &'static str,
@@ -506,13 +637,8 @@ mod tests {
         let pending = Arc::new(Mutex::new(HashMap::new()));
         let decision_meta: Arc<Mutex<HashMap<String, AcpPermissionDecisionScope>>> =
             Arc::new(Mutex::new(HashMap::new()));
-        let client = ReprodAcpClient::new(
-            workspace,
-            session_tx,
-            permission_tx,
-            pending,
-            decision_meta,
-        );
+        let client =
+            ReprodAcpClient::new(workspace, session_tx, permission_tx, pending, decision_meta);
 
         let req = RequestPermissionRequest::new(
             SessionId::new("s-test"),
@@ -548,16 +674,20 @@ mod tests {
     async fn applies_trust_store_decisions() {
         let _env_lock = ENV_LOCK.lock().unwrap();
         // Ensure trust store writes to a predictable, writable location for the test
-        let config_root = std::env::temp_dir().join(format!(
-            "reprod-config-{}",
-            std::process::id()
-        ));
+        let config_root =
+            std::env::temp_dir().join(format!("reprod-config-{}", std::process::id()));
         let _ = std::fs::create_dir_all(&config_root);
-        let _app_dir =
-            EnvVarGuard::set(APP_DIR_ENV, config_root.to_string_lossy().as_ref());
+        let _app_dir = EnvVarGuard::set(APP_DIR_ENV, config_root.to_string_lossy().as_ref());
 
         let workspace = std::env::temp_dir().join("acp-client-trust");
         let _ = std::fs::create_dir_all(&workspace);
+        let trust_slug = workspace
+            .to_string_lossy()
+            .replace(std::path::MAIN_SEPARATOR, "_")
+            .replace(':', "_");
+        let trust_path = config_root
+            .join("acp_trust")
+            .join(format!("{trust_slug}.json"));
 
         let (session_tx, _session_rx) = tokio::sync::mpsc::unbounded_channel();
         let (permission_tx, mut permission_rx) = tokio::sync::mpsc::unbounded_channel();
@@ -616,7 +746,7 @@ mod tests {
 
         // Round trip persistence
         client.persist_trust(&req.options, &outcome, &payload).await;
-        let stored = load_trust_store(&trust_store_path(&workspace)).unwrap();
+        let stored = load_trust_store(&trust_path).unwrap();
         assert!(stored.contains_key(&payload.trust_key));
 
         // Ensure pending sender cleanup still works when skipping UI

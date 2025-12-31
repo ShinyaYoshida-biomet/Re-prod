@@ -1,8 +1,12 @@
 use std::{collections::HashMap, sync::Arc};
 
 use crate::projects::ProjectRuntime;
-use reprod_core::{ai::tools::*, ToolCall};
-use serde_json::Value;
+use reprod_core::{
+    ai::tools::*,
+    edit::{EditOperation, EditTextFileRequest},
+    ToolCall,
+};
+use serde_json::{json, Value};
 
 use super::common::{error_response, single_response, AppState, WSResponse};
 
@@ -37,31 +41,81 @@ pub(super) async fn handle_execute_tool(
     }
 }
 
+pub(super) struct ToolCallOutcome {
+    pub output: Value,
+    pub summary: String,
+}
+
 pub(super) async fn execute_ai_tool_call(
     tool_call: &ToolCall,
     runtime: &Arc<ProjectRuntime>,
-) -> Result<String, String> {
+) -> Result<ToolCallOutcome, String> {
     match tool_call.name.as_str() {
-        "read_file" => {
-            let request: ReadFileRequest = serde_json::from_value(tool_call.input.clone())
+        "read_text_file" => {
+            let request: ReadTextFileRequest = serde_json::from_value(tool_call.input.clone())
                 .map_err(|e| format!("Invalid request: {}", e))?;
 
-            runtime
-                .filesystem_tool
-                .read_file(request)
+            let result = runtime
+                .edit_service
+                .read_text_file(&request.path)
                 .await
-                .map_err(|e| e.to_string())
+                .map_err(|e| e.to_string())?;
+
+            let output = serde_json::to_value(result)
+                .map_err(|e| format!("Failed to serialize read result: {}", e))?;
+            Ok(ToolCallOutcome {
+                output: output.clone(),
+                summary: output.to_string(),
+            })
         }
-        "write_file" => {
-            let request: WriteFileRequest = serde_json::from_value(tool_call.input.clone())
+        "write_text_file" => {
+            let request: WriteTextFileRequest = serde_json::from_value(tool_call.input.clone())
                 .map_err(|e| format!("Invalid request: {}", e))?;
 
-            runtime
-                .filesystem_tool
-                .write_file(request)
+            let edit_request = EditTextFileRequest {
+                path: request.path,
+                operation: EditOperation::Replace,
+                expected_sha256: request.expected_sha256,
+                new_text: Some(request.content),
+                edits: None,
+            };
+            let result = runtime
+                .edit_service
+                .edit_text_file(edit_request)
                 .await
-                .map(|_| "File written successfully".to_string())
-                .map_err(|e| e.to_string())
+                .map_err(|e| e.to_string())?;
+            let summary = if result.unified_diff.is_empty() {
+                serde_json::to_string(&result).unwrap_or_default()
+            } else {
+                result.unified_diff.clone()
+            };
+            let output = serde_json::to_value(result)
+                .map_err(|e| format!("Failed to serialize edit result: {}", e))?;
+            Ok(ToolCallOutcome {
+                output,
+                summary,
+            })
+        }
+        "edit_text_file" => {
+            let request: EditTextFileRequest = serde_json::from_value(tool_call.input.clone())
+                .map_err(|e| format!("Invalid request: {}", e))?;
+
+            let result = runtime
+                .edit_service
+                .edit_text_file(request)
+                .await
+                .map_err(|e| e.to_string())?;
+            let summary = if result.unified_diff.is_empty() {
+                serde_json::to_string(&result).unwrap_or_default()
+            } else {
+                result.unified_diff.clone()
+            };
+            let output = serde_json::to_value(result)
+                .map_err(|e| format!("Failed to serialize edit result: {}", e))?;
+            Ok(ToolCallOutcome {
+                output,
+                summary,
+            })
         }
         "list_files" => {
             let request: ListFilesRequest = serde_json::from_value(tool_call.input.clone())
@@ -72,10 +126,14 @@ pub(super) async fn execute_ai_tool_call(
                 .list_files(request)
                 .await
                 .and_then(|files| {
-                    serde_json::to_string(&files)
+                    serde_json::to_value(&files)
                         .map_err(|e| reprod_core::ReprodError::IOError(e.to_string()))
                 })
                 .map_err(|e| e.to_string())
+                .map(|output| ToolCallOutcome {
+                    summary: output.to_string(),
+                    output,
+                })
         }
         "get_r_variables" => {
             let request: GetVariablesRequest = serde_json::from_value(tool_call.input.clone())
@@ -87,21 +145,30 @@ pub(super) async fn execute_ai_tool_call(
                 .get_variables(request, &mut executor)
                 .await
                 .and_then(|vars| {
-                    serde_json::to_string(&vars)
+                    serde_json::to_value(&vars)
                         .map_err(|e| reprod_core::ReprodError::IOError(e.to_string()))
                 })
                 .map_err(|e| e.to_string())
+                .map(|output| ToolCallOutcome {
+                    summary: output.to_string(),
+                    output,
+                })
         }
         "get_working_directory" => {
             let request: GetWorkingDirRequest = serde_json::from_value(tool_call.input.clone())
                 .map_err(|e| format!("Invalid request: {}", e))?;
 
             let mut executor = runtime.r_executor.lock().await;
-            runtime
+            let output = runtime
                 .r_context_tool
                 .get_working_dir(request, &mut executor)
                 .await
                 .map_err(|e| e.to_string())
+                .map(Value::String)?;
+            Ok(ToolCallOutcome {
+                summary: output.to_string(),
+                output,
+            })
         }
         "get_installed_packages" => {
             let request: GetInstalledPackagesRequest =
@@ -114,10 +181,14 @@ pub(super) async fn execute_ai_tool_call(
                 .get_installed_packages(request, &mut executor)
                 .await
                 .and_then(|pkgs| {
-                    serde_json::to_string(&pkgs)
+                    serde_json::to_value(&pkgs)
                         .map_err(|e| reprod_core::ReprodError::IOError(e.to_string()))
                 })
                 .map_err(|e| e.to_string())
+                .map(|output| ToolCallOutcome {
+                    summary: output.to_string(),
+                    output,
+                })
         }
         "get_recent_console_logs" => {
             let request: GetConsoleLogsRequest = serde_json::from_value(tool_call.input.clone())
@@ -126,7 +197,46 @@ pub(super) async fn execute_ai_tool_call(
             let logs = fetch_console_logs(runtime.timeline.as_ref(), &request)
                 .map_err(|e| e.to_string())?;
 
-            serde_json::to_string(&logs).map_err(|e| e.to_string())
+            let output = serde_json::to_value(&logs).map_err(|e| e.to_string())?;
+            Ok(ToolCallOutcome {
+                summary: output.to_string(),
+                output,
+            })
+        }
+        "web_search" => {
+            let request: WebSearchRequest = serde_json::from_value(tool_call.input.clone())
+                .map_err(|e| format!("Invalid request: {}", e))?;
+            let provider = runtime
+                .web_search_registry
+                .lock()
+                .await
+                .active_provider()
+                .ok_or_else(|| "No web search provider available".to_string())?;
+            let response = provider
+                .search(request.query)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            let results = response
+                .results
+                .into_iter()
+                .map(|result| {
+                    json!({
+                        "title": result.title,
+                        "uri": result.url,
+                        "description": result.text,
+                    })
+                })
+                .collect::<Vec<_>>();
+
+            let output = json!({
+                "results": results,
+                "count": results.len(),
+            });
+            Ok(ToolCallOutcome {
+                summary: output.to_string(),
+                output,
+            })
         }
         _ => Err(format!("Unknown tool: {}", tool_call.name)),
     }

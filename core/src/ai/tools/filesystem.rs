@@ -4,8 +4,6 @@ use serde_json::Value;
 use std::path::{Path, PathBuf};
 use tokio::fs;
 
-const MAX_FILE_SIZE: u64 = 10 * 1024 * 1024; // 10MB limit
-
 /// FileSystem tool for AI to interact with workspace files
 /// CRITICAL: All operations are restricted to workspace directory only
 #[derive(Debug, Clone)]
@@ -14,14 +12,16 @@ pub struct FileSystemTool {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ReadFileRequest {
+pub struct ReadTextFileRequest {
     pub path: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct WriteFileRequest {
+pub struct WriteTextFileRequest {
     pub path: String,
     pub content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expected_sha256: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -101,57 +101,6 @@ impl FileSystemTool {
         }
     }
 
-    /// Read a file from workspace
-    pub async fn read_file(&self, request: ReadFileRequest) -> Result<String, ReprodError> {
-        let path = self.validate_path(&request.path)?;
-
-        // Check file size before reading
-        let metadata = fs::metadata(&path)
-            .await
-            .map_err(|e| ReprodError::IOError(format!("Cannot read file metadata: {}", e)))?;
-
-        if metadata.len() > MAX_FILE_SIZE {
-            return Err(ReprodError::SecurityError(format!(
-                "File size {} exceeds maximum allowed size of {} bytes",
-                metadata.len(),
-                MAX_FILE_SIZE
-            )));
-        }
-
-        let content = fs::read_to_string(&path)
-            .await
-            .map_err(|e| ReprodError::IOError(format!("Cannot read file: {}", e)))?;
-
-        Ok(content)
-    }
-
-    /// Write a file to workspace
-    pub async fn write_file(&self, request: WriteFileRequest) -> Result<(), ReprodError> {
-        let path = self.validate_path(&request.path)?;
-
-        // Check content size
-        if request.content.len() > MAX_FILE_SIZE as usize {
-            return Err(ReprodError::SecurityError(format!(
-                "Content size {} exceeds maximum allowed size of {} bytes",
-                request.content.len(),
-                MAX_FILE_SIZE
-            )));
-        }
-
-        // Ensure parent directory exists
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent).await.map_err(|e| {
-                ReprodError::IOError(format!("Cannot create parent directory: {}", e))
-            })?;
-        }
-
-        fs::write(&path, request.content)
-            .await
-            .map_err(|e| ReprodError::IOError(format!("Cannot write file: {}", e)))?;
-
-        Ok(())
-    }
-
     /// List files in a directory
     pub async fn list_files(
         &self,
@@ -206,8 +155,8 @@ impl FileSystemTool {
 pub fn get_filesystem_tools() -> Vec<Value> {
     serde_json::json!([
         {
-            "name": "read_file",
-            "description": "Read the contents of a file in the workspace. Only files within the workspace directory can be accessed.",
+            "name": "read_text_file",
+            "description": "Read the contents of a file in the workspace and return text plus sha256 (ACP-compatible name).",
             "input_schema": {
                 "type": "object",
                 "properties": {
@@ -220,8 +169,8 @@ pub fn get_filesystem_tools() -> Vec<Value> {
             }
         },
         {
-            "name": "write_file",
-            "description": "Write content to a file in the workspace. Only files within the workspace directory can be written. Maximum file size is 10MB.",
+            "name": "write_text_file",
+            "description": "Write content to a file in the workspace (ACP-compatible name). Returns unified diff output.",
             "input_schema": {
                 "type": "object",
                 "properties": {
@@ -232,9 +181,61 @@ pub fn get_filesystem_tools() -> Vec<Value> {
                     "content": {
                         "type": "string",
                         "description": "Content to write to the file"
+                    },
+                    "expected_sha256": {
+                        "type": "string",
+                        "description": "Optional SHA-256 of the file content from read_text_file for conflict detection"
                     }
                 },
                 "required": ["path", "content"]
+            }
+        },
+        {
+            "name": "edit_text_file",
+            "description": "Apply an edit inside the workspace and return old/new text plus unified diff. Prefer this for file edits.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Relative path to the file within workspace (e.g., 'analysis.R')"
+                    },
+                    "operation": {
+                        "type": "string",
+                        "enum": ["create", "replace", "apply_edits", "delete"],
+                        "description": "Edit operation to perform"
+                    },
+                    "expected_sha256": {
+                        "type": "string",
+                        "description": "Optional SHA-256 of the file content from read_text_file for conflict detection"
+                    },
+                    "new_text": {
+                        "type": "string",
+                        "description": "Full new file contents (required for create/replace)"
+                    },
+                    "edits": {
+                        "type": "array",
+                        "description": "Range-based edits (required for apply_edits)",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "range": {
+                                    "type": "object",
+                                    "properties": {
+                                        "start_line": { "type": "integer" },
+                                        "start_col": { "type": "integer" },
+                                        "end_line": { "type": "integer" },
+                                        "end_col": { "type": "integer" }
+                                    },
+                                    "required": ["start_line", "start_col", "end_line", "end_col"]
+                                },
+                                "text": { "type": "string" }
+                            },
+                            "required": ["range", "text"]
+                        }
+                    }
+                },
+                "required": ["path", "operation"]
             }
         },
         {
@@ -307,108 +308,6 @@ mod tests {
             let result = tool.validate_path("escape_link");
             assert!(result.is_err());
         }
-    }
-
-    #[tokio::test]
-    async fn test_read_file_success() {
-        let temp = TempDir::new().unwrap();
-        let workspace = temp.path();
-        let tool = FileSystemTool::new(workspace.to_path_buf());
-
-        // Create a test file
-        let test_file = workspace.join("test.txt");
-        fs::write(&test_file, "Hello, World!").await.unwrap();
-
-        let result = tool
-            .read_file(ReadFileRequest {
-                path: "test.txt".to_string(),
-            })
-            .await;
-
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "Hello, World!");
-    }
-
-    #[tokio::test]
-    async fn test_read_file_rejects_large_files() {
-        let temp = TempDir::new().unwrap();
-        let workspace = temp.path();
-        let tool = FileSystemTool::new(workspace.to_path_buf());
-
-        // Create a file larger than MAX_FILE_SIZE
-        let test_file = workspace.join("large.txt");
-        let large_content = "x".repeat((MAX_FILE_SIZE + 1) as usize);
-        fs::write(&test_file, large_content).await.unwrap();
-
-        let result = tool
-            .read_file(ReadFileRequest {
-                path: "large.txt".to_string(),
-            })
-            .await;
-
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("exceeds maximum"));
-    }
-
-    #[tokio::test]
-    async fn test_write_file_success() {
-        let temp = TempDir::new().unwrap();
-        let workspace = temp.path();
-        let tool = FileSystemTool::new(workspace.to_path_buf());
-
-        let result = tool
-            .write_file(WriteFileRequest {
-                path: "output.txt".to_string(),
-                content: "Test content".to_string(),
-            })
-            .await;
-
-        assert!(result.is_ok(), "Write failed: {:?}", result.err());
-
-        let content = fs::read_to_string(workspace.join("output.txt"))
-            .await
-            .unwrap();
-        assert_eq!(content, "Test content");
-    }
-
-    #[tokio::test]
-    async fn test_write_file_creates_parent_dirs() {
-        let temp = TempDir::new().unwrap();
-        let workspace = temp.path();
-        let tool = FileSystemTool::new(workspace.to_path_buf());
-
-        let result = tool
-            .write_file(WriteFileRequest {
-                path: "nested/dir/file.txt".to_string(),
-                content: "Nested content".to_string(),
-            })
-            .await;
-
-        assert!(result.is_ok());
-
-        let content = fs::read_to_string(workspace.join("nested/dir/file.txt"))
-            .await
-            .unwrap();
-        assert_eq!(content, "Nested content");
-    }
-
-    #[tokio::test]
-    async fn test_write_file_rejects_large_content() {
-        let temp = TempDir::new().unwrap();
-        let workspace = temp.path();
-        let tool = FileSystemTool::new(workspace.to_path_buf());
-
-        let large_content = "x".repeat((MAX_FILE_SIZE + 1) as usize);
-
-        let result = tool
-            .write_file(WriteFileRequest {
-                path: "large.txt".to_string(),
-                content: large_content,
-            })
-            .await;
-
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("exceeds maximum"));
     }
 
     #[tokio::test]

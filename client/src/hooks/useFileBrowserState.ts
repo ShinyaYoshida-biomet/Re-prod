@@ -8,12 +8,17 @@ import type {
 import { fileBrowserUIInitialState, fileBrowserUIReducer } from "@/types/fileBrowser";
 
 /**
- * Return type for the useFileBrowserState hook.
+ * State returned by the useFileBrowserState hook.
  */
-export interface UseFileBrowserStateReturn {
+export interface UseFileBrowserState {
 	/** Current UI state */
-	state: FileBrowserUIState;
+	fileBrowserState: FileBrowserUIState;
+}
 
+/**
+ * Actions returned by the useFileBrowserState hook.
+ */
+export interface UseFileBrowserActions {
 	/** Raw dispatch function for custom actions */
 	dispatch: React.Dispatch<FileBrowserUIAction>;
 
@@ -47,6 +52,14 @@ export interface UseFileBrowserStateReturn {
 }
 
 /**
+ * Return type for the useFileBrowserState hook.
+ */
+export interface UseFileBrowserStateReturn {
+	state: UseFileBrowserState;
+	actions: UseFileBrowserActions;
+}
+
+/**
  * A hook for managing FileBrowser local UI state.
  *
  * Consolidates related states that often update together:
@@ -58,16 +71,17 @@ export interface UseFileBrowserStateReturn {
  * @example
  * ```tsx
  * function FileBrowserPane() {
+ *   const { state, actions } = useFileBrowserState();
+ *   const { fileBrowserState } = state;
  *   const {
- *     state,
  *     setClipboard,
  *     setSelection,
  *     showContextMenu,
  *     hideContextMenu,
  *     setDragOverPath,
- *   } = useFileBrowserState();
+ *   } = actions;
  *
- *   const { clipboard, selection, contextMenu, dragOverPath } = state;
+ *   const { clipboard, selection, contextMenu, dragOverPath } = fileBrowserState;
  *   const { anchorPath, focusedPath } = selection;
  *
  *   // Use in handlers...
@@ -75,7 +89,7 @@ export interface UseFileBrowserStateReturn {
  * ```
  */
 export function useFileBrowserState(): UseFileBrowserStateReturn {
-	const [state, dispatch] = useReducer(fileBrowserUIReducer, fileBrowserUIInitialState);
+	const [fileBrowserState, dispatch] = useReducer(fileBrowserUIReducer, fileBrowserUIInitialState);
 
 	// Clipboard operations
 	const setClipboard = useCallback((clipboard: ClipboardState) => {
@@ -119,16 +133,20 @@ export function useFileBrowserState(): UseFileBrowserStateReturn {
 	}, []);
 
 	return {
-		state,
-		dispatch,
-		setClipboard,
-		clearClipboard,
-		setAnchorPath,
-		setFocusedPath,
-		setSelection,
-		showContextMenu,
-		hideContextMenu,
-		setDragOverPath,
-		reset,
+		state: {
+			fileBrowserState,
+		},
+		actions: {
+			dispatch,
+			setClipboard,
+			clearClipboard,
+			setAnchorPath,
+			setFocusedPath,
+			setSelection,
+			showContextMenu,
+			hideContextMenu,
+			setDragOverPath,
+			reset,
+		},
 	};
 }

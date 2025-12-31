@@ -1,5 +1,3 @@
-import { env } from "@/config/env";
-
 const detectTauri = (): boolean => {
 	if (typeof window === "undefined") return false;
 	const win = window as typeof window & {
@@ -11,4 +9,3 @@ const detectTauri = (): boolean => {
 };
 
 export const IS_TAURI = detectTauri();
-export const ACP_FEATURE_ENABLED = env.enableAcp;

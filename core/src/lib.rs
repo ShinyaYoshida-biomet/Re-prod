@@ -2,9 +2,11 @@
 // and panicking is the correct behavior
 #![allow(clippy::expect_used)]
 
+pub mod acp;
 pub mod ai;
 pub mod api;
 pub mod config;
+pub mod edit;
 pub mod error;
 pub mod execution_repository;
 pub mod executor;
@@ -17,8 +19,10 @@ pub mod protocol;
 pub mod terminal;
 pub mod timeline;
 pub mod tools;
+pub mod web_search;
 
 // Re-export protocol types (for API boundaries)
+pub use edit::*;
 pub use error::*;
 pub use protocol::*;
 

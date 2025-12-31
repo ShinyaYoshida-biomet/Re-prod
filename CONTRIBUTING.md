@@ -16,7 +16,7 @@ Thank you for your interest in contributing to Re-prod. We welcome contributions
 
 - Pick an issue that interests you
 - Comment on the issue to let others know you are working on it
-- Fork the repo, create a branch, and start coding
+- Fork the repo, create a branch, and start coding. Please note that the current default branch is `develop`, not `main`. `
 
 ### Discuss First
 
@@ -44,7 +44,7 @@ pnpm install
 ### 2. Create a Branch
 
 ```bash
-git checkout -b feat/your-feature-name
+git checkout -b feature/your-feature-name
 # or
 git checkout -b fix/issue-number-description
 ```
@@ -94,6 +94,7 @@ git commit -m "fix: resolve bug in Y for issue #456"
 ```
 
 **Commit message format:**
+
 - `feat:` for new features
 - `fix:` for bug fixes
 - `docs:` for documentation
@@ -106,11 +107,7 @@ git commit -m "fix: resolve bug in Y for issue #456"
 git push origin feat/your-feature-name
 ```
 
-Then open a Pull Request on GitHub with:
-- **What**: What does this PR do?
-- **Why**: Which issue does it address?
-- **How**: Brief explanation of your approach
-- **Testing**: What tests did you add/run?
+Then open a Pull Request on GitHub following PR template located in `.github` dir.
 
 ## Pull Request Requirements
 
@@ -126,12 +123,14 @@ Before your PR can be merged:
 ## Code Style
 
 ### TypeScript/React
+
 - Use functional components with hooks
 - Prefer `const` over `let`
 - Use TypeScript types (avoid `any`)
 - Follow existing file structure
 
 ### Rust
+
 - Run `cargo fmt` before committing
 - Address `cargo clippy` warnings
 - Write idiomatic Rust
@@ -148,6 +147,7 @@ Before your PR can be merged:
 We use [Husky](https://typicode.github.io/husky/) to manage git hooks. Hooks are automatically installed when you run `pnpm install`.
 
 Pre-push hooks check:
+
 - Rust formatting (`cargo fmt --check`)
 - Rust linting (`cargo clippy`)
 - TypeScript linting (`pnpm run lint`)

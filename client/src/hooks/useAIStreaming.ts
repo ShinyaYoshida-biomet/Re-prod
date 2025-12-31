@@ -1,8 +1,6 @@
-import type { CodeBlock } from "@/types";
 import { useCallback } from "react";
-import { useStore } from "@/core";
-import { extractCodeBlocks } from "@/core/ai/codeBlockUtils";
 import { socketService } from "@/services/socket";
+import { useAssistantEventAdapter } from "./useAssistantEventAdapter";
 
 type RegisterStreamingHandlersOptions = {
 	isRequestActive?: () => boolean;
@@ -11,11 +9,7 @@ type RegisterStreamingHandlersOptions = {
 };
 
 export function useAIStreaming() {
-	const appendStreamingChunk = useStore((state) => state.appendStreamingChunk);
-	const updateStreamingPlan = useStore((state) => state.updateStreamingPlan);
-	const recordToolEvent = useStore((state) => state.recordToolEvent);
-	const completeStreamingMessage = useStore((state) => state.completeStreamingMessage);
-	const setAILoading = useStore((state) => state.setAILoading);
+	const { appendChunk, finalize, recordTool, updatePlan } = useAssistantEventAdapter();
 
 	const registerStreamingHandlers = useCallback(
 		(requestId: string, options: RegisterStreamingHandlersOptions = {}) => {
@@ -35,9 +29,8 @@ export function useAIStreaming() {
 				});
 			};
 
-			const finalize = (finalContent: string, extras?: { codeBlocks?: CodeBlock[] }) => {
-				completeStreamingMessage(requestId, finalContent, extras);
-				setAILoading(false);
+			const finalizeMessage = (finalContent: string) => {
+				finalize(requestId, finalContent);
 				cleanup();
 				onComplete?.(requestId);
 			};
@@ -58,7 +51,7 @@ export function useAIStreaming() {
 						return;
 					}
 					onStreamingProgress?.();
-					appendStreamingChunk(requestId, message.chunk);
+					appendChunk(requestId, message.chunk);
 				}),
 			);
 
@@ -67,7 +60,7 @@ export function useAIStreaming() {
 					if (message.type !== "ai_plan_updated" || !shouldProcess(message.id)) {
 						return;
 					}
-					updateStreamingPlan(requestId, message.plan);
+					updatePlan(requestId, message.plan);
 				}),
 			);
 
@@ -76,7 +69,7 @@ export function useAIStreaming() {
 					if (message.type !== "ai_tool_started" || !shouldProcess(message.id)) {
 						return;
 					}
-					recordToolEvent(requestId, message.tool);
+					recordTool(requestId, message.tool);
 				}),
 			);
 
@@ -85,7 +78,7 @@ export function useAIStreaming() {
 					if (message.type !== "ai_tool_finished" || !shouldProcess(message.id)) {
 						return;
 					}
-					recordToolEvent(requestId, message.tool);
+					recordTool(requestId, message.tool);
 				}),
 			);
 
@@ -94,8 +87,7 @@ export function useAIStreaming() {
 					if (message.type !== "ai_response_complete" || !shouldProcess(message.id)) {
 						return;
 					}
-					const codeBlocks = message.codeBlocks ?? extractCodeBlocks(message.final);
-					finalize(message.final, { codeBlocks });
+					finalizeMessage(message.final);
 				}),
 			);
 
@@ -104,8 +96,7 @@ export function useAIStreaming() {
 					if (message.type !== "ai_response" || !shouldProcess()) {
 						return;
 					}
-					const codeBlocks = extractCodeBlocks(message.response);
-					finalize(message.response, { codeBlocks });
+					finalizeMessage(message.response);
 				}),
 			);
 
@@ -134,10 +125,7 @@ export function useAIStreaming() {
 							.join("\n\n");
 					}
 
-					const codeBlocks = extractCodeBlocks(content ?? "");
-					finalize(content ?? "AI response received (no content)", {
-						codeBlocks,
-					});
+					finalizeMessage(content ?? "AI response received (no content)");
 				}),
 			);
 
@@ -146,19 +134,13 @@ export function useAIStreaming() {
 					if (message.type !== "error" || !shouldProcess()) {
 						return;
 					}
-					finalize(`AI request failed: ${message.message}`);
+					finalizeMessage(`AI request failed: ${message.message}`);
 				}),
 			);
 
 			return cleanup;
 		},
-		[
-			appendStreamingChunk,
-			completeStreamingMessage,
-			recordToolEvent,
-			setAILoading,
-			updateStreamingPlan,
-		],
+		[appendChunk, finalize, recordTool, updatePlan],
 	);
 
 	return { registerStreamingHandlers };

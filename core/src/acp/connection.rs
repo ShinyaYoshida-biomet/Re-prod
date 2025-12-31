@@ -1,8 +1,8 @@
 use agent_client_protocol::{
-    Agent, CancelNotification, ClientSideConnection, ContentBlock, InitializeRequest,
-    NewSessionRequest, PermissionOptionKind, PromptRequest, PromptResponse, ProtocolVersion,
-    RequestPermissionOutcome, RequestPermissionRequest, SelectedPermissionOutcome, SessionId,
-    SessionNotification,
+    Agent, CancelNotification, ClientCapabilities, ClientSideConnection, ContentBlock,
+    FileSystemCapability, InitializeRequest, NewSessionRequest, PermissionOptionKind,
+    PromptRequest, PromptResponse, ProtocolVersion, RequestPermissionOutcome,
+    RequestPermissionRequest, SelectedPermissionOutcome, SessionId, SessionNotification,
 };
 use anyhow::{anyhow, Context, Result};
 use std::collections::HashMap;
@@ -18,9 +18,9 @@ use tokio::{
     task::LocalSet,
 };
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
-use tracing::error;
+use tracing::{error, info};
 
-use crate::{
+use super::{
     client::ReprodAcpClient,
     types::{
         AcpPermissionDecision, AcpPermissionDecisionScope, AcpPermissionOption,
@@ -112,8 +112,23 @@ impl AcpConnection {
                             }
                         });
 
+                        let init_request = InitializeRequest::new(ProtocolVersion::LATEST)
+                            .client_capabilities(
+                                ClientCapabilities::new()
+                                    .fs(FileSystemCapability::new()
+                                        .read_text_file(true)
+                                        .write_text_file(true))
+                                    .terminal(false),
+                            );
+                        info!(
+                            fs_read_text_file = true,
+                            fs_write_text_file = true,
+                            terminal = false,
+                            "ACP initialize request built"
+                        );
+
                         let init_result = conn
-                            .initialize(InitializeRequest::new(ProtocolVersion::LATEST))
+                            .initialize(init_request)
                             .await
                             .context("ACP initialize failed");
                         if let Err(ref err) = init_result {
@@ -161,7 +176,10 @@ impl AcpConnection {
             async move {
                 while let Some(decision) = permission_response_rx.recv().await {
                     if let Some(scope) = decision.remember_scope.clone() {
-                        decision_meta.lock().await.insert(decision.request_id.clone(), scope);
+                        decision_meta
+                            .lock()
+                            .await
+                            .insert(decision.request_id.clone(), scope);
                     }
                     let sender = { pending.lock().await.remove(&decision.request_id) };
                     if let Some(tx) = sender {
@@ -273,7 +291,7 @@ impl TryFrom<AcpPermissionDecision> for PermissionDecisionMessage {
 
     fn try_from(value: AcpPermissionDecision) -> Result<Self, Self::Error> {
         let outcome = match value.outcome {
-            crate::types::AcpPermissionDecisionOutcome::Cancelled => {
+            super::types::AcpPermissionDecisionOutcome::Cancelled => {
                 RequestPermissionOutcome::Cancelled
             }
             _ => {
@@ -324,9 +342,11 @@ mod tests {
 
     #[test]
     fn converts_decision_into_protocol_message() {
+        use crate::acp::types::AcpPermissionDecisionOutcome;
+
         let decision = AcpPermissionDecision {
             request_id: "req-1".to_string(),
-            outcome: crate::types::AcpPermissionDecisionOutcome::AllowOnce,
+            outcome: AcpPermissionDecisionOutcome::AllowOnce,
             option_id: Some("opt-1".to_string()),
             remember_scope: None,
         };
@@ -343,9 +363,11 @@ mod tests {
 
     #[test]
     fn converts_cancelled_decision() {
+        use crate::acp::types::AcpPermissionDecisionOutcome;
+
         let decision = AcpPermissionDecision {
             request_id: "req-2".to_string(),
-            outcome: crate::types::AcpPermissionDecisionOutcome::Cancelled,
+            outcome: AcpPermissionDecisionOutcome::Cancelled,
             option_id: None,
             remember_scope: None,
         };

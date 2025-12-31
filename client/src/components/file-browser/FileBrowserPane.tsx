@@ -19,6 +19,7 @@ import {
 	alertFileOperationError,
 	alertDesktopOnlyFeature,
 } from "@/utils/fileBrowserAlerts";
+import { getErrorMessage } from "@/utils/error";
 
 const ROOT_LABEL = "Workspace";
 const DRAG_DATA_MIME = "application/x-reprod-paths";
@@ -159,8 +160,9 @@ export function FileBrowserPane(): JSX.Element {
 	const setActivePath = useFileSystemStore((state) => state.setActivePath);
 	const workspaceRoot = useFileSystemStore((state) => state.workspaceRoot);
 
+	const { state, actions } = useFileBrowserState();
+	const { fileBrowserState: uiState } = state;
 	const {
-		state: uiState,
 		setClipboard,
 		clearClipboard,
 		setAnchorPath,
@@ -169,7 +171,7 @@ export function FileBrowserPane(): JSX.Element {
 		showContextMenu,
 		hideContextMenu,
 		setDragOverPath,
-	} = useFileBrowserState();
+	} = actions;
 	const { clipboard, selection, contextMenu, dragOverPath } = uiState;
 	const { anchorPath, focusedPath } = selection;
 
@@ -321,7 +323,10 @@ export function FileBrowserPane(): JSX.Element {
 				setEditorFilepath(node.path);
 				setEditorIsDirty(false);
 			} catch (error) {
-				alertFileOperationError(toast, `Failed to open file: ${(error as Error).message}`);
+				alertFileOperationError(
+					toast,
+					`Failed to open file: ${getErrorMessage(error, "Unknown error")}`,
+				);
 			}
 		},
 		[openInSystemViewer, setEditorContent, setEditorFilepath, setEditorIsDirty, toast],
@@ -363,7 +368,7 @@ export function FileBrowserPane(): JSX.Element {
 			} catch (error) {
 				alertFileOperationError(
 					toast,
-					`Failed to create ${isDir ? "folder" : "file"}: ${(error as Error).message}`,
+					`Failed to create ${isDir ? "folder" : "file"}: ${getErrorMessage(error, "Unknown error")}`,
 				);
 			}
 		},
@@ -382,7 +387,10 @@ export function FileBrowserPane(): JSX.Element {
 				await fileSystem.renamePath(path, destination);
 				await refreshPath(parent);
 			} catch (error) {
-				alertFileOperationError(toast, `Failed to rename: ${(error as Error).message}`);
+				alertFileOperationError(
+					toast,
+					`Failed to rename: ${getErrorMessage(error, "Unknown error")}`,
+				);
 			}
 		},
 		[hideContextMenu, refreshPath, toast],
@@ -407,7 +415,10 @@ export function FileBrowserPane(): JSX.Element {
 			try {
 				await fileSystem.deletePath(path);
 			} catch (error) {
-				alertFileOperationError(toast, `Failed to delete ${path}: ${(error as Error).message}`);
+				alertFileOperationError(
+					toast,
+					`Failed to delete ${path}: ${getErrorMessage(error, "Unknown error")}`,
+				);
 			}
 		}
 
@@ -444,7 +455,7 @@ export function FileBrowserPane(): JSX.Element {
 				} catch (error) {
 					alertFileOperationError(
 						toast,
-						`Failed to ${mode === "copy" ? "copy" : "move"} ${name}: ${(error as Error).message}`,
+						`Failed to ${mode === "copy" ? "copy" : "move"} ${name}: ${getErrorMessage(error, "Unknown error")}`,
 					);
 				}
 			}

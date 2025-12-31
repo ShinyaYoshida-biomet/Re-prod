@@ -3,11 +3,13 @@ use crate::handlers::stream_buffer::StreamBuffer;
 use anyhow::{anyhow, Context, Result};
 use reprod_core::{
     ai::tools::{FileSystemTool, RContextTool},
+    edit::EditService,
     execution_repository::{ExecutionRepository, TimelineExecutionRepository},
     fs::FileSystem,
     plot_history::PlotHistoryEntry,
     plot_history::PlotHistoryManager,
     timeline::JsonTimeline,
+    web_search::{cloud_provider::CloudWebSearchProvider, WebSearchRegistry},
 };
 use reprod_core::{
     project::{
@@ -138,10 +140,12 @@ pub struct ProjectRuntime {
     pub run_events: broadcast::Sender<RuntimeBroadcastEvent>,
     pub file_system: Arc<FileSystem>,
     pub filesystem_tool: Arc<FileSystemTool>,
+    pub edit_service: Arc<EditService>,
     pub r_context_tool: Arc<RContextTool>,
     pub r_executor: Arc<Mutex<RExecutor>>,
     pub plot_history: Arc<Mutex<PlotHistoryManager>>,
     pub acp: Arc<AcpService>,
+    pub web_search_registry: Arc<Mutex<WebSearchRegistry>>,
 }
 
 impl ProjectRuntime {
@@ -190,6 +194,22 @@ impl ProjectRuntime {
         let filesystem_root = descriptor.root_path.clone();
         let (run_events, _) = broadcast::channel(1024);
         let acp = Arc::new(AcpService::new(descriptor.root_path.clone()));
+        let web_search_registry = Arc::new(Mutex::new(WebSearchRegistry::new()));
+        match CloudWebSearchProvider::from_env() {
+            Ok(Some(provider)) => {
+                if let Ok(mut registry) = web_search_registry.try_lock() {
+                    registry.register_provider(provider);
+                } else {
+                    tracing::warn!("Web search registry locked during initialization");
+                }
+            }
+            Ok(None) => {
+                tracing::info!("Web search provider not configured; skipping initialization");
+            }
+            Err(error) => {
+                tracing::warn!("Failed to initialize web search provider: {}", error);
+            }
+        }
         Ok(Self {
             descriptor,
             timeline,
@@ -197,11 +217,13 @@ impl ProjectRuntime {
             stream_buffer: Arc::new(Mutex::new(StreamBuffer::new())),
             run_events,
             file_system: Arc::new(FileSystem::new(&filesystem_root)),
-            filesystem_tool: Arc::new(FileSystemTool::new(filesystem_root)),
+            filesystem_tool: Arc::new(FileSystemTool::new(filesystem_root.clone())),
+            edit_service: Arc::new(EditService::new(filesystem_root)),
             r_context_tool: Arc::new(RContextTool::new()),
             r_executor: Arc::new(Mutex::new(r_executor)),
             plot_history,
             acp,
+            web_search_registry,
         })
     }
 }

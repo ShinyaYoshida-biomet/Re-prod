@@ -4,11 +4,10 @@ use crate::projects::ProjectRuntime;
 use reprod_core::{
     ai::{
         self,
-        tools::{get_console_tools, get_filesystem_tools, get_r_context_tools},
+        tools::{get_console_tools, get_filesystem_tools, get_r_context_tools, get_web_search_tools},
     },
     ChatMessage,
 };
-use serde_json::json;
 
 use super::{
     common::{
@@ -91,6 +90,7 @@ pub(super) async fn handle_ai_message(
         let mut tools = get_filesystem_tools();
         tools.extend(get_r_context_tools());
         tools.extend(get_console_tools());
+        tools.extend(get_web_search_tools());
         let mut responses = Vec::new();
 
         // Mark fetch/inspect/execute phases as running in order as we start tool processing.
@@ -123,10 +123,10 @@ pub(super) async fn handle_ai_message(
 
                         let tool_result = execute_ai_tool_call(tool_call, runtime).await;
                         match tool_result {
-                            Ok(content) => {
+                            Ok(result) => {
                                 log.status = ToolLogStatus::Done;
-                                log.output = Some(json!({ "result": content }));
-                                tool_results.push((tool_call.id.clone(), content));
+                                log.output = Some(result.output.clone());
+                                tool_results.push((tool_call.id.clone(), result.summary));
                             }
                             Err(err) => {
                                 log.status = ToolLogStatus::Error;

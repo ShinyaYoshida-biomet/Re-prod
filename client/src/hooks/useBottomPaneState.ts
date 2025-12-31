@@ -10,18 +10,26 @@ import type {
 	PlotNavigationState,
 } from "@/types/panels";
 
-interface UseBottomPaneStateResult {
+interface UseBottomPaneState {
 	tabs: PanelTabItem<BottomPaneTab>[];
 	activeTab: BottomPaneTab;
-	setActiveTab: (tab: BottomPaneTab) => void;
 	navigation: PlotNavigationState;
 	allPlots: ExecutionLogPlot[];
 	currentPlot: ExecutionLogPlot | null;
+}
+
+interface UseBottomPaneActions {
+	setActiveTab: (tab: BottomPaneTab) => void;
 	selectPreviousPlot: () => void;
 	selectNextPlot: () => void;
 	goToPreviousPlot: () => void;
 	goToNextPlot: () => void;
 	clearExecutionResults: () => void;
+}
+
+interface UseBottomPaneStateResult {
+	state: UseBottomPaneState;
+	actions: UseBottomPaneActions;
 }
 
 const DEFAULT_TAB: BottomPaneTab = "console";
@@ -153,16 +161,20 @@ export function useBottomPaneState(): UseBottomPaneStateResult {
 	}, [allPlots, persistActivePlot, selectNextPlot, selectedPlotIndex]);
 
 	return {
-		tabs,
-		activeTab,
-		setActiveTab,
-		navigation,
-		allPlots,
-		currentPlot,
-		selectPreviousPlot,
-		selectNextPlot,
-		goToPreviousPlot,
-		goToNextPlot,
-		clearExecutionResults,
+		state: {
+			tabs,
+			activeTab,
+			navigation,
+			allPlots,
+			currentPlot,
+		},
+		actions: {
+			setActiveTab,
+			selectPreviousPlot,
+			selectNextPlot,
+			goToPreviousPlot,
+			goToNextPlot,
+			clearExecutionResults,
+		},
 	};
 }

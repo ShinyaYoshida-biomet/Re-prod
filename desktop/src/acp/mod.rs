@@ -1,12 +1,12 @@
 pub mod commands;
 pub mod runtime;
 
-pub use reprod_acp::types;
+pub use reprod_core::acp::types;
 
 use std::path::PathBuf;
 
 use anyhow::Result;
-use reprod_acp::{
+use reprod_core::acp::{
     types::{
         AcpInitializeResponse, AcpPermissionDecision, AcpPermissionRequestPayload,
         AcpSessionUpdateEnvelope,
@@ -141,4 +141,4 @@ impl AcpManager {
     }
 }
 
-pub use reprod_acp::build_process_config;
+pub use reprod_core::acp::build_process_config;

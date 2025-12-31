@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
+use crate::config::{app_config_dir, workspace_root_override};
 use anyhow::{bail, Result};
-use reprod_core::config::{app_config_dir, workspace_root_override};
 use serde::{Deserialize, Serialize};
 use tracing::{error, info, warn};
 
@@ -152,10 +152,9 @@ pub fn is_external_mode(mode: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use reprod_core::config::{APP_DIR_ENV, WORKSPACE_ROOT_ENV};
-    use std::{env, fs, sync::Mutex};
-
-    static ENV_LOCK: Mutex<()> = Mutex::new(());
+    use crate::acp::test_support::ENV_LOCK;
+    use crate::config::{APP_DIR_ENV, WORKSPACE_ROOT_ENV};
+    use std::{env, fs};
 
     fn with_env_lock<T>(f: impl FnOnce() -> T) -> T {
         let _guard = ENV_LOCK.lock().unwrap();

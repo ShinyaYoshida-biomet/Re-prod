@@ -16,7 +16,7 @@ Re-prod に興味を持っていただきありがとうございます。コミ
 
 - 興味がある Issue を選ぶ
 - 自分が取り組む旨をコメントで共有
-- リポジトリを fork し、ブランチを切って開発を進める
+- リポジトリを fork し、ブランチを切って開発を進める。現在のデフォルトブランチは `main` ではなく `develop` です。
 
 ### 事前に相談すべきこと
 
@@ -45,7 +45,7 @@ pnpm install
 ### 2. ブランチを作成
 
 ```bash
-git checkout -b feat/your-feature-name
+git checkout -b feature/your-feature-name
 # または
 git checkout -b fix/issue-number-description
 ```
@@ -95,6 +95,7 @@ git commit -m "fix: Y のバグを修正 (#456)"
 ```
 
 **コミットメッセージ形式**
+
 - `feat:` 新機能
 - `fix:` バグ修正
 - `docs:` ドキュメント
@@ -104,15 +105,10 @@ git commit -m "fix: Y のバグを修正 (#456)"
 ### 7. Push＆PR
 
 ```bash
-git push origin feat/your-feature-name
+git push origin feature/your-feature-name
 ```
 
-その後 GitHub でプルリクエストを作成し、以下を明示しておくとレビューしやすくなります。
-
-- **What**: この PR で何をするか
-- **Why**: どの Issue を解決するか
-- **How**: 取り組んだ手法の概要
-- **Testing**: 実行/追加したテスト
+その後 GitHub でプルリクエストを作成します。`.github` ディレクトリにある PR テンプレートに従ってください。
 
 ## プルリクエスト要件
 
@@ -126,12 +122,14 @@ git push origin feat/your-feature-name
 ## コードスタイル
 
 ### TypeScript/React
+
 - フックを活用した関数コンポーネントを使用
 - `let` より `const` を優先
 - TypeScript の型を利用（`any` は避ける）
 - 既存ファイル構成や命名規則に従う
 
 ### Rust
+
 - コミット前に `cargo fmt` を実行
 - `cargo clippy` の警告に対処
 - イディオマティックな Rust を書く
@@ -146,6 +144,7 @@ git push origin feat/your-feature-name
 ## Git フック
 
 コード品質の担保のために Husky 管理の Git フックを利用しています。`pnpm install` 実行時に自動設定され、pre-push で以下をチェックします:
+
 - Rust フォーマット (`cargo fmt --check`)
 - Rust lint (`cargo clippy`)
 - TypeScript lint (`pnpm run lint`)

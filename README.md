@@ -2,9 +2,13 @@
 
 ---
 
-[English](README.md) | [Japanese](README.ja.md)
+<p align="center">
+  <a href="README.md">English</a> | <a href="README.ja.md">Japanese</a>
+</p>
 
 AI-Powered R Analysis IDE - A modern, AI-native alternative to RStudio.
+
+![image](https://private-user-images.githubusercontent.com/33049408/530954930-95408ef3-14a7-4dec-9cf2-f77598166418.png?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NjcwOTI0NDgsIm5iZiI6MTc2NzA5MjE0OCwicGF0aCI6Ii8zMzA0OTQwOC81MzA5NTQ5MzAtOTU0MDhlZjMtMTRhNy00ZGVjLTljZjItZjc3NTk4MTY2NDE4LnBuZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNTEyMzAlMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjUxMjMwVDEwNTU0OFomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPWE5NjI5NDRjOTljMzliN2FkZDRjZTdkZmQ5ZmRkNGRkN2JlYWM5NDE5NDE5ODc1MzFmMzBjOTY0NTk1MWUxNDgmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.JEjhasFCUhM05dKKykFK9c1TXrpXEU-ENlDCvSxO31g)
 
 ## Mission
 
@@ -32,6 +36,7 @@ Re-prod is a cross-platform IDE for R and scientific analysis, built as a Rust�
 ### Frontend
 
 - `client/` is a React + TypeScript + Vite application that renders a Monaco-powered editor, and other panes. All TypeScript types are located in `client/src/types/`, with protocol types auto-generated from Rust via ts-rs.
+- `shared/` exports TypeScript types and constants shared across the client, server, and scripts.
 
 ## Prerequisites
 
@@ -285,6 +290,7 @@ Socket connection error
 ## Contributing
 
 Before submitting changes, follow the contribution guidance in [CONTRIBUTING.md](./CONTRIBUTING.md).
+
 日本語版は [CONTRIBUTING.ja.md](./CONTRIBUTING.ja.md) をご覧ください。
 
 ## License

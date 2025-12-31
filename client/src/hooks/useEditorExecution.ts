@@ -17,7 +17,25 @@ interface UseEditorExecutionProps {
 	cells: Cell[];
 }
 
-export function useEditorExecution({ editorRef, cells }: UseEditorExecutionProps) {
+interface UseEditorExecutionState {
+	executingCellIndex: number | null;
+}
+
+interface UseEditorExecutionActions {
+	handleRunAll: () => void;
+	handleRunCurrentCell: () => void;
+	handleRunCellAndMoveNext: () => void;
+}
+
+interface UseEditorExecutionReturn {
+	state: UseEditorExecutionState;
+	actions: UseEditorExecutionActions;
+}
+
+export function useEditorExecution({
+	editorRef,
+	cells,
+}: UseEditorExecutionProps): UseEditorExecutionReturn {
 	const editorContent = useStore((state) => state.editor.content);
 	const editorFilepath = useStore((state) => state.editor.filepath);
 	const cursorLine = useStore((state) => state.editor.cursorPosition.line);
@@ -99,9 +117,13 @@ export function useEditorExecution({ editorRef, cells }: UseEditorExecutionProps
 	}, [cells, cursorLine, editorRef, executeCode]);
 
 	return {
-		executingCellIndex,
-		handleRunAll,
-		handleRunCurrentCell,
-		handleRunCellAndMoveNext,
+		state: {
+			executingCellIndex,
+		},
+		actions: {
+			handleRunAll,
+			handleRunCurrentCell,
+			handleRunCellAndMoveNext,
+		},
 	};
 }

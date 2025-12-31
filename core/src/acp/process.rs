@@ -7,7 +7,7 @@ use tokio::task::JoinHandle;
 use tokio::time::sleep;
 use tracing::{debug, error, info};
 
-use crate::detection::find_agent_binary;
+use super::detection::find_agent_binary;
 
 pub struct ProcessConfig {
     pub command: String,
@@ -91,12 +91,10 @@ pub async fn spawn_agent(config: ProcessConfig) -> Result<SpawnedPipes> {
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
 
-    let mut child = cmd
-        .spawn()
-        .map_err(|err| {
-            error!(error = %err, "Failed to spawn ACP agent");
-            anyhow!("Failed to spawn ACP agent: {err}")
-        })?;
+    let mut child = cmd.spawn().map_err(|err| {
+        error!(error = %err, "Failed to spawn ACP agent");
+        anyhow!("Failed to spawn ACP agent: {err}")
+    })?;
 
     let stderr_task = child.stderr.take().map(spawn_stderr_logger);
     let stdout = child

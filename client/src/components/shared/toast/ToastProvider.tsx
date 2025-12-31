@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { Toast, type ToastProps, type ToastSeverity } from "./Toast";
+import { Toast, type ToastProps, ToastSeverity } from "./Toast";
 import { registerToastFunction, unregisterToastFunction } from "@/services/toastService";
 
 interface ToastOptions {
@@ -41,28 +41,28 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
 	const showInfo = useCallback(
 		(message: string, options?: ToastOptions) => {
-			showToast(message, "info", options);
+			showToast(message, ToastSeverity.INFO, options);
 		},
 		[showToast],
 	);
 
 	const showSuccess = useCallback(
 		(message: string, options?: ToastOptions) => {
-			showToast(message, "success", options);
+			showToast(message, ToastSeverity.SUCCESS, options);
 		},
 		[showToast],
 	);
 
 	const showWarning = useCallback(
 		(message: string, options?: ToastOptions) => {
-			showToast(message, "warning", options);
+			showToast(message, ToastSeverity.WARNING, options);
 		},
 		[showToast],
 	);
 
 	const showError = useCallback(
 		(message: string, options?: ToastOptions) => {
-			showToast(message, "error", options);
+			showToast(message, ToastSeverity.ERROR, options);
 		},
 		[showToast],
 	);

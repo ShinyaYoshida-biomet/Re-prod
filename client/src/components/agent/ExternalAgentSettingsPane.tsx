@@ -1,16 +1,8 @@
-import type { AcpAgentConfig, AcpDetectedAgent } from "@/types/generated";
 import { useCallback, useEffect, useMemo } from "react";
-import { ACP_FEATURE_ENABLED, IS_TAURI } from "@/constants/features";
 import { useStore } from "@/core";
 import { useAsyncState } from "@/hooks/useAsyncState";
-
-async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-	const response = await fetch(url, init);
-	if (!response.ok) {
-		throw new Error(`Request failed: ${response.status}`);
-	}
-	return (await response.json()) as T;
-}
+import { getAcpAdminClient } from "@/services/acpAdminClient";
+import { classNames } from "@/utils/classNames";
 
 export function ExternalAgentSettingsPane(): JSX.Element {
 	const activeMode = useStore((state) => state.activeMode);
@@ -19,8 +11,8 @@ export function ExternalAgentSettingsPane(): JSX.Element {
 	const setActiveMode = useStore((state) => state.setActiveMode);
 	const setActiveAgent = useStore((state) => state.setActiveAgent);
 	const setDetectedAgents = useStore((state) => state.setDetectedAgents);
-	const enabled = ACP_FEATURE_ENABLED;
 	const isWindows = typeof navigator !== "undefined" && navigator.userAgent.includes("Windows");
+	const acpAdminClient = useMemo(() => getAcpAdminClient(), []);
 
 	const availableAgents = useMemo(
 		() => detectedAgents.filter((agent) => agent.available),
@@ -28,50 +20,23 @@ export function ExternalAgentSettingsPane(): JSX.Element {
 	);
 
 	const fetchAgentsAsync = useCallback(async () => {
-		if (!enabled) return null;
-		if (IS_TAURI) {
-			const { invoke } = await import("@tauri-apps/api/core");
-			const [agents, config] = await Promise.all([
-				invoke<AcpDetectedAgent[]>("acp_detect_agents"),
-				invoke<{ active_mode: string; active_agent: string | null }>("acp_get_agent_config"),
-			]);
-			setDetectedAgents(agents);
-			setActiveMode((config.active_mode as "api" | "external_agent") ?? "api");
-			setActiveAgent(config.active_agent);
-		} else {
-			const [agents, config] = await Promise.all([
-				fetchJson<AcpDetectedAgent[]>("/api/acp/agents"),
-				fetchJson<AcpAgentConfig>("/api/acp/config"),
-			]);
-			setDetectedAgents(agents);
-			setActiveMode((config.active_mode as "api" | "external_agent") ?? "api");
-			setActiveAgent(config.active_agent);
-		}
+		const { config, agents } = await acpAdminClient.bootstrap();
+		setDetectedAgents(agents);
+		setActiveMode((config.active_mode as "api" | "external_agent") ?? "api");
+		setActiveAgent(config.active_agent);
 		return null;
-	}, [enabled, setDetectedAgents, setActiveMode, setActiveAgent]);
+	}, [acpAdminClient, setDetectedAgents, setActiveMode, setActiveAgent]);
 
 	const { loading, execute: fetchAgents } = useAsyncState(fetchAgentsAsync, {
 		onError: (error) => console.error("Failed to load ACP agents/config", error),
 	});
 
 	useEffect(() => {
-		if (enabled) {
-			void fetchAgents();
-		}
-	}, [enabled, fetchAgents]);
+		void fetchAgents();
+	}, [fetchAgents]);
 
 	const persistConfig = async (mode: "api" | "external_agent", agent: string | null) => {
-		if (!enabled) return;
-		if (IS_TAURI) {
-			const { invoke } = await import("@tauri-apps/api/core");
-			await invoke("acp_set_agent_config", { activeMode: mode, activeAgent: agent });
-			return;
-		}
-		await fetchJson<AcpAgentConfig>("/api/acp/config", {
-			method: "PUT",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ active_mode: mode, active_agent: agent }),
-		});
+		await acpAdminClient.setConfig(mode, agent);
 	};
 
 	const handleModeChange = async (mode: "api" | "external_agent") => {
@@ -116,12 +81,8 @@ export function ExternalAgentSettingsPane(): JSX.Element {
 							name="agent-mode"
 							checked={activeMode === "external_agent"}
 							onChange={() => handleModeChange("external_agent")}
-							disabled={!ACP_FEATURE_ENABLED}
 						/>
 						External agent (ACP)
-						{!ACP_FEATURE_ENABLED && (
-							<small className="hint">Enable ACP feature flag to activate.</small>
-						)}
 					</label>
 				</div>
 			</div>
@@ -143,7 +104,10 @@ export function ExternalAgentSettingsPane(): JSX.Element {
 					</div>
 					<div className="agent-list">
 						{detectedAgents.map((agent) => (
-							<label key={agent.id} className={`agent-row ${!agent.available ? "disabled" : ""}`}>
+							<label
+								key={agent.id}
+								className={classNames("agent-row", !agent.available && "disabled")}
+							>
 								<input
 									type="radio"
 									name="agent-select"

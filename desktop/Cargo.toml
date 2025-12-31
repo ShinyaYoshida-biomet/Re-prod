@@ -8,7 +8,6 @@ tauri-build = { workspace = true }
 
 [dependencies]
 reprod-core = { workspace = true }
-reprod-acp = { workspace = true }
 
 tauri = { workspace = true }
 serde = { workspace = true }

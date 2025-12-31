@@ -6,12 +6,12 @@ use crate::acp::types::{
 };
 use crate::acp::runtime::DesktopAcpRuntime;
 use crate::acp::{build_process_config, AcpManager};
-use reprod_acp::config::{
+use reprod_core::acp::config::{
     load_acp_config, normalize_active_mode, save_acp_config, ACP_MODE_API,
     ACP_MODE_EXTERNAL_AGENT,
 };
-use reprod_acp::detection::{detect_agents, resolve_active_agent_command};
-use reprod_acp::AcpRuntime;
+use reprod_core::acp::detection::{detect_agents, resolve_active_agent_command};
+use reprod_core::acp::AcpRuntime;
 use tauri::{AppHandle, State};
 use tracing::info;
 use tokio::sync::Mutex;

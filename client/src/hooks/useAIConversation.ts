@@ -1,17 +1,32 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ACP_FEATURE_ENABLED } from "@/constants/features";
 import { useStore } from "@/core";
 import { buildPromptWithContext, createRequestId } from "@/core/ai/promptUtils";
+import { getAcpSystemPrompts } from "@/core/ai/systemPrompts";
 import { getExternalAgentClient } from "@/services/externalAgentClient";
 import { aiMessages } from "@/services/messageBuilders";
 import { socketService } from "@/services/socket";
-import type { AIMessage, AIMode, ToolCallLog } from "@/types";
+import type { AIMessage, AIMode } from "@/types";
 import type { AcpPromptMessage, AcpSessionUpdateEnvelope } from "@/types/generated";
 import { useAICodeApplication } from "./useAICodeApplication";
+import { useAssistantEventAdapter } from "./useAssistantEventAdapter";
 import { useAIStreaming } from "./useAIStreaming";
 import { useAITimeout } from "./useAITimeout";
+import { usePromptHistory } from "./usePromptHistory";
 
 const STREAM_TIMEOUT_MS = 45000;
+
+export interface AIState {
+	input: string;
+	messages: AIMessage[];
+	isLoading: boolean;
+}
+
+export interface AIActions {
+	setInput: (value: string) => void;
+	ask: (mode?: AIMode) => Promise<void>;
+	stop: () => void;
+	applyCode: (code: string) => void;
+}
 
 const describeError = (error: unknown): string => {
 	if (typeof error === "string") return error;
@@ -24,40 +39,43 @@ const describeError = (error: unknown): string => {
 	}
 };
 
-const mapAcpStatus = (acpStatus: string): ToolCallLog["status"] => {
-	const lower = acpStatus.toLowerCase();
-	if (lower.includes("progress") || lower.includes("pending")) return "running";
-	if (lower.includes("completed") || lower.includes("done")) return "done";
-	if (lower.includes("failed") || lower.includes("error") || lower.includes("rejected"))
-		return "error";
-	return "pending";
-};
-
 export function useAIConversation() {
 	const messages = useStore((state) => state.ai.messages);
 	const isLoading = useStore((state) => state.ai.isLoading);
 	const activeMode = useStore((state) => state.activeMode);
 	const activeAgent = useStore((state) => state.activeAgent);
-	const appendStreamingChunk = useStore((state) => state.appendStreamingChunk);
 
 	const addAIMessage = useStore((state) => state.addAIMessage);
 	const startStreamingMessage = useStore((state) => state.startStreamingMessage);
 	const setAILoading = useStore((state) => state.setAILoading);
 	const completeStreamingMessage = useStore((state) => state.completeStreamingMessage);
-	const recordToolEvent = useStore((state) => state.recordToolEvent);
 	const editorContent = useStore((state) => state.editor.content);
 	const editorFilepath = useStore((state) => state.editor.filepath);
 	const consoleHistory = useStore((state) => state.execution.results);
 
 	const { clearTimeoutRef, startTimeout } = useAITimeout();
 	const { registerStreamingHandlers } = useAIStreaming();
+	const {
+		appendChunk,
+		finalize,
+		mapPlanSteps,
+		mapToolCall,
+		mapToolCallUpdate,
+		recordTool,
+		updatePlan,
+	} = useAssistantEventAdapter();
 
 	const [input, setInput] = useState("");
 	const activeRequestRef = useRef<{ id: string; dispose: () => void } | null>(null);
+
+	const promptHistory = usePromptHistory({
+		messages,
+		currentInput: input,
+		setInput,
+	});
 	const acpSessionIdRef = useRef<string | null>(null);
 	const acpStreamsRef = useRef<Map<string, string>>(new Map());
-	const acpConfigured =
-		ACP_FEATURE_ENABLED && activeMode === "external_agent" && Boolean(activeAgent);
+	const acpConfigured = activeMode === "external_agent" && Boolean(activeAgent);
 	const externalAgentClient = acpConfigured ? getExternalAgentClient() : null;
 
 	const postAssistantMessage = useCallback(
@@ -96,8 +114,9 @@ export function useAIConversation() {
 
 	const extractAcpText = useCallback(
 		(update: AcpSessionUpdateEnvelope["update"]): string | null => {
-			const [variant, value] = Object.entries(update ?? {})[0] ?? [];
-			if (!variant || !value) return null;
+			if (typeof update !== "object" || update === null) return null;
+			if (!("AgentMessageChunk" in update)) return null;
+			const value = update.AgentMessageChunk;
 			if (typeof value === "object" && "text" in value) {
 				const candidate = (value as { text?: unknown }).text;
 				return typeof candidate === "string" ? candidate : null;
@@ -105,6 +124,19 @@ export function useAIConversation() {
 			return null;
 		},
 		[],
+	);
+
+	const finalizeAcpStream = useCallback(
+		(streamingId: string) => {
+			const { ai } = useStore.getState();
+			const message = ai.messages.find(
+				(entry) => entry.streamingId === streamingId || entry.id === streamingId,
+			);
+			const finalContent = message?.content ?? "";
+			finalize(streamingId, finalContent);
+			clearActiveRequest();
+		},
+		[clearActiveRequest, finalize],
 	);
 
 	const handleSessionUpdate = useCallback(
@@ -120,37 +152,44 @@ export function useAIConversation() {
 
 			const update = payload.update;
 
+			if (update === "Done") {
+				finalizeAcpStream(streamingId);
+				return;
+			}
+
+			if (typeof update === "object" && update !== null && "Plan" in update) {
+				updatePlan(streamingId, mapPlanSteps(update.Plan.steps));
+				return;
+			}
+
 			// Handle ToolCall
 			if (typeof update === "object" && update !== null && "ToolCall" in update) {
-				const toolCall = update.ToolCall;
-				recordToolEvent(streamingId, {
-					id: toolCall.id,
-					name: toolCall.title,
-					status: mapAcpStatus(toolCall.status),
-					kind: toolCall.kind,
-					locations: toolCall.locations,
-				});
+				recordTool(streamingId, mapToolCall(update.ToolCall));
 				return;
 			}
 
 			// Handle ToolCallUpdate
 			if (typeof update === "object" && update !== null && "ToolCallUpdate" in update) {
-				const toolUpdate = update.ToolCallUpdate;
-				recordToolEvent(streamingId, {
-					id: toolUpdate.id,
-					name: "", // Will be merged with existing
-					status: toolUpdate.status ? mapAcpStatus(toolUpdate.status) : "running",
-					output: toolUpdate.content ? { text: toolUpdate.content } : undefined,
-				});
+				recordTool(streamingId, mapToolCallUpdate(update.ToolCallUpdate));
 				return;
 			}
 
 			// Handle text chunks
 			const text = extractAcpText(update);
 			if (!text) return;
-			appendStreamingChunk(streamingId, text);
+			appendChunk(streamingId, text);
 		},
-		[appendStreamingChunk, extractAcpText, recordToolEvent, startStreamingMessage],
+		[
+			appendChunk,
+			extractAcpText,
+			finalizeAcpStream,
+			mapPlanSteps,
+			mapToolCall,
+			mapToolCallUpdate,
+			recordTool,
+			startStreamingMessage,
+			updatePlan,
+		],
 	);
 
 	useEffect(() => {
@@ -260,13 +299,12 @@ export function useAIConversation() {
 						role: message.role,
 						content: message.content,
 					}));
-					await externalAgentClient.prompt(sessionId, payload);
-					completeStreamingMessage(requestId);
+					const systemPrompts = getAcpSystemPrompts(mode);
+					await externalAgentClient.prompt(sessionId, [...systemPrompts, ...payload]);
 				} catch (error) {
 					const reason = describeError(error);
-					completeStreamingMessage(requestId, `ACP request failed: ${reason}`);
+					finalize(requestId, `ACP request failed: ${reason}`);
 				} finally {
-					setAILoading(false);
 					clearActiveRequest();
 				}
 				return;
@@ -344,12 +382,17 @@ export function useAIConversation() {
 	);
 
 	return {
-		input,
-		setInput,
-		messages,
-		isLoading,
-		handleAsk,
-		handleStop,
-		handleApplyCode,
+		aiState: {
+			input,
+			messages,
+			isLoading,
+		},
+		aiActions: {
+			setInput,
+			ask: handleAsk,
+			stop: handleStop,
+			applyCode: handleApplyCode,
+		},
+		promptHistory,
 	};
 }

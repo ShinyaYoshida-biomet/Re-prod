@@ -96,5 +96,6 @@ wt-*/
 
 # Codex
 .codex/
+.shared-skills/
 
 AGENTS.*.md

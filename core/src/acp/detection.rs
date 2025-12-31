@@ -1,13 +1,14 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
+use tracing::warn;
 use which::which;
 
-use crate::agents::{AgentDescriptor, AGENTS};
-use crate::config::AcpConfig;
-use crate::download::ensure_agent_available;
-use crate::types::AcpDetectedAgent;
-use crate::config::ACP_MODE_EXTERNAL_AGENT;
+use super::agents::{AgentDescriptor, AGENTS};
+use super::config::AcpConfig;
+use super::config::ACP_MODE_EXTERNAL_AGENT;
+use super::download::ensure_agent_available;
+use super::types::AcpDetectedAgent;
 
 /// Locate an agent binary, honoring absolute/path-like inputs and Windows `.cmd` fallbacks.
 pub fn find_agent_binary(command: &str) -> Option<PathBuf> {
@@ -64,9 +65,19 @@ pub async fn detect_agents() -> Result<Vec<AcpDetectedAgent>> {
         }
 
         if found_cmd.is_none() {
-            if let Some(path) = ensure_agent_available(agent).await? {
-                found_cmd = Some(agent.commands[0].to_string());
-                found_path = Some(path);
+            match ensure_agent_available(agent).await {
+                Ok(Some(path)) => {
+                    found_cmd = Some(agent.commands[0].to_string());
+                    found_path = Some(path);
+                }
+                Ok(None) => {}
+                Err(err) => {
+                    warn!(
+                        agent = agent.name,
+                        error = %err,
+                        "ACP agent download failed; skipping"
+                    );
+                }
             }
         }
 
@@ -147,7 +158,7 @@ mod tests {
     #[test]
     fn resolves_active_agent_command_from_config() {
         let cfg = AcpConfig {
-            active_mode: crate::config::ACP_MODE_EXTERNAL_AGENT.to_string(),
+            active_mode: ACP_MODE_EXTERNAL_AGENT.to_string(),
             active_agent: Some("codex".to_string()),
             active_agent_command: None,
         };
@@ -175,7 +186,7 @@ mod tests {
     #[test]
     fn resolves_active_agent_command_override() {
         let cfg = AcpConfig {
-            active_mode: crate::config::ACP_MODE_EXTERNAL_AGENT.to_string(),
+            active_mode: ACP_MODE_EXTERNAL_AGENT.to_string(),
             active_agent: Some("codex".to_string()),
             active_agent_command: Some("/opt/bin/codex-acp".to_string()),
         };

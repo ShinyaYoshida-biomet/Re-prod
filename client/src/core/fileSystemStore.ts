@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { normalizeRelativePath, ROOT_PATH } from "@/core/pathUtils";
 import type { FileEntry, FileSystemEvent } from "@/services/fileSystem";
 import { fileSystem } from "@/services/fileSystem";
+import { getErrorMessage } from "@/utils/error";
 
 const normalizeStorePath = (path: string): string => normalizeRelativePath(path);
 
@@ -114,7 +115,7 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
 				};
 			});
 		} catch (error) {
-			set({ error: (error as Error).message, loading: false });
+			set({ error: getErrorMessage(error, "Failed to load workspace"), loading: false });
 		}
 	},
 
@@ -134,7 +135,7 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
 				error: null,
 			});
 		} catch (error) {
-			set({ error: (error as Error).message, loading: false });
+			set({ error: getErrorMessage(error, "Failed to reset workspace"), loading: false });
 		}
 	},
 
@@ -180,7 +181,7 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
 				const files = await fileSystem.listDir(ROOT_PATH);
 				set({ files });
 			} catch (error) {
-				set({ error: (error as Error).message });
+				set({ error: getErrorMessage(error, "Failed to refresh path") });
 			}
 			return;
 		}
@@ -209,7 +210,7 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
 			set((state) => {
 				const pending = new Set(state.pendingFolders);
 				pending.delete(path);
-				return { error: (error as Error).message, pendingFolders: pending };
+				return { error: getErrorMessage(error, "Failed to load folder"), pendingFolders: pending };
 			});
 		}
 	},

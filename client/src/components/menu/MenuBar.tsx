@@ -10,6 +10,7 @@ import { useStore } from "@/core/state/store";
 import { useListNavigation } from "@/hooks/useListNavigation";
 import { useMenuSections } from "@/hooks/useMenuSections";
 import type { ConnectionIndicatorProps, MenuItem, MenuSectionComponentProps } from "@/types/menu";
+import { classNames } from "@/utils/classNames";
 
 export function MenuBar(): JSX.Element {
 	const isConnected = useStore((state) => state.isConnected);
@@ -161,7 +162,7 @@ function MenuSectionComponent({
 			<button
 				ref={buttonRef}
 				type="button"
-				className={`menu-item ${isOpen ? "active" : ""}`}
+				className={classNames("menu-item", isOpen && "active")}
 				aria-haspopup="menu"
 				aria-expanded={isOpen}
 				onClick={handleButtonClick}
@@ -171,7 +172,7 @@ function MenuSectionComponent({
 			</button>
 			<div
 				ref={menuRef}
-				className={`menu-dropdown ${isOpen ? "" : "hidden"}`}
+				className={classNames("menu-dropdown", !isOpen && "hidden")}
 				role="menu"
 				aria-label={section.label}
 				aria-hidden={!isOpen}
@@ -222,7 +223,7 @@ function MenuSectionComponent({
 // Connection indicator component
 function ConnectionIndicator({ isConnected }: ConnectionIndicatorProps) {
 	return (
-		<div className={`connection-indicator ${isConnected ? "connected" : "disconnected"}`}>
+		<div className={classNames("connection-indicator", isConnected ? "connected" : "disconnected")}>
 			<span className="connection-dot"></span>
 			<span className="connection-text">{isConnected ? "Connected" : "Disconnected"}</span>
 		</div>

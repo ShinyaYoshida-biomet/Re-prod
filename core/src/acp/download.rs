@@ -6,9 +6,9 @@ use reqwest::Client;
 use serde::Deserialize;
 use tracing::{info, warn};
 
-use reprod_core::config::{acp_auto_download_enabled, app_config_dir};
+use crate::config::{acp_auto_download_enabled, app_config_dir};
 
-use crate::agents::{AgentDescriptor, AgentDownload, GithubReleaseSpec};
+use super::agents::{AgentDescriptor, AgentDownload, GithubReleaseSpec};
 
 const ACP_AGENT_DIR: &str = "acp_agents";
 const USER_AGENT: &str = "reprod-acp";
@@ -47,11 +47,18 @@ async fn ensure_github_release_available(
         return Ok(Some(path));
     }
 
-    info!(agent = agent.name, "ACP agent not found; downloading latest release");
+    info!(
+        agent = agent.name,
+        "ACP agent not found; downloading latest release"
+    );
     let release = fetch_latest_release(spec.repo, agent.name).await?;
     let target = host_target()?;
     let asset = select_asset(&release, &target, spec.asset_prefix).ok_or_else(|| {
-        let names: Vec<String> = release.assets.iter().map(|asset| asset.name.clone()).collect();
+        let names: Vec<String> = release
+            .assets
+            .iter()
+            .map(|asset| asset.name.clone())
+            .collect();
         anyhow!(
             "ACP asset not found for agent {agent} target {target}. Available assets: {names:?}",
             agent = agent.name

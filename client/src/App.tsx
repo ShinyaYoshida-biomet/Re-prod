@@ -23,9 +23,8 @@ import { useProjectSession } from "@/hooks/useProjectSession";
 import { useSettingsPersistence } from "@/hooks/useSettingsPersistence";
 import { useSocketConnection } from "@/hooks/useSocketConnection";
 import { setupSocketListeners } from "@/core/init/socketListeners";
-import { ACP_FEATURE_ENABLED, IS_TAURI } from "@/constants/features";
-import type { AcpDetectedAgent } from "@/types/generated";
 import { PermissionRequestManager } from "@/components/agent/PermissionRequestManager";
+import { getAcpAdminClient } from "@/services/acpAdminClient";
 
 function App(): JSX.Element {
 	const panes = useStore((state) => state.view.panes);
@@ -41,14 +40,9 @@ function App(): JSX.Element {
 	const setModalOpen = useStore((state) => state.setModalOpen);
 
 	const timelineDialogRef = useRef<TimelineDialogRef | null>(null);
-	const { fetchSettings, providers, activeProvider } = useSettingsStore();
+	const { fetchSettings } = useSettingsStore();
 
-	const activeProviderConfig = providers.find((provider) => provider.name === activeProvider);
-	const isActiveProviderConfigured = Boolean(activeProviderConfig?.isConfigured);
-	const canUseAssistant =
-		activeMode === "external_agent"
-			? ACP_FEATURE_ENABLED && Boolean(activeAgent)
-			: isActiveProviderConfigured || ACP_FEATURE_ENABLED;
+	const canUseAssistant = activeMode === "external_agent" ? Boolean(activeAgent) : true;
 
 	// Enable global keyboard shortcuts
 	useKeyboardShortcuts();
@@ -75,36 +69,13 @@ function App(): JSX.Element {
 	}, [fetchSettings]);
 
 	useEffect(() => {
-		if (!ACP_FEATURE_ENABLED) return;
 		const bootstrap = async () => {
 			try {
-				if (IS_TAURI) {
-					const { invoke } = await import("@tauri-apps/api/core");
-					const [cfg, agents] = await Promise.all([
-						invoke<{ active_mode: string; active_agent: string | null }>("acp_get_agent_config"),
-						invoke("acp_detect_agents"),
-					]);
-					setActiveMode((cfg.active_mode as "api" | "external_agent") ?? "api");
-					setActiveAgent(cfg.active_agent);
-					setDetectedAgents(agents as any);
-				} else {
-					const [cfgResp, agentsResp] = await Promise.all([
-						fetch("/api/acp/config"),
-						fetch("/api/acp/agents"),
-					]);
-					if (cfgResp.ok) {
-						const cfg = (await cfgResp.json()) as {
-							active_mode: string;
-							active_agent: string | null;
-						};
-						setActiveMode((cfg.active_mode as "api" | "external_agent") ?? "api");
-						setActiveAgent(cfg.active_agent);
-					}
-					if (agentsResp.ok) {
-						const agents = (await agentsResp.json()) as AcpDetectedAgent[];
-						setDetectedAgents(agents);
-					}
-				}
+				const acpAdminClient = getAcpAdminClient();
+				const { config, agents } = await acpAdminClient.bootstrap();
+				setActiveMode((config.active_mode as "api" | "external_agent") ?? "api");
+				setActiveAgent(config.active_agent);
+				setDetectedAgents(agents);
 			} catch (error) {
 				console.error("Failed to bootstrap ACP config", error);
 			}
