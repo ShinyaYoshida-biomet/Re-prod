@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo } from "react";
-import { ACP_FEATURE_ENABLED } from "@/constants/features";
 import { useStore } from "@/core";
 import { useAsyncState } from "@/hooks/useAsyncState";
 import { getAcpAdminClient } from "@/services/acpAdminClient";
@@ -12,7 +11,6 @@ export function ExternalAgentSettingsPane(): JSX.Element {
 	const setActiveMode = useStore((state) => state.setActiveMode);
 	const setActiveAgent = useStore((state) => state.setActiveAgent);
 	const setDetectedAgents = useStore((state) => state.setDetectedAgents);
-	const enabled = ACP_FEATURE_ENABLED;
 	const isWindows = typeof navigator !== "undefined" && navigator.userAgent.includes("Windows");
 	const acpAdminClient = useMemo(() => getAcpAdminClient(), []);
 
@@ -22,26 +20,22 @@ export function ExternalAgentSettingsPane(): JSX.Element {
 	);
 
 	const fetchAgentsAsync = useCallback(async () => {
-		if (!enabled) return null;
 		const { config, agents } = await acpAdminClient.bootstrap();
 		setDetectedAgents(agents);
 		setActiveMode((config.active_mode as "api" | "external_agent") ?? "api");
 		setActiveAgent(config.active_agent);
 		return null;
-	}, [acpAdminClient, enabled, setDetectedAgents, setActiveMode, setActiveAgent]);
+	}, [acpAdminClient, setDetectedAgents, setActiveMode, setActiveAgent]);
 
 	const { loading, execute: fetchAgents } = useAsyncState(fetchAgentsAsync, {
 		onError: (error) => console.error("Failed to load ACP agents/config", error),
 	});
 
 	useEffect(() => {
-		if (enabled) {
-			void fetchAgents();
-		}
-	}, [enabled, fetchAgents]);
+		void fetchAgents();
+	}, [fetchAgents]);
 
 	const persistConfig = async (mode: "api" | "external_agent", agent: string | null) => {
-		if (!enabled) return;
 		await acpAdminClient.setConfig(mode, agent);
 	};
 
@@ -87,12 +81,8 @@ export function ExternalAgentSettingsPane(): JSX.Element {
 							name="agent-mode"
 							checked={activeMode === "external_agent"}
 							onChange={() => handleModeChange("external_agent")}
-							disabled={!ACP_FEATURE_ENABLED}
 						/>
 						External agent (ACP)
-						{!ACP_FEATURE_ENABLED && (
-							<small className="hint">Enable ACP feature flag to activate.</small>
-						)}
 					</label>
 				</div>
 			</div>

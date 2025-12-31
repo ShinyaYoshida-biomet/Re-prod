@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ACP_FEATURE_ENABLED } from "@/constants/features";
 import { useStore } from "@/core";
 import { buildPromptWithContext, createRequestId } from "@/core/ai/promptUtils";
 import { getAcpSystemPrompts } from "@/core/ai/systemPrompts";
@@ -76,8 +75,7 @@ export function useAIConversation() {
 	});
 	const acpSessionIdRef = useRef<string | null>(null);
 	const acpStreamsRef = useRef<Map<string, string>>(new Map());
-	const acpConfigured =
-		ACP_FEATURE_ENABLED && activeMode === "external_agent" && Boolean(activeAgent);
+	const acpConfigured = activeMode === "external_agent" && Boolean(activeAgent);
 	const externalAgentClient = acpConfigured ? getExternalAgentClient() : null;
 
 	const postAssistantMessage = useCallback(

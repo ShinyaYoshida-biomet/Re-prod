@@ -12,7 +12,7 @@
 		"prepare": "husky",
 		"dev": "concurrently \"RUST_LOG=info cargo run -p reprod-server\" \"pnpm --filter client dev\"",
 		"dev:client": "pnpm --filter client dev",
-		"dev:tauri:acp": "VITE_ENABLE_ACP=true cargo tauri dev",
+		"dev:tauri:acp": "cargo tauri dev",
 		"build": "pnpm -r build",
 		"build:client": "pnpm --filter client build",
 		"lint": "pnpm -r --if-present lint",

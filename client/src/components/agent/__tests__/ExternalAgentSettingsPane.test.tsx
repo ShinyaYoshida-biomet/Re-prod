@@ -3,11 +3,6 @@ import { fireEvent, render, waitFor } from "@testing-library/react";
 import { ExternalAgentSettingsPane } from "../ExternalAgentSettingsPane";
 import { useStore } from "@/core";
 
-vi.mock("@/constants/features", () => ({
-	ACP_FEATURE_ENABLED: true,
-	IS_TAURI: false,
-}));
-
 const bootstrapMock = vi.fn();
 const setConfigMock = vi.fn();
 

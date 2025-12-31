@@ -23,7 +23,6 @@ import { useProjectSession } from "@/hooks/useProjectSession";
 import { useSettingsPersistence } from "@/hooks/useSettingsPersistence";
 import { useSocketConnection } from "@/hooks/useSocketConnection";
 import { setupSocketListeners } from "@/core/init/socketListeners";
-import { ACP_FEATURE_ENABLED } from "@/constants/features";
 import { PermissionRequestManager } from "@/components/agent/PermissionRequestManager";
 import { getAcpAdminClient } from "@/services/acpAdminClient";
 
@@ -41,14 +40,9 @@ function App(): JSX.Element {
 	const setModalOpen = useStore((state) => state.setModalOpen);
 
 	const timelineDialogRef = useRef<TimelineDialogRef | null>(null);
-	const { fetchSettings, providers, activeProvider } = useSettingsStore();
+	const { fetchSettings } = useSettingsStore();
 
-	const activeProviderConfig = providers.find((provider) => provider.name === activeProvider);
-	const isActiveProviderConfigured = Boolean(activeProviderConfig?.isConfigured);
-	const canUseAssistant =
-		activeMode === "external_agent"
-			? ACP_FEATURE_ENABLED && Boolean(activeAgent)
-			: isActiveProviderConfigured || ACP_FEATURE_ENABLED;
+	const canUseAssistant = activeMode === "external_agent" ? Boolean(activeAgent) : true;
 
 	// Enable global keyboard shortcuts
 	useKeyboardShortcuts();
@@ -75,7 +69,6 @@ function App(): JSX.Element {
 	}, [fetchSettings]);
 
 	useEffect(() => {
-		if (!ACP_FEATURE_ENABLED) return;
 		const bootstrap = async () => {
 			try {
 				const acpAdminClient = getAcpAdminClient();

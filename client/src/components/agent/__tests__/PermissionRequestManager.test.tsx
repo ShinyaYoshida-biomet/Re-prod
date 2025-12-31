@@ -2,10 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { PermissionRequestManager } from "../PermissionRequestManager";
 
-vi.mock("@/constants/features", () => ({
-	ACP_FEATURE_ENABLED: true,
-}));
-
 const decidePermissionMock = vi.fn();
 let permissionListener: ((payload: any) => void) | null = null;
 

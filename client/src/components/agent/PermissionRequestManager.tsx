@@ -1,7 +1,6 @@
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AcpPermissionOption, AcpPermissionRequestPayload } from "@/types/generated";
-import { ACP_FEATURE_ENABLED } from "@/constants/features";
 import { getExternalAgentClient } from "@/services/externalAgentClient";
 
 type DecisionOutcome = "AllowOnce" | "AllowAlways" | "RejectOnce" | "RejectAlways" | "Cancelled";
@@ -12,8 +11,7 @@ export function PermissionRequestManager(): JSX.Element | null {
 	const [remember, setRemember] = useState(false);
 	const allowButtonRef = useRef<HTMLButtonElement | null>(null);
 
-	const enabled = ACP_FEATURE_ENABLED;
-	const externalAgentClient = enabled ? getExternalAgentClient() : null;
+	const externalAgentClient = getExternalAgentClient();
 	const pending = queue[0] ?? null;
 
 	useEffect(() => {
@@ -146,7 +144,7 @@ export function PermissionRequestManager(): JSX.Element | null {
 		allowButtonRef.current?.focus();
 	}, [pending]);
 
-	if (!enabled || !pending || !hasOptions) return null;
+	if (!pending || !hasOptions) return null;
 
 	const overlayStyle: CSSProperties = {
 		position: "fixed",
