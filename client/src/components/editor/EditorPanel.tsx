@@ -12,6 +12,7 @@ import { useEditorDecorations } from "@/hooks/useEditorDecorations";
 import { useEditorExecution } from "@/hooks/useEditorExecution";
 import type { EditorRef } from "./editorRef";
 import { commandRegistry } from "@/core/commands/registry";
+import { clamp } from "@/utils/math";
 
 function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Element {
 	const toast = useToast();
@@ -62,7 +63,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 			return;
 		}
 
-		const clampLine = Math.min(Math.max(lineNumber, 1), model.getLineCount());
+		const clampLine = clamp(lineNumber, 1, model.getLineCount());
 		monacoEditor.revealLine(clampLine);
 		monacoEditor.setPosition({ lineNumber: clampLine, column: 1 });
 		monacoEditor.focus();
@@ -101,12 +102,12 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 				return;
 			}
 
-			const clampLine = (line: number): number => Math.min(Math.max(line, 1), model.getLineCount());
+			const clampLine = (line: number): number => clamp(line, 1, model.getLineCount());
 
 			const clampColumn = (line: number, column?: number): number => {
 				const maxColumn = model.getLineMaxColumn(line);
 				const requested = column ?? 1;
-				return Math.min(Math.max(requested, 1), maxColumn);
+				return clamp(requested, 1, maxColumn);
 			};
 
 			const editorContent = monacoEditor.getValue();
