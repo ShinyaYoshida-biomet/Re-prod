@@ -1,0 +1,282 @@
+/* Markdown rendering styles for AI assistant responses */
+
+.markdown-body {
+	font-size: 14px;
+	line-height: 1.6;
+	font-family: inherit;
+}
+
+/* Reset margins for first and last elements */
+.markdown-body > *:first-child {
+	margin-top: 0 !important;
+}
+
+.markdown-body > *:last-child {
+	margin-bottom: 0 !important;
+}
+
+/* Headings */
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+	font-weight: 600;
+	line-height: 1.25;
+	margin-top: 24px;
+	margin-bottom: 16px;
+}
+
+.markdown-body h1 {
+	font-size: 2em;
+	border-bottom: 1px solid var(--border-color, #d0d7de);
+	padding-bottom: 0.3em;
+}
+
+.markdown-body h2 {
+	font-size: 1.5em;
+	border-bottom: 1px solid var(--border-color, #d0d7de);
+	padding-bottom: 0.3em;
+}
+
+.markdown-body h3 {
+	font-size: 1.25em;
+}
+
+.markdown-body h4 {
+	font-size: 1em;
+}
+
+.markdown-body h5 {
+	font-size: 0.875em;
+}
+
+.markdown-body h6 {
+	font-size: 0.85em;
+	color: var(--text-secondary, #656d76);
+}
+
+/* Inline code */
+.markdown-body code {
+	padding: 0.2em 0.4em;
+	margin: 0;
+	font-size: 85%;
+	background-color: var(--code-inline-bg, rgba(175, 184, 193, 0.2));
+	border-radius: 6px;
+	font-family:
+		ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+/* Code blocks */
+.markdown-body pre {
+	padding: 16px;
+	overflow: auto;
+	font-size: 85%;
+	line-height: 1.45;
+	background-color: var(--code-block-bg, #f6f8fa);
+	border-radius: 6px;
+	margin-top: 0;
+	margin-bottom: 16px;
+}
+
+.markdown-body pre code {
+	display: inline;
+	max-width: auto;
+	padding: 0;
+	margin: 0;
+	overflow: visible;
+	line-height: inherit;
+	word-wrap: normal;
+	background-color: transparent;
+	border: 0;
+}
+
+/* Lists */
+.markdown-body ul,
+.markdown-body ol {
+	margin-top: 0;
+	margin-bottom: 16px;
+	padding-left: 2em;
+}
+
+.markdown-body li {
+	margin-top: 0.25em;
+}
+
+.markdown-body li > p {
+	margin-top: 16px;
+}
+
+.markdown-body li + li {
+	margin-top: 0.25em;
+}
+
+/* Task lists (GFM) */
+.markdown-body .task-list-item {
+	list-style-type: none;
+}
+
+.markdown-body .task-list-item input[type="checkbox"] {
+	margin: 0 0.2em 0.25em -1.6em;
+	vertical-align: middle;
+}
+
+/* Blockquotes */
+.markdown-body blockquote {
+	padding: 0 1em;
+	color: var(--text-secondary, #656d76);
+	border-left: 0.25em solid var(--border-accent, #d0d7de);
+	margin-top: 0;
+	margin-bottom: 16px;
+}
+
+.markdown-body blockquote > :first-child {
+	margin-top: 0;
+}
+
+.markdown-body blockquote > :last-child {
+	margin-bottom: 0;
+}
+
+/* Tables (GFM) */
+.markdown-body table {
+	border-spacing: 0;
+	border-collapse: collapse;
+	display: block;
+	width: max-content;
+	max-width: 100%;
+	overflow: auto;
+	margin-top: 0;
+	margin-bottom: 16px;
+}
+
+.markdown-body table th {
+	font-weight: 600;
+	padding: 6px 13px;
+	border: 1px solid var(--border-color, #d0d7de);
+}
+
+.markdown-body table td {
+	padding: 6px 13px;
+	border: 1px solid var(--border-color, #d0d7de);
+}
+
+.markdown-body table tr {
+	background-color: var(--bg-primary, #ffffff);
+	border-top: 1px solid var(--border-subtle, hsla(210, 18%, 87%, 1));
+}
+
+.markdown-body table tr:nth-child(2n) {
+	background-color: var(--bg-secondary, #f6f8fa);
+}
+
+.markdown-body table thead tr {
+	background-color: var(--bg-primary, #ffffff);
+}
+
+/* Links */
+.markdown-body a {
+	color: var(--link-color, #0969da);
+	text-decoration: none;
+}
+
+.markdown-body a:hover {
+	text-decoration: underline;
+}
+
+.markdown-body a:visited {
+	color: var(--link-visited, #8250df);
+}
+
+/* Horizontal rules */
+.markdown-body hr {
+	height: 0.25em;
+	padding: 0;
+	margin: 24px 0;
+	background-color: var(--border-color, #d0d7de);
+	border: 0;
+}
+
+/* Strong and emphasis */
+.markdown-body strong {
+	font-weight: 600;
+}
+
+.markdown-body em {
+	font-style: italic;
+}
+
+/* Strikethrough (GFM) */
+.markdown-body del {
+	text-decoration: line-through;
+}
+
+/* Paragraphs */
+.markdown-body p {
+	margin-top: 0;
+	margin-bottom: 16px;
+}
+
+/* Images */
+.markdown-body img {
+	max-width: 100%;
+	height: auto;
+	border-radius: 6px;
+	margin: 16px 0;
+}
+
+/* Dark mode support (if Re-prod has dark mode) */
+@media (prefers-color-scheme: dark) {
+	.markdown-body {
+		color: var(--text-primary, #e6edf3);
+	}
+
+	.markdown-body code {
+		background-color: var(--code-inline-bg, rgba(110, 118, 129, 0.4));
+	}
+
+	.markdown-body pre {
+		background-color: var(--code-block-bg, #161b22);
+	}
+
+	.markdown-body h1,
+	.markdown-body h2 {
+		border-bottom-color: var(--border-color, #21262d);
+	}
+
+	.markdown-body h6 {
+		color: var(--text-secondary, #7d8590);
+	}
+
+	.markdown-body blockquote {
+		color: var(--text-secondary, #7d8590);
+		border-left-color: var(--border-accent, #3b434b);
+	}
+
+	.markdown-body table th,
+	.markdown-body table td {
+		border-color: var(--border-color, #30363d);
+	}
+
+	.markdown-body table tr {
+		background-color: var(--bg-primary, #0d1117);
+		border-top-color: var(--border-subtle, #21262d);
+	}
+
+	.markdown-body table tr:nth-child(2n) {
+		background-color: var(--bg-secondary, #161b22);
+	}
+
+	.markdown-body hr {
+		background-color: var(--border-color, #21262d);
+	}
+
+	.markdown-body a {
+		color: var(--link-color, #58a6ff);
+	}
+
+	.markdown-body a:visited {
+		color: var(--link-visited, #bc8cff);
+	}
+}
