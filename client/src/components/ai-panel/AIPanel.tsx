@@ -147,9 +147,6 @@ export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(({ hasConfiguredProv
 									/>
 								) : (
 									<div key={message.id} className="message message-user">
-										<div className="message-header">
-											<span className="message-role">You</span>
-										</div>
 										<div className="message-content">{message.content}</div>
 									</div>
 								),

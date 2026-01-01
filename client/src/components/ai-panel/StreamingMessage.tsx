@@ -90,9 +90,11 @@ export function StreamingMessage({ message, onApplyCode }: Props): JSX.Element {
 			className={classNames("message", `message-${message.role}`)}
 			data-streaming={isStreaming ? "true" : "false"}
 		>
-			<div className="message-header">
-				<span className="message-role">{isAssistant ? "AI" : "You"}</span>
-			</div>
+			{isStreaming && (
+				<div className="message-header">
+					<span className="message-role">💡 Thinking</span>
+				</div>
+			)}
 			<div className="message-content message-streaming">
 				{isStreaming && (
 					<div className="message-streaming-indicator">
