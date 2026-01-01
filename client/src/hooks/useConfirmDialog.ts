@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useRef } from "react";
 
 interface ConfirmDialogState {
 	open: boolean;
@@ -21,6 +21,7 @@ export function useConfirmDialog(): UseConfirmDialogReturn {
 		message: "",
 		onConfirm: () => {},
 	});
+	const rejectRef = useRef<(() => void) | null>(null);
 
 	const showConfirm = useCallback((title: string, message: string): Promise<boolean> => {
 		return new Promise((resolve) => {
@@ -35,7 +36,7 @@ export function useConfirmDialog(): UseConfirmDialogReturn {
 			});
 
 			// Store the reject callback to call on cancel
-			(setDialogState as any)._reject = () => {
+			rejectRef.current = () => {
 				setDialogState((prev) => ({ ...prev, open: false }));
 				resolve(false);
 			};
@@ -43,14 +44,15 @@ export function useConfirmDialog(): UseConfirmDialogReturn {
 	}, []);
 
 	const handleConfirm = useCallback(() => {
-		dialogState.onConfirm();
-	}, [dialogState]);
+		setDialogState((prev) => ({ ...prev, open: false }));
+		rejectRef.current = null;
+	}, []);
 
 	const handleCancel = useCallback(() => {
 		setDialogState((prev) => ({ ...prev, open: false }));
-		if ((setDialogState as any)._reject) {
-			(setDialogState as any)._reject();
-			delete (setDialogState as any)._reject;
+		if (rejectRef.current) {
+			rejectRef.current();
+			rejectRef.current = null;
 		}
 	}, []);
 
