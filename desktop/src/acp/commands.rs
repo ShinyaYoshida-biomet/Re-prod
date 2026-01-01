@@ -1,20 +1,19 @@
 use std::{path::PathBuf, sync::Arc};
 
+use crate::acp::runtime::DesktopAcpRuntime;
 use crate::acp::types::{
     AcpAgentConfig, AcpCancelRequest, AcpDetectedAgent, AcpInitializeResponse,
     AcpPermissionDecision, AcpPromptRequest,
 };
-use crate::acp::runtime::DesktopAcpRuntime;
 use crate::acp::{build_process_config, AcpManager};
 use reprod_core::acp::config::{
-    load_acp_config, normalize_active_mode, save_acp_config, ACP_MODE_API,
-    ACP_MODE_EXTERNAL_AGENT,
+    load_acp_config, normalize_active_mode, save_acp_config, ACP_MODE_API, ACP_MODE_EXTERNAL_AGENT,
 };
 use reprod_core::acp::detection::{detect_agents, resolve_active_agent_command};
 use reprod_core::acp::AcpRuntime;
 use tauri::{AppHandle, State};
-use tracing::info;
 use tokio::sync::Mutex;
+use tracing::info;
 
 pub type SharedAcpManager = Arc<Mutex<AcpManager>>;
 pub type AcpState<'a> = State<'a, SharedAcpManager>;
@@ -64,7 +63,10 @@ pub async fn acp_initialize(
 #[tauri::command]
 pub async fn acp_create_session(state: AcpState<'_>) -> Result<String, String> {
     let runtime = DesktopAcpRuntime::new(state.inner().clone());
-    runtime.create_session().await.map_err(|err| err.to_string())
+    runtime
+        .create_session()
+        .await
+        .map_err(|err| err.to_string())
 }
 
 #[tauri::command]

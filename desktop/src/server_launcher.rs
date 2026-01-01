@@ -5,8 +5,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-use reqwest::StatusCode;
 use reprod_core::config::{server_binary_override, PORT_ENV};
+use reqwest::StatusCode;
 use thiserror::Error;
 use tokio::time::sleep;
 

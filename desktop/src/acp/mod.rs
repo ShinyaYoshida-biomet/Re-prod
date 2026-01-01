@@ -14,8 +14,8 @@ use reprod_core::acp::{
     AcpGateway, ProcessConfig,
 };
 use tauri::{AppHandle, Emitter};
-use tracing::{info, warn};
 use tokio::sync::broadcast;
+use tracing::{info, warn};
 
 struct Forwarders {
     updates: tauri::async_runtime::JoinHandle<()>,
@@ -78,9 +78,7 @@ impl AcpManager {
         self.gateway.send_prompt(session_id, messages).await
     }
 
-    pub fn subscribe_session_updates(
-        &self,
-    ) -> broadcast::Receiver<AcpSessionUpdateEnvelope> {
+    pub fn subscribe_session_updates(&self) -> broadcast::Receiver<AcpSessionUpdateEnvelope> {
         self.gateway.subscribe_session_updates()
     }
 

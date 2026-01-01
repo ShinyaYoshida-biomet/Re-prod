@@ -91,10 +91,7 @@ pub(super) async fn execute_ai_tool_call(
             };
             let output = serde_json::to_value(result)
                 .map_err(|e| format!("Failed to serialize edit result: {}", e))?;
-            Ok(ToolCallOutcome {
-                output,
-                summary,
-            })
+            Ok(ToolCallOutcome { output, summary })
         }
         "edit_text_file" => {
             let request: EditTextFileRequest = serde_json::from_value(tool_call.input.clone())
@@ -112,10 +109,7 @@ pub(super) async fn execute_ai_tool_call(
             };
             let output = serde_json::to_value(result)
                 .map_err(|e| format!("Failed to serialize edit result: {}", e))?;
-            Ok(ToolCallOutcome {
-                output,
-                summary,
-            })
+            Ok(ToolCallOutcome { output, summary })
         }
         "list_files" => {
             let request: ListFilesRequest = serde_json::from_value(tool_call.input.clone())

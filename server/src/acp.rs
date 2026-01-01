@@ -189,7 +189,6 @@ async fn resolve_agent_command() -> Result<String> {
         bail!("External agent mode not enabled");
     }
     let detected = detect_agents().await?;
-    resolve_active_agent_command(&cfg, &detected).ok_or_else(|| {
-        anyhow!("Selected ACP agent unavailable or not set for external_agent mode")
-    })
+    resolve_active_agent_command(&cfg, &detected)
+        .ok_or_else(|| anyhow!("Selected ACP agent unavailable or not set for external_agent mode"))
 }
