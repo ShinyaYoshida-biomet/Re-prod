@@ -38,24 +38,26 @@ class DesktopAcpClient implements ExternalAgentClient {
 		let disposed = false;
 		let unlisten: ExternalAgentUnsubscribe | null = null;
 
-		void import("@tauri-apps/api/event")
-			.then(({ listen }) =>
-				listen<AcpSessionUpdateEnvelope>("acp://session-update", (event) => {
+		(async () => {
+			try {
+				const tauriEvent = await import("@tauri-apps/api/event");
+				const listen: typeof tauriEvent.listen = tauriEvent.listen;
+
+				const dispose = await listen<AcpSessionUpdateEnvelope>("acp://session-update", (event) => {
 					if (!event.payload) return;
 					cb(event.payload);
-				}),
-			)
-			.then((dispose) => {
+				});
+
 				if (disposed) {
 					dispose();
 					return;
 				}
-				unlisten = dispose;
-			})
-			.catch((error) => {
-				console.error("Failed to bind ACP session update listener", error);
-			});
 
+				unlisten = dispose;
+			} catch (error) {
+				console.error("Failed to bind ACP session update listener", error);
+			}
+		})();
 		return () => {
 			disposed = true;
 			if (unlisten) {
@@ -70,24 +72,29 @@ class DesktopAcpClient implements ExternalAgentClient {
 		let disposed = false;
 		let unlisten: ExternalAgentUnsubscribe | null = null;
 
-		void import("@tauri-apps/api/event")
-			.then(({ listen }) =>
-				listen<AcpPermissionRequestPayload>("acp://permission-request", (event) => {
-					if (!event.payload) return;
-					cb(event.payload);
-				}),
-			)
-			.then((dispose) => {
+		(async () => {
+			try {
+				const tauriEvent = await import("@tauri-apps/api/event");
+				const listen: typeof tauriEvent.listen = tauriEvent.listen;
+
+				const dispose = await listen<AcpPermissionRequestPayload>(
+					"acp://permission-request",
+					(event) => {
+						if (!event.payload) return;
+						cb(event.payload);
+					},
+				);
+
 				if (disposed) {
 					dispose();
 					return;
 				}
-				unlisten = dispose;
-			})
-			.catch((error) => {
-				console.error("Failed to bind ACP permission listener", error);
-			});
 
+				unlisten = dispose;
+			} catch (error) {
+				console.error("Failed to bind ACP permission listener", error);
+			}
+		})();
 		return () => {
 			disposed = true;
 			if (unlisten) {
