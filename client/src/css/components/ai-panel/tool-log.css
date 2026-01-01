@@ -6,10 +6,12 @@
 }
 
 .ai-tool-call {
-	border: 1px solid #ccc;
+	border: none;
+	border-left: 2px solid var(--border-medium);
 	margin: 4px 0;
-	padding: 4px;
+	padding: 4px 8px;
 	font-family: monospace;
+	background: rgba(0, 0, 0, 0.02);
 }
 
 .ai-tool-call__summary {
