@@ -1,11 +1,11 @@
 import { IS_TAURI } from "@/constants/features";
+import { socketService } from "@/services/socket";
 import type {
 	AcpPermissionDecision,
 	AcpPermissionRequestPayload,
 	AcpPromptMessage,
 	AcpSessionUpdateEnvelope,
 } from "@/types/generated";
-import { socketService } from "@/services/socket";
 
 export type ExternalAgentClientMode = "desktop" | "web";
 export type ExternalAgentUnsubscribe = () => void;

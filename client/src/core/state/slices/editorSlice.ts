@@ -1,7 +1,7 @@
-import type { CodeBlock } from "@/types";
 import type { RefObject } from "react";
 import type { StateCreator } from "zustand";
 import type { EditorRef } from "@/components/editor/editorRef";
+import type { CodeBlock } from "@/types";
 
 export const DEFAULT_R_SCRIPT = `# Welcome to Re-prod ----
 # AI-Powered R Analysis IDE

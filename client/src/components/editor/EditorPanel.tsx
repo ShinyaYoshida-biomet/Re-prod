@@ -1,18 +1,18 @@
 import Editor, { type Monaco } from "@monaco-editor/react";
-import type { CodeBlock, CodeRange } from "@/types";
 import type { editor as MonacoEditor } from "monaco-editor";
 import type { ForwardedRef } from "react";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import { ConfirmDialog, IconPlay, IconPlayCircle, useToast } from "@/components/shared";
 import { useStore } from "@/core";
 import { computeTargetRange, findCodeInEditor, matchPatchChunk } from "@/core/ai/contextMatcher";
+import { commandRegistry } from "@/core/commands/registry";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useEditorCells } from "@/hooks/useEditorCells";
 import { useEditorDecorations } from "@/hooks/useEditorDecorations";
 import { useEditorExecution } from "@/hooks/useEditorExecution";
-import type { EditorRef } from "./editorRef";
-import { commandRegistry } from "@/core/commands/registry";
+import type { CodeBlock, CodeRange } from "@/types";
 import { clamp } from "@/utils/math";
+import type { EditorRef } from "./editorRef";
 
 function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Element {
 	const toast = useToast();

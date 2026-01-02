@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import type { ExecutionEventPayload, TimelineStats } from "@/types";
 import { useStore } from "@/core";
 import { appendEventToStats, matchesTimelineFilters } from "@/core/timeline/utils";
 import {
@@ -7,6 +6,7 @@ import {
 	queryTimeline,
 	subscribeToTimelineEvents,
 } from "@/services/timelineService";
+import type { ExecutionEventPayload, TimelineStats } from "@/types";
 import { getErrorMessage } from "@/utils/error";
 
 interface UseTimelineDataState {

@@ -1,3 +1,4 @@
+export * from "./actions";
 export { BaseCodeAction } from "./BaseCodeAction";
 export { CodeActionFactory } from "./CodeActionFactory";
 export type {
@@ -5,4 +6,3 @@ export type {
 	CodeActionValidation,
 	ICodeAction,
 } from "./ICodeAction";
-export * from "./actions";

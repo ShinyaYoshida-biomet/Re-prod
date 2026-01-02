@@ -1,5 +1,5 @@
-import type { TimelineStatsProps } from "@/types/timeline";
 import { LoadingSpinner } from "@/components/shared";
+import type { TimelineStatsProps } from "@/types/timeline";
 
 export function TimelineStats({ stats, loading }: TimelineStatsProps): JSX.Element {
 	if (loading || !stats) {

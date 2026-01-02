@@ -1,5 +1,5 @@
 import type { CodeBlock } from "@/types";
-import type { ICodeAction } from "./ICodeAction";
+import { getErrorMessage } from "@/utils/error";
 import {
 	CreateFileAction,
 	DeleteRangeAction,
@@ -7,7 +7,7 @@ import {
 	ReplaceAllAction,
 	ReplaceRangeAction,
 } from "./actions";
-import { getErrorMessage } from "@/utils/error";
+import type { ICodeAction } from "./ICodeAction";
 
 /**
  * Factory for creating code action instances based on action type.
@@ -34,12 +34,12 @@ export class CodeActionFactory {
 	 * @throws Error if action type is unknown
 	 */
 	static getAction(codeBlock: CodeBlock): ICodeAction {
-		const action = this.actions.get(codeBlock.action);
+		const action = CodeActionFactory.actions.get(codeBlock.action);
 
 		if (!action) {
 			throw new Error(
 				`Unknown code action type: ${codeBlock.action}. ` +
-					`Supported actions: ${Array.from(this.actions.keys()).join(", ")}`,
+					`Supported actions: ${Array.from(CodeActionFactory.actions.keys()).join(", ")}`,
 			);
 		}
 
@@ -53,7 +53,7 @@ export class CodeActionFactory {
 	 */
 	static getLabel(codeBlock: CodeBlock): string {
 		try {
-			const action = this.getAction(codeBlock);
+			const action = CodeActionFactory.getAction(codeBlock);
 			return action.getLabel(codeBlock);
 		} catch {
 			return "Apply suggested change";
@@ -67,7 +67,7 @@ export class CodeActionFactory {
 	 */
 	static validate(codeBlock: CodeBlock) {
 		try {
-			const action = this.getAction(codeBlock);
+			const action = CodeActionFactory.getAction(codeBlock);
 			return action.validate(codeBlock);
 		} catch (error) {
 			return {
@@ -83,7 +83,7 @@ export class CodeActionFactory {
 	 * @returns True if supported, false otherwise
 	 */
 	static isSupported(actionType: string): boolean {
-		return this.actions.has(actionType);
+		return CodeActionFactory.actions.has(actionType);
 	}
 
 	/**
@@ -91,6 +91,6 @@ export class CodeActionFactory {
 	 * @returns Array of supported action type strings
 	 */
 	static getSupportedActions(): string[] {
-		return Array.from(this.actions.keys());
+		return Array.from(CodeActionFactory.actions.keys());
 	}
 }

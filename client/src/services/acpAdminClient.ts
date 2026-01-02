@@ -1,6 +1,6 @@
-import type { AcpAgentConfig, AcpDetectedAgent } from "@/types/generated";
 import { IS_TAURI } from "@/constants/features";
 import { getApiBaseUrl } from "@/constants/urls";
+import type { AcpAgentConfig, AcpDetectedAgent } from "@/types/generated";
 
 export type AcpMode = "api" | "external_agent";
 

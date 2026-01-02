@@ -1,6 +1,6 @@
-import type { ExecutionEventPayload } from "@/types";
 import { beforeEach, describe, expect, it } from "vitest";
 import { create } from "zustand";
+import type { ExecutionEventPayload } from "@/types";
 import { createTimelineSlice, type TimelineState } from "../timelineSlice";
 
 const createMockEvent = (overrides?: Partial<ExecutionEventPayload>): ExecutionEventPayload => ({

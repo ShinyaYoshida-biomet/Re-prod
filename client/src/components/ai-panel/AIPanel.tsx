@@ -1,10 +1,10 @@
-import type { AIMode } from "@/types";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { IconSend, IconSquare } from "@/components/shared";
+import { commandRegistry } from "@/core/commands/registry";
 import { useAIConversation } from "@/hooks/useAIConversation";
+import type { AIMode } from "@/types";
 import { ProviderSwitcher } from "./ProviderSwitcher";
 import { StreamingMessage } from "./StreamingMessage";
-import { commandRegistry } from "@/core/commands/registry";
 
 export interface AIPanelRef {
 	focusInput: () => void;

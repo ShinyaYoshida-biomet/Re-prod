@@ -1,7 +1,7 @@
-import type { CodeBlock } from "@/types";
 import { useMemo } from "react";
 import { useStore } from "@/core";
 import { buildDiffFromCodeBlock } from "@/core/ai/diffArtifacts";
+import type { CodeBlock } from "@/types";
 import { DiffPreview } from "./DiffPreview";
 
 interface Props {

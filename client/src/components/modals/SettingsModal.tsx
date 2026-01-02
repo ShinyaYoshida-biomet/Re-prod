@@ -1,10 +1,10 @@
-import type { AppSettings } from "@/types";
 import { useEffect, useState } from "react";
 import { IconSettings } from "@/components/shared";
 import { DEFAULT_SETTINGS } from "@/constants/defaultSettings";
 import { useStore } from "@/core";
-import { SettingsPanel } from "../settings/SettingsPanel";
+import type { AppSettings } from "@/types";
 import { ExternalAgentSettingsPane } from "../agent/ExternalAgentSettingsPane";
+import { SettingsPanel } from "../settings/SettingsPanel";
 import { ModalShell } from "./ModalShell";
 
 interface SettingsModalProps {

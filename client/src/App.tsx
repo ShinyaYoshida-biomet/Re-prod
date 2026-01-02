@@ -1,6 +1,7 @@
 import { Allotment } from "allotment";
 import { useEffect, useRef } from "react";
 import "allotment/dist/style.css";
+import { PermissionRequestManager } from "@/components/agent/PermissionRequestManager";
 import { AIPanel } from "@/components/ai-panel";
 import { BottomPane } from "@/components/bottom-pane";
 import { EditorPanel } from "@/components/editor";
@@ -17,13 +18,12 @@ import {
 import { ToastProvider } from "@/components/shared";
 import { TimelineDialog, type TimelineDialogRef } from "@/components/timeline";
 import { useStore } from "@/core";
+import { setupSocketListeners } from "@/core/init/socketListeners";
 import { useSettingsStore } from "@/core/state/slices/settingsStore";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useProjectSession } from "@/hooks/useProjectSession";
 import { useSettingsPersistence } from "@/hooks/useSettingsPersistence";
 import { useSocketConnection } from "@/hooks/useSocketConnection";
-import { setupSocketListeners } from "@/core/init/socketListeners";
-import { PermissionRequestManager } from "@/components/agent/PermissionRequestManager";
 import { getAcpAdminClient } from "@/services/acpAdminClient";
 
 function App(): JSX.Element {

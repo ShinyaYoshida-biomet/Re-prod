@@ -8,10 +8,7 @@ export interface BrailleSpinnerProps {
 	className?: string;
 }
 
-export function BrailleSpinner({
-	intervalMs = 80,
-	className,
-}: BrailleSpinnerProps): JSX.Element {
+export function BrailleSpinner({ intervalMs = 80, className }: BrailleSpinnerProps): JSX.Element {
 	const [frameIndex, setFrameIndex] = useState(0);
 
 	useEffect(() => {

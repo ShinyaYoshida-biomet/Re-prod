@@ -1,5 +1,5 @@
-import type { ToolCallLog as ToolCallLogEntry } from "@/types";
 import { extractDiffFromToolOutput } from "@/core/ai/diffArtifacts";
+import type { ToolCallLog as ToolCallLogEntry } from "@/types";
 import { DiffPreview } from "./DiffPreview";
 
 interface Props {

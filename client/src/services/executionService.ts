@@ -1,7 +1,7 @@
-import type { ExecutionRequestPayload, RunSummary } from "@/types";
 import type { DataTransport } from "@/repositories/core/DataTransport";
-import { ExecutionRepository } from "@/repositories/ExecutionRepository";
 import { WebSocketTransport } from "@/repositories/core/WebSocketTransport";
+import { ExecutionRepository } from "@/repositories/ExecutionRepository";
+import type { ExecutionRequestPayload, RunSummary } from "@/types";
 import { socketService } from "./socket";
 
 export class ExecutionServiceError extends Error {

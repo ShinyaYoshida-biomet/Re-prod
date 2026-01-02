@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { Toast, type ToastProps, ToastSeverity } from "./Toast";
 import { registerToastFunction, unregisterToastFunction } from "@/services/toastService";
+import { Toast, type ToastProps, ToastSeverity } from "./Toast";
 
 interface ToastOptions {
 	duration?: number;

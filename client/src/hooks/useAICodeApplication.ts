@@ -1,8 +1,8 @@
-import type { AIMessage, CodeBlock } from "@/types";
 import { useCallback } from "react";
 import { useStore } from "@/core";
-import { CodeActionFactory, type CodeActionContext } from "@/core/ai/actions";
+import { type CodeActionContext, CodeActionFactory } from "@/core/ai/actions";
 import { applyCodeChangeFile } from "@/services/fileService";
+import type { AIMessage, CodeBlock } from "@/types";
 import { getErrorMessage } from "@/utils/error";
 
 type PostAssistantMessage = (content: string, extras?: Partial<AIMessage>) => void;

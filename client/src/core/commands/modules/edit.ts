@@ -1,5 +1,5 @@
-import { commandRegistry } from "../registry";
 import { useStore } from "@/core/state/store";
+import { commandRegistry } from "../registry";
 
 export function setupEditCommands() {
 	commandRegistry.registerMany([

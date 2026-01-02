@@ -1,18 +1,17 @@
 import { useEffect } from "react";
-import type { ProjectRecord } from "@/types";
-
 import { useStore } from "@/core";
 import { useFileSystemStore } from "@/core/fileSystemStore";
+import { requestPlotHistory } from "@/services/plotHistoryService";
 import { projectService } from "@/services/projectService";
 import type { SessionSnapshot } from "@/services/sessionPersistence";
 import {
-	DEFAULT_VIEW_STATE,
 	applySessionSnapshot,
+	DEFAULT_VIEW_STATE,
 	getSessionSnapshot,
 	refreshTimelineData,
 } from "@/services/sessionPersistence";
-import { requestPlotHistory } from "@/services/plotHistoryService";
 import { socketService } from "@/services/socket";
+import type { ProjectRecord } from "@/types";
 
 function resetWorkspace(): void {
 	const store = useStore.getState();

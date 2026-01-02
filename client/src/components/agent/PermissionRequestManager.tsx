@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { AcpPermissionOption, AcpPermissionRequestPayload } from "@/types/generated";
 import { getExternalAgentClient } from "@/services/externalAgentClient";
+import type { AcpPermissionOption, AcpPermissionRequestPayload } from "@/types/generated";
 
 type DecisionOutcome = "AllowOnce" | "AllowAlways" | "RejectOnce" | "RejectAlways" | "Cancelled";
 

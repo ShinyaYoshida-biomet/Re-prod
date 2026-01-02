@@ -8,11 +8,13 @@
 import type {
 	AIMode,
 	ChatMessagePayload,
+	ClientMessage,
 	ExecutionRequestPayload,
+	ExportRMarkdownRequestPayload,
 	FileSystemAction,
+	TimelineQuery,
 	ToolExecutionRequestPayload,
 } from "@/types";
-import type { ClientMessage, ExportRMarkdownRequestPayload, TimelineQuery } from "@/types";
 
 // Project messages
 export const projectMessages = {

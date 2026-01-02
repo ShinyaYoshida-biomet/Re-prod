@@ -1,6 +1,6 @@
 import type { CodeBlock } from "@/types";
-import type { CodeActionContext, CodeActionValidation } from "../ICodeAction";
 import { BaseCodeAction } from "../BaseCodeAction";
+import type { CodeActionContext, CodeActionValidation } from "../ICodeAction";
 
 /**
  * Action for inserting code at a specific position

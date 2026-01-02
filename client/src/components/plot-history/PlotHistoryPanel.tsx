@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { IconBarChart, IconTrash, ConfirmDialog } from "@/components/shared";
+import { ConfirmDialog, IconBarChart, IconTrash } from "@/components/shared";
 import { useStore } from "@/core";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { deletePlot, exportPlot } from "@/services/plotHistoryService";

@@ -1,5 +1,5 @@
-import type { ExecutionLogEntry, PlotInfoPayload, RunOutputChunk, RunSummary } from "@/types";
 import type { StateCreator } from "zustand";
+import type { ExecutionLogEntry, PlotInfoPayload, RunOutputChunk, RunSummary } from "@/types";
 
 export interface ExecutionState {
 	execution: {

@@ -1,5 +1,5 @@
-import type { CodeBlock } from "@/types";
 import { getApiBaseUrl } from "@/constants/urls";
+import type { CodeBlock } from "@/types";
 
 export async function applyCodeChangeFile(codeBlock: CodeBlock): Promise<void> {
 	const response = await fetch(`${getApiBaseUrl()}/ai/code-change`, {

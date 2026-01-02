@@ -1,6 +1,6 @@
 import type { CodeBlock } from "@/types";
-import type { CodeActionContext, CodeActionValidation, ICodeAction } from "./ICodeAction";
 import { isEmptyString } from "@/utils/string";
+import type { CodeActionContext, CodeActionValidation, ICodeAction } from "./ICodeAction";
 
 /**
  * Abstract base class for code actions.

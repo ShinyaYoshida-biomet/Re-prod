@@ -1,7 +1,7 @@
-import type { CodeBlock } from "@/types";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useStore } from "@/core";
+import type { CodeBlock } from "@/types";
 import { CodeBlockDiffPreview } from "../CodeBlockDiffPreview";
 
 vi.mock("@monaco-editor/react", () => ({

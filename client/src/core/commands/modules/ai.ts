@@ -1,6 +1,6 @@
-import { commandRegistry } from "../registry";
-import { useStore } from "@/core/state/store";
 import { UI_TIMING } from "@/constants/ui";
+import { useStore } from "@/core/state/store";
+import { commandRegistry } from "../registry";
 
 export function setupAICommands() {
 	commandRegistry.registerMany([

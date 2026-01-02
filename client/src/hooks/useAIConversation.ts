@@ -8,9 +8,9 @@ import { socketService } from "@/services/socket";
 import type { AIMessage, AIMode } from "@/types";
 import type { AcpPromptMessage, AcpSessionUpdateEnvelope } from "@/types/generated";
 import { useAICodeApplication } from "./useAICodeApplication";
-import { useAssistantEventAdapter } from "./useAssistantEventAdapter";
 import { useAIStreaming } from "./useAIStreaming";
 import { useAITimeout } from "./useAITimeout";
+import { useAssistantEventAdapter } from "./useAssistantEventAdapter";
 import { usePromptHistory } from "./usePromptHistory";
 
 const STREAM_TIMEOUT_MS = 45000;

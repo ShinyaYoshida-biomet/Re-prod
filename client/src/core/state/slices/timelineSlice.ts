@@ -1,5 +1,5 @@
-import type { ExecutionEventPayload, TimelineQuery } from "@/types";
 import type { StateCreator } from "zustand";
+import type { ExecutionEventPayload, TimelineQuery } from "@/types";
 
 export interface TimelineState {
 	// Events data
