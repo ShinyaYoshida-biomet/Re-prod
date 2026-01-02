@@ -44,6 +44,7 @@ export function useTimelineData(): UseTimelineDataReturn {
 		limit,
 		offset,
 		setEvents,
+		appendEvents,
 		addEvent,
 		setFilters,
 		setSort,
@@ -61,6 +62,7 @@ export function useTimelineData(): UseTimelineDataReturn {
 		limit: state.limit,
 		offset: state.offset,
 		setEvents: state.setEvents,
+		appendEvents: state.appendEvents,
 		addEvent: state.addEvent,
 		setFilters: state.setFilters,
 		setSort: state.setSort,
@@ -117,16 +119,14 @@ export function useTimelineData(): UseTimelineDataReturn {
 					offset,
 				});
 
-				setEvents([...events, ...response.events], response.total, response.hasMore);
+				appendEvents(response.events, response.total, response.hasMore);
 			} catch (err) {
 				setError(getErrorMessage(err, "Failed to load more events"));
 			}
 		};
 
 		void fetchMoreEvents();
-		// We intentionally omit `events` from deps to avoid infinite fetch loops when new data is set.
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [offset, isConnected, filters, sort, limit, setEvents, setLoading, setError]);
+	}, [offset, isConnected, filters, sort, limit, appendEvents, setLoading, setError]);
 
 	useEffect(() => {
 		if (!isConnected) {
