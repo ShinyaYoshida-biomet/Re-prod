@@ -382,7 +382,7 @@ impl Client for ReprodAcpClient {
         let edit_request = EditTextFileRequest {
             path: relative.clone(),
             operation: EditOperation::Replace,
-            expected_sha256: expected_sha,
+            expected_sha256: expected_sha.clone(),
             new_text: Some(args.content.clone()),
             edits: None,
         };

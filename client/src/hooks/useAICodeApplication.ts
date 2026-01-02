@@ -38,7 +38,7 @@ export function useAICodeApplication(postAssistantMessage: PostAssistantMessage)
 				applyToEditor: applyCodeChange
 					? async (codeBlock: CodeBlock) => {
 							const snapshot = await applyCodeChange(codeBlock);
-							if (!snapshot) return;
+							if (!snapshot) return null;
 
 							const filePath = editorFilepath || "untitled";
 							const baseHash = await sha256Hex(snapshot.oldContent);
@@ -46,7 +46,6 @@ export function useAICodeApplication(postAssistantMessage: PostAssistantMessage)
 								id: crypto.randomUUID(),
 								source: {
 									type: "api-key",
-									messageId: codeBlock.messageId,
 									codeBlockId: codeBlock.id,
 								},
 								filePath,
@@ -64,6 +63,7 @@ export function useAICodeApplication(postAssistantMessage: PostAssistantMessage)
 								setEditorContent(snapshot.oldContent);
 								postAssistantMessage("A pending edit already exists for this file.");
 							}
+							return snapshot;
 						}
 					: undefined,
 				applyToFile: applyCodeChangeFile,

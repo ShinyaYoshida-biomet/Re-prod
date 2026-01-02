@@ -1,6 +1,6 @@
 export type PendingEditSource =
 	| { type: "acp"; sessionId: string }
-	| { type: "api-key"; messageId?: string; codeBlockId: string };
+	| { type: "api-key"; codeBlockId: string };
 
 export type PendingEditStatus = "pending" | "accepted" | "rejected";
 

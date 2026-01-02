@@ -156,6 +156,7 @@ impl RExecutor {
                     if is_internal_line(&line) {
                         return;
                     }
+                    let line_text = line;
                     let chunk = RunOutputChunk {
                         run_id: run_id.clone().unwrap_or_default(),
                         stream: if is_stdout {
@@ -163,17 +164,17 @@ impl RExecutor {
                         } else {
                             RunStream::Stderr
                         },
-                        chunk: line.clone(),
+                        chunk: line_text.clone(),
                         at_ms,
                     };
                     if let Some(tx) = output_tx.as_ref() {
                         let _ = tx.send(chunk.clone());
                     }
                     if is_stdout {
-                        streamed_stdout.push(line.clone());
+                        streamed_stdout.push(line_text);
                         streamed_chunks.push(chunk);
                     } else {
-                        streamed_stderr.push(line.clone());
+                        streamed_stderr.push(line_text);
                         streamed_chunks.push(chunk);
                     }
                 },
