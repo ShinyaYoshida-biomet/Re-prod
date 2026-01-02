@@ -37,8 +37,8 @@ pub use common::AppState;
 
 use crate::projects::RuntimeBroadcastEvent;
 use acp_handler::{
-    handle_acp_permission_decision, handle_acp_session_cancel, handle_acp_session_create,
-    handle_acp_session_prompt,
+    handle_acp_pending_edit_accept, handle_acp_pending_edit_reject, handle_acp_permission_decision,
+    handle_acp_session_cancel, handle_acp_session_create, handle_acp_session_prompt,
 };
 use ai_handler::handle_ai_message;
 use common::{error_response, WSRequest, WSResponse};
@@ -303,6 +303,12 @@ async fn handle_ws_request(
         }
         WSRequest::AcpPermissionDecision { decision } => {
             handle_acp_permission_decision(runtime, decision).await
+        }
+        WSRequest::AcpPendingEditAccept { edit_id } => {
+            handle_acp_pending_edit_accept(runtime, &edit_id).await
+        }
+        WSRequest::AcpPendingEditReject { edit_id } => {
+            handle_acp_pending_edit_reject(runtime, &edit_id).await
         }
         _ => Vec::new(),
     }

@@ -167,3 +167,21 @@ pub async fn acp_set_agent_config(
         active_agent_command: cfg.active_agent_command,
     })
 }
+
+#[tauri::command]
+pub async fn acp_accept_pending_edit(state: AcpState<'_>, edit_id: String) -> Result<(), String> {
+    let manager = state.lock().await;
+    manager
+        .accept_pending_edit(&edit_id)
+        .await
+        .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn acp_reject_pending_edit(state: AcpState<'_>, edit_id: String) -> Result<(), String> {
+    let manager = state.lock().await;
+    manager
+        .reject_pending_edit(&edit_id)
+        .await
+        .map_err(|err| err.to_string())
+}

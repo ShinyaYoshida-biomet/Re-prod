@@ -4,6 +4,7 @@ import { type AIState, createAISlice } from "./slices/aiSlice";
 import { type ConnectionState, createConnectionSlice } from "./slices/connectionSlice";
 import { createEditorSlice, type EditorState } from "./slices/editorSlice";
 import { createExecutionSlice, type ExecutionState } from "./slices/executionSlice";
+import { createPendingEditSlice, type PendingEditState } from "./slices/pendingEditSlice";
 import { createPlotHistorySlice, type PlotHistorySlice } from "./slices/plotHistorySlice";
 import { createProjectSlice, type ProjectState } from "./slices/projectSlice";
 import { createSettingsSlice, type SettingsState } from "./slices/settingsSlice";
@@ -13,6 +14,7 @@ import { createViewSlice, type ViewState } from "./slices/viewSlice";
 export type StoreState = EditorState &
 	ExecutionState &
 	AIState &
+	PendingEditState &
 	SettingsState &
 	ConnectionState &
 	TimelineState &
@@ -26,6 +28,7 @@ export const useStore = create<StoreState>()(
 			...createEditorSlice(...args),
 			...createExecutionSlice(...args),
 			...createAISlice(...args),
+			...createPendingEditSlice(...args),
 			...createSettingsSlice(...args),
 			...createConnectionSlice(...args),
 			...createTimelineSlice(...args),

@@ -64,6 +64,8 @@ async fn main() {
             acp::commands::acp_detect_agents,
             acp::commands::acp_get_agent_config,
             acp::commands::acp_set_agent_config,
+            acp::commands::acp_accept_pending_edit,
+            acp::commands::acp_reject_pending_edit,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

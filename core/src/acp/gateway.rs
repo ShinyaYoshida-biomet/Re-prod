@@ -11,6 +11,7 @@ use tracing::{info, warn};
 
 use super::{
     connection::{AcpConnection, PermissionDecisionMessage},
+    pending_edit::PendingEditStore,
     process::{spawn_agent, AcpChild, ProcessConfig, SpawnedPipes},
     session::AcpSessionManager,
     types::{
@@ -18,6 +19,7 @@ use super::{
         AcpPlanStepStatus, AcpSessionUpdate, AcpSessionUpdateEnvelope,
     },
 };
+use crate::edit::{EditOperation, EditService, EditStatus, EditTextFileRequest};
 
 const BROADCAST_BUFFER: usize = 128;
 
@@ -27,6 +29,8 @@ pub struct AcpGateway {
     conn: Option<AcpConnection>,
     workspace_root: PathBuf,
     sessions: AcpSessionManager,
+    edit_service: std::sync::Arc<EditService>,
+    pending_edits: std::sync::Arc<tokio::sync::Mutex<PendingEditStore>>,
     updates_tx: broadcast::Sender<AcpSessionUpdateEnvelope>,
     permission_tx: broadcast::Sender<AcpPermissionRequestPayload>,
 }
@@ -35,11 +39,16 @@ impl AcpGateway {
     pub fn new(workspace_root: PathBuf) -> Self {
         let (updates_tx, _) = broadcast::channel(BROADCAST_BUFFER);
         let (permission_tx, _) = broadcast::channel(BROADCAST_BUFFER);
+        let edit_service = std::sync::Arc::new(EditService::new(workspace_root.clone()));
+        let pending_edits =
+            std::sync::Arc::new(tokio::sync::Mutex::new(PendingEditStore::default()));
         Self {
             child: None,
             conn: None,
             workspace_root,
             sessions: AcpSessionManager::new(),
+            edit_service,
+            pending_edits,
             updates_tx,
             permission_tx,
         }
@@ -78,15 +87,22 @@ impl AcpGateway {
         } = spawn_agent(config).await?;
         child.notify_ready().await?;
 
-        let (connection, updates, permission_requests) =
-            match AcpConnection::initialize(self.workspace_root.clone(), writer, reader).await {
-                Ok(result) => result,
-                Err(err) => {
-                    warn!(error = %err, "ACP initialize failed; shutting down agent");
-                    child.shutdown().await;
-                    return Err(err);
-                }
-            };
+        let (connection, updates, permission_requests) = match AcpConnection::initialize(
+            self.workspace_root.clone(),
+            self.edit_service.clone(),
+            self.pending_edits.clone(),
+            writer,
+            reader,
+        )
+        .await
+        {
+            Ok(result) => result,
+            Err(err) => {
+                warn!(error = %err, "ACP initialize failed; shutting down agent");
+                child.shutdown().await;
+                return Err(err);
+            }
+        };
         self.forward_updates(updates);
         self.forward_permission_requests(permission_requests);
 
@@ -161,6 +177,49 @@ impl AcpGateway {
             update: AcpSessionUpdate::Done,
         };
         let _ = self.updates_tx.send(payload);
+        Ok(())
+    }
+
+    pub async fn accept_pending_edit(&self, edit_id: &str) -> Result<()> {
+        let edit = {
+            let store = self.pending_edits.lock().await;
+            store
+                .get_edit(edit_id)
+                .ok_or_else(|| anyhow!("Pending edit not found"))?
+        };
+
+        let current = self.edit_service.read_text_file(&edit.file_path).await?;
+        if current.sha256 != edit.base_sha256 {
+            return Err(anyhow!(
+                "Pending edit base mismatch: file changed since edit was created"
+            ));
+        }
+
+        let request = EditTextFileRequest {
+            path: edit.file_path.clone(),
+            operation: EditOperation::Replace,
+            expected_sha256: edit
+                .expected_sha256
+                .clone()
+                .or_else(|| Some(edit.base_sha256.clone())),
+            new_text: Some(edit.new_text.clone()),
+            edits: None,
+        };
+        let result = self.edit_service.edit_text_file(request).await?;
+        if matches!(result.status, EditStatus::Conflict) {
+            return Err(anyhow!("Conflict detected while applying pending edit"));
+        }
+
+        let mut store = self.pending_edits.lock().await;
+        store.remove_edit(edit_id);
+        Ok(())
+    }
+
+    pub async fn reject_pending_edit(&self, edit_id: &str) -> Result<()> {
+        let mut store = self.pending_edits.lock().await;
+        if store.remove_edit(edit_id).is_none() {
+            return Err(anyhow!("Pending edit not found"));
+        }
         Ok(())
     }
 

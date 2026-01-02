@@ -19,3 +19,25 @@
 .executing-cell-background {
 	background-color: rgba(47, 111, 237, 0.08);
 }
+
+.pending-edit-toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 8px 12px;
+	border-top: 1px solid var(--border-color, #e0e0e0);
+	border-bottom: 1px solid var(--border-color, #e0e0e0);
+	background: rgba(255, 196, 0, 0.08);
+	font-size: 12px;
+}
+
+.pending-edit-info {
+	font-weight: 600;
+	color: var(--text-primary, #1f1f1f);
+}
+
+.pending-edit-actions {
+	display: flex;
+	gap: 8px;
+}

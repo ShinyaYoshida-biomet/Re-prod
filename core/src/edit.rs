@@ -189,6 +189,88 @@ impl EditService {
         })
     }
 
+    pub async fn preview_text_file(
+        &self,
+        request: EditTextFileRequest,
+        base_text: Option<String>,
+    ) -> Result<EditTextFileResult, ReprodError> {
+        let resolved = self.validate_path(&request.path)?;
+        let (old_text, old_sha256) = match base_text {
+            Some(text) => {
+                let hash = sha256_hex(&text);
+                (text, hash)
+            }
+            None => read_existing(&resolved).await?,
+        };
+
+        if let Some(expected) = request.expected_sha256.as_ref() {
+            if &old_sha256 != expected {
+                let new_text = derive_new_text(&old_text, &request)?;
+                let unified_diff = unified_diff(&request.path, &old_text, &new_text);
+                let new_sha256 = sha256_hex(&new_text);
+                let structured_edits = match request.operation {
+                    EditOperation::ApplyEdits => request.edits.clone().unwrap_or_default(),
+                    _ => vec![TextEdit {
+                        range: full_range(&old_text),
+                        text: new_text.clone(),
+                    }],
+                };
+                return Ok(EditTextFileResult {
+                    status: EditStatus::Conflict,
+                    path: request.path,
+                    old_text: old_text.clone(),
+                    new_text,
+                    old_sha256: old_sha256.clone(),
+                    new_sha256,
+                    structured_edits,
+                    unified_diff,
+                    conflict: Some(EditConflict {
+                        current_sha256: old_sha256,
+                        current_text: old_text,
+                    }),
+                });
+            }
+        }
+
+        let new_text = derive_new_text(&old_text, &request)?;
+        if new_text.len() > MAX_FILE_SIZE as usize {
+            return Err(ReprodError::SecurityError(format!(
+                "Content size {} exceeds maximum allowed size of {} bytes",
+                new_text.len(),
+                MAX_FILE_SIZE
+            )));
+        }
+
+        let status = if new_text == old_text {
+            EditStatus::NoOp
+        } else {
+            EditStatus::Applied
+        };
+
+        let structured_edits = match request.operation {
+            EditOperation::ApplyEdits => request.edits.unwrap_or_default(),
+            _ => vec![TextEdit {
+                range: full_range(&old_text),
+                text: new_text.clone(),
+            }],
+        };
+
+        let unified_diff = unified_diff(&request.path, &old_text, &new_text);
+        let new_sha256 = sha256_hex(&new_text);
+
+        Ok(EditTextFileResult {
+            status,
+            path: request.path,
+            old_text,
+            new_text,
+            old_sha256,
+            new_sha256,
+            structured_edits,
+            unified_diff,
+            conflict: None,
+        })
+    }
+
     fn validate_path(&self, relative_path: &str) -> Result<PathBuf, ReprodError> {
         let path_obj = Path::new(relative_path);
         if path_obj.is_absolute() {
@@ -386,7 +468,7 @@ fn unified_diff(path: &str, old_text: &str, new_text: &str) -> String {
         .to_string()
 }
 
-fn sha256_hex(text: &str) -> String {
+pub fn sha256_hex(text: &str) -> String {
     use sha2::{Digest, Sha256};
     let mut hasher = Sha256::new();
     hasher.update(text.as_bytes());

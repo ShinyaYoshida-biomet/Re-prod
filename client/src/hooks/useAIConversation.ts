@@ -7,6 +7,7 @@ import { aiMessages } from "@/services/messageBuilders";
 import { socketService } from "@/services/socket";
 import type { AIMessage, AIMode } from "@/types";
 import type { AcpPromptMessage, AcpSessionUpdateEnvelope } from "@/types/generated";
+import type { PendingEdit } from "@/types";
 import { useAICodeApplication } from "./useAICodeApplication";
 import { useAIStreaming } from "./useAIStreaming";
 import { useAITimeout } from "./useAITimeout";
@@ -93,6 +94,8 @@ export function useAIConversation() {
 	);
 
 	const { handleApplyCode } = useAICodeApplication(postAssistantMessage);
+	const registerPendingEdit = useStore((state) => state.registerPendingEdit);
+	const setEditorContent = useStore((state) => state.setEditorContent);
 
 	const clearActiveRequest = useCallback((options: { dispose?: boolean } = {}) => {
 		if (!activeRequestRef.current) {
@@ -170,6 +173,37 @@ export function useAIConversation() {
 
 			// Handle ToolCallUpdate
 			if (typeof update === "object" && update !== null && "ToolCallUpdate" in update) {
+				const toolUpdate = update.ToolCallUpdate;
+				const output = toolUpdate.output;
+				if (
+					output &&
+					typeof output === "object" &&
+					"type" in output &&
+					(output as { type?: unknown }).type === "pending_edit"
+				) {
+					const editPayload = (output as { edit?: any }).edit;
+					if (editPayload && typeof editPayload === "object") {
+						const pendingEdit: PendingEdit = {
+							id: String(editPayload.id ?? ""),
+							source: { type: "acp", sessionId: payload.session_id },
+							filePath: String(editPayload.file_path ?? ""),
+							oldContent: String(editPayload.old_text ?? ""),
+							newContent: String(editPayload.new_text ?? ""),
+							unifiedDiff: String(editPayload.unified_diff ?? ""),
+							baseHash: String(editPayload.base_sha256 ?? ""),
+							expectedSha: editPayload.expected_sha256 ?? null,
+							status: "pending",
+							createdAt: Date.now(),
+						};
+
+						if (pendingEdit.filePath) {
+							const registered = registerPendingEdit(pendingEdit);
+							if (registered && pendingEdit.filePath === editorFilepath) {
+								setEditorContent(pendingEdit.newContent);
+							}
+						}
+					}
+				}
 				recordTool(streamingId, mapToolCallUpdate(update.ToolCallUpdate));
 				return;
 			}
@@ -187,6 +221,9 @@ export function useAIConversation() {
 			mapToolCall,
 			mapToolCallUpdate,
 			recordTool,
+			registerPendingEdit,
+			editorFilepath,
+			setEditorContent,
 			startStreamingMessage,
 			updatePlan,
 		],

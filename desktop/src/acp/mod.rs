@@ -88,6 +88,14 @@ impl AcpManager {
         self.gateway.subscribe_permission_requests()
     }
 
+    pub async fn accept_pending_edit(&self, edit_id: &str) -> Result<()> {
+        self.gateway.accept_pending_edit(edit_id).await
+    }
+
+    pub async fn reject_pending_edit(&self, edit_id: &str) -> Result<()> {
+        self.gateway.reject_pending_edit(edit_id).await
+    }
+
     pub async fn shutdown(&mut self) {
         if let Some(handles) = self.forwarders.take() {
             handles.updates.abort();

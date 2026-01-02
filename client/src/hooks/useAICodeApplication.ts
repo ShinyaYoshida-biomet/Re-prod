@@ -2,7 +2,8 @@ import { useCallback } from "react";
 import { useStore } from "@/core";
 import { type CodeActionContext, CodeActionFactory } from "@/core/ai/actions";
 import { applyCodeChangeFile } from "@/services/fileService";
-import type { AIMessage, CodeBlock } from "@/types";
+import type { AIMessage, CodeBlock, PendingEdit } from "@/types";
+import { sha256Hex } from "@/utils/crypto";
 import { getErrorMessage } from "@/utils/error";
 
 type PostAssistantMessage = (content: string, extras?: Partial<AIMessage>) => void;
@@ -10,9 +11,18 @@ type PostAssistantMessage = (content: string, extras?: Partial<AIMessage>) => vo
 export function useAICodeApplication(postAssistantMessage: PostAssistantMessage) {
 	const applyCodeChange = useStore((state) => state.applyCodeChange);
 	const editorFilepath = useStore((state) => state.editor.filepath);
+	const pendingEdit = useStore((state) => state.pendingEdits[editorFilepath]);
+	const registerPendingEdit = useStore((state) => state.registerPendingEdit);
+	const setEditorContent = useStore((state) => state.setEditorContent);
 
 	const handleApplyCode = useCallback(
 		async (codeBlock: CodeBlock): Promise<void> => {
+			const targetFile = codeBlock.filepath ?? editorFilepath;
+			if (editorFilepath && pendingEdit && targetFile === editorFilepath) {
+				postAssistantMessage("Resolve the pending edit before applying new changes.");
+				return;
+			}
+
 			// Validate the action first
 			const validation = CodeActionFactory.validate(codeBlock);
 			if (!validation.valid) {
@@ -27,7 +37,33 @@ export function useAICodeApplication(postAssistantMessage: PostAssistantMessage)
 			const context: CodeActionContext = {
 				applyToEditor: applyCodeChange
 					? async (codeBlock: CodeBlock) => {
-							applyCodeChange(codeBlock);
+							const snapshot = await applyCodeChange(codeBlock);
+							if (!snapshot) return;
+
+							const filePath = editorFilepath || "untitled";
+							const baseHash = await sha256Hex(snapshot.oldContent);
+							const pendingEdit: PendingEdit = {
+								id: crypto.randomUUID(),
+								source: {
+									type: "api-key",
+									messageId: codeBlock.messageId,
+									codeBlockId: codeBlock.id,
+								},
+								filePath,
+								oldContent: snapshot.oldContent,
+								newContent: snapshot.newContent,
+								unifiedDiff: "",
+								baseHash,
+								expectedSha: null,
+								status: "pending",
+								createdAt: Date.now(),
+							};
+
+							const registered = registerPendingEdit(pendingEdit);
+							if (!registered) {
+								setEditorContent(snapshot.oldContent);
+								postAssistantMessage("A pending edit already exists for this file.");
+							}
 						}
 					: undefined,
 				applyToFile: applyCodeChangeFile,
@@ -43,7 +79,14 @@ export function useAICodeApplication(postAssistantMessage: PostAssistantMessage)
 				postAssistantMessage(`Failed to apply code change: ${message}`);
 			}
 		},
-		[applyCodeChange, editorFilepath, postAssistantMessage],
+		[
+			applyCodeChange,
+			editorFilepath,
+			pendingEdit,
+			postAssistantMessage,
+			registerPendingEdit,
+			setEditorContent,
+		],
 	);
 
 	return { handleApplyCode };

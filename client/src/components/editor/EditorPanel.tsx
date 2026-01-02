@@ -10,6 +10,8 @@ import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useEditorCells } from "@/hooks/useEditorCells";
 import { useEditorDecorations } from "@/hooks/useEditorDecorations";
 import { useEditorExecution } from "@/hooks/useEditorExecution";
+import type { AppliedCodeChange } from "@/core/state/slices/editorSlice";
+import { acceptPendingEdit, rejectPendingEdit } from "@/services/pendingEditService";
 import type { CodeBlock, CodeRange } from "@/types";
 import { clamp } from "@/utils/math";
 import type { EditorRef } from "./editorRef";
@@ -28,9 +30,13 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	const setEditorRef = useStore((state) => state.setEditorRef);
 	const recordPatchMatchFailure = useStore((state) => state.recordPatchMatchFailure);
 	const recordPatchMatchSuccess = useStore((state) => state.recordPatchMatchSuccess);
+	const pendingEdit = useStore((state) => state.pendingEdits[editor.filepath]);
+	const clearPendingEdit = useStore((state) => state.clearPendingEdit);
+	const updatePendingEditStatus = useStore((state) => state.updatePendingEditStatus);
 	const editorMethodsRef = useRef<EditorRef | null>(null);
 	const monacoEditorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
 	const { dialogState, showConfirm, handleConfirm, handleCancel } = useConfirmDialog();
+	const pendingEditWarningRef = useRef(false);
 
 	const cells = useEditorCells(editor.content, editor.filepath);
 	const { state, actions } = useEditorExecution({
@@ -46,8 +52,70 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		executingCellIndex,
 	});
 
+	useEffect(() => {
+		pendingEditWarningRef.current = false;
+	}, [pendingEdit?.id]);
+
+	useEffect(() => {
+		if (!pendingEdit) return;
+		if (editor.content === pendingEdit.newContent) return;
+		setEditorContent(pendingEdit.newContent);
+	}, [editor.content, pendingEdit, setEditorContent]);
+
+	const handlePendingAccept = useCallback(async () => {
+		if (!pendingEdit) return;
+		if (editor.content !== pendingEdit.newContent) {
+			toast.showWarning("Editor content changed since the pending edit was created.");
+			return;
+		}
+		try {
+			await acceptPendingEdit(pendingEdit);
+			updatePendingEditStatus(pendingEdit.filePath, "accepted");
+			clearPendingEdit(pendingEdit.filePath);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Failed to accept pending edit";
+			toast.showError(message);
+		}
+	}, [clearPendingEdit, editor.content, pendingEdit, toast, updatePendingEditStatus]);
+
+	const handlePendingReject = useCallback(async () => {
+		if (!pendingEdit) return;
+		try {
+			await rejectPendingEdit(pendingEdit);
+			setEditorContent(pendingEdit.oldContent);
+			updatePendingEditStatus(pendingEdit.filePath, "rejected");
+			clearPendingEdit(pendingEdit.filePath);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Failed to reject pending edit";
+			toast.showError(message);
+		}
+	}, [clearPendingEdit, pendingEdit, setEditorContent, toast, updatePendingEditStatus]);
+
+	useEffect(() => {
+		if (!pendingEdit) return;
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key === "Enter" && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
+				event.preventDefault();
+				handlePendingAccept();
+				return;
+			}
+			if (event.key === "Escape") {
+				event.preventDefault();
+				handlePendingReject();
+			}
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => {
+			window.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [handlePendingAccept, handlePendingReject, pendingEdit]);
+
 	const handleEditorChange = (value: string | undefined): void => {
 		if (value !== undefined) {
+			if (pendingEdit && !pendingEditWarningRef.current) {
+				toast.showWarning("Resolve the pending edit before making additional changes.");
+				pendingEditWarningRef.current = true;
+			}
 			setEditorContent(value);
 		}
 	};
@@ -91,15 +159,15 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 
 	// Apply code changes from AI
 	const applyCodeChange = useCallback(
-		(codeBlock: CodeBlock): void => {
+		async (codeBlock: CodeBlock): Promise<AppliedCodeChange | null> => {
 			const monacoEditor = monacoEditorRef.current;
 			if (!monacoEditor) {
-				return;
+				return null;
 			}
 
 			const model = monacoEditor.getModel();
 			if (!model) {
-				return;
+				return null;
 			}
 
 			const clampLine = (line: number): number => clamp(line, 1, model.getLineCount());
@@ -111,10 +179,19 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 			};
 
 			const editorContent = monacoEditor.getValue();
+			const originalContent = editorContent;
 			const contextAlertMessage =
 				"Unable to locate the suggested context in the current editor. Try running the suggestion again after scrolling the intended section into view.";
 			let contextMatchingFailed = false;
 			let contextAlertPending = false;
+
+			const finalizeChange = (): AppliedCodeChange | null => {
+				const newContent = monacoEditor.getValue();
+				if (newContent === originalContent) {
+					return null;
+				}
+				return { oldContent: originalContent, newContent };
+			};
 
 			const resolveTargetRange = (): CodeRange | undefined => {
 				if (codeBlock.targetRange) {
@@ -286,53 +363,58 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 				case "replace-all": {
 					const structuredApplied = applyStructuredContext();
 					if (structuredApplied) {
-						break;
+						return finalizeChange();
 					}
 
 					const appliedRange = applyRangeChange(codeBlock.code, false);
 					if (appliedRange) {
-						break;
+						return finalizeChange();
 					}
 
-					// Show confirmation dialog asynchronously
 					const target = codeBlock.filepath ? `file ${codeBlock.filepath}` : "current editor";
 					const confirmationMessage = contextMatchingFailed
 						? `Context matching failed, so this action will replace the entire ${target}. Proceed only if you understand the change.`
 						: `This AI suggestion will replace the entire ${target}. Proceed only if you understand the change.`;
-					showConfirm("Confirm Replace All", confirmationMessage).then((confirmed) => {
-						if (confirmed) {
-							monacoEditor.setValue(codeBlock.code);
-							setEditorContent(codeBlock.code);
-						}
-					});
-					break;
+					const confirmed = await showConfirm("Confirm Replace All", confirmationMessage);
+					if (confirmed) {
+						monacoEditor.setValue(codeBlock.code);
+						setEditorContent(codeBlock.code);
+						return finalizeChange();
+					}
+					return null;
 				}
 				case "replace-range": {
 					const structuredApplied = applyStructuredContext();
-					if (!structuredApplied) {
-						const applied = applyRangeChange(codeBlock.code, contextMatchingFailed);
-						if (!applied) {
-							// No explicit context; offer to replace the whole file as a fallback
-							const target = codeBlock.filepath ? `file ${codeBlock.filepath}` : "current editor";
-							showConfirm(
-								"Confirm Replace All",
-								`Could not match the suggested context. Replace the entire ${target} with the suggested code?`,
-							).then((confirmed) => {
-								if (confirmed) {
-									monacoEditor.setValue(codeBlock.code);
-									setEditorContent(codeBlock.code);
-								}
-							});
-						}
+					if (structuredApplied) {
+						return finalizeChange();
 					}
-					break;
+
+					const applied = applyRangeChange(codeBlock.code, contextMatchingFailed);
+					if (applied) {
+						return finalizeChange();
+					}
+
+					const target = codeBlock.filepath ? `file ${codeBlock.filepath}` : "current editor";
+					const confirmed = await showConfirm(
+						"Confirm Replace All",
+						`Could not match the suggested context. Replace the entire ${target} with the suggested code?`,
+					);
+					if (confirmed) {
+						monacoEditor.setValue(codeBlock.code);
+						setEditorContent(codeBlock.code);
+						return finalizeChange();
+					}
+					return null;
 				}
 				case "delete-range": {
 					const structuredApplied = applyStructuredContext();
 					if (!structuredApplied) {
-						applyRangeChange("", contextMatchingFailed);
+						const applied = applyRangeChange("", contextMatchingFailed);
+						if (!applied) {
+							return null;
+						}
 					}
-					break;
+					return finalizeChange();
 				}
 				case "insert": {
 					const position = monacoEditor.getPosition();
@@ -346,12 +428,14 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 							},
 							codeBlock.code,
 						);
+						return finalizeChange();
 					}
-					break;
+					return null;
 				}
 				case "create-file":
-					break;
+					return null;
 				default:
+					return null;
 			}
 		},
 		[setEditorContent, showConfirm, recordPatchMatchFailure, recordPatchMatchSuccess],
@@ -441,6 +525,21 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 						</button>
 					</div>
 				</div>
+				{pendingEdit && (
+					<div className="pending-edit-toolbar">
+						<div className="pending-edit-info">
+							Pending edit ({pendingEdit.source.type === "acp" ? "ACP" : "API Key"})
+						</div>
+						<div className="pending-edit-actions">
+							<button className="btn btn-primary" onClick={handlePendingAccept} type="button">
+								Accept (Enter)
+							</button>
+							<button className="btn" onClick={handlePendingReject} type="button">
+								Reject (Esc)
+							</button>
+						</div>
+					</div>
+				)}
 				<div className="panel-content">
 					<Editor
 						height="100%"

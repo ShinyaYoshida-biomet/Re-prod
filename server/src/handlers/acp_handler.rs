@@ -68,3 +68,39 @@ pub async fn handle_acp_permission_decision(
         Err(error) => error_response(error.to_string()),
     }
 }
+
+pub async fn handle_acp_pending_edit_accept(
+    runtime: &Arc<ProjectRuntime>,
+    edit_id: &str,
+) -> Vec<WSResponse> {
+    match runtime.acp.accept_pending_edit(edit_id).await {
+        Ok(()) => single_response(WSResponse::AcpPendingEditResolved {
+            edit_id: edit_id.to_string(),
+            success: true,
+            error: None,
+        }),
+        Err(error) => single_response(WSResponse::AcpPendingEditResolved {
+            edit_id: edit_id.to_string(),
+            success: false,
+            error: Some(error.to_string()),
+        }),
+    }
+}
+
+pub async fn handle_acp_pending_edit_reject(
+    runtime: &Arc<ProjectRuntime>,
+    edit_id: &str,
+) -> Vec<WSResponse> {
+    match runtime.acp.reject_pending_edit(edit_id).await {
+        Ok(()) => single_response(WSResponse::AcpPendingEditResolved {
+            edit_id: edit_id.to_string(),
+            success: true,
+            error: None,
+        }),
+        Err(error) => single_response(WSResponse::AcpPendingEditResolved {
+            edit_id: edit_id.to_string(),
+            success: false,
+            error: Some(error.to_string()),
+        }),
+    }
+}

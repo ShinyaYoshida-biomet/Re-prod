@@ -182,6 +182,10 @@ pub(super) enum WSRequest {
     AcpSessionCancel { session_id: String },
     #[serde(rename = "acp_permission_decision")]
     AcpPermissionDecision { decision: AcpPermissionDecision },
+    #[serde(rename = "acp_pending_edit_accept")]
+    AcpPendingEditAccept { edit_id: String },
+    #[serde(rename = "acp_pending_edit_reject")]
+    AcpPendingEditReject { edit_id: String },
 }
 
 #[derive(serde::Serialize)]
@@ -267,6 +271,13 @@ pub(super) enum WSResponse {
     },
     #[serde(rename = "project_state_saved")]
     ProjectStateSaved { project_id: String },
+    #[serde(rename = "acp_pending_edit_resolved")]
+    AcpPendingEditResolved {
+        edit_id: String,
+        success: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        error: Option<String>,
+    },
     #[serde(rename = "plot_history_state")]
     PlotHistoryState {
         #[serde(rename = "activePlotId")]
