@@ -170,10 +170,10 @@ impl RExecutor {
                         let _ = tx.send(chunk.clone());
                     }
                     if is_stdout {
-                        streamed_stdout.push(line.clone());
+                        streamed_stdout.push(line);
                         streamed_chunks.push(chunk);
                     } else {
-                        streamed_stderr.push(line.clone());
+                        streamed_stderr.push(line);
                         streamed_chunks.push(chunk);
                     }
                 },
