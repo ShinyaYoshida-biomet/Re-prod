@@ -1,4 +1,5 @@
 import type { AIMessage, CodeBlock } from "@/types";
+import { BrailleSpinner } from "@/components/shared";
 import { AIPlanCard } from "./AIPlanCard";
 import { CodeBlockWithApply } from "./CodeBlockWithApply";
 import { ToolCallLog } from "./ToolCallLog";
@@ -98,7 +99,7 @@ export function StreamingMessage({ message, onApplyCode }: Props): JSX.Element {
 			<div className="message-content message-streaming">
 				{isStreaming && (
 					<div className="message-streaming-indicator">
-						<span className="spinner" aria-hidden />
+						<BrailleSpinner intervalMs={80} />
 						<span>Streaming response…</span>
 					</div>
 				)}
