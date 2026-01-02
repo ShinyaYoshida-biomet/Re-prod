@@ -68,10 +68,18 @@ pub struct AcpPlanStep {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "../../../client/src/types/generated/")]
 pub enum AcpSessionUpdate {
-    UserMessageChunk { text: String },
-    AgentMessageChunk { text: String },
-    AgentThoughtChunk { text: String },
-    Plan { steps: Vec<AcpPlanStep> },
+    UserMessageChunk {
+        text: String,
+    },
+    AgentMessageChunk {
+        text: String,
+    },
+    AgentThoughtChunk {
+        text: String,
+    },
+    Plan {
+        steps: Vec<AcpPlanStep>,
+    },
     ToolCall {
         id: String,
         title: String,

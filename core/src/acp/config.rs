@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use anyhow::{bail, Result};
 use crate::config::{app_config_dir, workspace_root_override};
+use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
 use tracing::{error, info, warn};
 

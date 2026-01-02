@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use agent_client_protocol::{
-    ContentBlock, ContentChunk, PlanEntryStatus, SessionNotification, SessionUpdate, ToolCallContent,
-    ToolCallStatus,
+    ContentBlock, ContentChunk, PlanEntryStatus, SessionNotification, SessionUpdate,
+    ToolCallContent, ToolCallStatus,
 };
 use anyhow::{anyhow, Result};
 use serde_json::Value;
@@ -229,7 +229,11 @@ fn map_session_update(update: &SessionUpdate) -> AcpSessionUpdate {
                 .collect(),
             input: tool_call.raw_input.clone(),
             output: tool_output_from(tool_call.raw_output.as_ref(), &tool_call.content),
-            error: tool_error_from(tool_call.status, tool_call.raw_output.as_ref(), &tool_call.content),
+            error: tool_error_from(
+                tool_call.status,
+                tool_call.raw_output.as_ref(),
+                &tool_call.content,
+            ),
         },
         SessionUpdate::ToolCallUpdate(tool_call_update) => {
             let content = tool_call_update.fields.content.as_ref().and_then(|blocks| {

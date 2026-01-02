@@ -91,12 +91,10 @@ pub async fn spawn_agent(config: ProcessConfig) -> Result<SpawnedPipes> {
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
 
-    let mut child = cmd
-        .spawn()
-        .map_err(|err| {
-            error!(error = %err, "Failed to spawn ACP agent");
-            anyhow!("Failed to spawn ACP agent: {err}")
-        })?;
+    let mut child = cmd.spawn().map_err(|err| {
+        error!(error = %err, "Failed to spawn ACP agent");
+        anyhow!("Failed to spawn ACP agent: {err}")
+    })?;
 
     let stderr_task = child.stderr.take().map(spawn_stderr_logger);
     let stdout = child

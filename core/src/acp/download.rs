@@ -47,11 +47,18 @@ async fn ensure_github_release_available(
         return Ok(Some(path));
     }
 
-    info!(agent = agent.name, "ACP agent not found; downloading latest release");
+    info!(
+        agent = agent.name,
+        "ACP agent not found; downloading latest release"
+    );
     let release = fetch_latest_release(spec.repo, agent.name).await?;
     let target = host_target()?;
     let asset = select_asset(&release, &target, spec.asset_prefix).ok_or_else(|| {
-        let names: Vec<String> = release.assets.iter().map(|asset| asset.name.clone()).collect();
+        let names: Vec<String> = release
+            .assets
+            .iter()
+            .map(|asset| asset.name.clone())
+            .collect();
         anyhow!(
             "ACP asset not found for agent {agent} target {target}. Available assets: {names:?}",
             agent = agent.name

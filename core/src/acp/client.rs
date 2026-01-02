@@ -6,6 +6,7 @@ use std::{
     time::Duration,
 };
 
+use crate::config::app_config_dir;
 use agent_client_protocol::{
     Client, PermissionOption, PermissionOptionKind, ReadTextFileRequest, ReadTextFileResponse,
     RequestPermissionOutcome, RequestPermissionRequest, RequestPermissionResponse,
@@ -13,7 +14,6 @@ use agent_client_protocol::{
 };
 use anyhow::{anyhow, bail, Context, Result};
 use dunce::canonicalize;
-use crate::config::app_config_dir;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc::UnboundedSender, oneshot, Mutex};
 use tokio::time::timeout;
@@ -90,11 +90,17 @@ impl ReprodAcpClient {
             let opt_id = match decision {
                 TrustDecision::Allow => pick_option_id(
                     options,
-                    &[PermissionOptionKind::AllowOnce, PermissionOptionKind::AllowAlways],
+                    &[
+                        PermissionOptionKind::AllowOnce,
+                        PermissionOptionKind::AllowAlways,
+                    ],
                 ),
                 TrustDecision::Reject => pick_option_id(
                     options,
-                    &[PermissionOptionKind::RejectOnce, PermissionOptionKind::RejectAlways],
+                    &[
+                        PermissionOptionKind::RejectOnce,
+                        PermissionOptionKind::RejectAlways,
+                    ],
                 ),
             }?;
             return Some(RequestPermissionOutcome::Selected(
@@ -160,12 +166,7 @@ impl ReprodAcpClient {
         }
 
         // Session-level remember: if UI indicated session scope, capture AllowOnce/RejectOnce
-        if let Some(scope) = self
-            .decision_meta
-            .lock()
-            .await
-            .remove(&payload.request_id)
-        {
+        if let Some(scope) = self.decision_meta.lock().await.remove(&payload.request_id) {
             if matches!(scope, AcpPermissionDecisionScope::Session) {
                 if let RequestPermissionOutcome::Selected(sel) = outcome {
                     if let Some(kind) = options
@@ -400,11 +401,11 @@ fn select_timeout_outcome(options: &[PermissionOption]) -> RequestPermissionOutc
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::APP_DIR_ENV;
     use agent_client_protocol::{
         PermissionOption, PermissionOptionId, PermissionOptionKind, SelectedPermissionOutcome,
         SessionId, ToolCallId, ToolCallUpdate, ToolCallUpdateFields,
     };
-    use crate::config::APP_DIR_ENV;
     use std::collections::HashMap;
     use std::env;
     use std::sync::{Arc, Mutex as StdMutex};
@@ -506,13 +507,8 @@ mod tests {
         let pending = Arc::new(Mutex::new(HashMap::new()));
         let decision_meta: Arc<Mutex<HashMap<String, AcpPermissionDecisionScope>>> =
             Arc::new(Mutex::new(HashMap::new()));
-        let client = ReprodAcpClient::new(
-            workspace,
-            session_tx,
-            permission_tx,
-            pending,
-            decision_meta,
-        );
+        let client =
+            ReprodAcpClient::new(workspace, session_tx, permission_tx, pending, decision_meta);
 
         let req = RequestPermissionRequest::new(
             SessionId::new("s-test"),
@@ -548,13 +544,10 @@ mod tests {
     async fn applies_trust_store_decisions() {
         let _env_lock = ENV_LOCK.lock().unwrap();
         // Ensure trust store writes to a predictable, writable location for the test
-        let config_root = std::env::temp_dir().join(format!(
-            "reprod-config-{}",
-            std::process::id()
-        ));
+        let config_root =
+            std::env::temp_dir().join(format!("reprod-config-{}", std::process::id()));
         let _ = std::fs::create_dir_all(&config_root);
-        let _app_dir =
-            EnvVarGuard::set(APP_DIR_ENV, config_root.to_string_lossy().as_ref());
+        let _app_dir = EnvVarGuard::set(APP_DIR_ENV, config_root.to_string_lossy().as_ref());
 
         let workspace = std::env::temp_dir().join("acp-client-trust");
         let _ = std::fs::create_dir_all(&workspace);
@@ -562,7 +555,9 @@ mod tests {
             .to_string_lossy()
             .replace(std::path::MAIN_SEPARATOR, "_")
             .replace(':', "_");
-        let trust_path = config_root.join("acp_trust").join(format!("{trust_slug}.json"));
+        let trust_path = config_root
+            .join("acp_trust")
+            .join(format!("{trust_slug}.json"));
 
         let (session_tx, _session_rx) = tokio::sync::mpsc::unbounded_channel();
         let (permission_tx, mut permission_rx) = tokio::sync::mpsc::unbounded_channel();
