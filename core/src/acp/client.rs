@@ -8,7 +8,7 @@ use std::{
 
 use crate::{
     config::app_config_dir,
-    edit::{EditOperation, EditService, EditStatus, EditTextFileRequest, EditTextFileResult},
+    edit::{EditOperation, EditService, EditStatus, EditTextFileRequest},
 };
 use agent_client_protocol::{
     Client, PermissionOption, PermissionOptionKind, ReadTextFileRequest, ReadTextFileResponse,
@@ -253,32 +253,6 @@ impl ReprodAcpClient {
 
         let _ = self.pending_permissions.lock().await.remove(&request_id);
         outcome
-    }
-
-    fn emit_edit_tool_update(&self, session_id: &str, path: &Path, result: &EditTextFileResult) {
-        let tool_call_id = ToolCallId::new(format!("fs-edit-{}", Uuid::new_v4()));
-        let location = ToolCallLocation::new(path.to_string_lossy().to_string());
-        let tool_call = ToolCall::new(tool_call_id.clone(), "Edit file")
-            .kind(ToolKind::Edit)
-            .status(ToolCallStatus::InProgress)
-            .locations(vec![location]);
-        let _ = self.session_update_tx.send(SessionNotification::new(
-            session_id.to_string(),
-            SessionUpdate::ToolCall(tool_call),
-        ));
-
-        let output = serde_json::to_value(result)
-            .unwrap_or(Value::String("Failed to serialize edit result".to_string()));
-        let update = ToolCallUpdate::new(
-            tool_call_id,
-            ToolCallUpdateFields::new()
-                .status(ToolCallStatus::Completed)
-                .raw_output(output),
-        );
-        let _ = self.session_update_tx.send(SessionNotification::new(
-            session_id.to_string(),
-            SessionUpdate::ToolCallUpdate(update),
-        ));
     }
 
     fn emit_pending_edit_update(&self, session_id: &str, path: &Path, edit: &PendingEdit) {
@@ -872,4 +846,48 @@ mod tests {
         let canon_root = dunce::canonicalize(&workspace).unwrap();
         assert!(resolved.starts_with(&canon_root));
     }
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn write_text_file_creates_pending_overlay_and_blocks_second() {
+    let workspace = std::env::temp_dir().join(format!("acp-pending-{}", Uuid::new_v4()));
+    std::fs::create_dir_all(&workspace).unwrap();
+    let file_path = workspace.join("sample.R");
+    std::fs::write(&file_path, "old").unwrap();
+
+    let (session_tx, _session_rx) = tokio::sync::mpsc::unbounded_channel();
+    let (permission_tx, _permission_rx) = tokio::sync::mpsc::unbounded_channel();
+    let pending = Arc::new(Mutex::new(HashMap::new()));
+    let decision_meta: Arc<Mutex<HashMap<String, AcpPermissionDecisionScope>>> =
+        Arc::new(Mutex::new(HashMap::new()));
+    let edit_service = Arc::new(EditService::new(workspace.clone()));
+    let pending_edits = Arc::new(Mutex::new(PendingEditStore::default()));
+    let client = ReprodAcpClient::new(
+        workspace,
+        edit_service,
+        pending_edits,
+        session_tx,
+        permission_tx,
+        pending,
+        decision_meta,
+    );
+
+    let session_id = "s-pending";
+    let read_req = ReadTextFileRequest::new(session_id, file_path.clone());
+    let read_resp = client.read_text_file(read_req).await.unwrap();
+    assert_eq!(read_resp.content, "old");
+
+    let write_req = WriteTextFileRequest::new(session_id, file_path.clone(), "new-content");
+    client.write_text_file(write_req).await.unwrap();
+
+    let disk_contents = std::fs::read_to_string(&file_path).unwrap();
+    assert_eq!(disk_contents, "old");
+
+    let read_req = ReadTextFileRequest::new(session_id, file_path.clone());
+    let read_resp = client.read_text_file(read_req).await.unwrap();
+    assert_eq!(read_resp.content, "new-content");
+
+    let write_req = WriteTextFileRequest::new(session_id, file_path.clone(), "another");
+    let second = client.write_text_file(write_req).await;
+    assert!(second.is_err());
 }

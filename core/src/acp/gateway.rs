@@ -388,6 +388,160 @@ fn stringify_chunk(chunk: &ContentChunk) -> String {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::acp::pending_edit::PendingEdit;
+    use crate::edit::sha256_hex;
+    use tokio::fs;
+    use uuid::Uuid;
+
+    #[tokio::test]
+    async fn accept_pending_edit_persists_and_clears() {
+        let workspace = std::env::temp_dir().join(format!("acp-accept-{}", Uuid::new_v4()));
+        fs::create_dir_all(&workspace).await.unwrap();
+        let file_path = workspace.join("sample.R");
+        fs::write(&file_path, "old").await.unwrap();
+
+        let gateway = AcpGateway::new(workspace.clone());
+        let request = EditTextFileRequest {
+            path: "sample.R".to_string(),
+            operation: EditOperation::Replace,
+            expected_sha256: None,
+            new_text: Some("new".to_string()),
+            edits: None,
+        };
+        let result = gateway
+            .edit_service
+            .preview_text_file(request, None)
+            .await
+            .unwrap();
+
+        let pending = PendingEdit {
+            id: "edit-1".to_string(),
+            session_id: "s1".to_string(),
+            tool_call_id: "tool-1".to_string(),
+            file_path: "sample.R".to_string(),
+            old_text: result.old_text.clone(),
+            new_text: result.new_text.clone(),
+            unified_diff: result.unified_diff.clone(),
+            base_sha256: result.old_sha256.clone(),
+            expected_sha256: None,
+        };
+
+        {
+            let mut store = gateway.pending_edits.lock().await;
+            store
+                .register_pending_edit(pending.clone(), &result)
+                .unwrap();
+        }
+
+        gateway.accept_pending_edit(&pending.id).await.unwrap();
+        let disk_contents = fs::read_to_string(&file_path).await.unwrap();
+        assert_eq!(disk_contents, "new");
+
+        let store = gateway.pending_edits.lock().await;
+        assert!(store.get_edit(&pending.id).is_none());
+    }
+
+    #[tokio::test]
+    async fn reject_pending_edit_keeps_disk_unchanged() {
+        let workspace = std::env::temp_dir().join(format!("acp-reject-{}", Uuid::new_v4()));
+        fs::create_dir_all(&workspace).await.unwrap();
+        let file_path = workspace.join("sample.R");
+        fs::write(&file_path, "old").await.unwrap();
+
+        let gateway = AcpGateway::new(workspace.clone());
+        let request = EditTextFileRequest {
+            path: "sample.R".to_string(),
+            operation: EditOperation::Replace,
+            expected_sha256: None,
+            new_text: Some("new".to_string()),
+            edits: None,
+        };
+        let result = gateway
+            .edit_service
+            .preview_text_file(request, None)
+            .await
+            .unwrap();
+
+        let pending = PendingEdit {
+            id: "edit-2".to_string(),
+            session_id: "s2".to_string(),
+            tool_call_id: "tool-2".to_string(),
+            file_path: "sample.R".to_string(),
+            old_text: result.old_text.clone(),
+            new_text: result.new_text.clone(),
+            unified_diff: result.unified_diff.clone(),
+            base_sha256: result.old_sha256.clone(),
+            expected_sha256: None,
+        };
+
+        {
+            let mut store = gateway.pending_edits.lock().await;
+            store
+                .register_pending_edit(pending.clone(), &result)
+                .unwrap();
+        }
+
+        gateway.reject_pending_edit(&pending.id).await.unwrap();
+        let disk_contents = fs::read_to_string(&file_path).await.unwrap();
+        assert_eq!(disk_contents, "old");
+    }
+
+    #[tokio::test]
+    async fn accept_pending_edit_rejects_base_mismatch() {
+        let workspace = std::env::temp_dir().join(format!("acp-mismatch-{}", Uuid::new_v4()));
+        fs::create_dir_all(&workspace).await.unwrap();
+        let file_path = workspace.join("sample.R");
+        fs::write(&file_path, "old").await.unwrap();
+
+        let gateway = AcpGateway::new(workspace.clone());
+        let base_hash = sha256_hex("old");
+        let pending = PendingEdit {
+            id: "edit-3".to_string(),
+            session_id: "s3".to_string(),
+            tool_call_id: "tool-3".to_string(),
+            file_path: "sample.R".to_string(),
+            old_text: "old".to_string(),
+            new_text: "new".to_string(),
+            unified_diff: String::new(),
+            base_sha256: base_hash,
+            expected_sha256: None,
+        };
+
+        let preview = gateway
+            .edit_service
+            .preview_text_file(
+                EditTextFileRequest {
+                    path: "sample.R".to_string(),
+                    operation: EditOperation::Replace,
+                    expected_sha256: None,
+                    new_text: Some("new".to_string()),
+                    edits: None,
+                },
+                None,
+            )
+            .await
+            .unwrap();
+
+        {
+            let mut store = gateway.pending_edits.lock().await;
+            store
+                .register_pending_edit(pending.clone(), &preview)
+                .unwrap();
+        }
+
+        fs::write(&file_path, "changed").await.unwrap();
+
+        let result = gateway.accept_pending_edit(&pending.id).await;
+        assert!(result.is_err());
+
+        let store = gateway.pending_edits.lock().await;
+        assert!(store.get_edit(&pending.id).is_some());
+    }
+}
+
 fn tool_output_from(raw_output: Option<&Value>, content: &[ToolCallContent]) -> Option<Value> {
     if let Some(output) = raw_output {
         return Some(output.clone());
