@@ -1,5 +1,6 @@
 import type { StateCreator } from "zustand";
 import type { PendingEdit, PendingEditStatus } from "@/types/pendingEdit";
+import { normalizeRelativePath } from "@/core/pathUtils";
 
 export interface PendingEditState {
 	pendingEdits: Record<string, PendingEdit>;
@@ -12,36 +13,42 @@ export const createPendingEditSlice: StateCreator<PendingEditState> = (set, get)
 	pendingEdits: {},
 	registerPendingEdit: (edit) => {
 		const { pendingEdits } = get();
-		if (pendingEdits[edit.filePath]) {
+		const normalizedPath = normalizeRelativePath(edit.filePath, { keepRootEmpty: true });
+		if (pendingEdits[normalizedPath]) {
 			return false;
 		}
+		const normalizedEdit: PendingEdit = { ...edit, filePath: normalizedPath };
 		set({
 			pendingEdits: {
 				...pendingEdits,
-				[edit.filePath]: edit,
+				[normalizedPath]: normalizedEdit,
 			},
 		});
 		return true;
 	},
-	updatePendingEditStatus: (filePath, status) =>
+	updatePendingEditStatus: (filePath, status) => {
+		const normalizedPath = normalizeRelativePath(filePath, { keepRootEmpty: true });
 		set((state) => {
-			const existing = state.pendingEdits[filePath];
+			const existing = state.pendingEdits[normalizedPath];
 			if (!existing) return state;
 			return {
 				pendingEdits: {
 					...state.pendingEdits,
-					[filePath]: {
+					[normalizedPath]: {
 						...existing,
 						status,
 					},
 				},
 			};
-		}),
-	clearPendingEdit: (filePath) =>
+		});
+	},
+	clearPendingEdit: (filePath) => {
+		const normalizedPath = normalizeRelativePath(filePath, { keepRootEmpty: true });
 		set((state) => {
-			if (!state.pendingEdits[filePath]) return state;
+			if (!state.pendingEdits[normalizedPath]) return state;
 			const next = { ...state.pendingEdits };
-			delete next[filePath];
+			delete next[normalizedPath];
 			return { pendingEdits: next };
-		}),
+		});
+	},
 });

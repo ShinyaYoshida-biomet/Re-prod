@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useStore } from "@/core";
 import { buildPromptWithContext, createRequestId } from "@/core/ai/promptUtils";
 import { getAcpSystemPrompts } from "@/core/ai/systemPrompts";
+import { normalizeRelativePath } from "@/core/pathUtils";
 import { getExternalAgentClient } from "@/services/externalAgentClient";
 import { aiMessages } from "@/services/messageBuilders";
 import { socketService } from "@/services/socket";
@@ -183,10 +184,16 @@ export function useAIConversation() {
 				) {
 					const editPayload = (output as { edit?: any }).edit;
 					if (editPayload && typeof editPayload === "object") {
+						const normalizedFilePath = normalizeRelativePath(String(editPayload.file_path ?? ""), {
+							keepRootEmpty: true,
+						});
+						const normalizedEditorPath = normalizeRelativePath(editorFilepath, {
+							keepRootEmpty: true,
+						});
 						const pendingEdit: PendingEdit = {
 							id: String(editPayload.id ?? ""),
 							source: { type: "acp", sessionId: payload.session_id },
-							filePath: String(editPayload.file_path ?? ""),
+							filePath: normalizedFilePath,
 							oldContent: String(editPayload.old_text ?? ""),
 							newContent: String(editPayload.new_text ?? ""),
 							unifiedDiff: String(editPayload.unified_diff ?? ""),
@@ -196,11 +203,9 @@ export function useAIConversation() {
 							createdAt: Date.now(),
 						};
 
-						if (pendingEdit.filePath) {
-							const registered = registerPendingEdit(pendingEdit);
-							if (registered && pendingEdit.filePath === editorFilepath) {
-								setEditorContent(pendingEdit.newContent);
-							}
+						const registered = registerPendingEdit(pendingEdit);
+						if (registered && pendingEdit.filePath === normalizedEditorPath) {
+							setEditorContent(pendingEdit.newContent);
 						}
 					}
 				}

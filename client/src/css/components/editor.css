@@ -37,6 +37,29 @@
 	color: var(--text-primary, #1f1f1f);
 }
 
+.pending-edit-message {
+	flex: 1;
+	min-width: 0;
+	padding: 4px 8px;
+	border-radius: 6px;
+	font-weight: 500;
+	color: #1f1f1f;
+	background: #fff7cc;
+	border: 1px solid #f5d573;
+}
+
+.pending-edit-message.warning {
+	color: #5c3b00;
+	background: #fff5cc;
+	border-color: #f2d07a;
+}
+
+.pending-edit-message.error {
+	color: #6b0f0f;
+	background: #ffe1e1;
+	border-color: #f1a6a6;
+}
+
 .pending-edit-actions {
 	display: flex;
 	gap: 8px;

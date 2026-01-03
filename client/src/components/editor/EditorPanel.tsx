@@ -1,7 +1,15 @@
 import Editor, { type Monaco } from "@monaco-editor/react";
 import type { editor as MonacoEditor } from "monaco-editor";
 import type { ForwardedRef } from "react";
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
+import {
+	forwardRef,
+	useCallback,
+	useEffect,
+	useImperativeHandle,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { ConfirmDialog, IconPlay, IconPlayCircle, useToast } from "@/components/shared";
 import { useStore } from "@/core";
 import { computeTargetRange, findCodeInEditor, matchPatchChunk } from "@/core/ai/contextMatcher";
@@ -14,6 +22,7 @@ import type { AppliedCodeChange } from "@/core/state/slices/editorSlice";
 import { acceptPendingEdit, rejectPendingEdit } from "@/services/pendingEditService";
 import type { CodeBlock, CodeRange } from "@/types";
 import { clamp } from "@/utils/math";
+import { normalizeRelativePath } from "@/core/pathUtils";
 import type { EditorRef } from "./editorRef";
 
 function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Element {
@@ -30,13 +39,21 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	const setEditorRef = useStore((state) => state.setEditorRef);
 	const recordPatchMatchFailure = useStore((state) => state.recordPatchMatchFailure);
 	const recordPatchMatchSuccess = useStore((state) => state.recordPatchMatchSuccess);
-	const pendingEdit = useStore((state) => state.pendingEdits[editor.filepath]);
+	const normalizedEditorPath = useMemo(
+		() => normalizeRelativePath(editor.filepath, { keepRootEmpty: true }),
+		[editor.filepath],
+	);
+	const pendingEdit = useStore((state) => state.pendingEdits[normalizedEditorPath]);
 	const clearPendingEdit = useStore((state) => state.clearPendingEdit);
 	const updatePendingEditStatus = useStore((state) => state.updatePendingEditStatus);
 	const editorMethodsRef = useRef<EditorRef | null>(null);
 	const monacoEditorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
 	const { dialogState, showConfirm, handleConfirm, handleCancel } = useConfirmDialog();
 	const pendingEditWarningRef = useRef(false);
+	const [pendingNotice, setPendingNotice] = useState<{
+		type: "warning" | "error";
+		message: string;
+	} | null>(null);
 
 	const cells = useEditorCells(editor.content, editor.filepath);
 	const { state, actions } = useEditorExecution({
@@ -54,6 +71,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 
 	useEffect(() => {
 		pendingEditWarningRef.current = false;
+		setPendingNotice(null);
 	}, [pendingEdit?.id]);
 
 	useEffect(() => {
@@ -65,18 +83,27 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	const handlePendingAccept = useCallback(async () => {
 		if (!pendingEdit) return;
 		if (editor.content !== pendingEdit.newContent) {
-			toast.showWarning("Editor content changed since the pending edit was created.");
+			setPendingNotice({
+				type: "warning",
+				message: "Editor content changed since the pending edit was created.",
+			});
 			return;
 		}
 		try {
 			await acceptPendingEdit(pendingEdit);
 			updatePendingEditStatus(pendingEdit.filePath, "accepted");
 			clearPendingEdit(pendingEdit.filePath);
+			setPendingNotice(null);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Failed to accept pending edit";
-			toast.showError(message);
+			setPendingNotice({
+				type: "error",
+				message: message.includes("Pending edit not found")
+					? "Pending edit is no longer available. Re-run the change or reject it."
+					: message,
+			});
 		}
-	}, [clearPendingEdit, editor.content, pendingEdit, toast, updatePendingEditStatus]);
+	}, [clearPendingEdit, editor.content, pendingEdit, updatePendingEditStatus]);
 
 	const handlePendingReject = useCallback(async () => {
 		if (!pendingEdit) return;
@@ -85,11 +112,17 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 			setEditorContent(pendingEdit.oldContent);
 			updatePendingEditStatus(pendingEdit.filePath, "rejected");
 			clearPendingEdit(pendingEdit.filePath);
+			setPendingNotice(null);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Failed to reject pending edit";
-			toast.showError(message);
+			setPendingNotice({
+				type: "error",
+				message: message.includes("Pending edit not found")
+					? "Pending edit is no longer available. The buffer may already be resolved."
+					: message,
+			});
 		}
-	}, [clearPendingEdit, pendingEdit, setEditorContent, toast, updatePendingEditStatus]);
+	}, [clearPendingEdit, pendingEdit, setEditorContent, updatePendingEditStatus]);
 
 	useEffect(() => {
 		if (!pendingEdit) return;
@@ -113,7 +146,12 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	const handleEditorChange = (value: string | undefined): void => {
 		if (value !== undefined) {
 			if (pendingEdit && !pendingEditWarningRef.current) {
-				toast.showWarning("Resolve the pending edit before making additional changes.");
+				if (!pendingNotice || pendingNotice.type !== "error") {
+					setPendingNotice({
+						type: "warning",
+						message: "Resolve the pending edit before making additional changes.",
+					});
+				}
 				pendingEditWarningRef.current = true;
 			}
 			setEditorContent(value);
@@ -530,6 +568,11 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 						<div className="pending-edit-info">
 							Pending edit ({pendingEdit.source.type === "acp" ? "ACP" : "API Key"})
 						</div>
+						{pendingNotice && (
+							<div className={`pending-edit-message ${pendingNotice.type}`}>
+								{pendingNotice.message}
+							</div>
+						)}
 						<div className="pending-edit-actions">
 							<button className="btn btn-primary" onClick={handlePendingAccept} type="button">
 								Accept (Enter)
