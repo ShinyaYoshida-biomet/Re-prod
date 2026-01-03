@@ -23,6 +23,7 @@ use super::{NoopTimeline, TimelineSink};
 pub struct RExecutor {
     pub(crate) temp_dir: PathBuf,
     pub(crate) r_path: String,
+    pub(crate) r_version: Option<String>,
     pub(crate) working_dir: PathBuf,
     pub(crate) timeline: Arc<dyn TimelineSink>,
     pub(crate) command_runner: Arc<dyn CommandRunner>,
@@ -33,9 +34,11 @@ pub struct RExecutor {
 
 impl RExecutor {
     pub fn new(temp_dir: PathBuf, r_path: String) -> Self {
+        let r_version = Self::detect_r_version(&r_path);
         Self {
             temp_dir,
             r_path,
+            r_version,
             working_dir: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
             timeline: Arc::new(NoopTimeline),
             command_runner: Arc::new(ProcessCommandRunner::default()),
@@ -43,6 +46,54 @@ impl RExecutor {
             persistent_mode: false,
             record_runs: true,
         }
+    }
+
+    /// Detect R version by running `R --version` and parsing the output.
+    pub(crate) fn detect_r_version(r_path: &str) -> Option<String> {
+        // Try to run R --version (works for both R and Rscript)
+        let output = std::process::Command::new(r_path)
+            .arg("--version")
+            .output()
+            .ok()?;
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+
+        // R version is usually in stdout, but some systems output to stderr
+        let combined = format!("{}{}", stdout, stderr);
+
+        // Parse version from output like "R version 4.3.1 (2023-06-16)" or "Rscript (R) version 4.3.1"
+        Self::parse_r_version(&combined)
+    }
+
+    /// Parse R version from R --version output.
+    pub(crate) fn parse_r_version(output: &str) -> Option<String> {
+        // Look for patterns like "R version 4.3.1" or "version 4.3.1"
+        for line in output.lines() {
+            let line_lower = line.to_lowercase();
+            if line_lower.contains("version") {
+                // Extract version number (e.g., "4.3.1")
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                for (i, part) in parts.iter().enumerate() {
+                    if part.to_lowercase() == "version" {
+                        if let Some(version) = parts.get(i + 1) {
+                            // Clean up the version string (remove parentheses if present)
+                            let clean_version = version.trim_matches(|c| c == '(' || c == ')');
+                            // Validate it looks like a version number
+                            if clean_version
+                                .chars()
+                                .next()
+                                .map(|c| c.is_ascii_digit())
+                                .unwrap_or(false)
+                            {
+                                return Some(clean_version.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        None
     }
 
     pub fn builder(temp_dir: PathBuf, r_path: String) -> RExecutorBuilder {
@@ -170,10 +221,10 @@ impl RExecutor {
                         let _ = tx.send(chunk.clone());
                     }
                     if is_stdout {
-                        streamed_stdout.push(line.clone());
+                        streamed_stdout.push(line);
                         streamed_chunks.push(chunk);
                     } else {
-                        streamed_stderr.push(line.clone());
+                        streamed_stderr.push(line);
                         streamed_chunks.push(chunk);
                     }
                 },
@@ -281,6 +332,7 @@ if (length(dev.list()) > 0) {
 
     pub fn environment_snapshot(&self) -> EnvironmentSnapshot {
         EnvironmentSnapshot {
+            r_version: self.r_version.clone(),
             r_path: self.r_path.clone(),
             working_dir: self.working_dir.to_string_lossy().into_owned(),
             temp_dir: self.temp_dir.to_string_lossy().into_owned(),

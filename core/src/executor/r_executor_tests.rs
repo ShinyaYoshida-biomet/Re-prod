@@ -200,3 +200,37 @@ async fn streamed_chunks_exclude_internal_noise_lines() {
     assert!(chunks.iter().all(|c| !c.chunk.starts_with("REPROD_")));
     assert!(chunks.iter().any(|c| c.chunk.contains("Hello")));
 }
+
+#[test]
+fn test_parse_r_version_standard_output() {
+    // Standard R --version output
+    let output = "R version 4.3.1 (2023-06-16) -- \"Beagle Scouts\"
+Copyright (C) 2023 The R Foundation for Statistical Computing
+Platform: aarch64-apple-darwin20 (64-bit)";
+
+    let version = RExecutor::parse_r_version(output);
+    assert_eq!(version, Some("4.3.1".to_string()));
+}
+
+#[test]
+fn test_parse_r_version_rscript_output() {
+    // Rscript --version output (can vary by system)
+    let output = "R scripting front-end version 4.2.0 (2022-04-22)";
+
+    let version = RExecutor::parse_r_version(output);
+    assert_eq!(version, Some("4.2.0".to_string()));
+}
+
+#[test]
+fn test_parse_r_version_no_version() {
+    let output = "Some other output without version info";
+    let version = RExecutor::parse_r_version(output);
+    assert_eq!(version, None);
+}
+
+#[test]
+fn test_parse_r_version_empty() {
+    let output = "";
+    let version = RExecutor::parse_r_version(output);
+    assert_eq!(version, None);
+}

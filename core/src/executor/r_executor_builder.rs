@@ -89,9 +89,12 @@ impl RExecutorBuilder {
             self.command_runner
         };
 
+        let r_version = RExecutor::detect_r_version(&self.r_path);
+
         RExecutor {
             temp_dir: self.temp_dir,
             r_path: self.r_path,
+            r_version,
             working_dir: self.working_dir,
             timeline: self.timeline,
             command_runner,

@@ -169,6 +169,7 @@ pub struct ExecutionRequest {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
 #[ts(export, export_to = "../../client/src/types/generated/")]
 pub struct EnvironmentSnapshot {
+    pub r_version: Option<String>,
     pub r_path: String,
     pub working_dir: String,
     pub temp_dir: String,
@@ -370,6 +371,7 @@ mod tests {
                 execution_time_ms: 42,
             },
             environment: EnvironmentSnapshot {
+                r_version: None,
                 r_path: "Rscript".into(),
                 working_dir: "/tmp".into(),
                 temp_dir: "/tmp/reprod".into(),

@@ -194,6 +194,7 @@ mod tests {
                 execution_time_ms: 123,
             },
             environment: EnvironmentSnapshot {
+                r_version: None,
                 r_path: "Rscript".to_string(),
                 working_dir: "/tmp".to_string(),
                 temp_dir: "/tmp/reprod".to_string(),

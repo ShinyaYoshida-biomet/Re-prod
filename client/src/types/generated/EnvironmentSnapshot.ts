@@ -3,4 +3,4 @@
 /**
  * Snapshot of the environment used when executing R code.
  */
-export type EnvironmentSnapshot = { r_path: string; working_dir: string; temp_dir: string };
+export type EnvironmentSnapshot = { r_version: string | null, r_path: string, working_dir: string, temp_dir: string, };
