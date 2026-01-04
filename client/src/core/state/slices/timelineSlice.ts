@@ -20,6 +20,7 @@ export interface TimelineState {
 
 	// Actions
 	setEvents: (events: ExecutionEventPayload[], total: number, hasMore: boolean) => void;
+	appendEvents: (newEvents: ExecutionEventPayload[], total: number, hasMore: boolean) => void;
 	addEvent: (event: ExecutionEventPayload) => void;
 	setFilters: (filters: TimelineQuery["filters"]) => void;
 	setSort: (sort: "asc" | "desc") => void;
@@ -56,6 +57,23 @@ export const createTimelineSlice: StateCreator<TimelineState> = (set) => ({
 			loading: false,
 			error: null,
 		})),
+
+	appendEvents: (newEvents, total, hasMore) =>
+		set((state) => {
+			// Filter out duplicates by event_id
+			const existingIds = new Set(state.events.map((e) => e.event_id));
+			const uniqueNewEvents = newEvents.filter((e) => !existingIds.has(e.event_id));
+			const mergedEvents = [...state.events, ...uniqueNewEvents];
+
+			return {
+				events: mergedEvents,
+				total,
+				hasMore,
+				offset: mergedEvents.length,
+				loading: false,
+				error: null,
+			};
+		}),
 
 	addEvent: (event) =>
 		set((state) => {

@@ -37,7 +37,7 @@ impl ReproductionBundle {
         // Extract environment info from first event
         if let Some(first_event) = events.first() {
             metadata.environment = EnvironmentInfo {
-                r_version: None, // TODO: Extract from R execution if available
+                r_version: first_event.environment.r_version.clone(),
                 r_path: first_event.environment.r_path.clone(),
                 platform: Self::get_platform_string(),
                 working_dir: first_event.environment.working_dir.clone(),
@@ -298,6 +298,7 @@ mod tests {
                 execution_time_ms: 42,
             },
             environment: EnvironmentSnapshot {
+                r_version: None,
                 r_path: "Rscript".to_string(),
                 working_dir: "/tmp/test".to_string(),
                 temp_dir: "/tmp/reprod".to_string(),
