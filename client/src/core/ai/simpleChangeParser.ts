@@ -1,3 +1,4 @@
+import { isDiffAddition, isDiffContext, isDiffRemoval } from "@/constants/diff";
 import type { SimpleCodeChange } from "@/types";
 
 const CODE_FENCE_REGEX = /```[a-zA-Z0-9_-]*\n([\s\S]*?)```/g;
@@ -23,14 +24,14 @@ const parseDiffBlock = (block: string): SimpleCodeChange | null => {
 	const lines = normalizeBlock(block);
 	const diffLineIndexes = lines
 		.map((line, index) => ({ index, line }))
-		.filter(({ line }) => line.startsWith("-") || line.startsWith("+"));
+		.filter(({ line }) => isDiffRemoval(line) || isDiffAddition(line));
 
 	if (!diffLineIndexes.length) {
 		return null;
 	}
 
-	const hasAdditions = diffLineIndexes.some(({ line }) => line.startsWith("+"));
-	const hasRemovals = diffLineIndexes.some(({ line }) => line.startsWith("-"));
+	const hasAdditions = diffLineIndexes.some(({ line }) => isDiffAddition(line));
+	const hasRemovals = diffLineIndexes.some(({ line }) => isDiffRemoval(line));
 
 	if (!hasAdditions || !hasRemovals) {
 		return null;
@@ -47,17 +48,17 @@ const parseDiffBlock = (block: string): SimpleCodeChange | null => {
 
 	for (let idx = firstDiff; idx <= lastDiff; idx++) {
 		const line = lines[idx];
-		if (line.startsWith("-")) {
+		if (isDiffRemoval(line)) {
 			oldLines.push(line.slice(1));
 			continue;
 		}
-		if (line.startsWith("+")) {
+		if (isDiffAddition(line)) {
 			newLines.push(line.slice(1));
 			continue;
 		}
 		// Treat neutral lines (including blanks) within the diff span as shared context
-		oldLines.push(line.startsWith(" ") ? line.slice(1) : line);
-		newLines.push(line.startsWith(" ") ? line.slice(1) : line);
+		oldLines.push(isDiffContext(line) ? line.slice(1) : line);
+		newLines.push(isDiffContext(line) ? line.slice(1) : line);
 	}
 
 	if (!oldLines.length && !newLines.length) {
