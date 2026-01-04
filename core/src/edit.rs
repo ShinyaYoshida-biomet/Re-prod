@@ -128,14 +128,14 @@ impl EditService {
                     EditOperation::ApplyEdits => request.edits.clone().unwrap_or_default(),
                     _ => vec![TextEdit {
                         range: full_range(&old_text),
-                        text: new_text.clone(),
+                        text: new_text_snapshot.clone(),
                     }],
                 };
                 return Ok(EditTextFileResult {
                     status: EditStatus::Conflict,
                     path: request.path,
                     old_text: old_text.clone(),
-                    new_text,
+                    new_text: new_text_snapshot,
                     old_sha256: old_sha256.clone(),
                     new_sha256,
                     structured_edits,
