@@ -104,3 +104,23 @@ pub async fn handle_acp_pending_edit_reject(
         }),
     }
 }
+
+pub async fn handle_acp_pending_edit_update(
+    runtime: &Arc<ProjectRuntime>,
+    edit_id: &str,
+    new_text: &str,
+) -> Vec<WSResponse> {
+    match runtime.acp.update_pending_edit(edit_id, new_text).await {
+        Ok(()) => single_response(WSResponse::AcpPendingEditUpdated {
+            edit_id: edit_id.to_string(),
+            success: true,
+            error: None,
+        }),
+        Err(error) => single_response(WSResponse::AcpPendingEditUpdated {
+            edit_id: edit_id.to_string(),
+            success: false,
+            error: Some(error.to_string()),
+        }),
+    }
+}
+

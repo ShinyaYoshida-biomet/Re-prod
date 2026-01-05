@@ -45,4 +45,28 @@ describe("pendingEditSlice", () => {
 		store.getState().clearPendingEdit("/foo/bar.R");
 		expect(store.getState().pendingEdits["foo/bar.R"]).toBeUndefined();
 	});
+
+	it("tracks per-change reviews", () => {
+		const store = createTestStore();
+		const edit = makeEdit("foo/bar.R");
+
+		store.getState().registerPendingEdit(edit);
+		store.getState().updatePendingEditReview("foo/bar.R", "change-1", "reject");
+
+		expect(store.getState().pendingEdits["foo/bar.R"]?.reviewedChanges).toEqual({
+			"change-1": "reject",
+		});
+	});
+
+	it("replaces review map", () => {
+		const store = createTestStore();
+		const edit = makeEdit("foo/bar.R");
+
+		store.getState().registerPendingEdit(edit);
+		store.getState().setPendingEditReviewMap("foo/bar.R", { "change-2": "keep" });
+
+		expect(store.getState().pendingEdits["foo/bar.R"]?.reviewedChanges).toEqual({
+			"change-2": "keep",
+		});
+	});
 });

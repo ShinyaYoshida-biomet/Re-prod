@@ -45,3 +45,25 @@ export async function rejectPendingEdit(edit: PendingEdit): Promise<void> {
 		throw new Error(response.error || "Failed to reject pending edit");
 	}
 }
+
+export async function updatePendingEdit(edit: PendingEdit, newContent: string): Promise<void> {
+	if (edit.source.type !== "acp") {
+		return;
+	}
+
+	if (IS_TAURI) {
+		const { invoke } = await import("@tauri-apps/api/core");
+		await invoke("acp_update_pending_edit", { editId: edit.id, newText: newContent });
+		return;
+	}
+
+	const response = await socketService.request(
+		{ type: "acp_pending_edit_update", edit_id: edit.id, new_text: newContent },
+		"acp_pending_edit_updated",
+		(message) => message.edit_id === edit.id,
+	);
+
+	if (!response.success) {
+		throw new Error(response.error || "Failed to update pending edit");
+	}
+}

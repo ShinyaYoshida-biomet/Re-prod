@@ -185,3 +185,17 @@ pub async fn acp_reject_pending_edit(state: AcpState<'_>, edit_id: String) -> Re
         .await
         .map_err(|err| err.to_string())
 }
+
+#[tauri::command]
+pub async fn acp_update_pending_edit(
+    state: AcpState<'_>,
+    edit_id: String,
+    new_text: String,
+) -> Result<(), String> {
+    let manager = state.lock().await;
+    manager
+        .update_pending_edit(&edit_id, &new_text)
+        .await
+        .map_err(|err| err.to_string())
+}
+

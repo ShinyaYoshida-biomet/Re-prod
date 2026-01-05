@@ -215,6 +215,14 @@ impl AcpGateway {
         Ok(())
     }
 
+    pub async fn update_pending_edit(&self, edit_id: &str, new_text: &str) -> Result<()> {
+        let mut store = self.pending_edits.lock().await;
+        store
+            .update_edit_text(edit_id, new_text.to_string())
+            .map_err(|error| anyhow!(error))?;
+        Ok(())
+    }
+
     pub async fn reject_pending_edit(&self, edit_id: &str) -> Result<()> {
         let mut store = self.pending_edits.lock().await;
         if store.remove_edit(edit_id).is_none() {
@@ -487,6 +495,61 @@ mod tests {
         gateway.reject_pending_edit(&pending.id).await.unwrap();
         let disk_contents = fs::read_to_string(&file_path).await.unwrap();
         assert_eq!(disk_contents, "old");
+    }
+
+    #[tokio::test]
+    async fn update_pending_edit_refreshes_overlay() {
+        let workspace = std::env::temp_dir().join(format!("acp-update-{}", Uuid::new_v4()));
+        fs::create_dir_all(&workspace).await.unwrap();
+        let file_path = workspace.join("sample.R");
+        fs::write(&file_path, "old").await.unwrap();
+
+        let gateway = AcpGateway::new(workspace.clone());
+        let request = EditTextFileRequest {
+            path: "sample.R".to_string(),
+            operation: EditOperation::Replace,
+            expected_sha256: None,
+            new_text: Some("new".to_string()),
+            edits: None,
+        };
+        let result = gateway
+            .edit_service
+            .preview_text_file(request, None)
+            .await
+            .unwrap();
+
+        let pending = PendingEdit {
+            id: "edit-update".to_string(),
+            session_id: "s-update".to_string(),
+            tool_call_id: "tool-update".to_string(),
+            file_path: "sample.R".to_string(),
+            old_text: result.old_text.clone(),
+            new_text: result.new_text.clone(),
+            unified_diff: result.unified_diff.clone(),
+            base_sha256: result.old_sha256.clone(),
+            expected_sha256: None,
+        };
+
+        {
+            let mut store = gateway.pending_edits.lock().await;
+            store
+                .register_pending_edit(pending.clone(), &result)
+                .unwrap();
+        }
+
+        gateway
+            .update_pending_edit(&pending.id, "new-updated")
+            .await
+            .unwrap();
+
+        let store = gateway.pending_edits.lock().await;
+        let updated = store.get_edit(&pending.id).unwrap();
+        assert_eq!(updated.new_text, "new-updated");
+        let overlay = store
+            .overlay_for(&pending.session_id, &pending.file_path)
+            .unwrap();
+        assert_eq!(overlay.text, "new-updated");
+        assert_eq!(overlay.sha256, sha256_hex("new-updated"));
     }
 
     #[tokio::test]

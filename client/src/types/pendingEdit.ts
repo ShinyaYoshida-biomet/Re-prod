@@ -4,6 +4,9 @@ export type PendingEditSource =
 
 export type PendingEditStatus = "pending" | "accepted" | "rejected";
 
+export type PendingEditReviewStatus = "keep" | "reject";
+export type PendingEditReviewMap = Record<string, PendingEditReviewStatus>;
+
 export interface PendingEdit {
 	id: string;
 	source: PendingEditSource;
@@ -15,4 +18,5 @@ export interface PendingEdit {
 	expectedSha?: string | null;
 	status: PendingEditStatus;
 	createdAt: number;
+	reviewedChanges?: PendingEditReviewMap;
 }

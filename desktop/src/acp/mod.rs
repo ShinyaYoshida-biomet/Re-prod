@@ -96,6 +96,11 @@ impl AcpManager {
         self.gateway.reject_pending_edit(edit_id).await
     }
 
+    pub async fn update_pending_edit(&self, edit_id: &str, new_text: &str) -> Result<()> {
+        self.gateway.update_pending_edit(edit_id, new_text).await
+    }
+
+
     pub async fn shutdown(&mut self) {
         if let Some(handles) = self.forwarders.take() {
             handles.updates.abort();

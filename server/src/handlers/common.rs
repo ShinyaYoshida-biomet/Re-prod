@@ -186,6 +186,8 @@ pub(super) enum WSRequest {
     AcpPendingEditAccept { edit_id: String },
     #[serde(rename = "acp_pending_edit_reject")]
     AcpPendingEditReject { edit_id: String },
+    #[serde(rename = "acp_pending_edit_update")]
+    AcpPendingEditUpdate { edit_id: String, new_text: String },
 }
 
 #[derive(serde::Serialize)]
@@ -273,6 +275,13 @@ pub(super) enum WSResponse {
     ProjectStateSaved { project_id: String },
     #[serde(rename = "acp_pending_edit_resolved")]
     AcpPendingEditResolved {
+        edit_id: String,
+        success: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        error: Option<String>,
+    },
+    #[serde(rename = "acp_pending_edit_updated")]
+    AcpPendingEditUpdated {
         edit_id: String,
         success: bool,
         #[serde(skip_serializing_if = "Option::is_none")]

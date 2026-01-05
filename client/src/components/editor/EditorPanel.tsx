@@ -14,15 +14,26 @@ import { ConfirmDialog, IconPlay, IconPlayCircle, useToast } from "@/components/
 import { useStore } from "@/core";
 import { computeTargetRange, findCodeInEditor, matchPatchChunk } from "@/core/ai/contextMatcher";
 import { commandRegistry } from "@/core/commands/registry";
+import type { AppliedCodeChange } from "@/core/state/slices/editorSlice";
+import { normalizeRelativePath } from "@/core/pathUtils";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useEditorCells } from "@/hooks/useEditorCells";
 import { useEditorDecorations } from "@/hooks/useEditorDecorations";
 import { useEditorExecution } from "@/hooks/useEditorExecution";
-import type { AppliedCodeChange } from "@/core/state/slices/editorSlice";
-import { acceptPendingEdit, rejectPendingEdit } from "@/services/pendingEditService";
+import {
+	acceptPendingEdit,
+	rejectPendingEdit,
+	updatePendingEdit,
+} from "@/services/pendingEditService";
 import type { CodeBlock, CodeRange } from "@/types";
+import type { PendingEditReviewMap, PendingEditReviewStatus } from "@/types/pendingEdit";
 import { clamp } from "@/utils/math";
-import { normalizeRelativePath } from "@/core/pathUtils";
+import {
+	applyPendingEditChanges,
+	buildDiffChanges,
+	buildDiffHunks,
+} from "@/utils/pendingEditDiff";
+import { PendingEditDiffView } from "./PendingEditDiffView";
 import type { EditorRef } from "./editorRef";
 
 function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Element {
@@ -46,14 +57,70 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	const pendingEdit = useStore((state) => state.pendingEdits[normalizedEditorPath]);
 	const clearPendingEdit = useStore((state) => state.clearPendingEdit);
 	const updatePendingEditStatus = useStore((state) => state.updatePendingEditStatus);
+	const updatePendingEditReview = useStore((state) => state.updatePendingEditReview);
+	const setPendingEditReviewMap = useStore((state) => state.setPendingEditReviewMap);
 	const editorMethodsRef = useRef<EditorRef | null>(null);
 	const monacoEditorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
 	const { dialogState, showConfirm, handleConfirm, handleCancel } = useConfirmDialog();
 	const pendingEditWarningRef = useRef(false);
+	const skipPendingNoticeRef = useRef(false);
+	const [monacoInstance, setMonacoInstance] = useState<Monaco | null>(null);
 	const [pendingNotice, setPendingNotice] = useState<{
 		type: "warning" | "error";
 		message: string;
 	} | null>(null);
+	const pendingEditReviewMap = pendingEdit?.reviewedChanges ?? {};
+	const pendingEditDiff = useMemo(() => {
+		if (!pendingEdit || !monacoInstance) return null;
+		const language = monacoEditorRef.current?.getModel()?.getLanguageId();
+		const original = monacoInstance.editor.createModel(pendingEdit.oldContent, language);
+		const modified = monacoInstance.editor.createModel(pendingEdit.newContent, language);
+		try {
+			const result = monacoInstance.editor.computeDiff(original, modified, {
+				ignoreTrimWhitespace: false,
+				maxComputationTime: 2000,
+			});
+			const diffChanges = buildDiffChanges(
+				pendingEdit.oldContent,
+				pendingEdit.newContent,
+				result.changes ?? [],
+			);
+			return {
+				changes: diffChanges,
+				hunks: buildDiffHunks(diffChanges),
+			};
+		} finally {
+			original.dispose();
+			modified.dispose();
+		}
+	}, [monacoInstance, pendingEdit]);
+	const reviewedContent = useMemo(() => {
+		if (!pendingEdit || !pendingEditDiff) return null;
+		return applyPendingEditChanges(
+			pendingEdit.oldContent,
+			pendingEditDiff.changes,
+			pendingEditReviewMap,
+		);
+	}, [pendingEdit, pendingEditDiff, pendingEditReviewMap]);
+	const pendingEditSummary = useMemo(() => {
+		if (!pendingEditDiff) {
+			return { total: 0, keep: 0, reject: 0, pending: 0 };
+		}
+		let keep = 0;
+		let reject = 0;
+		let pending = 0;
+		for (const change of pendingEditDiff.changes) {
+			const status = pendingEditReviewMap[change.id];
+			if (status === "keep") {
+				keep += 1;
+			} else if (status === "reject") {
+				reject += 1;
+			} else {
+				pending += 1;
+			}
+		}
+		return { total: pendingEditDiff.changes.length, keep, reject, pending };
+	}, [pendingEditDiff, pendingEditReviewMap]);
 
 	const cells = useEditorCells(editor.content, editor.filepath);
 	const { state, actions } = useEditorExecution({
@@ -76,20 +143,41 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 
 	useEffect(() => {
 		if (!pendingEdit) return;
-		if (editor.content === pendingEdit.newContent) return;
-		setEditorContent(pendingEdit.newContent);
-	}, [editor.content, pendingEdit, setEditorContent]);
+		if (reviewedContent === null) return;
+		if (editor.content === reviewedContent) return;
+		skipPendingNoticeRef.current = true;
+		setEditorContent(reviewedContent);
+	}, [editor.content, pendingEdit, reviewedContent, setEditorContent]);
+
+	useEffect(() => {
+		if (!pendingEdit || !pendingEditDiff) return;
+		const nextMap: PendingEditReviewMap = { ...pendingEditReviewMap };
+		let updated = false;
+		for (const change of pendingEditDiff.changes) {
+			if (!(change.id in nextMap)) {
+				nextMap[change.id] = "keep";
+				updated = true;
+			}
+		}
+		if (updated) {
+			setPendingEditReviewMap(pendingEdit.filePath, nextMap);
+		}
+	}, [pendingEdit, pendingEditDiff, pendingEditReviewMap, setPendingEditReviewMap]);
 
 	const handlePendingAccept = useCallback(async () => {
 		if (!pendingEdit) return;
-		if (editor.content !== pendingEdit.newContent) {
+		const resolvedContent = reviewedContent ?? pendingEdit.newContent;
+		if (editor.content !== resolvedContent) {
 			setPendingNotice({
 				type: "warning",
-				message: "Editor content changed since the pending edit was created.",
+				message: "Editor content changed since the pending edit review.",
 			});
 			return;
 		}
 		try {
+			if (pendingEdit.source.type === "acp" && resolvedContent !== pendingEdit.newContent) {
+				await updatePendingEdit(pendingEdit, resolvedContent);
+			}
 			await acceptPendingEdit(pendingEdit);
 			updatePendingEditStatus(pendingEdit.filePath, "accepted");
 			clearPendingEdit(pendingEdit.filePath);
@@ -103,7 +191,14 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 					: message,
 			});
 		}
-	}, [clearPendingEdit, editor.content, pendingEdit, updatePendingEditStatus]);
+	}, [
+		clearPendingEdit,
+		editor.content,
+		pendingEdit,
+		reviewedContent,
+		updatePendingEdit,
+		updatePendingEditStatus,
+	]);
 
 	const handlePendingReject = useCallback(async () => {
 		if (!pendingEdit) return;
@@ -123,6 +218,32 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 			});
 		}
 	}, [clearPendingEdit, pendingEdit, setEditorContent, updatePendingEditStatus]);
+
+	const handlePendingReviewChange = useCallback(
+		(changeId: string, status: PendingEditReviewStatus) => {
+			if (!pendingEdit) return;
+			updatePendingEditReview(pendingEdit.filePath, changeId, status);
+		},
+		[pendingEdit, updatePendingEditReview],
+	);
+
+	const handlePendingKeepAll = useCallback(() => {
+		if (!pendingEdit || !pendingEditDiff) return;
+		const nextMap: PendingEditReviewMap = {};
+		for (const change of pendingEditDiff.changes) {
+			nextMap[change.id] = "keep";
+		}
+		setPendingEditReviewMap(pendingEdit.filePath, nextMap);
+	}, [pendingEdit, pendingEditDiff, setPendingEditReviewMap]);
+
+	const handlePendingRejectAll = useCallback(() => {
+		if (!pendingEdit || !pendingEditDiff) return;
+		const nextMap: PendingEditReviewMap = {};
+		for (const change of pendingEditDiff.changes) {
+			nextMap[change.id] = "reject";
+		}
+		setPendingEditReviewMap(pendingEdit.filePath, nextMap);
+	}, [pendingEdit, pendingEditDiff, setPendingEditReviewMap]);
 
 	useEffect(() => {
 		if (!pendingEdit) return;
@@ -145,6 +266,11 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 
 	const handleEditorChange = (value: string | undefined): void => {
 		if (value !== undefined) {
+			if (pendingEdit && skipPendingNoticeRef.current) {
+				skipPendingNoticeRef.current = false;
+				setEditorContent(value);
+				return;
+			}
 			if (pendingEdit && !pendingEditWarningRef.current) {
 				if (!pendingNotice || pendingNotice.type !== "error") {
 					setPendingNotice({
@@ -501,6 +627,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	): void => {
 		monacoEditorRef.current = monacoEditor;
 		setMonacoEditor(monacoEditor);
+		setMonacoInstance(monaco);
 
 		// Track cursor position
 		monacoEditor.onDidChangeCursorPosition((e) => {
@@ -564,23 +691,51 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 					</div>
 				</div>
 				{pendingEdit && (
-					<div className="pending-edit-toolbar">
-						<div className="pending-edit-info">
-							Pending edit ({pendingEdit.source.type === "acp" ? "ACP" : "API Key"})
+					<div className="pending-edit-review">
+						<div className="pending-edit-review-toolbar">
+							<div className="pending-edit-review-summary">
+								Pending edit ({pendingEdit.source.type === "acp" ? "ACP" : "API Key"})
+							</div>
+							<div className="pending-edit-review-meta">
+								{pendingEditSummary.total} hunks · {pendingEditSummary.keep} keep ·{" "}
+								{pendingEditSummary.reject} reject · {pendingEditSummary.pending} pending
+							</div>
+							{pendingNotice && (
+								<div className={`pending-edit-message ${pendingNotice.type}`}>
+									{pendingNotice.message}
+								</div>
+							)}
+							<div className="pending-edit-review-actions">
+								<button className="btn" onClick={handlePendingKeepAll} type="button">
+									Keep All
+								</button>
+								<button className="btn" onClick={handlePendingRejectAll} type="button">
+									Reject All
+								</button>
+								<button
+									className="btn btn-primary"
+									onClick={handlePendingAccept}
+									type="button"
+								>
+									Apply (Enter)
+								</button>
+								<button className="btn" onClick={handlePendingReject} type="button">
+									Discard (Esc)
+								</button>
+							</div>
 						</div>
-						{pendingNotice && (
-							<div className={`pending-edit-message ${pendingNotice.type}`}>
-								{pendingNotice.message}
+						{pendingEditDiff && pendingEditDiff.hunks.length > 0 ? (
+							<PendingEditDiffView
+								hunks={pendingEditDiff.hunks}
+								reviewMap={pendingEditReviewMap}
+								onReviewChange={handlePendingReviewChange}
+								onNavigateToLine={navigateToLine}
+							/>
+						) : (
+							<div className="pending-edit-message warning">
+								No pending changes detected in the diff view.
 							</div>
 						)}
-						<div className="pending-edit-actions">
-							<button className="btn btn-primary" onClick={handlePendingAccept} type="button">
-								Accept (Enter)
-							</button>
-							<button className="btn" onClick={handlePendingReject} type="button">
-								Reject (Esc)
-							</button>
-						</div>
 					</div>
 				)}
 				<div className="panel-content">
@@ -601,6 +756,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 							tabSize: 2,
 							automaticLayout: true,
 							padding: { top: 8, bottom: 8 },
+							readOnly: Boolean(pendingEdit),
 							scrollbar: {
 								useShadows: false,
 								verticalScrollbarSize: 12,
