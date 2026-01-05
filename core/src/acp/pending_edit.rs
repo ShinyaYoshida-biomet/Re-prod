@@ -70,7 +70,11 @@ impl PendingEditStore {
         self.edits_by_id.get(edit_id).cloned()
     }
 
-    pub fn update_edit_text(&mut self, edit_id: &str, new_text: String) -> Result<PendingEdit, String> {
+    pub fn update_edit_text(
+        &mut self,
+        edit_id: &str,
+        new_text: String,
+    ) -> Result<PendingEdit, String> {
         let edit = self
             .edits_by_id
             .get_mut(edit_id)

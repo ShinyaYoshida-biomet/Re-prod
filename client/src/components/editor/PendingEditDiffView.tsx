@@ -61,10 +61,7 @@ export function PendingEditDiffView({
 						</div>
 						<div className="pending-edit-lines">
 							{hunk.lines.map((line, index) => (
-								<div
-									className={`pending-edit-line ${line.type}`}
-									key={`${hunk.id}-${index}`}
-								>
+								<div className={`pending-edit-line ${line.type}`} key={`${hunk.id}-${index}`}>
 									<span className="line-number old">{line.oldLine ?? ""}</span>
 									<span className="line-number new">{line.newLine ?? ""}</span>
 									<span className="line-content">{line.content}</span>

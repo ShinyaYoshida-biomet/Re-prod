@@ -28,11 +28,7 @@ import {
 import type { CodeBlock, CodeRange } from "@/types";
 import type { PendingEditReviewMap, PendingEditReviewStatus } from "@/types/pendingEdit";
 import { clamp } from "@/utils/math";
-import {
-	applyPendingEditChanges,
-	buildDiffChanges,
-	buildDiffHunks,
-} from "@/utils/pendingEditDiff";
+import { applyPendingEditChanges, buildDiffChanges, buildDiffHunks } from "@/utils/pendingEditDiff";
 import { PendingEditDiffView } from "./PendingEditDiffView";
 import type { EditorRef } from "./editorRef";
 
@@ -73,23 +69,25 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	const pendingEditDiff = useMemo(() => {
 		if (!pendingEdit || !monacoInstance) return null;
 		const language = monacoEditorRef.current?.getModel()?.getLanguageId();
+		if (typeof document === "undefined") {
+			return null;
+		}
 		const original = monacoInstance.editor.createModel(pendingEdit.oldContent, language);
 		const modified = monacoInstance.editor.createModel(pendingEdit.newContent, language);
+		const diffContainer = document.createElement("div");
+		const diffEditor = monacoInstance.editor.createDiffEditor(diffContainer, {
+			readOnly: true,
+		});
 		try {
-			const result = monacoInstance.editor.computeDiff(original, modified, {
-				ignoreTrimWhitespace: false,
-				maxComputationTime: 2000,
-			});
-			const diffChanges = buildDiffChanges(
-				pendingEdit.oldContent,
-				pendingEdit.newContent,
-				result.changes ?? [],
-			);
+			diffEditor.setModel({ original, modified });
+			const changes = diffEditor.getLineChanges() ?? [];
+			const diffChanges = buildDiffChanges(pendingEdit.oldContent, pendingEdit.newContent, changes);
 			return {
 				changes: diffChanges,
 				hunks: buildDiffHunks(diffChanges),
 			};
 		} finally {
+			diffEditor.dispose();
 			original.dispose();
 			modified.dispose();
 		}
@@ -712,11 +710,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 								<button className="btn" onClick={handlePendingRejectAll} type="button">
 									Reject All
 								</button>
-								<button
-									className="btn btn-primary"
-									onClick={handlePendingAccept}
-									type="button"
-								>
+								<button className="btn btn-primary" onClick={handlePendingAccept} type="button">
 									Apply (Enter)
 								</button>
 								<button className="btn" onClick={handlePendingReject} type="button">

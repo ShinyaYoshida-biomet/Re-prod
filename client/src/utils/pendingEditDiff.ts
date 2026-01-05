@@ -65,11 +65,7 @@ export const buildDiffChanges = (
 		const oldLinesSlice = sliceLines(oldLines, originalStartLine, originalEndLine);
 		const newLinesSlice = sliceLines(newLines, modifiedStartLine, modifiedEndLine);
 		const type =
-			oldLinesSlice.length === 0
-				? "add"
-				: newLinesSlice.length === 0
-					? "remove"
-					: "modify";
+			oldLinesSlice.length === 0 ? "add" : newLinesSlice.length === 0 ? "remove" : "modify";
 
 		return {
 			id: buildChangeId(change, index),
