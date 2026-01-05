@@ -14,8 +14,9 @@ import { ConfirmDialog, IconPlay, IconPlayCircle, useToast } from "@/components/
 import { useStore } from "@/core";
 import { computeTargetRange, findCodeInEditor, matchPatchChunk } from "@/core/ai/contextMatcher";
 import { commandRegistry } from "@/core/commands/registry";
+import { useFileSystemStore } from "@/core/fileSystemStore";
 import type { AppliedCodeChange } from "@/core/state/slices/editorSlice";
-import { normalizeRelativePath } from "@/core/pathUtils";
+import { normalizeWorkspaceRelativePath } from "@/core/pathUtils";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useEditorCells } from "@/hooks/useEditorCells";
 import { useEditorDecorations } from "@/hooks/useEditorDecorations";
@@ -37,6 +38,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	const editor = useStore((state) => state.editor);
 	const execution = useStore((state) => state.execution);
 	const settings = useStore((state) => state.settings);
+	const workspaceRoot = useFileSystemStore((state) => state.workspaceRoot);
 	const setEditorContent = useStore((state) => state.setEditorContent);
 	const setEditorCursorPosition = useStore((state) => state.setEditorCursorPosition);
 	const setApplyCodeChange = useStore((state) => state.setApplyCodeChange);
@@ -47,8 +49,8 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	const recordPatchMatchFailure = useStore((state) => state.recordPatchMatchFailure);
 	const recordPatchMatchSuccess = useStore((state) => state.recordPatchMatchSuccess);
 	const normalizedEditorPath = useMemo(
-		() => normalizeRelativePath(editor.filepath, { keepRootEmpty: true }),
-		[editor.filepath],
+		() => normalizeWorkspaceRelativePath(editor.filepath, workspaceRoot, { keepRootEmpty: true }),
+		[editor.filepath, workspaceRoot],
 	);
 	const pendingEdit = useStore((state) => state.pendingEdits[normalizedEditorPath]);
 	const clearPendingEdit = useStore((state) => state.clearPendingEdit);

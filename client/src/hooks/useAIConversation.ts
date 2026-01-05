@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useStore } from "@/core";
+import { useFileSystemStore } from "@/core/fileSystemStore";
 import { buildPromptWithContext, createRequestId } from "@/core/ai/promptUtils";
 import { getAcpSystemPrompts } from "@/core/ai/systemPrompts";
-import { normalizeRelativePath } from "@/core/pathUtils";
+import { normalizeWorkspaceRelativePath } from "@/core/pathUtils";
 import { getExternalAgentClient } from "@/services/externalAgentClient";
 import { aiMessages } from "@/services/messageBuilders";
 import { socketService } from "@/services/socket";
@@ -54,6 +55,7 @@ export function useAIConversation() {
 	const editorContent = useStore((state) => state.editor.content);
 	const editorFilepath = useStore((state) => state.editor.filepath);
 	const consoleHistory = useStore((state) => state.execution.results);
+	const workspaceRoot = useFileSystemStore((state) => state.workspaceRoot);
 
 	const { clearTimeoutRef, startTimeout } = useAITimeout();
 	const { registerStreamingHandlers } = useAIStreaming();
@@ -184,12 +186,18 @@ export function useAIConversation() {
 				) {
 					const editPayload = (output as { edit?: any }).edit;
 					if (editPayload && typeof editPayload === "object") {
-						const normalizedFilePath = normalizeRelativePath(String(editPayload.file_path ?? ""), {
-							keepRootEmpty: true,
-						});
-						const normalizedEditorPath = normalizeRelativePath(editorFilepath, {
-							keepRootEmpty: true,
-						});
+						const normalizedFilePath = normalizeWorkspaceRelativePath(
+							String(editPayload.file_path ?? ""),
+							workspaceRoot,
+							{ keepRootEmpty: true },
+						);
+						const normalizedEditorPath = normalizeWorkspaceRelativePath(
+							editorFilepath,
+							workspaceRoot,
+							{
+								keepRootEmpty: true,
+							},
+						);
 						const pendingEdit: PendingEdit = {
 							id: String(editPayload.id ?? ""),
 							source: { type: "acp", sessionId: payload.session_id },
@@ -230,6 +238,7 @@ export function useAIConversation() {
 			editorFilepath,
 			setEditorContent,
 			startStreamingMessage,
+			workspaceRoot,
 			updatePlan,
 		],
 	);
