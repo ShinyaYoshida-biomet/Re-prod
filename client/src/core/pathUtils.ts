@@ -18,6 +18,28 @@ export const normalizeRelativePath = (
 	return normalized;
 };
 
+export const normalizeWorkspaceRelativePath = (
+	path: string,
+	workspaceRoot: string,
+	options?: { keepRootEmpty?: boolean },
+): string => {
+	if (!path) {
+		return normalizeRelativePath(path, options);
+	}
+	const normalizedRoot = normalizeSeparators(workspaceRoot).replace(/\/+$/, "");
+	const normalizedPath = normalizeSeparators(path);
+	if (normalizedRoot) {
+		if (normalizedPath === normalizedRoot) {
+			return options?.keepRootEmpty ? "" : ROOT_PATH;
+		}
+		if (normalizedPath.startsWith(`${normalizedRoot}/`)) {
+			const relative = normalizedPath.slice(normalizedRoot.length + 1);
+			return normalizeRelativePath(relative, options);
+		}
+	}
+	return normalizeRelativePath(path, options);
+};
+
 export const normalizePathInput = (path: string): string => {
 	const normalized = normalizeRelativePath(path, { keepRootEmpty: true });
 	return normalized || ROOT_PATH;
