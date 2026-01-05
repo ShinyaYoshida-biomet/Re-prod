@@ -130,6 +130,14 @@ impl AcpService {
         Ok(())
     }
 
+    pub async fn update_pending_edit(&self, edit_id: &str, new_text: &str) -> Result<()> {
+        self.rate_limit("pending_edit_update").await?;
+        self.ensure_agent_running().await?;
+        let gateway = self.gateway.lock().await;
+        gateway.update_pending_edit(edit_id, new_text).await?;
+        Ok(())
+    }
+
     pub async fn subscribe_session_updates(&self) -> broadcast::Receiver<AcpSessionUpdateEnvelope> {
         let gateway = self.gateway.lock().await;
         gateway.subscribe_session_updates()
