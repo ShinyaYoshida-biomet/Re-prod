@@ -6,7 +6,6 @@ import type {
 	AcpPromptMessage,
 	AcpSessionUpdateEnvelope,
 } from "@/types/generated";
-import { socketService } from "@/services/socket";
 import { showToast } from "@/services/toastService";
 
 export type ExternalAgentClientMode = "desktop" | "web";
@@ -59,8 +58,6 @@ class DesktopAcpClient implements ExternalAgentClient {
 			} catch (error) {
 				console.error("Failed to bind ACP session update listener", error);
 				showToast("Failed to connect to AI agent. Please restart the application.", "error");
-			});
-
 			}
 		})();
 		return () => {
@@ -102,8 +99,6 @@ class DesktopAcpClient implements ExternalAgentClient {
 					"Failed to initialize permission system. Agent requests may not work properly.",
 					"error",
 				);
-			});
-
 			}
 		})();
 		return () => {
