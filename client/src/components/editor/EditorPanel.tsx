@@ -256,6 +256,23 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		}
 	}, [clearPendingEdit, pendingEdit, setEditorContent, updatePendingEditStatus]);
 
+	const navigateToLine = useCallback((lineNumber: number): void => {
+		const monacoEditor = monacoEditorRef.current;
+		if (!monacoEditor) {
+			return;
+		}
+
+		const model = monacoEditor.getModel();
+		if (!model) {
+			return;
+		}
+
+		const clampLine = clamp(lineNumber, 1, model.getLineCount());
+		monacoEditor.revealLine(clampLine);
+		monacoEditor.setPosition({ lineNumber: clampLine, column: 1 });
+		monacoEditor.focus();
+	}, []);
+
 	const handlePendingReviewChange = useCallback(
 		(changeId: string, status: PendingEditReviewStatus) => {
 			if (!pendingEdit || !pendingEditDiff) return;
@@ -345,23 +362,6 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 			setEditorContent(value);
 		}
 	};
-
-	const navigateToLine = useCallback((lineNumber: number): void => {
-		const monacoEditor = monacoEditorRef.current;
-		if (!monacoEditor) {
-			return;
-		}
-
-		const model = monacoEditor.getModel();
-		if (!model) {
-			return;
-		}
-
-		const clampLine = clamp(lineNumber, 1, model.getLineCount());
-		monacoEditor.revealLine(clampLine);
-		monacoEditor.setPosition({ lineNumber: clampLine, column: 1 });
-		monacoEditor.focus();
-	}, []);
 
 	const focusEditor = useCallback((): void => {
 		const monacoEditor = monacoEditorRef.current;
