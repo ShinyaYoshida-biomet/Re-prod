@@ -29,11 +29,22 @@ import {
 import type { CodeBlock, CodeRange } from "@/types";
 import type { PendingEditReviewMap, PendingEditReviewStatus } from "@/types/pendingEdit";
 import { clamp } from "@/utils/math";
-import { applyPendingEditChanges, buildDiffChanges, buildDiffHunks } from "@/utils/pendingEditDiff";
+import {
+	applyPendingEditChanges,
+	buildDiffChanges,
+	buildDiffHunks,
+	type DiffChange,
+	type DiffHunk,
+} from "@/utils/pendingEditDiff";
 import { PendingEditDiffView } from "./PendingEditDiffView";
 import type { EditorRef } from "./editorRef";
 
 function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Element {
+	type PendingEditDiff = {
+		changes: DiffChange[];
+		hunks: DiffHunk[];
+	};
+
 	const toast = useToast();
 	const editor = useStore((state) => state.editor);
 	const execution = useStore((state) => state.execution);
@@ -68,32 +79,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		message: string;
 	} | null>(null);
 	const pendingEditReviewMap = pendingEdit?.reviewedChanges ?? {};
-	const pendingEditDiff = useMemo(() => {
-		if (!pendingEdit || !monacoInstance) return null;
-		const language = monacoEditorRef.current?.getModel()?.getLanguageId();
-		if (typeof document === "undefined") {
-			return null;
-		}
-		const original = monacoInstance.editor.createModel(pendingEdit.oldContent, language);
-		const modified = monacoInstance.editor.createModel(pendingEdit.newContent, language);
-		const diffContainer = document.createElement("div");
-		const diffEditor = monacoInstance.editor.createDiffEditor(diffContainer, {
-			readOnly: true,
-		});
-		try {
-			diffEditor.setModel({ original, modified });
-			const changes = diffEditor.getLineChanges() ?? [];
-			const diffChanges = buildDiffChanges(pendingEdit.oldContent, pendingEdit.newContent, changes);
-			return {
-				changes: diffChanges,
-				hunks: buildDiffHunks(diffChanges),
-			};
-		} finally {
-			diffEditor.dispose();
-			original.dispose();
-			modified.dispose();
-		}
-	}, [monacoInstance, pendingEdit]);
+	const [pendingEditDiff, setPendingEditDiff] = useState<PendingEditDiff | null>(null);
 	const reviewedContent = useMemo(() => {
 		if (!pendingEdit || !pendingEditDiff) return null;
 		return applyPendingEditChanges(
@@ -121,6 +107,51 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		}
 		return { total: pendingEditDiff.changes.length, keep, reject, pending };
 	}, [pendingEditDiff, pendingEditReviewMap]);
+
+	useEffect(() => {
+		if (!pendingEdit || !monacoInstance) {
+			setPendingEditDiff(null);
+			return;
+		}
+		if (typeof document === "undefined") {
+			setPendingEditDiff(null);
+			return;
+		}
+
+		setPendingEditDiff(null);
+
+		const language = monacoEditorRef.current?.getModel()?.getLanguageId();
+		const original = monacoInstance.editor.createModel(pendingEdit.oldContent, language);
+		const modified = monacoInstance.editor.createModel(pendingEdit.newContent, language);
+		const diffContainer = document.createElement("div");
+		const diffEditor = monacoInstance.editor.createDiffEditor(diffContainer, {
+			readOnly: true,
+		});
+		let disposed = false;
+
+		const updateDiff = (): void => {
+			if (disposed) return;
+			const changes = diffEditor.getLineChanges();
+			if (!changes) return;
+			const diffChanges = buildDiffChanges(pendingEdit.oldContent, pendingEdit.newContent, changes);
+			setPendingEditDiff({
+				changes: diffChanges,
+				hunks: buildDiffHunks(diffChanges),
+			});
+		};
+
+		const subscription = diffEditor.onDidUpdateDiff(updateDiff);
+		diffEditor.setModel({ original, modified });
+		updateDiff();
+
+		return () => {
+			disposed = true;
+			subscription.dispose();
+			diffEditor.dispose();
+			original.dispose();
+			modified.dispose();
+		};
+	}, [monacoInstance, pendingEdit]);
 
 	const cells = useEditorCells(editor.content, editor.filepath);
 	const { state, actions } = useEditorExecution({
@@ -720,17 +751,21 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 								</button>
 							</div>
 						</div>
-						{pendingEditDiff && pendingEditDiff.hunks.length > 0 ? (
-							<PendingEditDiffView
-								hunks={pendingEditDiff.hunks}
-								reviewMap={pendingEditReviewMap}
-								onReviewChange={handlePendingReviewChange}
-								onNavigateToLine={navigateToLine}
-							/>
+						{pendingEditDiff ? (
+							pendingEditDiff.hunks.length > 0 ? (
+								<PendingEditDiffView
+									hunks={pendingEditDiff.hunks}
+									reviewMap={pendingEditReviewMap}
+									onReviewChange={handlePendingReviewChange}
+									onNavigateToLine={navigateToLine}
+								/>
+							) : (
+								<div className="pending-edit-message warning">
+									No pending changes detected in the diff view.
+								</div>
+							)
 						) : (
-							<div className="pending-edit-message warning">
-								No pending changes detected in the diff view.
-							</div>
+							<div className="pending-edit-message warning">Preparing diff preview...</div>
 						)}
 					</div>
 				)}
