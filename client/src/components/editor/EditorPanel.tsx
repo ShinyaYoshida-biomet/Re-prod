@@ -45,6 +45,12 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		hunks: DiffHunk[];
 	};
 
+	const getHunkHeaderLine = useCallback((hunk: DiffHunk): number => {
+		return hunk.change.originalStartLine > 0
+			? hunk.change.originalStartLine
+			: hunk.change.modifiedStartLine;
+	}, []);
+
 	const toast = useToast();
 	const editor = useStore((state) => state.editor);
 	const execution = useStore((state) => state.execution);
@@ -252,10 +258,35 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 
 	const handlePendingReviewChange = useCallback(
 		(changeId: string, status: PendingEditReviewStatus) => {
-			if (!pendingEdit) return;
+			if (!pendingEdit || !pendingEditDiff) return;
 			updatePendingEditReview(pendingEdit.filePath, changeId, status);
+			const nextReviewMap: PendingEditReviewMap = {
+				...pendingEditReviewMap,
+				[changeId]: status,
+			};
+			const currentIndex = pendingEditDiff.hunks.findIndex((hunk) => hunk.id === changeId);
+			const startIndex = currentIndex >= 0 ? currentIndex + 1 : 0;
+			const nextPending =
+				pendingEditDiff.hunks.slice(startIndex).find((hunk) => !nextReviewMap[hunk.id]) ??
+				pendingEditDiff.hunks.find((hunk) => !nextReviewMap[hunk.id]);
+
+			if (nextPending) {
+				const targetLine = getHunkHeaderLine(nextPending);
+				if (typeof requestAnimationFrame === "function") {
+					requestAnimationFrame(() => navigateToLine(targetLine));
+				} else {
+					navigateToLine(targetLine);
+				}
+			}
 		},
-		[pendingEdit, updatePendingEditReview],
+		[
+			getHunkHeaderLine,
+			navigateToLine,
+			pendingEdit,
+			pendingEditDiff,
+			pendingEditReviewMap,
+			updatePendingEditReview,
+		],
 	);
 
 	const handlePendingKeepAll = useCallback(() => {
