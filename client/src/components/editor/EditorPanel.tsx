@@ -31,7 +31,6 @@ import { clamp } from "@/utils/math";
 import { applyPendingEditChanges, buildDiffChanges, buildDiffHunks } from "@/utils/pendingEditDiff";
 import { PendingEditDiffView } from "./PendingEditDiffView";
 import type { EditorRef } from "./editorRef";
-import { commandRegistry } from "@/core/commands/registry";
 import { clamp } from "@/utils/math";
 
 function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Element {
