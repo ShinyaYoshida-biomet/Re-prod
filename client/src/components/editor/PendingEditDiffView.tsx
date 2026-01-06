@@ -5,7 +5,7 @@ interface Props {
 	hunks: DiffHunk[];
 	reviewMap: PendingEditReviewMap;
 	onReviewChange: (changeId: string, status: PendingEditReviewMap[string]) => void;
-	onNavigateToLine: (lineNumber: number) => void;
+	onNavigateToLine: (lineNumber: number, hunkId: string) => void;
 }
 
 export function PendingEditDiffView({
@@ -27,7 +27,7 @@ export function PendingEditDiffView({
 					<div className="pending-edit-hunk" key={hunk.id}>
 						<button
 							className="pending-edit-hunk-header"
-							onClick={() => onNavigateToLine(headerLine)}
+							onClick={() => onNavigateToLine(headerLine, hunk.id)}
 							type="button"
 						>
 							<span className="pending-edit-hunk-title">Hunk {hunk.index + 1}</span>

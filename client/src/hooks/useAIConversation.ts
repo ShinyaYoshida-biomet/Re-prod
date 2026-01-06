@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useStore } from "@/core";
+import { useFileSystemStore } from "@/core/fileSystemStore";
 import { buildPromptWithContext, createRequestId } from "@/core/ai/promptUtils";
 import { getAcpSystemPrompts } from "@/core/ai/systemPrompts";
-import { normalizeRelativePath } from "@/core/pathUtils";
+import { normalizeWorkspaceRelativePath } from "@/core/pathUtils";
 import { getExternalAgentClient } from "@/services/externalAgentClient";
 import { aiMessages } from "@/services/messageBuilders";
 import { socketService } from "@/services/socket";
@@ -62,6 +63,7 @@ export function useAIConversation() {
 	const editorContent = useStore((state) => state.editor.content);
 	const editorFilepath = useStore((state) => state.editor.filepath);
 	const consoleHistory = useStore((state) => state.execution.results);
+	const workspaceRoot = useFileSystemStore((state) => state.workspaceRoot);
 
 	const { clearTimeoutRef, startTimeout } = useAITimeout();
 	const { registerStreamingHandlers } = useAIStreaming();
@@ -85,6 +87,7 @@ export function useAIConversation() {
 	});
 	const acpSessionIdRef = useRef<string | null>(null);
 	const acpStreamsRef = useRef<Map<string, string>>(new Map());
+	const acpLastChunkKindRef = useRef<Map<string, "message" | "thought" | "tool">>(new Map());
 	const acpConfigured = activeMode === "external_agent" && Boolean(activeAgent);
 	const externalAgentClient = acpConfigured ? getExternalAgentClient() : null;
 
@@ -124,16 +127,60 @@ export function useAIConversation() {
 		};
 	}, [clearActiveRequest, clearTimeoutRef]);
 
-	const extractAcpText = useCallback(
-		(update: AcpSessionUpdateEnvelope["update"]): string | null => {
+	const extractAcpChunk = useCallback(
+		(
+			update: AcpSessionUpdateEnvelope["update"],
+		): { kind: "message" | "thought"; text: string } | null => {
 			if (typeof update !== "object" || update === null) return null;
-			if (!("AgentMessageChunk" in update)) return null;
-			const value = update.AgentMessageChunk;
+			if (!("AgentMessageChunk" in update) && !("AgentThoughtChunk" in update)) return null;
+			const kind = "AgentThoughtChunk" in update ? "thought" : "message";
+			const value =
+				"AgentThoughtChunk" in update ? update.AgentThoughtChunk : update.AgentMessageChunk;
 			if (typeof value === "object" && "text" in value) {
 				const candidate = (value as { text?: unknown }).text;
 				return asOptionalString(candidate) ?? null;
 			}
 			return null;
+		},
+		[],
+	);
+
+	const appendAcpChunk = useCallback(
+		(streamingId: string, kind: "message" | "thought" | "tool", text: string) => {
+			if (!text) return;
+			const lastKind = acpLastChunkKindRef.current.get(streamingId);
+			let prefix = "";
+
+			if (kind === "thought") {
+				if (lastKind !== "thought") {
+					prefix = `${lastKind ? "\n\n" : ""}[Thought]\n`;
+				}
+			} else if (kind === "tool") {
+				if (lastKind !== "tool") {
+					prefix = `${lastKind ? "\n\n" : ""}[Tool]\n`;
+				}
+			} else if (lastKind && lastKind !== "message") {
+				prefix = "\n\n";
+			}
+
+			acpLastChunkKindRef.current.set(streamingId, kind);
+			appendChunk(streamingId, `${prefix}${text}`);
+		},
+		[appendChunk],
+	);
+
+	const summarizeAcpToolCall = useCallback((toolCall: { title: string; status: string }) => {
+		const status = toolCall.status?.trim();
+		return status ? `${toolCall.title} (${status})` : toolCall.title;
+	}, []);
+
+	const summarizeAcpToolUpdate = useCallback(
+		(toolUpdate: { status: string | null; content: string | null }) => {
+			if (toolUpdate.content && toolUpdate.content.trim()) {
+				return toolUpdate.content;
+			}
+			const status = toolUpdate.status ?? "running";
+			return `Status: ${status}`;
 		},
 		[],
 	);
@@ -146,6 +193,7 @@ export function useAIConversation() {
 			);
 			const finalContent = message?.content ?? "";
 			finalize(streamingId, finalContent);
+			acpLastChunkKindRef.current.delete(streamingId);
 			clearActiveRequest();
 		},
 		[clearActiveRequest, finalize],
@@ -176,6 +224,7 @@ export function useAIConversation() {
 
 			// Handle ToolCall
 			if (typeof update === "object" && update !== null && "ToolCall" in update) {
+				appendAcpChunk(streamingId, "tool", summarizeAcpToolCall(update.ToolCall));
 				recordTool(streamingId, mapToolCall(update.ToolCall));
 				return;
 			}
@@ -183,6 +232,7 @@ export function useAIConversation() {
 			// Handle ToolCallUpdate
 			if (typeof update === "object" && update !== null && "ToolCallUpdate" in update) {
 				const toolUpdate = update.ToolCallUpdate;
+				appendAcpChunk(streamingId, "tool", summarizeAcpToolUpdate(toolUpdate));
 				const output = toolUpdate.output;
 				if (
 					output &&
@@ -192,12 +242,18 @@ export function useAIConversation() {
 				) {
 					const editPayload = (output as { edit?: any }).edit;
 					if (editPayload && typeof editPayload === "object") {
-						const normalizedFilePath = normalizeRelativePath(String(editPayload.file_path ?? ""), {
-							keepRootEmpty: true,
-						});
-						const normalizedEditorPath = normalizeRelativePath(editorFilepath, {
-							keepRootEmpty: true,
-						});
+						const normalizedFilePath = normalizeWorkspaceRelativePath(
+							String(editPayload.file_path ?? ""),
+							workspaceRoot,
+							{ keepRootEmpty: true },
+						);
+						const normalizedEditorPath = normalizeWorkspaceRelativePath(
+							editorFilepath,
+							workspaceRoot,
+							{
+								keepRootEmpty: true,
+							},
+						);
 						const pendingEdit: PendingEdit = {
 							id: String(editPayload.id ?? ""),
 							source: { type: "acp", sessionId: payload.session_id },
@@ -222,22 +278,25 @@ export function useAIConversation() {
 			}
 
 			// Handle text chunks
-			const text = extractAcpText(update);
-			if (!text) return;
-			appendChunk(streamingId, text);
+			const chunk = extractAcpChunk(update);
+			if (!chunk) return;
+			appendAcpChunk(streamingId, chunk.kind, chunk.text);
 		},
 		[
-			appendChunk,
-			extractAcpText,
+			appendAcpChunk,
+			extractAcpChunk,
 			finalizeAcpStream,
 			mapPlanSteps,
 			mapToolCall,
 			mapToolCallUpdate,
 			recordTool,
+			summarizeAcpToolCall,
+			summarizeAcpToolUpdate,
 			registerPendingEdit,
 			editorFilepath,
 			setEditorContent,
 			startStreamingMessage,
+			workspaceRoot,
 			updatePlan,
 		],
 	);
@@ -279,6 +338,7 @@ export function useAIConversation() {
 		const acpStreamId = acpStreamsRef.current.get(acpSessionIdRef.current);
 		if (acpStreamId) {
 			completeStreamingMessage(acpStreamId);
+			acpLastChunkKindRef.current.delete(acpStreamId);
 		}
 	}, [completeStreamingMessage, externalAgentClient]);
 
@@ -288,6 +348,7 @@ export function useAIConversation() {
 		const streamingId = activeRequestRef.current?.id;
 		if (streamingId) {
 			completeStreamingMessage(streamingId);
+			acpLastChunkKindRef.current.delete(streamingId);
 			clearActiveRequest();
 		} else if (acpConfigured && acpSessionIdRef.current) {
 			void cancelAcpSession();

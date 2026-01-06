@@ -1,4 +1,4 @@
-import Editor, { type Monaco } from "@monaco-editor/react";
+import Editor, { DiffEditor, type Monaco } from "@monaco-editor/react";
 import type { editor as MonacoEditor } from "monaco-editor";
 import type { ForwardedRef } from "react";
 import {
@@ -14,8 +14,9 @@ import { ConfirmDialog, IconPlay, IconPlayCircle, useToast } from "@/components/
 import { useStore } from "@/core";
 import { computeTargetRange, findCodeInEditor, matchPatchChunk } from "@/core/ai/contextMatcher";
 import { commandRegistry } from "@/core/commands/registry";
+import { useFileSystemStore } from "@/core/fileSystemStore";
 import type { AppliedCodeChange } from "@/core/state/slices/editorSlice";
-import { normalizeRelativePath } from "@/core/pathUtils";
+import { normalizeWorkspaceRelativePath } from "@/core/pathUtils";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useEditorCells } from "@/hooks/useEditorCells";
 import { useEditorDecorations } from "@/hooks/useEditorDecorations";
@@ -28,15 +29,33 @@ import {
 import type { CodeBlock, CodeRange } from "@/types";
 import type { PendingEditReviewMap, PendingEditReviewStatus } from "@/types/pendingEdit";
 import { clamp } from "@/utils/math";
-import { applyPendingEditChanges, buildDiffChanges, buildDiffHunks } from "@/utils/pendingEditDiff";
+import {
+	applyPendingEditChanges,
+	buildDiffChanges,
+	buildDiffHunks,
+	type DiffChange,
+	type DiffHunk,
+} from "@/utils/pendingEditDiff";
 import { PendingEditDiffView } from "./PendingEditDiffView";
 import type { EditorRef } from "./editorRef";
 
 function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Element {
+	type PendingEditDiff = {
+		changes: DiffChange[];
+		hunks: DiffHunk[];
+	};
+
+	const getHunkHeaderLine = useCallback((hunk: DiffHunk): number => {
+		return hunk.change.originalStartLine > 0
+			? hunk.change.originalStartLine
+			: hunk.change.modifiedStartLine;
+	}, []);
+
 	const toast = useToast();
 	const editor = useStore((state) => state.editor);
 	const execution = useStore((state) => state.execution);
 	const settings = useStore((state) => state.settings);
+	const workspaceRoot = useFileSystemStore((state) => state.workspaceRoot);
 	const setEditorContent = useStore((state) => state.setEditorContent);
 	const setEditorCursorPosition = useStore((state) => state.setEditorCursorPosition);
 	const setApplyCodeChange = useStore((state) => state.setApplyCodeChange);
@@ -47,8 +66,8 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	const recordPatchMatchFailure = useStore((state) => state.recordPatchMatchFailure);
 	const recordPatchMatchSuccess = useStore((state) => state.recordPatchMatchSuccess);
 	const normalizedEditorPath = useMemo(
-		() => normalizeRelativePath(editor.filepath, { keepRootEmpty: true }),
-		[editor.filepath],
+		() => normalizeWorkspaceRelativePath(editor.filepath, workspaceRoot, { keepRootEmpty: true }),
+		[editor.filepath, workspaceRoot],
 	);
 	const pendingEdit = useStore((state) => state.pendingEdits[normalizedEditorPath]);
 	const clearPendingEdit = useStore((state) => state.clearPendingEdit);
@@ -65,33 +84,11 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		type: "warning" | "error";
 		message: string;
 	} | null>(null);
+	const [showWhitespace, setShowWhitespace] = useState(false);
+	const [ignoreWhitespace, setIgnoreWhitespace] = useState(false);
+	const [activeHunkId, setActiveHunkId] = useState<string | null>(null);
 	const pendingEditReviewMap = pendingEdit?.reviewedChanges ?? {};
-	const pendingEditDiff = useMemo(() => {
-		if (!pendingEdit || !monacoInstance) return null;
-		const language = monacoEditorRef.current?.getModel()?.getLanguageId();
-		if (typeof document === "undefined") {
-			return null;
-		}
-		const original = monacoInstance.editor.createModel(pendingEdit.oldContent, language);
-		const modified = monacoInstance.editor.createModel(pendingEdit.newContent, language);
-		const diffContainer = document.createElement("div");
-		const diffEditor = monacoInstance.editor.createDiffEditor(diffContainer, {
-			readOnly: true,
-		});
-		try {
-			diffEditor.setModel({ original, modified });
-			const changes = diffEditor.getLineChanges() ?? [];
-			const diffChanges = buildDiffChanges(pendingEdit.oldContent, pendingEdit.newContent, changes);
-			return {
-				changes: diffChanges,
-				hunks: buildDiffHunks(diffChanges),
-			};
-		} finally {
-			diffEditor.dispose();
-			original.dispose();
-			modified.dispose();
-		}
-	}, [monacoInstance, pendingEdit]);
+	const [pendingEditDiff, setPendingEditDiff] = useState<PendingEditDiff | null>(null);
 	const reviewedContent = useMemo(() => {
 		if (!pendingEdit || !pendingEditDiff) return null;
 		return applyPendingEditChanges(
@@ -119,6 +116,69 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		}
 		return { total: pendingEditDiff.changes.length, keep, reject, pending };
 	}, [pendingEditDiff, pendingEditReviewMap]);
+	const pendingHunks = useMemo(() => {
+		if (!pendingEditDiff) return [];
+		return pendingEditDiff.hunks.filter((hunk) => !pendingEditReviewMap[hunk.id]);
+	}, [pendingEditDiff, pendingEditReviewMap]);
+
+	useEffect(() => {
+		if (!pendingEditDiff) {
+			setActiveHunkId(null);
+			return;
+		}
+		if (pendingHunks.length === 0) {
+			setActiveHunkId(null);
+			return;
+		}
+		if (!activeHunkId || !pendingHunks.some((hunk) => hunk.id === activeHunkId)) {
+			setActiveHunkId(pendingHunks[0].id);
+		}
+	}, [activeHunkId, pendingEditDiff, pendingHunks]);
+
+	useEffect(() => {
+		if (!pendingEdit || !monacoInstance) {
+			setPendingEditDiff(null);
+			return;
+		}
+		if (typeof document === "undefined") {
+			setPendingEditDiff(null);
+			return;
+		}
+
+		setPendingEditDiff(null);
+
+		const language = monacoEditorRef.current?.getModel()?.getLanguageId();
+		const original = monacoInstance.editor.createModel(pendingEdit.oldContent, language);
+		const modified = monacoInstance.editor.createModel(pendingEdit.newContent, language);
+		const diffContainer = document.createElement("div");
+		const diffEditor = monacoInstance.editor.createDiffEditor(diffContainer, {
+			readOnly: true,
+		});
+		let disposed = false;
+
+		const updateDiff = (): void => {
+			if (disposed) return;
+			const changes = diffEditor.getLineChanges();
+			if (!changes) return;
+			const diffChanges = buildDiffChanges(pendingEdit.oldContent, pendingEdit.newContent, changes);
+			setPendingEditDiff({
+				changes: diffChanges,
+				hunks: buildDiffHunks(diffChanges),
+			});
+		};
+
+		const subscription = diffEditor.onDidUpdateDiff(updateDiff);
+		diffEditor.setModel({ original, modified });
+		updateDiff();
+
+		return () => {
+			disposed = true;
+			subscription.dispose();
+			diffEditor.dispose();
+			original.dispose();
+			modified.dispose();
+		};
+	}, [monacoInstance, pendingEdit]);
 
 	const cells = useEditorCells(editor.content, editor.filepath);
 	const { state, actions } = useEditorExecution({
@@ -217,12 +277,80 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		}
 	}, [clearPendingEdit, pendingEdit, setEditorContent, updatePendingEditStatus]);
 
+	const navigateToLine = useCallback((lineNumber: number): void => {
+		const monacoEditor = monacoEditorRef.current;
+		if (!monacoEditor) {
+			return;
+		}
+
+		const model = monacoEditor.getModel();
+		if (!model) {
+			return;
+		}
+
+		const clampLine = clamp(lineNumber, 1, model.getLineCount());
+		monacoEditor.revealLine(clampLine);
+		monacoEditor.setPosition({ lineNumber: clampLine, column: 1 });
+		monacoEditor.focus();
+	}, []);
+
+	const focusHunk = useCallback(
+		(hunk: DiffHunk): void => {
+			setActiveHunkId(hunk.id);
+			const targetLine = getHunkHeaderLine(hunk);
+			if (typeof requestAnimationFrame === "function") {
+				requestAnimationFrame(() => navigateToLine(targetLine));
+			} else {
+				navigateToLine(targetLine);
+			}
+		},
+		[getHunkHeaderLine, navigateToLine],
+	);
+
+	const handlePrevHunk = useCallback(() => {
+		if (!pendingHunks.length) return;
+		const currentIndex = pendingHunks.findIndex((hunk) => hunk.id === activeHunkId);
+		const previousIndex = currentIndex > 0 ? currentIndex - 1 : 0;
+		focusHunk(pendingHunks[previousIndex]);
+	}, [activeHunkId, focusHunk, pendingHunks]);
+
+	const handleNextHunk = useCallback(() => {
+		if (!pendingHunks.length) return;
+		const currentIndex = pendingHunks.findIndex((hunk) => hunk.id === activeHunkId);
+		const nextIndex =
+			currentIndex >= 0 && currentIndex < pendingHunks.length - 1
+				? currentIndex + 1
+				: pendingHunks.length - 1;
+		focusHunk(pendingHunks[nextIndex]);
+	}, [activeHunkId, focusHunk, pendingHunks]);
+
 	const handlePendingReviewChange = useCallback(
 		(changeId: string, status: PendingEditReviewStatus) => {
-			if (!pendingEdit) return;
+			if (!pendingEdit || !pendingEditDiff) return;
 			updatePendingEditReview(pendingEdit.filePath, changeId, status);
+			const nextReviewMap: PendingEditReviewMap = {
+				...pendingEditReviewMap,
+				[changeId]: status,
+			};
+			const currentIndex = pendingEditDiff.hunks.findIndex((hunk) => hunk.id === changeId);
+			const startIndex = currentIndex >= 0 ? currentIndex + 1 : 0;
+			const nextPending =
+				pendingEditDiff.hunks.slice(startIndex).find((hunk) => !nextReviewMap[hunk.id]) ??
+				pendingEditDiff.hunks.find((hunk) => !nextReviewMap[hunk.id]);
+
+			if (nextPending) {
+				focusHunk(nextPending);
+			}
 		},
-		[pendingEdit, updatePendingEditReview],
+		[focusHunk, pendingEdit, pendingEditDiff, pendingEditReviewMap, updatePendingEditReview],
+	);
+
+	const handlePendingHunkNavigate = useCallback(
+		(lineNumber: number, hunkId: string) => {
+			setActiveHunkId(hunkId);
+			navigateToLine(lineNumber);
+		},
+		[navigateToLine],
 	);
 
 	const handlePendingKeepAll = useCallback(() => {
@@ -281,23 +409,6 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 			setEditorContent(value);
 		}
 	};
-
-	const navigateToLine = useCallback((lineNumber: number): void => {
-		const monacoEditor = monacoEditorRef.current;
-		if (!monacoEditor) {
-			return;
-		}
-
-		const model = monacoEditor.getModel();
-		if (!model) {
-			return;
-		}
-
-		const clampLine = clamp(lineNumber, 1, model.getLineCount());
-		monacoEditor.revealLine(clampLine);
-		monacoEditor.setPosition({ lineNumber: clampLine, column: 1 });
-		monacoEditor.focus();
-	}, []);
 
 	const focusEditor = useCallback((): void => {
 		const monacoEditor = monacoEditorRef.current;
@@ -698,6 +809,38 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 								{pendingEditSummary.total} hunks · {pendingEditSummary.keep} keep ·{" "}
 								{pendingEditSummary.reject} reject · {pendingEditSummary.pending} pending
 							</div>
+							<div className="pending-edit-review-controls">
+								<button
+									className="btn"
+									onClick={handlePrevHunk}
+									type="button"
+									disabled={!pendingHunks.length}
+								>
+									Prev Hunk
+								</button>
+								<button
+									className="btn"
+									onClick={handleNextHunk}
+									type="button"
+									disabled={!pendingHunks.length}
+								>
+									Next Hunk
+								</button>
+								<button
+									className={`btn ${showWhitespace ? "btn-primary" : ""}`}
+									onClick={() => setShowWhitespace((prev) => !prev)}
+									type="button"
+								>
+									Show Whitespace
+								</button>
+								<button
+									className={`btn ${ignoreWhitespace ? "btn-primary" : ""}`}
+									onClick={() => setIgnoreWhitespace((prev) => !prev)}
+									type="button"
+								>
+									Ignore Whitespace
+								</button>
+							</div>
 							{pendingNotice && (
 								<div className={`pending-edit-message ${pendingNotice.type}`}>
 									{pendingNotice.message}
@@ -718,47 +861,107 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 								</button>
 							</div>
 						</div>
-						{pendingEditDiff && pendingEditDiff.hunks.length > 0 ? (
-							<PendingEditDiffView
-								hunks={pendingEditDiff.hunks}
-								reviewMap={pendingEditReviewMap}
-								onReviewChange={handlePendingReviewChange}
-								onNavigateToLine={navigateToLine}
-							/>
+						{pendingEditDiff ? (
+							pendingEditDiff.hunks.length > 0 ? (
+								<PendingEditDiffView
+									hunks={pendingEditDiff.hunks}
+									reviewMap={pendingEditReviewMap}
+									onReviewChange={handlePendingReviewChange}
+									onNavigateToLine={handlePendingHunkNavigate}
+								/>
+							) : (
+								<div className="pending-edit-message warning">
+									No pending changes detected in the diff view.
+								</div>
+							)
 						) : (
-							<div className="pending-edit-message warning">
-								No pending changes detected in the diff view.
-							</div>
+							<div className="pending-edit-message warning">Preparing diff preview...</div>
 						)}
 					</div>
 				)}
 				<div className="panel-content">
-					<Editor
-						height="100%"
-						defaultLanguage="r"
-						theme="vs"
-						value={editor.content}
-						onChange={handleEditorChange}
-						options={{
-							fontSize: settings.fontSize,
-							fontFamily: "Monaco, Menlo, Consolas, monospace",
-							minimap: { enabled: false },
-							scrollBeyondLastLine: false,
-							wordWrap: "on",
-							lineNumbers: "on",
-							renderWhitespace: "selection",
-							tabSize: 2,
-							automaticLayout: true,
-							padding: { top: 8, bottom: 8 },
-							readOnly: Boolean(pendingEdit),
-							scrollbar: {
-								useShadows: false,
-								verticalScrollbarSize: 12,
-								horizontalScrollbarSize: 12,
-							},
-						}}
-						onMount={handleEditorDidMount}
-					/>
+					{pendingEdit ? (
+						<div className="editor-split">
+							<div className="editor-pane">
+								<Editor
+									height="100%"
+									defaultLanguage="r"
+									theme="vs"
+									value={editor.content}
+									onChange={handleEditorChange}
+									options={{
+										fontSize: settings.fontSize,
+										fontFamily: "Monaco, Menlo, Consolas, monospace",
+										minimap: { enabled: false },
+										scrollBeyondLastLine: false,
+										wordWrap: "on",
+										lineNumbers: "on",
+										renderWhitespace: "selection",
+										tabSize: 2,
+										automaticLayout: true,
+										padding: { top: 8, bottom: 8 },
+										readOnly: true,
+										scrollbar: {
+											useShadows: false,
+											verticalScrollbarSize: 12,
+											horizontalScrollbarSize: 12,
+										},
+									}}
+									onMount={handleEditorDidMount}
+								/>
+							</div>
+							<div className="editor-pane diff-pane">
+								<DiffEditor
+									height="100%"
+									original={pendingEdit.oldContent}
+									modified={pendingEdit.newContent}
+									theme="vs"
+									language="r"
+									options={{
+										readOnly: true,
+										renderSideBySide: true,
+										renderWhitespace: showWhitespace ? "all" : "selection",
+										ignoreTrimWhitespace: ignoreWhitespace,
+										minimap: { enabled: false },
+										scrollBeyondLastLine: false,
+										automaticLayout: true,
+										lineNumbers: "on",
+										glyphMargin: false,
+										folding: false,
+										lineDecorationsWidth: 18,
+										lineNumbersMinChars: 3,
+									}}
+								/>
+							</div>
+						</div>
+					) : (
+						<Editor
+							height="100%"
+							defaultLanguage="r"
+							theme="vs"
+							value={editor.content}
+							onChange={handleEditorChange}
+							options={{
+								fontSize: settings.fontSize,
+								fontFamily: "Monaco, Menlo, Consolas, monospace",
+								minimap: { enabled: false },
+								scrollBeyondLastLine: false,
+								wordWrap: "on",
+								lineNumbers: "on",
+								renderWhitespace: "selection",
+								tabSize: 2,
+								automaticLayout: true,
+								padding: { top: 8, bottom: 8 },
+								readOnly: false,
+								scrollbar: {
+									useShadows: false,
+									verticalScrollbarSize: 12,
+									horizontalScrollbarSize: 12,
+								},
+							}}
+							onMount={handleEditorDidMount}
+						/>
+					)}
 				</div>
 			</div>
 			<ConfirmDialog
