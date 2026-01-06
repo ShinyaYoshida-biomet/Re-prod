@@ -1,6 +1,7 @@
 import { extractDiffFromToolOutput } from "@/core/ai/diffArtifacts";
 import type { ToolCallLog as ToolCallLogEntry } from "@/types";
 import { DiffPreview } from "./DiffPreview";
+import { asString, asOptionalString } from "@/utils/string";
 
 interface Props {
 	logs?: ToolCallLogEntry[];
@@ -34,14 +35,9 @@ const extractSearchResults = (payload?: Record<string, unknown>): SearchResult[]
 	for (const entry of payload.results) {
 		if (!entry || typeof entry !== "object") continue;
 		const record = entry as Record<string, unknown>;
-		const title = typeof record.title === "string" ? record.title : "";
-		const uri = typeof record.uri === "string" ? record.uri : "";
-		const description =
-			typeof record.description === "string"
-				? record.description
-				: typeof record.text === "string"
-					? record.text
-					: undefined;
+		const title = asString(record.title);
+		const uri = asString(record.uri);
+		const description = asOptionalString(record.description) ?? asOptionalString(record.text);
 
 		if (!title && !uri) continue;
 		const result: SearchResult = {

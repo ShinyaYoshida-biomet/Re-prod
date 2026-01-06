@@ -1,4 +1,5 @@
 import type { CodeBlock, CodeRange } from "@/types";
+import { asOptionalString } from "@/utils/string";
 
 export type DiffSource = "tool" | "code_block";
 
@@ -21,8 +22,7 @@ export type CodeBlockDiffData = {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
 
-const toOptionalString = (value: unknown): string | undefined =>
-	typeof value === "string" ? value : undefined;
+const toOptionalString = (value: unknown): string | undefined => asOptionalString(value);
 
 const sliceContent = (content: string, range: CodeRange): string => {
 	const lines = content.split(/\r?\n/);

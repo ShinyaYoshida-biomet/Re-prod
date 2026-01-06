@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { socketService } from "@/services/socket";
 import { useAssistantEventAdapter } from "./useAssistantEventAdapter";
+import { asOptionalString } from "@/utils/string";
 
 type RegisterStreamingHandlersOptions = {
 	isRequestActive?: () => boolean;
@@ -106,15 +107,11 @@ export function useAIStreaming() {
 						return;
 					}
 
-					let content: string | undefined;
-					if (typeof message.response === "string") {
-						content = message.response;
-					} else if (
-						typeof message.response?.content === "string" &&
-						message.response.content.length
-					) {
-						content = message.response.content;
-					} else if (
+					let content =
+						asOptionalString(message.response) ?? asOptionalString(message.response?.content);
+
+					if (
+						!content &&
 						Array.isArray(message.response?.tool_calls) &&
 						message.response.tool_calls.length > 0
 					) {

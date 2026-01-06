@@ -14,6 +14,7 @@ import { useAIStreaming } from "./useAIStreaming";
 import { useAITimeout } from "./useAITimeout";
 import { useAssistantEventAdapter } from "./useAssistantEventAdapter";
 import { usePromptHistory } from "./usePromptHistory";
+import { asOptionalString } from "@/utils/string";
 
 const STREAM_TIMEOUT_MS = 45000;
 
@@ -31,8 +32,15 @@ export interface AIActions {
 }
 
 const describeError = (error: unknown): string => {
-	if (typeof error === "string") return error;
-	if (error instanceof Error) return error.message;
+	const message = asOptionalString(error);
+	if (message) {
+		return message;
+	}
+
+	if (error instanceof Error) {
+		return error.message;
+	}
+
 	try {
 		const serialized = JSON.stringify(error);
 		return serialized === "{}" ? "Unknown error" : serialized;
@@ -123,7 +131,7 @@ export function useAIConversation() {
 			const value = update.AgentMessageChunk;
 			if (typeof value === "object" && "text" in value) {
 				const candidate = (value as { text?: unknown }).text;
-				return typeof candidate === "string" ? candidate : null;
+				return asOptionalString(candidate) ?? null;
 			}
 			return null;
 		},

@@ -11,6 +11,7 @@ import { CodeActionFactory } from "./actions";
 import type { PatchHunk } from "./patchParser";
 import { parsePatchFormat } from "./patchParser";
 import { parseSimpleChanges } from "./simpleChangeParser";
+import { asString, asOptionalString } from "@/utils/string";
 
 const R_CODE_BLOCK_REGEX = /```(?:r|R)\n([\s\S]*?)\n```/g;
 const JSON_BLOCK_REGEX = /```json\n([\s\S]*?)\n```/g;
@@ -133,25 +134,26 @@ const buildCodeBlockFromPatch = (hunk: PatchHunk): CodeBlock | null => {
 };
 
 const normalizeCodeBlock = (raw: Record<string, unknown>): CodeBlock | null => {
-	const action =
-		typeof raw.action === "string" && CodeActionFactory.isSupported(raw.action)
-			? (raw.action as CodeChangeAction)
+	const actionString = asOptionalString(raw.action);
+	const action: CodeChangeAction =
+		actionString && CodeActionFactory.isSupported(actionString)
+			? (actionString as CodeChangeAction)
 			: "replace-all";
 
-	const code = typeof raw.code === "string" ? raw.code : "";
+	const code = asString(raw.code);
 	if (!code) {
 		return null;
 	}
 
 	const codeBlock: CodeBlock = {
-		id: typeof raw.id === "string" ? raw.id : `code-${Date.now()}-json`,
+		id: asString(raw.id, `code-${Date.now()}-json`),
 		code,
 		language: "r",
 		action,
-		filepath: typeof raw.filepath === "string" ? raw.filepath : undefined,
-		explanation: typeof raw.explanation === "string" ? raw.explanation : undefined,
-		checksum: typeof raw.checksum === "string" ? raw.checksum : undefined,
-		originalCode: typeof raw.originalCode === "string" ? raw.originalCode : undefined,
+		filepath: asOptionalString(raw.filepath),
+		explanation: asOptionalString(raw.explanation),
+		checksum: asOptionalString(raw.checksum),
+		originalCode: asOptionalString(raw.originalCode),
 	};
 
 	const targetRange = makeCodeRange(raw.targetRange as Partial<CodeRange>);
