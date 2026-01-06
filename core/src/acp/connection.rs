@@ -22,11 +22,13 @@ use tracing::{error, info};
 
 use super::{
     client::ReprodAcpClient,
+    pending_edit::PendingEditStore,
     types::{
         AcpPermissionDecision, AcpPermissionDecisionScope, AcpPermissionOption,
         AcpPermissionRequestPayload,
     },
 };
+use crate::edit::EditService;
 
 enum AcpRequest {
     CreateSession {
@@ -59,6 +61,8 @@ pub struct PermissionDecisionMessage {
 impl AcpConnection {
     pub async fn initialize<R, W>(
         workspace_root: std::path::PathBuf,
+        edit_service: Arc<EditService>,
+        pending_edits: Arc<Mutex<PendingEditStore>>,
         outgoing: W,
         incoming: R,
     ) -> Result<(
@@ -82,6 +86,8 @@ impl AcpConnection {
 
         let handler = ReprodAcpClient::new(
             workspace_root,
+            edit_service,
+            pending_edits,
             notif_tx,
             permission_request_tx,
             pending_permissions.clone(),

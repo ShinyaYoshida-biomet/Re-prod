@@ -1,8 +1,8 @@
-import { commandRegistry } from "../registry";
-import { useStore } from "@/core/state/store";
 import { DEFAULT_FILENAMES } from "@/constants/ui";
 import { DEFAULT_R_SCRIPT } from "@/core/state/slices/editorSlice";
+import { useStore } from "@/core/state/store";
 import { downloadFile, openFile } from "@/utils/fileOperations";
+import { commandRegistry } from "../registry";
 
 export function setupFileCommands() {
 	commandRegistry.registerMany([

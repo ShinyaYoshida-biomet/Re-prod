@@ -1,5 +1,5 @@
-import type { AIMessage, AIMode, CodeBlock, PlanStep, ToolCallLog } from "@/types";
 import type { StateCreator } from "zustand";
+import type { AIMessage, AIMode, CodeBlock, PlanStep, ToolCallLog } from "@/types";
 
 type StreamingExtras = {
 	codeBlocks?: CodeBlock[];

@@ -182,7 +182,6 @@ pub async fn set_provider(
     config.save().map(|_| StatusCode::OK).map_err(err_500)
 }
 
-
 pub async fn acp_detect_agents() -> Resp<Vec<AcpDetectedAgent>> {
     info!("Detecting ACP agents");
     detect_agents().await.map(Json).map_err(err_500)

@@ -1,5 +1,5 @@
-import type { AcpPromptMessage } from "@/types/generated";
 import type { AIMode } from "@/types";
+import type { AcpPromptMessage } from "@/types/generated";
 import prompts from "./systemPrompts.json";
 
 const toSystemMessage = (content: string): AcpPromptMessage => ({

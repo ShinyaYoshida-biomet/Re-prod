@@ -8,7 +8,7 @@ use std::{
 
 use crate::{
     config::app_config_dir,
-    edit::{EditOperation, EditService, EditStatus, EditTextFileRequest, EditTextFileResult},
+    edit::{EditOperation, EditService, EditStatus, EditTextFileRequest},
 };
 use agent_client_protocol::{
     Client, PermissionOption, PermissionOptionKind, ReadTextFileRequest, ReadTextFileResponse,
@@ -28,6 +28,7 @@ use uuid::Uuid;
 
 use super::{
     connection::map_permission_request,
+    pending_edit::{PendingEdit, PendingEditStore},
     types::{AcpPermissionDecisionScope, AcpPermissionRequestPayload},
 };
 
@@ -48,11 +49,14 @@ pub struct ReprodAcpClient {
     decision_meta: Arc<Mutex<HashMap<String, AcpPermissionDecisionScope>>>,
     session_trust: Arc<Mutex<HashMap<String, TrustDecision>>>,
     read_snapshots: Arc<Mutex<HashMap<String, String>>>,
+    pending_edits: Arc<Mutex<PendingEditStore>>,
 }
 
 impl ReprodAcpClient {
     pub fn new(
         workspace_root: PathBuf,
+        edit_service: Arc<EditService>,
+        pending_edits: Arc<Mutex<PendingEditStore>>,
         session_update_tx: UnboundedSender<SessionNotification>,
         permission_request_tx: UnboundedSender<AcpPermissionRequestPayload>,
         pending_permissions: Arc<Mutex<HashMap<String, oneshot::Sender<RequestPermissionOutcome>>>>,
@@ -62,7 +66,6 @@ impl ReprodAcpClient {
         let trust_store = Arc::new(Mutex::new(
             load_trust_store(&trust_path).unwrap_or_default(),
         ));
-        let edit_service = Arc::new(EditService::new(workspace_root.clone()));
         Self {
             workspace_root,
             edit_service,
@@ -74,6 +77,7 @@ impl ReprodAcpClient {
             decision_meta,
             session_trust: Arc::new(Mutex::new(HashMap::new())),
             read_snapshots: Arc::new(Mutex::new(HashMap::new())),
+            pending_edits,
         }
     }
 
@@ -251,10 +255,10 @@ impl ReprodAcpClient {
         outcome
     }
 
-    fn emit_edit_tool_update(&self, session_id: &str, path: &Path, result: &EditTextFileResult) {
-        let tool_call_id = ToolCallId::new(format!("fs-edit-{}", Uuid::new_v4()));
+    fn emit_pending_edit_update(&self, session_id: &str, path: &Path, edit: &PendingEdit) {
+        let tool_call_id = ToolCallId::new(format!("fs-pending-{}", edit.id));
         let location = ToolCallLocation::new(path.to_string_lossy().to_string());
-        let tool_call = ToolCall::new(tool_call_id.clone(), "Edit file")
+        let tool_call = ToolCall::new(tool_call_id.clone(), "Pending edit")
             .kind(ToolKind::Edit)
             .status(ToolCallStatus::InProgress)
             .locations(vec![location]);
@@ -263,8 +267,10 @@ impl ReprodAcpClient {
             SessionUpdate::ToolCall(tool_call),
         ));
 
-        let output = serde_json::to_value(result)
-            .unwrap_or(Value::String("Failed to serialize edit result".to_string()));
+        let output = serde_json::json!({
+            "type": "pending_edit",
+            "edit": edit,
+        });
         let update = ToolCallUpdate::new(
             tool_call_id,
             ToolCallUpdateFields::new()
@@ -337,11 +343,12 @@ impl Client for ReprodAcpClient {
             .map_err(|err| agent_client_protocol::Error::internal_error().data(err.to_string()))?;
         let relative = workspace_relative_path(&self.workspace_root, &resolved)
             .map_err(|err| agent_client_protocol::Error::internal_error().data(err.to_string()))?;
+        let session_id = args.session_id.to_string();
 
         let expected_sha = match Self::expected_sha_from_meta(&args.meta) {
             Some(value) => Some(value),
             None => {
-                let key = self.snapshot_key(&args.session_id.to_string(), &resolved);
+                let key = self.snapshot_key(&session_id, &resolved);
                 self.read_snapshots.lock().await.get(&key).cloned()
             }
         };
@@ -349,30 +356,65 @@ impl Client for ReprodAcpClient {
         let edit_request = EditTextFileRequest {
             path: relative.clone(),
             operation: EditOperation::Replace,
-            expected_sha256: expected_sha,
+            expected_sha256: expected_sha.clone(),
             new_text: Some(args.content.clone()),
             edits: None,
         };
 
-        let result = match self.edit_service.edit_text_file(edit_request).await {
+        let overlay_text = self
+            .pending_edits
+            .lock()
+            .await
+            .overlay_for(&session_id, &relative)
+            .map(|overlay| overlay.text);
+
+        let result = match self
+            .edit_service
+            .preview_text_file(edit_request, overlay_text)
+            .await
+        {
             Ok(result) => result,
             Err(err) => {
-                self.emit_edit_tool_error(
-                    &args.session_id.to_string(),
-                    &resolved,
-                    &err.to_string(),
-                );
+                self.emit_edit_tool_error(&session_id, &resolved, &err.to_string());
                 return Err(agent_client_protocol::Error::into_internal_error(err));
             }
         };
 
-        self.emit_edit_tool_update(&args.session_id.to_string(), &resolved, &result);
-
         if matches!(result.status, EditStatus::Conflict) {
+            self.emit_edit_tool_error(
+                &session_id,
+                &resolved,
+                "Conflict detected: file changed since last read. Reload and retry.",
+            );
             return Err(agent_client_protocol::Error::internal_error()
                 .data("Conflict detected: file changed since last read. Reload and retry."));
         }
 
+        let pending_edit = PendingEdit {
+            id: Uuid::new_v4().to_string(),
+            session_id: session_id.clone(),
+            tool_call_id: Uuid::new_v4().to_string(),
+            file_path: relative.clone(),
+            old_text: result.old_text.clone(),
+            new_text: result.new_text.clone(),
+            unified_diff: result.unified_diff.clone(),
+            base_sha256: result.old_sha256.clone(),
+            expected_sha256: expected_sha,
+        };
+
+        let mut store = self.pending_edits.lock().await;
+        if store.has_pending_for_file(&session_id, &relative) {
+            self.emit_edit_tool_error(&session_id, &resolved, "Pending edit already exists.");
+            return Err(agent_client_protocol::Error::internal_error()
+                .data("Pending edit already exists for this file."));
+        }
+        if let Err(err) = store.register_pending_edit(pending_edit.clone(), &result) {
+            self.emit_edit_tool_error(&session_id, &resolved, &err);
+            return Err(agent_client_protocol::Error::internal_error().data(err));
+        }
+        drop(store);
+
+        self.emit_pending_edit_update(&session_id, &resolved, &pending_edit);
         Ok(WriteTextFileResponse::new())
     }
 
@@ -384,18 +426,29 @@ impl Client for ReprodAcpClient {
             .map_err(|err| agent_client_protocol::Error::internal_error().data(err.to_string()))?;
         let relative = workspace_relative_path(&self.workspace_root, &resolved)
             .map_err(|err| agent_client_protocol::Error::internal_error().data(err.to_string()))?;
-        let result = self
-            .edit_service
-            .read_text_file(&relative)
+        let session_id = args.session_id.to_string();
+        let overlay = self
+            .pending_edits
+            .lock()
             .await
-            .map_err(agent_client_protocol::Error::into_internal_error)?;
+            .overlay_for(&session_id, &relative);
 
-        let content = result.text.clone();
-        let snapshot_key = self.snapshot_key(&args.session_id.to_string(), &resolved);
+        let (content, sha256) = if let Some(overlay) = overlay {
+            (overlay.text, overlay.sha256)
+        } else {
+            let result = self
+                .edit_service
+                .read_text_file(&relative)
+                .await
+                .map_err(agent_client_protocol::Error::into_internal_error)?;
+            (result.text, result.sha256)
+        };
+
+        let snapshot_key = self.snapshot_key(&session_id, &resolved);
         self.read_snapshots
             .lock()
             .await
-            .insert(snapshot_key, result.sha256);
+            .insert(snapshot_key, sha256);
 
         let (start_line, limit) = match (args.line, args.limit) {
             (None, None) => return Ok(ReadTextFileResponse::new(content)),
@@ -532,8 +585,10 @@ fn select_timeout_outcome(options: &[PermissionOption]) -> RequestPermissionOutc
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::acp::pending_edit::PendingEditStore;
     use crate::acp::test_support::ENV_LOCK;
     use crate::config::APP_DIR_ENV;
+    use crate::edit::EditService;
     use agent_client_protocol::{
         PermissionOption, PermissionOptionId, PermissionOptionKind, SelectedPermissionOutcome,
         SessionId, ToolCallId, ToolCallUpdate, ToolCallUpdateFields,
@@ -578,8 +633,12 @@ mod tests {
                 let pending = Arc::new(Mutex::new(HashMap::new()));
                 let decision_meta: Arc<Mutex<HashMap<String, AcpPermissionDecisionScope>>> =
                     Arc::new(Mutex::new(HashMap::new()));
+                let edit_service = Arc::new(EditService::new(workspace.clone()));
+                let pending_edits = Arc::new(Mutex::new(PendingEditStore::default()));
                 let client = ReprodAcpClient::new(
                     workspace,
+                    edit_service,
+                    pending_edits,
                     session_tx,
                     permission_tx,
                     pending.clone(),
@@ -637,8 +696,17 @@ mod tests {
         let pending = Arc::new(Mutex::new(HashMap::new()));
         let decision_meta: Arc<Mutex<HashMap<String, AcpPermissionDecisionScope>>> =
             Arc::new(Mutex::new(HashMap::new()));
-        let client =
-            ReprodAcpClient::new(workspace, session_tx, permission_tx, pending, decision_meta);
+        let edit_service = Arc::new(EditService::new(workspace.clone()));
+        let pending_edits = Arc::new(Mutex::new(PendingEditStore::default()));
+        let client = ReprodAcpClient::new(
+            workspace,
+            edit_service,
+            pending_edits,
+            session_tx,
+            permission_tx,
+            pending,
+            decision_meta,
+        );
 
         let req = RequestPermissionRequest::new(
             SessionId::new("s-test"),
@@ -694,8 +762,12 @@ mod tests {
         let pending = Arc::new(Mutex::new(HashMap::new()));
         let decision_meta: Arc<Mutex<HashMap<String, AcpPermissionDecisionScope>>> =
             Arc::new(Mutex::new(HashMap::new()));
+        let edit_service = Arc::new(EditService::new(workspace.clone()));
+        let pending_edits = Arc::new(Mutex::new(PendingEditStore::default()));
         let client = ReprodAcpClient::new(
             workspace.clone(),
+            edit_service,
+            pending_edits,
             session_tx,
             permission_tx,
             pending.clone(),
@@ -774,4 +846,48 @@ mod tests {
         let canon_root = dunce::canonicalize(&workspace).unwrap();
         assert!(resolved.starts_with(&canon_root));
     }
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn write_text_file_creates_pending_overlay_and_blocks_second() {
+    let workspace = std::env::temp_dir().join(format!("acp-pending-{}", Uuid::new_v4()));
+    std::fs::create_dir_all(&workspace).unwrap();
+    let file_path = workspace.join("sample.R");
+    std::fs::write(&file_path, "old").unwrap();
+
+    let (session_tx, _session_rx) = tokio::sync::mpsc::unbounded_channel();
+    let (permission_tx, _permission_rx) = tokio::sync::mpsc::unbounded_channel();
+    let pending = Arc::new(Mutex::new(HashMap::new()));
+    let decision_meta: Arc<Mutex<HashMap<String, AcpPermissionDecisionScope>>> =
+        Arc::new(Mutex::new(HashMap::new()));
+    let edit_service = Arc::new(EditService::new(workspace.clone()));
+    let pending_edits = Arc::new(Mutex::new(PendingEditStore::default()));
+    let client = ReprodAcpClient::new(
+        workspace,
+        edit_service,
+        pending_edits,
+        session_tx,
+        permission_tx,
+        pending,
+        decision_meta,
+    );
+
+    let session_id = "s-pending";
+    let read_req = ReadTextFileRequest::new(session_id, file_path.clone());
+    let read_resp = client.read_text_file(read_req).await.unwrap();
+    assert_eq!(read_resp.content, "old");
+
+    let write_req = WriteTextFileRequest::new(session_id, file_path.clone(), "new-content");
+    client.write_text_file(write_req).await.unwrap();
+
+    let disk_contents = std::fs::read_to_string(&file_path).unwrap();
+    assert_eq!(disk_contents, "old");
+
+    let read_req = ReadTextFileRequest::new(session_id, file_path.clone());
+    let read_resp = client.read_text_file(read_req).await.unwrap();
+    assert_eq!(read_resp.content, "new-content");
+
+    let write_req = WriteTextFileRequest::new(session_id, file_path.clone(), "another");
+    let second = client.write_text_file(write_req).await;
+    assert!(second.is_err());
 }

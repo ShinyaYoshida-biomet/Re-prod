@@ -1,6 +1,6 @@
 import { useStore } from "@/core";
-import { useSettingsStore } from "@/core/state/slices/settingsStore";
 import { commandRegistry } from "@/core/commands/registry";
+import { useSettingsStore } from "@/core/state/slices/settingsStore";
 import { classNames } from "@/utils/classNames";
 
 // Removed StatusBarProps interface as it's now empty/unused

@@ -1,6 +1,6 @@
-import type { AppSettings } from "@/types";
 import type { StateCreator } from "zustand";
 import { DEFAULT_SETTINGS } from "@/constants/defaultSettings";
+import type { AppSettings } from "@/types";
 import type { AcpDetectedAgent } from "@/types/generated";
 
 export interface SettingsState {

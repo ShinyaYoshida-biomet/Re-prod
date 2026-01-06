@@ -1,12 +1,12 @@
+import type { DataTransport } from "@/repositories/core/DataTransport";
+import { WebSocketTransport } from "@/repositories/core/WebSocketTransport";
+import { TimelineRepository } from "@/repositories/TimelineRepository";
 import type {
 	ExecutionEventPayload,
 	TimelineQuery,
 	TimelineResponse,
 	TimelineStats,
 } from "@/types";
-import type { DataTransport } from "@/repositories/core/DataTransport";
-import { TimelineRepository } from "@/repositories/TimelineRepository";
-import { WebSocketTransport } from "@/repositories/core/WebSocketTransport";
 import { socketService } from "./socket";
 
 export function createTimelineService(transport: DataTransport): {

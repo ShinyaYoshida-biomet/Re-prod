@@ -1,6 +1,6 @@
+import { commandRegistry } from "@/core/commands/registry";
 import type { ViewPane } from "@/core/state/slices/viewSlice";
 import type { MenuSection } from "@/types/menu";
-import { commandRegistry } from "@/core/commands/registry";
 
 export interface MenuStateSnapshot {
 	isEditorDirty: boolean;

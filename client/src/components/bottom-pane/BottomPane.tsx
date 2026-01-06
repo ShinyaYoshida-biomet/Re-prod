@@ -1,7 +1,7 @@
 import { ConsolePanel } from "@/components/console";
+import { PlotHistoryPanel } from "@/components/plot-history";
 import { IconChevronLeft, IconChevronRight, IconTrash, PanelTabs } from "@/components/shared";
 import { TerminalPane } from "@/components/Terminal";
-import { PlotHistoryPanel } from "@/components/plot-history";
 import { useBottomPaneState } from "@/hooks/useBottomPaneState";
 
 export function BottomPane(): JSX.Element {

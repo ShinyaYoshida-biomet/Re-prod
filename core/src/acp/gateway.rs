@@ -11,6 +11,7 @@ use tracing::{info, warn};
 
 use super::{
     connection::{AcpConnection, PermissionDecisionMessage},
+    pending_edit::PendingEditStore,
     process::{spawn_agent, AcpChild, ProcessConfig, SpawnedPipes},
     session::AcpSessionManager,
     types::{
@@ -18,6 +19,7 @@ use super::{
         AcpPlanStepStatus, AcpSessionUpdate, AcpSessionUpdateEnvelope,
     },
 };
+use crate::edit::{EditOperation, EditService, EditStatus, EditTextFileRequest};
 
 const BROADCAST_BUFFER: usize = 128;
 
@@ -27,6 +29,8 @@ pub struct AcpGateway {
     conn: Option<AcpConnection>,
     workspace_root: PathBuf,
     sessions: AcpSessionManager,
+    edit_service: std::sync::Arc<EditService>,
+    pending_edits: std::sync::Arc<tokio::sync::Mutex<PendingEditStore>>,
     updates_tx: broadcast::Sender<AcpSessionUpdateEnvelope>,
     permission_tx: broadcast::Sender<AcpPermissionRequestPayload>,
 }
@@ -35,11 +39,16 @@ impl AcpGateway {
     pub fn new(workspace_root: PathBuf) -> Self {
         let (updates_tx, _) = broadcast::channel(BROADCAST_BUFFER);
         let (permission_tx, _) = broadcast::channel(BROADCAST_BUFFER);
+        let edit_service = std::sync::Arc::new(EditService::new(workspace_root.clone()));
+        let pending_edits =
+            std::sync::Arc::new(tokio::sync::Mutex::new(PendingEditStore::default()));
         Self {
             child: None,
             conn: None,
             workspace_root,
             sessions: AcpSessionManager::new(),
+            edit_service,
+            pending_edits,
             updates_tx,
             permission_tx,
         }
@@ -78,15 +87,22 @@ impl AcpGateway {
         } = spawn_agent(config).await?;
         child.notify_ready().await?;
 
-        let (connection, updates, permission_requests) =
-            match AcpConnection::initialize(self.workspace_root.clone(), writer, reader).await {
-                Ok(result) => result,
-                Err(err) => {
-                    warn!(error = %err, "ACP initialize failed; shutting down agent");
-                    child.shutdown().await;
-                    return Err(err);
-                }
-            };
+        let (connection, updates, permission_requests) = match AcpConnection::initialize(
+            self.workspace_root.clone(),
+            self.edit_service.clone(),
+            self.pending_edits.clone(),
+            writer,
+            reader,
+        )
+        .await
+        {
+            Ok(result) => result,
+            Err(err) => {
+                warn!(error = %err, "ACP initialize failed; shutting down agent");
+                child.shutdown().await;
+                return Err(err);
+            }
+        };
         self.forward_updates(updates);
         self.forward_permission_requests(permission_requests);
 
@@ -161,6 +177,57 @@ impl AcpGateway {
             update: AcpSessionUpdate::Done,
         };
         let _ = self.updates_tx.send(payload);
+        Ok(())
+    }
+
+    pub async fn accept_pending_edit(&self, edit_id: &str) -> Result<()> {
+        let edit = {
+            let store = self.pending_edits.lock().await;
+            store
+                .get_edit(edit_id)
+                .ok_or_else(|| anyhow!("Pending edit not found"))?
+        };
+
+        let current = self.edit_service.read_text_file(&edit.file_path).await?;
+        if current.sha256 != edit.base_sha256 {
+            return Err(anyhow!(
+                "Pending edit base mismatch: file changed since edit was created"
+            ));
+        }
+
+        let request = EditTextFileRequest {
+            path: edit.file_path.clone(),
+            operation: EditOperation::Replace,
+            expected_sha256: edit
+                .expected_sha256
+                .clone()
+                .or_else(|| Some(edit.base_sha256.clone())),
+            new_text: Some(edit.new_text.clone()),
+            edits: None,
+        };
+        let result = self.edit_service.edit_text_file(request).await?;
+        if matches!(result.status, EditStatus::Conflict) {
+            return Err(anyhow!("Conflict detected while applying pending edit"));
+        }
+
+        let mut store = self.pending_edits.lock().await;
+        store.remove_edit(edit_id);
+        Ok(())
+    }
+
+    pub async fn update_pending_edit(&self, edit_id: &str, new_text: &str) -> Result<()> {
+        let mut store = self.pending_edits.lock().await;
+        store
+            .update_edit_text(edit_id, new_text.to_string())
+            .map_err(|error| anyhow!(error))?;
+        Ok(())
+    }
+
+    pub async fn reject_pending_edit(&self, edit_id: &str) -> Result<()> {
+        let mut store = self.pending_edits.lock().await;
+        if store.remove_edit(edit_id).is_none() {
+            return Err(anyhow!("Pending edit not found"));
+        }
         Ok(())
     }
 
@@ -326,6 +393,215 @@ fn stringify_chunk(chunk: &ContentChunk) -> String {
     match &chunk.content {
         ContentBlock::Text(text) => text.text.clone(),
         other => format!("{other:?}"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::acp::pending_edit::PendingEdit;
+    use crate::edit::sha256_hex;
+    use tokio::fs;
+    use uuid::Uuid;
+
+    #[tokio::test]
+    async fn accept_pending_edit_persists_and_clears() {
+        let workspace = std::env::temp_dir().join(format!("acp-accept-{}", Uuid::new_v4()));
+        fs::create_dir_all(&workspace).await.unwrap();
+        let file_path = workspace.join("sample.R");
+        fs::write(&file_path, "old").await.unwrap();
+
+        let gateway = AcpGateway::new(workspace.clone());
+        let request = EditTextFileRequest {
+            path: "sample.R".to_string(),
+            operation: EditOperation::Replace,
+            expected_sha256: None,
+            new_text: Some("new".to_string()),
+            edits: None,
+        };
+        let result = gateway
+            .edit_service
+            .preview_text_file(request, None)
+            .await
+            .unwrap();
+
+        let pending = PendingEdit {
+            id: "edit-1".to_string(),
+            session_id: "s1".to_string(),
+            tool_call_id: "tool-1".to_string(),
+            file_path: "sample.R".to_string(),
+            old_text: result.old_text.clone(),
+            new_text: result.new_text.clone(),
+            unified_diff: result.unified_diff.clone(),
+            base_sha256: result.old_sha256.clone(),
+            expected_sha256: None,
+        };
+
+        {
+            let mut store = gateway.pending_edits.lock().await;
+            store
+                .register_pending_edit(pending.clone(), &result)
+                .unwrap();
+        }
+
+        gateway.accept_pending_edit(&pending.id).await.unwrap();
+        let disk_contents = fs::read_to_string(&file_path).await.unwrap();
+        assert_eq!(disk_contents, "new");
+
+        let store = gateway.pending_edits.lock().await;
+        assert!(store.get_edit(&pending.id).is_none());
+    }
+
+    #[tokio::test]
+    async fn reject_pending_edit_keeps_disk_unchanged() {
+        let workspace = std::env::temp_dir().join(format!("acp-reject-{}", Uuid::new_v4()));
+        fs::create_dir_all(&workspace).await.unwrap();
+        let file_path = workspace.join("sample.R");
+        fs::write(&file_path, "old").await.unwrap();
+
+        let gateway = AcpGateway::new(workspace.clone());
+        let request = EditTextFileRequest {
+            path: "sample.R".to_string(),
+            operation: EditOperation::Replace,
+            expected_sha256: None,
+            new_text: Some("new".to_string()),
+            edits: None,
+        };
+        let result = gateway
+            .edit_service
+            .preview_text_file(request, None)
+            .await
+            .unwrap();
+
+        let pending = PendingEdit {
+            id: "edit-2".to_string(),
+            session_id: "s2".to_string(),
+            tool_call_id: "tool-2".to_string(),
+            file_path: "sample.R".to_string(),
+            old_text: result.old_text.clone(),
+            new_text: result.new_text.clone(),
+            unified_diff: result.unified_diff.clone(),
+            base_sha256: result.old_sha256.clone(),
+            expected_sha256: None,
+        };
+
+        {
+            let mut store = gateway.pending_edits.lock().await;
+            store
+                .register_pending_edit(pending.clone(), &result)
+                .unwrap();
+        }
+
+        gateway.reject_pending_edit(&pending.id).await.unwrap();
+        let disk_contents = fs::read_to_string(&file_path).await.unwrap();
+        assert_eq!(disk_contents, "old");
+    }
+
+    #[tokio::test]
+    async fn update_pending_edit_refreshes_overlay() {
+        let workspace = std::env::temp_dir().join(format!("acp-update-{}", Uuid::new_v4()));
+        fs::create_dir_all(&workspace).await.unwrap();
+        let file_path = workspace.join("sample.R");
+        fs::write(&file_path, "old").await.unwrap();
+
+        let gateway = AcpGateway::new(workspace.clone());
+        let request = EditTextFileRequest {
+            path: "sample.R".to_string(),
+            operation: EditOperation::Replace,
+            expected_sha256: None,
+            new_text: Some("new".to_string()),
+            edits: None,
+        };
+        let result = gateway
+            .edit_service
+            .preview_text_file(request, None)
+            .await
+            .unwrap();
+
+        let pending = PendingEdit {
+            id: "edit-update".to_string(),
+            session_id: "s-update".to_string(),
+            tool_call_id: "tool-update".to_string(),
+            file_path: "sample.R".to_string(),
+            old_text: result.old_text.clone(),
+            new_text: result.new_text.clone(),
+            unified_diff: result.unified_diff.clone(),
+            base_sha256: result.old_sha256.clone(),
+            expected_sha256: None,
+        };
+
+        {
+            let mut store = gateway.pending_edits.lock().await;
+            store
+                .register_pending_edit(pending.clone(), &result)
+                .unwrap();
+        }
+
+        gateway
+            .update_pending_edit(&pending.id, "new-updated")
+            .await
+            .unwrap();
+
+        let store = gateway.pending_edits.lock().await;
+        let updated = store.get_edit(&pending.id).unwrap();
+        assert_eq!(updated.new_text, "new-updated");
+        let overlay = store
+            .overlay_for(&pending.session_id, &pending.file_path)
+            .unwrap();
+        assert_eq!(overlay.text, "new-updated");
+        assert_eq!(overlay.sha256, sha256_hex("new-updated"));
+    }
+
+    #[tokio::test]
+    async fn accept_pending_edit_rejects_base_mismatch() {
+        let workspace = std::env::temp_dir().join(format!("acp-mismatch-{}", Uuid::new_v4()));
+        fs::create_dir_all(&workspace).await.unwrap();
+        let file_path = workspace.join("sample.R");
+        fs::write(&file_path, "old").await.unwrap();
+
+        let gateway = AcpGateway::new(workspace.clone());
+        let base_hash = sha256_hex("old");
+        let pending = PendingEdit {
+            id: "edit-3".to_string(),
+            session_id: "s3".to_string(),
+            tool_call_id: "tool-3".to_string(),
+            file_path: "sample.R".to_string(),
+            old_text: "old".to_string(),
+            new_text: "new".to_string(),
+            unified_diff: String::new(),
+            base_sha256: base_hash,
+            expected_sha256: None,
+        };
+
+        let preview = gateway
+            .edit_service
+            .preview_text_file(
+                EditTextFileRequest {
+                    path: "sample.R".to_string(),
+                    operation: EditOperation::Replace,
+                    expected_sha256: None,
+                    new_text: Some("new".to_string()),
+                    edits: None,
+                },
+                None,
+            )
+            .await
+            .unwrap();
+
+        {
+            let mut store = gateway.pending_edits.lock().await;
+            store
+                .register_pending_edit(pending.clone(), &preview)
+                .unwrap();
+        }
+
+        fs::write(&file_path, "changed").await.unwrap();
+
+        let result = gateway.accept_pending_edit(&pending.id).await;
+        assert!(result.is_err());
+
+        let store = gateway.pending_edits.lock().await;
+        assert!(store.get_edit(&pending.id).is_some());
     }
 }
 

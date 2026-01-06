@@ -1,8 +1,8 @@
-import type { CodeBlock } from "@/types";
 import { useEffect, useState } from "react";
 import { IconCheck, IconClipboard, IconLightbulb } from "@/components/shared";
-import { CodeActionFactory } from "@/core/ai/actions";
 import { COPY_FEEDBACK_DURATION } from "@/constants/timeouts";
+import { CodeActionFactory } from "@/core/ai/actions";
+import type { CodeBlock } from "@/types";
 import { CodeBlockDiffPreview } from "./CodeBlockDiffPreview";
 
 interface Props {

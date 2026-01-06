@@ -1,7 +1,7 @@
-import type { PlotHistoryStatePayload } from "@/types";
 import type { DataTransport } from "@/repositories/core/DataTransport";
-import { PlotHistoryRepository } from "@/repositories/PlotHistoryRepository";
 import { WebSocketTransport } from "@/repositories/core/WebSocketTransport";
+import { PlotHistoryRepository } from "@/repositories/PlotHistoryRepository";
+import type { PlotHistoryStatePayload } from "@/types";
 import { socketService } from "./socket";
 
 export function createPlotHistoryService(transport: DataTransport): {

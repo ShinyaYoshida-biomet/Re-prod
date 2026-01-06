@@ -1,11 +1,11 @@
-import type { TimelineMessage, TimelineQuery, TimelineResponse, TimelineStats } from "./timeline";
-import type { ToolManifest } from "./tools";
 import type {
 	AcpPermissionDecision,
 	AcpPermissionRequestPayload,
 	AcpPromptMessage,
 	AcpSessionUpdateEnvelope,
 } from "./generated";
+import type { TimelineMessage, TimelineQuery, TimelineResponse, TimelineStats } from "./timeline";
+import type { ToolManifest } from "./tools";
 import type {
 	AIMode,
 	ChatMessagePayload,
@@ -142,7 +142,10 @@ export type ClientMessage =
 	| { type: "acp_session_create" }
 	| { type: "acp_session_prompt"; session_id: string; messages: AcpPromptMessage[] }
 	| { type: "acp_session_cancel"; session_id: string }
-	| { type: "acp_permission_decision"; decision: AcpPermissionDecision };
+	| { type: "acp_permission_decision"; decision: AcpPermissionDecision }
+	| { type: "acp_pending_edit_accept"; edit_id: string }
+	| { type: "acp_pending_edit_reject"; edit_id: string }
+	| { type: "acp_pending_edit_update"; edit_id: string; new_text: string };
 
 type TimelineEventPush = Extract<TimelineMessage, { type: "timeline_event_added" }>;
 
@@ -218,6 +221,8 @@ export type ServerMessage =
 	| { type: "run_accepted"; run_id: string }
 	| { type: "run_started"; run: RunSummary }
 	| ({ type: "run_output" } & RunOutputChunk)
+	| { type: "acp_pending_edit_resolved"; edit_id: string; success: boolean; error?: string | null }
+	| { type: "acp_pending_edit_updated"; edit_id: string; success: boolean; error?: string | null }
 	| { type: "run_finished"; run: RunSummary }
 	| { type: "acp_session_created"; session_id: string }
 	| ({ type: "acp://session-update" } & AcpSessionUpdateEnvelope)

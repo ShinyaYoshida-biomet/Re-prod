@@ -1,3 +1,5 @@
+import { DIFF_MARKER_HUNK, isDiffAddition, isDiffContext, isDiffRemoval } from "@/constants/diff";
+
 export type PatchChunk = {
 	context?: string;
 	oldLines: string[];
@@ -58,7 +60,7 @@ export function parsePatchFormat(text: string): PatchHunk[] {
 				continue;
 			}
 
-			if (line.startsWith("@@")) {
+			if (line.startsWith(DIFF_MARKER_HUNK)) {
 				currentChunk = {
 					context: line,
 					oldLines: [],
@@ -73,17 +75,17 @@ export function parsePatchFormat(text: string): PatchHunk[] {
 				continue;
 			}
 
-			if (line.startsWith("-")) {
+			if (isDiffRemoval(line)) {
 				chunk.oldLines.push(line.slice(1));
 				continue;
 			}
 
-			if (line.startsWith("+")) {
+			if (isDiffAddition(line)) {
 				chunk.newLines.push(line.slice(1));
 				continue;
 			}
 
-			if (line.startsWith(" ")) {
+			if (isDiffContext(line)) {
 				const context = line.slice(1);
 				chunk.oldLines.push(context);
 				chunk.newLines.push(context);

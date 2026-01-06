@@ -33,7 +33,9 @@ export interface ICodeAction {
  */
 export interface CodeActionContext {
 	/** Function to apply changes to the current editor */
-	applyToEditor?: (codeBlock: CodeBlock) => Promise<void>;
+	applyToEditor?: (
+		codeBlock: CodeBlock,
+	) => Promise<{ oldContent: string; newContent: string } | null>;
 
 	/** Function to apply changes to remote files */
 	applyToFile?: (codeBlock: CodeBlock) => Promise<void>;

@@ -1,6 +1,6 @@
+import { plotHistoryMessages } from "@/services/messageBuilders";
 import type { PlotHistoryStatePayload } from "@/types";
 import type { DataTransport } from "./core/DataTransport";
-import { plotHistoryMessages } from "@/services/messageBuilders";
 
 export class PlotHistoryRepository {
 	constructor(private readonly transport: DataTransport) {}

@@ -14,8 +14,8 @@ use reprod_core::acp::{
     AcpGateway, ProcessConfig,
 };
 use tauri::{AppHandle, Emitter};
-use tracing::{info, warn};
 use tokio::sync::broadcast;
+use tracing::{info, warn};
 
 struct Forwarders {
     updates: tauri::async_runtime::JoinHandle<()>,
@@ -78,9 +78,7 @@ impl AcpManager {
         self.gateway.send_prompt(session_id, messages).await
     }
 
-    pub fn subscribe_session_updates(
-        &self,
-    ) -> broadcast::Receiver<AcpSessionUpdateEnvelope> {
+    pub fn subscribe_session_updates(&self) -> broadcast::Receiver<AcpSessionUpdateEnvelope> {
         self.gateway.subscribe_session_updates()
     }
 
@@ -89,6 +87,19 @@ impl AcpManager {
     ) -> broadcast::Receiver<AcpPermissionRequestPayload> {
         self.gateway.subscribe_permission_requests()
     }
+
+    pub async fn accept_pending_edit(&self, edit_id: &str) -> Result<()> {
+        self.gateway.accept_pending_edit(edit_id).await
+    }
+
+    pub async fn reject_pending_edit(&self, edit_id: &str) -> Result<()> {
+        self.gateway.reject_pending_edit(edit_id).await
+    }
+
+    pub async fn update_pending_edit(&self, edit_id: &str, new_text: &str) -> Result<()> {
+        self.gateway.update_pending_edit(edit_id, new_text).await
+    }
+
 
     pub async fn shutdown(&mut self) {
         if let Some(handles) = self.forwarders.take() {

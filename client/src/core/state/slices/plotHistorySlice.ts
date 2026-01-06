@@ -1,5 +1,5 @@
-import type { PlotHistoryEntryPayload, PlotHistoryStatePayload } from "@/types";
 import type { StateCreator } from "zustand";
+import type { PlotHistoryEntryPayload, PlotHistoryStatePayload } from "@/types";
 
 export interface PlotHistoryItem {
 	id: string;

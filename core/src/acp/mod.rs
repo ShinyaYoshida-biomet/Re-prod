@@ -5,6 +5,7 @@ pub mod connection;
 pub mod detection;
 mod download;
 pub mod gateway;
+pub mod pending_edit;
 pub mod process;
 pub mod runtime;
 pub mod session;

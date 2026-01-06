@@ -1,9 +1,9 @@
 import type React from "react";
 import { useState } from "react";
-import { useSettingsStore } from "../../core/state/slices/settingsStore";
+import { classNames } from "@/utils/classNames";
 import { TEST_STATUS_RESET_DELAY } from "../../constants/timeouts";
 import { TestStatus } from "../../constants/ui";
-import { classNames } from "@/utils/classNames";
+import { useSettingsStore } from "../../core/state/slices/settingsStore";
 import "./LLMProviderConfig.css";
 
 interface Props {

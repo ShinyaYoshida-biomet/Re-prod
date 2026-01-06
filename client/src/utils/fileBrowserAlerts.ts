@@ -1,4 +1,4 @@
-import { type ToastContextValue } from "@/components/shared";
+import type { ToastContextValue } from "@/components/shared";
 
 export function alertWorkspaceNotReady(toast: ToastContextValue): void {
 	toast.showWarning(

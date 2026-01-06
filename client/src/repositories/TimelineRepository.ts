@@ -1,6 +1,6 @@
+import { timelineMessages } from "@/services/messageBuilders";
 import type { TimelineQuery, TimelineResponse, TimelineStats } from "@/types";
 import type { DataTransport } from "./core/DataTransport";
-import { timelineMessages } from "@/services/messageBuilders";
 
 export class TimelineRepository {
 	constructor(private readonly transport: DataTransport) {}

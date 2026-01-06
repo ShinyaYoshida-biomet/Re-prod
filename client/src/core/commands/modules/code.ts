@@ -1,6 +1,6 @@
-import { commandRegistry } from "../registry";
 import { useStore } from "@/core/state/store";
 import { interruptExecution, restartSession } from "@/services/executionService";
+import { commandRegistry } from "../registry";
 
 export function setupCodeCommands() {
 	commandRegistry.registerMany([

@@ -1,15 +1,35 @@
 import Editor, { type Monaco } from "@monaco-editor/react";
-import type { CodeBlock, CodeRange } from "@/types";
 import type { editor as MonacoEditor } from "monaco-editor";
 import type { ForwardedRef } from "react";
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
+import {
+	forwardRef,
+	useCallback,
+	useEffect,
+	useImperativeHandle,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { ConfirmDialog, IconPlay, IconPlayCircle, useToast } from "@/components/shared";
 import { useStore } from "@/core";
 import { computeTargetRange, findCodeInEditor, matchPatchChunk } from "@/core/ai/contextMatcher";
+import { commandRegistry } from "@/core/commands/registry";
+import type { AppliedCodeChange } from "@/core/state/slices/editorSlice";
+import { normalizeRelativePath } from "@/core/pathUtils";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useEditorCells } from "@/hooks/useEditorCells";
 import { useEditorDecorations } from "@/hooks/useEditorDecorations";
 import { useEditorExecution } from "@/hooks/useEditorExecution";
+import {
+	acceptPendingEdit,
+	rejectPendingEdit,
+	updatePendingEdit,
+} from "@/services/pendingEditService";
+import type { CodeBlock, CodeRange } from "@/types";
+import type { PendingEditReviewMap, PendingEditReviewStatus } from "@/types/pendingEdit";
+import { clamp } from "@/utils/math";
+import { applyPendingEditChanges, buildDiffChanges, buildDiffHunks } from "@/utils/pendingEditDiff";
+import { PendingEditDiffView } from "./PendingEditDiffView";
 import type { EditorRef } from "./editorRef";
 import { commandRegistry } from "@/core/commands/registry";
 import { clamp } from "@/utils/math";
@@ -28,9 +48,79 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	const setEditorRef = useStore((state) => state.setEditorRef);
 	const recordPatchMatchFailure = useStore((state) => state.recordPatchMatchFailure);
 	const recordPatchMatchSuccess = useStore((state) => state.recordPatchMatchSuccess);
+	const normalizedEditorPath = useMemo(
+		() => normalizeRelativePath(editor.filepath, { keepRootEmpty: true }),
+		[editor.filepath],
+	);
+	const pendingEdit = useStore((state) => state.pendingEdits[normalizedEditorPath]);
+	const clearPendingEdit = useStore((state) => state.clearPendingEdit);
+	const updatePendingEditStatus = useStore((state) => state.updatePendingEditStatus);
+	const updatePendingEditReview = useStore((state) => state.updatePendingEditReview);
+	const setPendingEditReviewMap = useStore((state) => state.setPendingEditReviewMap);
 	const editorMethodsRef = useRef<EditorRef | null>(null);
 	const monacoEditorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
 	const { dialogState, showConfirm, handleConfirm, handleCancel } = useConfirmDialog();
+	const pendingEditWarningRef = useRef(false);
+	const skipPendingNoticeRef = useRef(false);
+	const [monacoInstance, setMonacoInstance] = useState<Monaco | null>(null);
+	const [pendingNotice, setPendingNotice] = useState<{
+		type: "warning" | "error";
+		message: string;
+	} | null>(null);
+	const pendingEditReviewMap = pendingEdit?.reviewedChanges ?? {};
+	const pendingEditDiff = useMemo(() => {
+		if (!pendingEdit || !monacoInstance) return null;
+		const language = monacoEditorRef.current?.getModel()?.getLanguageId();
+		if (typeof document === "undefined") {
+			return null;
+		}
+		const original = monacoInstance.editor.createModel(pendingEdit.oldContent, language);
+		const modified = monacoInstance.editor.createModel(pendingEdit.newContent, language);
+		const diffContainer = document.createElement("div");
+		const diffEditor = monacoInstance.editor.createDiffEditor(diffContainer, {
+			readOnly: true,
+		});
+		try {
+			diffEditor.setModel({ original, modified });
+			const changes = diffEditor.getLineChanges() ?? [];
+			const diffChanges = buildDiffChanges(pendingEdit.oldContent, pendingEdit.newContent, changes);
+			return {
+				changes: diffChanges,
+				hunks: buildDiffHunks(diffChanges),
+			};
+		} finally {
+			diffEditor.dispose();
+			original.dispose();
+			modified.dispose();
+		}
+	}, [monacoInstance, pendingEdit]);
+	const reviewedContent = useMemo(() => {
+		if (!pendingEdit || !pendingEditDiff) return null;
+		return applyPendingEditChanges(
+			pendingEdit.oldContent,
+			pendingEditDiff.changes,
+			pendingEditReviewMap,
+		);
+	}, [pendingEdit, pendingEditDiff, pendingEditReviewMap]);
+	const pendingEditSummary = useMemo(() => {
+		if (!pendingEditDiff) {
+			return { total: 0, keep: 0, reject: 0, pending: 0 };
+		}
+		let keep = 0;
+		let reject = 0;
+		let pending = 0;
+		for (const change of pendingEditDiff.changes) {
+			const status = pendingEditReviewMap[change.id];
+			if (status === "keep") {
+				keep += 1;
+			} else if (status === "reject") {
+				reject += 1;
+			} else {
+				pending += 1;
+			}
+		}
+		return { total: pendingEditDiff.changes.length, keep, reject, pending };
+	}, [pendingEditDiff, pendingEditReviewMap]);
 
 	const cells = useEditorCells(editor.content, editor.filepath);
 	const { state, actions } = useEditorExecution({
@@ -46,8 +136,150 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		executingCellIndex,
 	});
 
+	useEffect(() => {
+		pendingEditWarningRef.current = false;
+		setPendingNotice(null);
+	}, [pendingEdit?.id]);
+
+	useEffect(() => {
+		if (!pendingEdit) return;
+		if (reviewedContent === null) return;
+		if (editor.content === reviewedContent) return;
+		skipPendingNoticeRef.current = true;
+		setEditorContent(reviewedContent);
+	}, [editor.content, pendingEdit, reviewedContent, setEditorContent]);
+
+	useEffect(() => {
+		if (!pendingEdit || !pendingEditDiff) return;
+		const nextMap: PendingEditReviewMap = { ...pendingEditReviewMap };
+		let updated = false;
+		for (const change of pendingEditDiff.changes) {
+			if (!(change.id in nextMap)) {
+				nextMap[change.id] = "keep";
+				updated = true;
+			}
+		}
+		if (updated) {
+			setPendingEditReviewMap(pendingEdit.filePath, nextMap);
+		}
+	}, [pendingEdit, pendingEditDiff, pendingEditReviewMap, setPendingEditReviewMap]);
+
+	const handlePendingAccept = useCallback(async () => {
+		if (!pendingEdit) return;
+		const resolvedContent = reviewedContent ?? pendingEdit.newContent;
+		if (editor.content !== resolvedContent) {
+			setPendingNotice({
+				type: "warning",
+				message: "Editor content changed since the pending edit review.",
+			});
+			return;
+		}
+		try {
+			if (pendingEdit.source.type === "acp" && resolvedContent !== pendingEdit.newContent) {
+				await updatePendingEdit(pendingEdit, resolvedContent);
+			}
+			await acceptPendingEdit(pendingEdit);
+			updatePendingEditStatus(pendingEdit.filePath, "accepted");
+			clearPendingEdit(pendingEdit.filePath);
+			setPendingNotice(null);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Failed to accept pending edit";
+			setPendingNotice({
+				type: "error",
+				message: message.includes("Pending edit not found")
+					? "Pending edit is no longer available. Re-run the change or reject it."
+					: message,
+			});
+		}
+	}, [
+		clearPendingEdit,
+		editor.content,
+		pendingEdit,
+		reviewedContent,
+		updatePendingEdit,
+		updatePendingEditStatus,
+	]);
+
+	const handlePendingReject = useCallback(async () => {
+		if (!pendingEdit) return;
+		try {
+			await rejectPendingEdit(pendingEdit);
+			setEditorContent(pendingEdit.oldContent);
+			updatePendingEditStatus(pendingEdit.filePath, "rejected");
+			clearPendingEdit(pendingEdit.filePath);
+			setPendingNotice(null);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Failed to reject pending edit";
+			setPendingNotice({
+				type: "error",
+				message: message.includes("Pending edit not found")
+					? "Pending edit is no longer available. The buffer may already be resolved."
+					: message,
+			});
+		}
+	}, [clearPendingEdit, pendingEdit, setEditorContent, updatePendingEditStatus]);
+
+	const handlePendingReviewChange = useCallback(
+		(changeId: string, status: PendingEditReviewStatus) => {
+			if (!pendingEdit) return;
+			updatePendingEditReview(pendingEdit.filePath, changeId, status);
+		},
+		[pendingEdit, updatePendingEditReview],
+	);
+
+	const handlePendingKeepAll = useCallback(() => {
+		if (!pendingEdit || !pendingEditDiff) return;
+		const nextMap: PendingEditReviewMap = {};
+		for (const change of pendingEditDiff.changes) {
+			nextMap[change.id] = "keep";
+		}
+		setPendingEditReviewMap(pendingEdit.filePath, nextMap);
+	}, [pendingEdit, pendingEditDiff, setPendingEditReviewMap]);
+
+	const handlePendingRejectAll = useCallback(() => {
+		if (!pendingEdit || !pendingEditDiff) return;
+		const nextMap: PendingEditReviewMap = {};
+		for (const change of pendingEditDiff.changes) {
+			nextMap[change.id] = "reject";
+		}
+		setPendingEditReviewMap(pendingEdit.filePath, nextMap);
+	}, [pendingEdit, pendingEditDiff, setPendingEditReviewMap]);
+
+	useEffect(() => {
+		if (!pendingEdit) return;
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key === "Enter" && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
+				event.preventDefault();
+				handlePendingAccept();
+				return;
+			}
+			if (event.key === "Escape") {
+				event.preventDefault();
+				handlePendingReject();
+			}
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => {
+			window.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [handlePendingAccept, handlePendingReject, pendingEdit]);
+
 	const handleEditorChange = (value: string | undefined): void => {
 		if (value !== undefined) {
+			if (pendingEdit && skipPendingNoticeRef.current) {
+				skipPendingNoticeRef.current = false;
+				setEditorContent(value);
+				return;
+			}
+			if (pendingEdit && !pendingEditWarningRef.current) {
+				if (!pendingNotice || pendingNotice.type !== "error") {
+					setPendingNotice({
+						type: "warning",
+						message: "Resolve the pending edit before making additional changes.",
+					});
+				}
+				pendingEditWarningRef.current = true;
+			}
 			setEditorContent(value);
 		}
 	};
@@ -91,15 +323,15 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 
 	// Apply code changes from AI
 	const applyCodeChange = useCallback(
-		(codeBlock: CodeBlock): void => {
+		async (codeBlock: CodeBlock): Promise<AppliedCodeChange | null> => {
 			const monacoEditor = monacoEditorRef.current;
 			if (!monacoEditor) {
-				return;
+				return null;
 			}
 
 			const model = monacoEditor.getModel();
 			if (!model) {
-				return;
+				return null;
 			}
 
 			const clampLine = (line: number): number => clamp(line, 1, model.getLineCount());
@@ -111,10 +343,19 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 			};
 
 			const editorContent = monacoEditor.getValue();
+			const originalContent = editorContent;
 			const contextAlertMessage =
 				"Unable to locate the suggested context in the current editor. Try running the suggestion again after scrolling the intended section into view.";
 			let contextMatchingFailed = false;
 			let contextAlertPending = false;
+
+			const finalizeChange = (): AppliedCodeChange | null => {
+				const newContent = monacoEditor.getValue();
+				if (newContent === originalContent) {
+					return null;
+				}
+				return { oldContent: originalContent, newContent };
+			};
 
 			const resolveTargetRange = (): CodeRange | undefined => {
 				if (codeBlock.targetRange) {
@@ -286,53 +527,58 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 				case "replace-all": {
 					const structuredApplied = applyStructuredContext();
 					if (structuredApplied) {
-						break;
+						return finalizeChange();
 					}
 
 					const appliedRange = applyRangeChange(codeBlock.code, false);
 					if (appliedRange) {
-						break;
+						return finalizeChange();
 					}
 
-					// Show confirmation dialog asynchronously
 					const target = codeBlock.filepath ? `file ${codeBlock.filepath}` : "current editor";
 					const confirmationMessage = contextMatchingFailed
 						? `Context matching failed, so this action will replace the entire ${target}. Proceed only if you understand the change.`
 						: `This AI suggestion will replace the entire ${target}. Proceed only if you understand the change.`;
-					showConfirm("Confirm Replace All", confirmationMessage).then((confirmed) => {
-						if (confirmed) {
-							monacoEditor.setValue(codeBlock.code);
-							setEditorContent(codeBlock.code);
-						}
-					});
-					break;
+					const confirmed = await showConfirm("Confirm Replace All", confirmationMessage);
+					if (confirmed) {
+						monacoEditor.setValue(codeBlock.code);
+						setEditorContent(codeBlock.code);
+						return finalizeChange();
+					}
+					return null;
 				}
 				case "replace-range": {
 					const structuredApplied = applyStructuredContext();
-					if (!structuredApplied) {
-						const applied = applyRangeChange(codeBlock.code, contextMatchingFailed);
-						if (!applied) {
-							// No explicit context; offer to replace the whole file as a fallback
-							const target = codeBlock.filepath ? `file ${codeBlock.filepath}` : "current editor";
-							showConfirm(
-								"Confirm Replace All",
-								`Could not match the suggested context. Replace the entire ${target} with the suggested code?`,
-							).then((confirmed) => {
-								if (confirmed) {
-									monacoEditor.setValue(codeBlock.code);
-									setEditorContent(codeBlock.code);
-								}
-							});
-						}
+					if (structuredApplied) {
+						return finalizeChange();
 					}
-					break;
+
+					const applied = applyRangeChange(codeBlock.code, contextMatchingFailed);
+					if (applied) {
+						return finalizeChange();
+					}
+
+					const target = codeBlock.filepath ? `file ${codeBlock.filepath}` : "current editor";
+					const confirmed = await showConfirm(
+						"Confirm Replace All",
+						`Could not match the suggested context. Replace the entire ${target} with the suggested code?`,
+					);
+					if (confirmed) {
+						monacoEditor.setValue(codeBlock.code);
+						setEditorContent(codeBlock.code);
+						return finalizeChange();
+					}
+					return null;
 				}
 				case "delete-range": {
 					const structuredApplied = applyStructuredContext();
 					if (!structuredApplied) {
-						applyRangeChange("", contextMatchingFailed);
+						const applied = applyRangeChange("", contextMatchingFailed);
+						if (!applied) {
+							return null;
+						}
 					}
-					break;
+					return finalizeChange();
 				}
 				case "insert": {
 					const position = monacoEditor.getPosition();
@@ -346,12 +592,14 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 							},
 							codeBlock.code,
 						);
+						return finalizeChange();
 					}
-					break;
+					return null;
 				}
 				case "create-file":
-					break;
+					return null;
 				default:
+					return null;
 			}
 		},
 		[setEditorContent, showConfirm, recordPatchMatchFailure, recordPatchMatchSuccess],
@@ -379,6 +627,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	): void => {
 		monacoEditorRef.current = monacoEditor;
 		setMonacoEditor(monacoEditor);
+		setMonacoInstance(monaco);
 
 		// Track cursor position
 		monacoEditor.onDidChangeCursorPosition((e) => {
@@ -441,6 +690,50 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 						</button>
 					</div>
 				</div>
+				{pendingEdit && (
+					<div className="pending-edit-review">
+						<div className="pending-edit-review-toolbar">
+							<div className="pending-edit-review-summary">
+								Pending edit ({pendingEdit.source.type === "acp" ? "ACP" : "API Key"})
+							</div>
+							<div className="pending-edit-review-meta">
+								{pendingEditSummary.total} hunks · {pendingEditSummary.keep} keep ·{" "}
+								{pendingEditSummary.reject} reject · {pendingEditSummary.pending} pending
+							</div>
+							{pendingNotice && (
+								<div className={`pending-edit-message ${pendingNotice.type}`}>
+									{pendingNotice.message}
+								</div>
+							)}
+							<div className="pending-edit-review-actions">
+								<button className="btn" onClick={handlePendingKeepAll} type="button">
+									Keep All
+								</button>
+								<button className="btn" onClick={handlePendingRejectAll} type="button">
+									Reject All
+								</button>
+								<button className="btn btn-primary" onClick={handlePendingAccept} type="button">
+									Apply (Enter)
+								</button>
+								<button className="btn" onClick={handlePendingReject} type="button">
+									Discard (Esc)
+								</button>
+							</div>
+						</div>
+						{pendingEditDiff && pendingEditDiff.hunks.length > 0 ? (
+							<PendingEditDiffView
+								hunks={pendingEditDiff.hunks}
+								reviewMap={pendingEditReviewMap}
+								onReviewChange={handlePendingReviewChange}
+								onNavigateToLine={navigateToLine}
+							/>
+						) : (
+							<div className="pending-edit-message warning">
+								No pending changes detected in the diff view.
+							</div>
+						)}
+					</div>
+				)}
 				<div className="panel-content">
 					<Editor
 						height="100%"
@@ -459,6 +752,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 							tabSize: 2,
 							automaticLayout: true,
 							padding: { top: 8, bottom: 8 },
+							readOnly: Boolean(pendingEdit),
 							scrollbar: {
 								useShadows: false,
 								verticalScrollbarSize: 12,

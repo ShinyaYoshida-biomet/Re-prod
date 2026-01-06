@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, waitFor } from "@testing-library/react";
-import { ExternalAgentSettingsPane } from "../ExternalAgentSettingsPane";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useStore } from "@/core";
+import { ExternalAgentSettingsPane } from "../ExternalAgentSettingsPane";
 
 const bootstrapMock = vi.fn();
 const setConfigMock = vi.fn();

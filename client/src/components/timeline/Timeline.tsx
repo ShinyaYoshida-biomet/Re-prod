@@ -1,5 +1,5 @@
-import type { TimelineListProps } from "@/types/timeline";
 import { LoadingSpinner } from "@/components/shared";
+import type { TimelineListProps } from "@/types/timeline";
 import { TimelineEvent } from "./TimelineEvent";
 
 export function Timeline({

@@ -1,8 +1,8 @@
-import type { ExecutionLogPlot } from "@/types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PanelTabItem } from "@/components/shared";
 import { useStore } from "@/core";
 import { setActivePlot } from "@/services/plotHistoryService";
+import type { ExecutionLogPlot } from "@/types";
 import type {
 	BottomPanePlotTab,
 	BottomPaneTab,

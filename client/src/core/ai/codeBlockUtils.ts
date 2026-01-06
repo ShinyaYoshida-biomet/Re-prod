@@ -1,3 +1,11 @@
+import {
+	DIFF_MARKER_FILE_NEW,
+	DIFF_MARKER_FILE_OLD,
+	DIFF_MARKER_HUNK,
+	isDiffAddition,
+	isDiffContext,
+	isDiffRemoval,
+} from "@/constants/diff";
 import type { CodeBlock, CodeChangeAction, CodeRange, SimpleCodeChange } from "@/types";
 import { CodeActionFactory } from "./actions";
 import type { PatchHunk } from "./patchParser";
@@ -28,7 +36,7 @@ const makeCodeRange = (raw?: Partial<CodeRange>): CodeRange | undefined => {
 
 const parsePatchSnippet = (value: string): { originalCode: string; newCode: string } | null => {
 	const lines = value.split(/\r?\n/);
-	const hasDiffMarkers = lines.some((line) => line.startsWith("+") || line.startsWith("-"));
+	const hasDiffMarkers = lines.some((line) => isDiffAddition(line) || isDiffRemoval(line));
 	if (!hasDiffMarkers) {
 		return null;
 	}
@@ -37,21 +45,25 @@ const parsePatchSnippet = (value: string): { originalCode: string; newCode: stri
 	const newLines: string[] = [];
 
 	for (const line of lines) {
-		if (line.startsWith("@@") || line.startsWith("---") || line.startsWith("+++")) {
+		if (
+			line.startsWith(DIFF_MARKER_HUNK) ||
+			line.startsWith(DIFF_MARKER_FILE_OLD) ||
+			line.startsWith(DIFF_MARKER_FILE_NEW)
+		) {
 			continue;
 		}
 
-		if (line.startsWith("-")) {
+		if (isDiffRemoval(line)) {
 			originalLines.push(line.slice(1));
 			continue;
 		}
 
-		if (line.startsWith("+")) {
+		if (isDiffAddition(line)) {
 			newLines.push(line.slice(1));
 			continue;
 		}
 
-		if (line.startsWith(" ")) {
+		if (isDiffContext(line)) {
 			const context = line.slice(1);
 			originalLines.push(context);
 			newLines.push(context);

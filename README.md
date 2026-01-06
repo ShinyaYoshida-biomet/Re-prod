@@ -8,7 +8,8 @@
 
 AI-Powered R Analysis IDE - A modern, AI-native alternative to RStudio.
 
-![image](https://private-user-images.githubusercontent.com/33049408/530954930-95408ef3-14a7-4dec-9cf2-f77598166418.png?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NjcwOTI0NDgsIm5iZiI6MTc2NzA5MjE0OCwicGF0aCI6Ii8zMzA0OTQwOC81MzA5NTQ5MzAtOTU0MDhlZjMtMTRhNy00ZGVjLTljZjItZjc3NTk4MTY2NDE4LnBuZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNTEyMzAlMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjUxMjMwVDEwNTU0OFomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPWE5NjI5NDRjOTljMzliN2FkZDRjZTdkZmQ5ZmRkNGRkN2JlYWM5NDE5NDE5ODc1MzFmMzBjOTY0NTk1MWUxNDgmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.JEjhasFCUhM05dKKykFK9c1TXrpXEU-ENlDCvSxO31g)
+<img width="1509" height="850" alt="snapshot" src="https://github.com/user-attachments/assets/95408ef3-14a7-4dec-9cf2-f77598166418" />
+
 
 ## Mission
 

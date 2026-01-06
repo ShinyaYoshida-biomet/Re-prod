@@ -69,6 +69,7 @@ fn create_test_event(
             execution_time_ms: 42,
         },
         environment: EnvironmentSnapshot {
+            r_version: None,
             r_path: "Rscript".to_string(),
             working_dir: "/tmp/test-project".to_string(),
             temp_dir: "/tmp/reprod-test".to_string(),

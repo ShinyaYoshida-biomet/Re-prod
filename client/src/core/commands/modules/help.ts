@@ -1,6 +1,6 @@
-import { commandRegistry } from "../registry";
-import { useStore } from "@/core/state/store";
 import { DOCS_URL, GITHUB_ISSUE_URL } from "@/constants/urls";
+import { useStore } from "@/core/state/store";
+import { commandRegistry } from "../registry";
 
 export function setupHelpCommands() {
 	commandRegistry.registerMany([

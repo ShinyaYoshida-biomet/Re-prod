@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { IconFile } from "@/components/icons/IconFile";
 import {
+	ConfirmDialog,
 	IconChevronDown,
 	IconChevronRight,
 	IconFolder,
 	IconPlus,
-	ConfirmDialog,
 	useToast,
 } from "@/components/shared";
 import { useFileSystemStore, useStore } from "@/core";
@@ -14,12 +14,12 @@ import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useFileBrowserState } from "@/hooks/useFileBrowserState";
 import { useFileSystemData } from "@/hooks/useFileSystemData";
 import { type FileEntry, fileSystem } from "@/services/fileSystem";
-import {
-	alertWorkspaceNotReady,
-	alertFileOperationError,
-	alertDesktopOnlyFeature,
-} from "@/utils/fileBrowserAlerts";
 import { getErrorMessage } from "@/utils/error";
+import {
+	alertDesktopOnlyFeature,
+	alertFileOperationError,
+	alertWorkspaceNotReady,
+} from "@/utils/fileBrowserAlerts";
 
 const ROOT_LABEL = "Workspace";
 const DRAG_DATA_MIME = "application/x-reprod-paths";

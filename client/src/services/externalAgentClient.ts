@@ -1,4 +1,5 @@
 import { IS_TAURI } from "@/constants/features";
+import { socketService } from "@/services/socket";
 import type {
 	AcpPermissionDecision,
 	AcpPermissionRequestPayload,
@@ -39,25 +40,29 @@ class DesktopAcpClient implements ExternalAgentClient {
 		let disposed = false;
 		let unlisten: ExternalAgentUnsubscribe | null = null;
 
-		void import("@tauri-apps/api/event")
-			.then(({ listen }) =>
-				listen<AcpSessionUpdateEnvelope>("acp://session-update", (event) => {
+		(async () => {
+			try {
+				const tauriEvent = await import("@tauri-apps/api/event");
+				const listen: typeof tauriEvent.listen = tauriEvent.listen;
+
+				const dispose = await listen<AcpSessionUpdateEnvelope>("acp://session-update", (event) => {
 					if (!event.payload) return;
 					cb(event.payload);
-				}),
-			)
-			.then((dispose) => {
+				});
+
 				if (disposed) {
 					dispose();
 					return;
 				}
+
 				unlisten = dispose;
-			})
-			.catch((error) => {
+			} catch (error) {
 				console.error("Failed to bind ACP session update listener", error);
 				showToast("Failed to connect to AI agent. Please restart the application.", "error");
 			});
 
+			}
+		})();
 		return () => {
 			disposed = true;
 			if (unlisten) {
@@ -72,21 +77,26 @@ class DesktopAcpClient implements ExternalAgentClient {
 		let disposed = false;
 		let unlisten: ExternalAgentUnsubscribe | null = null;
 
-		void import("@tauri-apps/api/event")
-			.then(({ listen }) =>
-				listen<AcpPermissionRequestPayload>("acp://permission-request", (event) => {
-					if (!event.payload) return;
-					cb(event.payload);
-				}),
-			)
-			.then((dispose) => {
+		(async () => {
+			try {
+				const tauriEvent = await import("@tauri-apps/api/event");
+				const listen: typeof tauriEvent.listen = tauriEvent.listen;
+
+				const dispose = await listen<AcpPermissionRequestPayload>(
+					"acp://permission-request",
+					(event) => {
+						if (!event.payload) return;
+						cb(event.payload);
+					},
+				);
+
 				if (disposed) {
 					dispose();
 					return;
 				}
+
 				unlisten = dispose;
-			})
-			.catch((error) => {
+			} catch (error) {
 				console.error("Failed to bind ACP permission listener", error);
 				showToast(
 					"Failed to initialize permission system. Agent requests may not work properly.",
@@ -94,6 +104,8 @@ class DesktopAcpClient implements ExternalAgentClient {
 				);
 			});
 
+			}
+		})();
 		return () => {
 			disposed = true;
 			if (unlisten) {

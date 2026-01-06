@@ -114,6 +114,30 @@ impl AcpService {
         Ok(())
     }
 
+    pub async fn accept_pending_edit(&self, edit_id: &str) -> Result<()> {
+        self.rate_limit("pending_edit_accept").await?;
+        self.ensure_agent_running().await?;
+        let gateway = self.gateway.lock().await;
+        gateway.accept_pending_edit(edit_id).await?;
+        Ok(())
+    }
+
+    pub async fn reject_pending_edit(&self, edit_id: &str) -> Result<()> {
+        self.rate_limit("pending_edit_reject").await?;
+        self.ensure_agent_running().await?;
+        let gateway = self.gateway.lock().await;
+        gateway.reject_pending_edit(edit_id).await?;
+        Ok(())
+    }
+
+    pub async fn update_pending_edit(&self, edit_id: &str, new_text: &str) -> Result<()> {
+        self.rate_limit("pending_edit_update").await?;
+        self.ensure_agent_running().await?;
+        let gateway = self.gateway.lock().await;
+        gateway.update_pending_edit(edit_id, new_text).await?;
+        Ok(())
+    }
+
     pub async fn subscribe_session_updates(&self) -> broadcast::Receiver<AcpSessionUpdateEnvelope> {
         let gateway = self.gateway.lock().await;
         gateway.subscribe_session_updates()
@@ -189,7 +213,6 @@ async fn resolve_agent_command() -> Result<String> {
         bail!("External agent mode not enabled");
     }
     let detected = detect_agents().await?;
-    resolve_active_agent_command(&cfg, &detected).ok_or_else(|| {
-        anyhow!("Selected ACP agent unavailable or not set for external_agent mode")
-    })
+    resolve_active_agent_command(&cfg, &detected)
+        .ok_or_else(|| anyhow!("Selected ACP agent unavailable or not set for external_agent mode"))
 }

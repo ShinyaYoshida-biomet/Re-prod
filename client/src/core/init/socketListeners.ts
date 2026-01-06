@@ -1,7 +1,7 @@
-import type { ServerMessage } from "@/types";
 import { useStore } from "@/core/state/store";
-import { socketService } from "@/services/socket";
 import { refreshTimelineData } from "@/services/sessionPersistence";
+import { socketService } from "@/services/socket";
+import type { ServerMessage } from "@/types";
 
 type RunEventHandlers = {
 	run_state: (message: Extract<ServerMessage, { type: "run_state" }>) => void;

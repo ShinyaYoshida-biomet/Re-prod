@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { IconXCircle } from "../icons";
 import { classNames } from "@/utils/classNames";
+import { IconXCircle } from "../icons";
 
 export const ToastSeverity = {
 	INFO: "info",

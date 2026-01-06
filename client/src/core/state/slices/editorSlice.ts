@@ -1,7 +1,12 @@
-import type { CodeBlock } from "@/types";
 import type { RefObject } from "react";
 import type { StateCreator } from "zustand";
 import type { EditorRef } from "@/components/editor/editorRef";
+import type { CodeBlock } from "@/types";
+
+export interface AppliedCodeChange {
+	oldContent: string;
+	newContent: string;
+}
 
 export const DEFAULT_R_SCRIPT = `# Welcome to Re-prod ----
 # AI-Powered R Analysis IDE
@@ -21,7 +26,7 @@ export interface EditorState {
 		};
 	};
 	monacoEditor: any | null;
-	applyCodeChange: ((codeBlock: CodeBlock) => void) | null;
+	applyCodeChange: ((codeBlock: CodeBlock) => Promise<AppliedCodeChange | null>) | null;
 	runCurrentCell: (() => void) | null;
 	runAll: (() => void) | null;
 	editorRef: RefObject<EditorRef> | null;
@@ -30,7 +35,9 @@ export interface EditorState {
 	setEditorCursorPosition: (position: { line: number; column: number }) => void;
 	setEditorIsDirty: (isDirty: boolean) => void;
 	setMonacoEditor: (editor: any) => void;
-	setApplyCodeChange: (handler: (codeBlock: CodeBlock) => void) => void;
+	setApplyCodeChange: (
+		handler: (codeBlock: CodeBlock) => Promise<AppliedCodeChange | null>,
+	) => void;
 	setRunCurrentCell: (handler: () => void) => void;
 	setRunAll: (handler: () => void) => void;
 	setEditorRef: (editorRef: RefObject<EditorRef> | null) => void;

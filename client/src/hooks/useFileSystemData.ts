@@ -1,7 +1,7 @@
 import { useEffect } from "react";
-import type { ExtractServerMessage } from "@/types";
 import { useFileSystemStore } from "@/core/fileSystemStore";
 import { socketService } from "@/services/socket";
+import type { ExtractServerMessage } from "@/types";
 
 export function useFileSystemData(): void {
 	const loadRoot = useFileSystemStore((state) => state.loadRoot);

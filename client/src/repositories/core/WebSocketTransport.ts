@@ -1,6 +1,6 @@
-import type { ExtractServerMessage, ServerMessage, ServerMessageType } from "@/types";
 import type { socketService } from "@/services/socket";
-import { RemoteError, TransportError, type DataTransport } from "./DataTransport";
+import type { ExtractServerMessage, ServerMessage, ServerMessageType } from "@/types";
+import { type DataTransport, RemoteError, TransportError } from "./DataTransport";
 
 type SocketService = typeof socketService;
 
