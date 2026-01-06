@@ -15,6 +15,11 @@
 	margin-bottom: 0 !important;
 }
 
+/* Ensure content doesn't get clipped in message-streaming-text container */
+.message-streaming-text .markdown-body {
+	padding-top: 6px;
+}
+
 /* Headings */
 .markdown-body h1,
 .markdown-body h2,
@@ -70,14 +75,14 @@
 
 /* Code blocks */
 .markdown-body pre {
-	padding: 16px;
+	padding: 8px;
 	overflow: auto;
 	font-size: 85%;
 	line-height: 1.45;
 	background-color: var(--code-block-bg, #f6f8fa);
 	border-radius: 6px;
 	margin-top: 0;
-	margin-bottom: 16px;
+	margin-bottom: 8px;
 }
 
 .markdown-body pre code {
@@ -105,7 +110,7 @@
 }
 
 .markdown-body li > p {
-	margin-top: 16px;
+	margin-top: 8px;
 }
 
 .markdown-body li + li {
@@ -128,7 +133,7 @@
 	color: var(--text-secondary, #656d76);
 	border-left: 0.25em solid var(--border-accent, #d0d7de);
 	margin-top: 0;
-	margin-bottom: 16px;
+	margin-bottom: 8px;
 }
 
 .markdown-body blockquote > :first-child {
@@ -148,7 +153,7 @@
 	max-width: 100%;
 	overflow: auto;
 	margin-top: 0;
-	margin-bottom: 16px;
+	margin-bottom: 8px;
 }
 
 .markdown-body table th {
@@ -215,7 +220,7 @@
 /* Paragraphs */
 .markdown-body p {
 	margin-top: 0;
-	margin-bottom: 16px;
+	margin-bottom: 8px;
 }
 
 /* Images */
