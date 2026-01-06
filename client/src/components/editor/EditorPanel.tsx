@@ -1,4 +1,4 @@
-import Editor, { type Monaco } from "@monaco-editor/react";
+import Editor, { DiffEditor, type Monaco } from "@monaco-editor/react";
 import type { editor as MonacoEditor } from "monaco-editor";
 import type { ForwardedRef } from "react";
 import {
@@ -84,6 +84,9 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		type: "warning" | "error";
 		message: string;
 	} | null>(null);
+	const [showWhitespace, setShowWhitespace] = useState(false);
+	const [ignoreWhitespace, setIgnoreWhitespace] = useState(false);
+	const [activeHunkId, setActiveHunkId] = useState<string | null>(null);
 	const pendingEditReviewMap = pendingEdit?.reviewedChanges ?? {};
 	const [pendingEditDiff, setPendingEditDiff] = useState<PendingEditDiff | null>(null);
 	const reviewedContent = useMemo(() => {
@@ -113,6 +116,24 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		}
 		return { total: pendingEditDiff.changes.length, keep, reject, pending };
 	}, [pendingEditDiff, pendingEditReviewMap]);
+	const pendingHunks = useMemo(() => {
+		if (!pendingEditDiff) return [];
+		return pendingEditDiff.hunks.filter((hunk) => !pendingEditReviewMap[hunk.id]);
+	}, [pendingEditDiff, pendingEditReviewMap]);
+
+	useEffect(() => {
+		if (!pendingEditDiff) {
+			setActiveHunkId(null);
+			return;
+		}
+		if (pendingHunks.length === 0) {
+			setActiveHunkId(null);
+			return;
+		}
+		if (!activeHunkId || !pendingHunks.some((hunk) => hunk.id === activeHunkId)) {
+			setActiveHunkId(pendingHunks[0].id);
+		}
+	}, [activeHunkId, pendingEditDiff, pendingHunks]);
 
 	useEffect(() => {
 		if (!pendingEdit || !monacoInstance) {
@@ -273,6 +294,36 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		monacoEditor.focus();
 	}, []);
 
+	const focusHunk = useCallback(
+		(hunk: DiffHunk): void => {
+			setActiveHunkId(hunk.id);
+			const targetLine = getHunkHeaderLine(hunk);
+			if (typeof requestAnimationFrame === "function") {
+				requestAnimationFrame(() => navigateToLine(targetLine));
+			} else {
+				navigateToLine(targetLine);
+			}
+		},
+		[getHunkHeaderLine, navigateToLine],
+	);
+
+	const handlePrevHunk = useCallback(() => {
+		if (!pendingHunks.length) return;
+		const currentIndex = pendingHunks.findIndex((hunk) => hunk.id === activeHunkId);
+		const previousIndex = currentIndex > 0 ? currentIndex - 1 : 0;
+		focusHunk(pendingHunks[previousIndex]);
+	}, [activeHunkId, focusHunk, pendingHunks]);
+
+	const handleNextHunk = useCallback(() => {
+		if (!pendingHunks.length) return;
+		const currentIndex = pendingHunks.findIndex((hunk) => hunk.id === activeHunkId);
+		const nextIndex =
+			currentIndex >= 0 && currentIndex < pendingHunks.length - 1
+				? currentIndex + 1
+				: pendingHunks.length - 1;
+		focusHunk(pendingHunks[nextIndex]);
+	}, [activeHunkId, focusHunk, pendingHunks]);
+
 	const handlePendingReviewChange = useCallback(
 		(changeId: string, status: PendingEditReviewStatus) => {
 			if (!pendingEdit || !pendingEditDiff) return;
@@ -288,22 +339,18 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 				pendingEditDiff.hunks.find((hunk) => !nextReviewMap[hunk.id]);
 
 			if (nextPending) {
-				const targetLine = getHunkHeaderLine(nextPending);
-				if (typeof requestAnimationFrame === "function") {
-					requestAnimationFrame(() => navigateToLine(targetLine));
-				} else {
-					navigateToLine(targetLine);
-				}
+				focusHunk(nextPending);
 			}
 		},
-		[
-			getHunkHeaderLine,
-			navigateToLine,
-			pendingEdit,
-			pendingEditDiff,
-			pendingEditReviewMap,
-			updatePendingEditReview,
-		],
+		[focusHunk, pendingEdit, pendingEditDiff, pendingEditReviewMap, updatePendingEditReview],
+	);
+
+	const handlePendingHunkNavigate = useCallback(
+		(lineNumber: number, hunkId: string) => {
+			setActiveHunkId(hunkId);
+			navigateToLine(lineNumber);
+		},
+		[navigateToLine],
 	);
 
 	const handlePendingKeepAll = useCallback(() => {
@@ -762,6 +809,38 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 								{pendingEditSummary.total} hunks · {pendingEditSummary.keep} keep ·{" "}
 								{pendingEditSummary.reject} reject · {pendingEditSummary.pending} pending
 							</div>
+							<div className="pending-edit-review-controls">
+								<button
+									className="btn"
+									onClick={handlePrevHunk}
+									type="button"
+									disabled={!pendingHunks.length}
+								>
+									Prev Hunk
+								</button>
+								<button
+									className="btn"
+									onClick={handleNextHunk}
+									type="button"
+									disabled={!pendingHunks.length}
+								>
+									Next Hunk
+								</button>
+								<button
+									className={`btn ${showWhitespace ? "btn-primary" : ""}`}
+									onClick={() => setShowWhitespace((prev) => !prev)}
+									type="button"
+								>
+									Show Whitespace
+								</button>
+								<button
+									className={`btn ${ignoreWhitespace ? "btn-primary" : ""}`}
+									onClick={() => setIgnoreWhitespace((prev) => !prev)}
+									type="button"
+								>
+									Ignore Whitespace
+								</button>
+							</div>
 							{pendingNotice && (
 								<div className={`pending-edit-message ${pendingNotice.type}`}>
 									{pendingNotice.message}
@@ -788,7 +867,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 									hunks={pendingEditDiff.hunks}
 									reviewMap={pendingEditReviewMap}
 									onReviewChange={handlePendingReviewChange}
-									onNavigateToLine={navigateToLine}
+									onNavigateToLine={handlePendingHunkNavigate}
 								/>
 							) : (
 								<div className="pending-edit-message warning">
@@ -801,32 +880,88 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 					</div>
 				)}
 				<div className="panel-content">
-					<Editor
-						height="100%"
-						defaultLanguage="r"
-						theme="vs"
-						value={editor.content}
-						onChange={handleEditorChange}
-						options={{
-							fontSize: settings.fontSize,
-							fontFamily: "Monaco, Menlo, Consolas, monospace",
-							minimap: { enabled: false },
-							scrollBeyondLastLine: false,
-							wordWrap: "on",
-							lineNumbers: "on",
-							renderWhitespace: "selection",
-							tabSize: 2,
-							automaticLayout: true,
-							padding: { top: 8, bottom: 8 },
-							readOnly: Boolean(pendingEdit),
-							scrollbar: {
-								useShadows: false,
-								verticalScrollbarSize: 12,
-								horizontalScrollbarSize: 12,
-							},
-						}}
-						onMount={handleEditorDidMount}
-					/>
+					{pendingEdit ? (
+						<div className="editor-split">
+							<div className="editor-pane">
+								<Editor
+									height="100%"
+									defaultLanguage="r"
+									theme="vs"
+									value={editor.content}
+									onChange={handleEditorChange}
+									options={{
+										fontSize: settings.fontSize,
+										fontFamily: "Monaco, Menlo, Consolas, monospace",
+										minimap: { enabled: false },
+										scrollBeyondLastLine: false,
+										wordWrap: "on",
+										lineNumbers: "on",
+										renderWhitespace: "selection",
+										tabSize: 2,
+										automaticLayout: true,
+										padding: { top: 8, bottom: 8 },
+										readOnly: true,
+										scrollbar: {
+											useShadows: false,
+											verticalScrollbarSize: 12,
+											horizontalScrollbarSize: 12,
+										},
+									}}
+									onMount={handleEditorDidMount}
+								/>
+							</div>
+							<div className="editor-pane diff-pane">
+								<DiffEditor
+									height="100%"
+									original={pendingEdit.oldContent}
+									modified={pendingEdit.newContent}
+									theme="vs"
+									language="r"
+									options={{
+										readOnly: true,
+										renderSideBySide: true,
+										renderWhitespace: showWhitespace ? "all" : "selection",
+										ignoreTrimWhitespace: ignoreWhitespace,
+										minimap: { enabled: false },
+										scrollBeyondLastLine: false,
+										automaticLayout: true,
+										lineNumbers: "on",
+										glyphMargin: false,
+										folding: false,
+										lineDecorationsWidth: 18,
+										lineNumbersMinChars: 3,
+									}}
+								/>
+							</div>
+						</div>
+					) : (
+						<Editor
+							height="100%"
+							defaultLanguage="r"
+							theme="vs"
+							value={editor.content}
+							onChange={handleEditorChange}
+							options={{
+								fontSize: settings.fontSize,
+								fontFamily: "Monaco, Menlo, Consolas, monospace",
+								minimap: { enabled: false },
+								scrollBeyondLastLine: false,
+								wordWrap: "on",
+								lineNumbers: "on",
+								renderWhitespace: "selection",
+								tabSize: 2,
+								automaticLayout: true,
+								padding: { top: 8, bottom: 8 },
+								readOnly: false,
+								scrollbar: {
+									useShadows: false,
+									verticalScrollbarSize: 12,
+									horizontalScrollbarSize: 12,
+								},
+							}}
+							onMount={handleEditorDidMount}
+						/>
+					)}
 				</div>
 			</div>
 			<ConfirmDialog
