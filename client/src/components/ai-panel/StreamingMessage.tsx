@@ -1,11 +1,15 @@
+import { useCallback, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
-import { BrailleSpinner } from "@/components/shared";
-import type { AIMessage, CodeBlock } from "@/types";
+import { useStore } from "@/core";
+import { BrailleSpinner, useToast } from "@/components/shared";
+import { fileSystem } from "@/services/fileSystem";
+import type { AIMessage, CodeBlock, ToolCallLog as ToolCallLogEntry } from "@/types";
 import { classNames } from "@/utils/classNames";
 import { AIPlanCard } from "./AIPlanCard";
 import { CodeBlockWithApply } from "./CodeBlockWithApply";
+import { FileAccessIndicator } from "./FileAccessIndicator";
 import { ToolCallLog } from "./ToolCallLog";
 import "github-markdown-css/github-markdown.css";
 import "./Markdown.css";
@@ -21,7 +25,54 @@ function stripPatchBlocks(content: string): string {
 	return content.replace(/\*\*\* Begin Patch[\s\S]*?\*\*\* End Patch/g, "").trim();
 }
 
+const READ_TOOL_NAMES = new Set(["read", "read file", "read_file", "read_text_file"]);
+
+const isReadTool = (name?: string): boolean => {
+	if (!name) return false;
+	const normalized = name.trim().toLowerCase();
+	if (READ_TOOL_NAMES.has(normalized)) return true;
+	return normalized.includes("read") && normalized.includes("file");
+};
+
+const extractReadPathFromInput = (input?: Record<string, unknown>): string | null => {
+	if (!input) return null;
+	const candidate = input.path ?? input.file_path ?? input.filePath;
+	if (typeof candidate === "string" && candidate.trim()) {
+		return candidate.trim();
+	}
+	return null;
+};
+
+const extractReadFilePaths = (logs?: ToolCallLogEntry[]): string[] => {
+	if (!logs || logs.length === 0) return [];
+	const seen = new Set<string>();
+	const result: string[] = [];
+
+	for (const log of logs) {
+		if (log.status !== "done") continue;
+		if (!isReadTool(log.name)) continue;
+
+		const path =
+			extractReadPathFromInput(log.input) ??
+			(log.locations && log.locations.length > 0 ? log.locations[0] : null);
+
+		if (typeof path === "string" && path.trim()) {
+			const trimmed = path.trim();
+			if (!seen.has(trimmed)) {
+				seen.add(trimmed);
+				result.push(trimmed);
+			}
+		}
+	}
+
+	return result;
+};
+
 export function StreamingMessage({ message, onApplyCode }: Props): JSX.Element {
+	const setEditorContent = useStore((state) => state.setEditorContent);
+	const setEditorFilepath = useStore((state) => state.setEditorFilepath);
+	const setEditorIsDirty = useStore((state) => state.setEditorIsDirty);
+	const toast = useToast();
 	const isAssistant = message.role === "assistant";
 	const isStreaming = Boolean(message.streamingId && !message.isComplete);
 	const hasPlan = Boolean(message.planSteps && message.planSteps.length > 0);
@@ -31,6 +82,21 @@ export function StreamingMessage({ message, onApplyCode }: Props): JSX.Element {
 
 	// Strip patch blocks from content to avoid duplicate display
 	const displayContent = message.content ? stripPatchBlocks(message.content) : "";
+	const readFilePaths = useMemo(() => extractReadFilePaths(message.toolLogs), [message.toolLogs]);
+	const handleOpenPath = useCallback(
+		async (path: string) => {
+			try {
+				const content = await fileSystem.readFile(path);
+				setEditorContent(content);
+				setEditorFilepath(path);
+				setEditorIsDirty(false);
+			} catch (error) {
+				const message = error instanceof Error ? error.message : "Unknown error";
+				toast.showError(`Failed to open file: ${message}`);
+			}
+		},
+		[setEditorContent, setEditorFilepath, setEditorIsDirty, toast],
+	);
 
 	// Custom components for react-markdown
 	const markdownComponents: Components = {
@@ -118,6 +184,10 @@ export function StreamingMessage({ message, onApplyCode }: Props): JSX.Element {
 
 			{isAssistant && (
 				<>
+					{readFilePaths.length > 0 && (
+						<FileAccessIndicator filePaths={readFilePaths} onOpenPath={handleOpenPath} />
+					)}
+
 					{hasPlan && <AIPlanCard steps={message.planSteps} />}
 
 					{hasTools && <ToolCallLog logs={message.toolLogs} />}
