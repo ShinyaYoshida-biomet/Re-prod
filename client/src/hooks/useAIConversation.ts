@@ -132,15 +132,25 @@ export function useAIConversation() {
 			update: AcpSessionUpdateEnvelope["update"],
 		): { kind: "message" | "thought"; text: string } | null => {
 			if (typeof update !== "object" || update === null) return null;
-			if (!("AgentMessageChunk" in update) && !("AgentThoughtChunk" in update)) return null;
-			const kind = "AgentThoughtChunk" in update ? "thought" : "message";
-			const value =
-				"AgentThoughtChunk" in update ? update.AgentThoughtChunk : update.AgentMessageChunk;
-			if (typeof value === "object" && "text" in value) {
-				const candidate = (value as { text?: unknown }).text;
-				return asOptionalString(candidate) ?? null;
+
+			const isThought = "AgentThoughtChunk" in update;
+			const isMessage = "AgentMessageChunk" in update;
+
+			if (!isThought && !isMessage) return null;
+
+			const value = isThought ? update.AgentThoughtChunk : update.AgentMessageChunk;
+
+			if (typeof value !== "object" || value === null || !("text" in value)) {
+				return null;
 			}
-			return null;
+
+			const text = asOptionalString((value as { text?: unknown }).text);
+			if (!text) return null;
+
+			return {
+				kind: isThought ? "thought" : "message",
+				text,
+			};
 		},
 		[],
 	);
