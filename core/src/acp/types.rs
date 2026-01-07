@@ -210,5 +210,6 @@ mod tests {
         AcpPermissionDecision::export().unwrap();
         AcpDetectedAgent::export().unwrap();
         AcpAgentConfig::export().unwrap();
+        crate::test_utils::format_typescript_bindings();
     }
 }

@@ -405,5 +405,6 @@ mod tests {
         FileChangeEvent::export_all().expect("Failed to export FileChangeEvent");
         ToolExecutionRequest::export_all().expect("Failed to export ToolExecutionRequest");
         ToolExecutionResult::export_all().expect("Failed to export ToolExecutionResult");
+        crate::test_utils::format_typescript_bindings();
     }
 }

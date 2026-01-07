@@ -17,6 +17,8 @@ pub mod plot_history;
 pub mod project;
 pub mod protocol;
 pub mod terminal;
+#[cfg(test)]
+mod test_utils;
 pub mod timeline;
 pub mod tools;
 pub mod web_search;
