@@ -7,4 +7,9 @@ Files:
 - OpenAI-black-monoblossom.svg
 - gemini-color.png
 
-Please update this file with the official source URLs and licensing terms for each asset.
+Sources:
+- Claude symbol - Clay.svg: https://www.anthropic.com/news
+- OpenAI-black-monoblossom.svg: https://openai.com/ja-JP/brand/
+- gemini-color.png: https://lobehub.com/ja/icons/gemini
+
+Please verify usage rights for each asset before distribution.
