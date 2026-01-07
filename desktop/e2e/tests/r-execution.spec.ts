@@ -11,8 +11,8 @@ test.describe("R execution flow", () => {
 		const editor = page.locator(selectors.editor);
 		await editor.waitFor({ timeout: 30000 });
 
-		// Execute simple R code
-		await executeRCode(page, "1 + 1");
+		// Execute simple R code (explicit print ensures output in non-interactive runs)
+		await executeRCode(page, "print(1 + 1)");
 
 		// Wait for output to appear
 		await waitForConsoleOutput(page, "[1] 2", { timeout: 30000 });
@@ -31,7 +31,7 @@ test.describe("R execution flow", () => {
 		// Execute multiple lines
 		const code = `x <- 5
 y <- 10
-x + y`;
+print(x + y)`;
 
 		await executeRCode(page, code);
 

@@ -55,6 +55,11 @@ export async function waitForConsoleOutput(
 ) {
 	const timeout = options.timeout || 30000;
 
+	const consoleTab = page.locator('button:has-text("Console")');
+	if (await consoleTab.isVisible()) {
+		await consoleTab.click();
+	}
+
 	await page.waitForFunction(
 		({ selector, text }) => {
 			const outputs = document.querySelectorAll(selector);
