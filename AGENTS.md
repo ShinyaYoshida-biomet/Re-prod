@@ -67,6 +67,11 @@ The following commands are always allowed without asking for permission:
   - `git worktree remove`,
   - `git worktree prune`,
   - `git worktree list`
+- Branch management:
+  - git checkout
+    - git checkout -b
+  - git switch
+    - git switch -c
 
 If you are asked to work in worktree dir, **never damage the main dir**. Please work only in worktree dir.
 
