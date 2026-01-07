@@ -6,6 +6,7 @@ import {
 	getModelUrl,
 	getTestConnectionUrl,
 } from "@/constants/urls";
+import { type ProviderMetadata, resolveProviderMetadata } from "@/domain/provider/ProviderMetadata";
 
 interface Provider {
 	name: string;
@@ -14,6 +15,7 @@ interface Provider {
 	activeModel: string;
 	apiKeyMasked?: string;
 	isConfigured: boolean;
+	metadata: ProviderMetadata | null;
 }
 
 interface SettingsState {
@@ -34,17 +36,19 @@ interface SettingsState {
 const DEFAULT_PROVIDERS: Provider[] = [
 	{
 		name: "anthropic",
-		displayName: "Anthropic Claude",
+		displayName: "Claude",
 		models: LLM_MODELS.anthropic,
 		activeModel: DEFAULT_MODEL_BY_PROVIDER.anthropic,
 		isConfigured: false,
+		metadata: resolveProviderMetadata("anthropic"),
 	},
 	{
 		name: "openai",
-		displayName: "OpenAI GPT",
+		displayName: "OpenAI",
 		models: [...LLM_MODELS.openai, "gpt-4o-mini"],
 		activeModel: DEFAULT_MODEL_BY_PROVIDER.openai,
 		isConfigured: false,
+		metadata: resolveProviderMetadata("openai"),
 	},
 ];
 

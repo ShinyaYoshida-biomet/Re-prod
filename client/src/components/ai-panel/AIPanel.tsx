@@ -1,8 +1,12 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { IconSend, IconSquare } from "@/components/shared";
+import { useStore } from "@/core";
 import { commandRegistry } from "@/core/commands/registry";
+import { useSettingsStore } from "@/core/state/slices/settingsStore";
+import { resolveProviderMetadata } from "@/domain/provider/ProviderMetadata";
 import { useAIConversation } from "@/hooks/useAIConversation";
 import type { AIMode } from "@/types";
+import { ProviderIcon } from "./ProviderIcon";
 import { ProviderSwitcher } from "./ProviderSwitcher";
 import { StreamingMessage } from "./StreamingMessage";
 
@@ -16,6 +20,10 @@ interface AIPanelProps {
 
 export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(({ hasConfiguredProvider }, ref) => {
 	const { aiState, aiActions, promptHistory } = useAIConversation();
+	const { activeProvider, providers } = useSettingsStore();
+	const activeMode = useStore((state) => state.activeMode);
+	const activeAgent = useStore((state) => state.activeAgent);
+	const detectedAgents = useStore((state) => state.detectedAgents);
 
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -48,6 +56,22 @@ export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(({ hasConfiguredProv
 
 	const [mode, setMode] = useState<AIMode>("agent");
 	const placeholder = mode === "agent" ? "Describe a task..." : "Ask a question...";
+	const providerMetadata = useMemo(() => {
+		if (activeMode === "external_agent") {
+			return resolveProviderMetadata(activeAgent);
+		}
+		const provider = providers.find((item) => item.name === activeProvider);
+		return provider?.metadata ?? resolveProviderMetadata(activeProvider);
+	}, [activeAgent, activeMode, activeProvider, providers]);
+
+	const providerLabel = useMemo(() => {
+		if (activeMode === "external_agent") {
+			const agent = detectedAgents.find((item) => item.id === activeAgent);
+			return agent?.name ?? "External agent";
+		}
+		const provider = providers.find((item) => item.name === activeProvider);
+		return provider?.displayName ?? activeProvider ?? "AI";
+	}, [activeAgent, activeMode, activeProvider, detectedAgents, providers]);
 
 	useEffect(() => {
 		if (hasConfiguredProvider && showApiKeyError) {
@@ -180,6 +204,11 @@ export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(({ hasConfiguredProv
 									<option value="agent">Agent</option>
 									<option value="chat">Chat</option>
 								</select>
+								{providerMetadata ? (
+									<ProviderIcon metadata={providerMetadata} showLabel size="small" />
+								) : (
+									<span className="provider-fallback-label">{providerLabel}</span>
+								)}
 							</div>
 							<div className="input-controls-right">
 								{aiState.isLoading ? (

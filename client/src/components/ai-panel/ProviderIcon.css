@@ -1,0 +1,41 @@
+.provider-icon {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin-left: 8px;
+	user-select: none;
+}
+
+.provider-icon__image {
+	width: 16px;
+	height: 16px;
+	object-fit: contain;
+}
+
+.provider-icon--small .provider-icon__image {
+	width: 14px;
+	height: 14px;
+}
+
+.provider-icon--medium .provider-icon__image {
+	width: 16px;
+	height: 16px;
+}
+
+.provider-icon--large .provider-icon__image {
+	width: 20px;
+	height: 20px;
+}
+
+.provider-icon__label {
+	font-size: 13px;
+	color: var(--text-secondary);
+	font-weight: 500;
+}
+
+.provider-fallback-label {
+	margin-left: 8px;
+	font-size: 13px;
+	color: var(--text-secondary);
+	font-weight: 500;
+}
