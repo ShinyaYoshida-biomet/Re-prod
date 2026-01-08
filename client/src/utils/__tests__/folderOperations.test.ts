@@ -48,4 +48,17 @@ describe("openFolder", () => {
 		});
 		expect(toast.showError).not.toHaveBeenCalled();
 	});
+
+	it("returns null when the picker is cancelled", async () => {
+		(window as unknown as { __TAURI__?: object }).__TAURI__ = {};
+		const dialog = await import("@tauri-apps/plugin-dialog");
+		const toast = await import("@/services/toastService");
+		const openMock = dialog.open as unknown as ReturnType<typeof vi.fn>;
+		openMock.mockResolvedValue(null);
+
+		const result = await openFolder();
+
+		expect(result).toBeNull();
+		expect(toast.showError).not.toHaveBeenCalled();
+	});
 });

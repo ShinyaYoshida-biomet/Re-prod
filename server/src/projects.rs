@@ -257,4 +257,18 @@ mod tests {
         assert!(reprod_dir.is_dir());
         assert!(reprod_dir.join("config.json").exists());
     }
+
+    #[tokio::test]
+    async fn runtime_for_path_rejects_file_paths() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let file_path = temp.path().join("not-a-dir");
+        std::fs::write(&file_path, "data").expect("write file");
+
+        let controller = ProjectController::new(Arc::new(Mutex::new(Config::default())))
+            .await
+            .expect("controller");
+        let result = controller.runtime_for_path(&file_path).await;
+
+        assert!(result.is_err());
+    }
 }
