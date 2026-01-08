@@ -4,6 +4,7 @@ import { DEFAULT_SETTINGS } from "@/constants/defaultSettings";
 import { useStore } from "@/core";
 import type { AppSettings } from "@/types";
 import { ExternalAgentSettingsPane } from "../agent/ExternalAgentSettingsPane";
+import { AIProviderSettingsPane } from "../settings/AIProviderSettingsPane";
 import { SettingsPanel } from "../settings/SettingsPanel";
 import { ModalShell } from "./ModalShell";
 
@@ -17,6 +18,7 @@ type SettingKey = keyof AppSettings;
 export function SettingsModal({ open, onClose }: SettingsModalProps): JSX.Element | null {
 	const settings = useStore((state) => state.settings);
 	const updateSettings = useStore((state) => state.updateSettings);
+	const activeMode = useStore((state) => state.activeMode);
 	const [draft, setDraft] = useState<AppSettings>(settings);
 
 	useEffect(() => {
@@ -63,6 +65,11 @@ export function SettingsModal({ open, onClose }: SettingsModalProps): JSX.Elemen
 			}
 		>
 			<form id="settings-form" className="settings-form" onSubmit={handleSubmit}>
+				<section>
+					<h3>AI Provider</h3>
+					<AIProviderSettingsPane />
+				</section>
+
 				<section>
 					<h3>General</h3>
 					<label className="settings-row">
@@ -136,15 +143,18 @@ export function SettingsModal({ open, onClose }: SettingsModalProps): JSX.Elemen
 					</label>
 				</section>
 
-				<section>
-					<h3>LLM Providers</h3>
-					<SettingsPanel />
-				</section>
+				{activeMode === "api" && (
+					<section>
+						<h3>API Providers</h3>
+						<SettingsPanel />
+					</section>
+				)}
 
-				<section>
-					<h3>External Agents (ACP)</h3>
-					<ExternalAgentSettingsPane />
-				</section>
+				{activeMode === "external_agent" && (
+					<section>
+						<ExternalAgentSettingsPane />
+					</section>
+				)}
 			</form>
 		</ModalShell>
 	);

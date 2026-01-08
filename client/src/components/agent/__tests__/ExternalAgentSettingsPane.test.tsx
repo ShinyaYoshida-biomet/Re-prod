@@ -71,4 +71,28 @@ describe("ExternalAgentSettingsPane", () => {
 		await waitFor(() => expect(setConfigMock).toHaveBeenCalledWith("external_agent", "claude"));
 		expect(useStore.getState().activeAgent).toBe("claude");
 	});
+
+	it("toggles the refresh button label based on loading state", async () => {
+		let resolveBootstrap: ((value: any) => void) | null = null;
+		bootstrapMock.mockReturnValue(
+			new Promise((resolve) => {
+				resolveBootstrap = resolve;
+			}),
+		);
+
+		const { getByText } = render(<ExternalAgentSettingsPane />);
+
+		await waitFor(() => expect(getByText("Refreshing...")).toBeTruthy());
+
+		resolveBootstrap?.({
+			config: {
+				active_mode: "external_agent",
+				active_agent: null,
+				active_agent_command: null,
+			},
+			agents: [],
+		});
+
+		await waitFor(() => expect(getByText("Refresh")).toBeTruthy());
+	});
 });

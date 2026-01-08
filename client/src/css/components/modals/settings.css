@@ -27,6 +27,9 @@
 	--settings-checkbox-accent: auto;
 	--settings-range-accent: var(--phylo-cytosine-light);
 
+	--settings-option-bg: rgba(255, 255, 255, 0.03);
+	--settings-option-hover-bg: rgba(255, 255, 255, 0.06);
+
 	--settings-number-hint-size: inherit;
 	--settings-number-hint-color: inherit;
 	--settings-number-hint-font: inherit;
@@ -60,6 +63,9 @@
 	--settings-checkbox-size: 14px;
 	--settings-checkbox-accent: var(--phylo-cytosine);
 	--settings-range-accent: var(--phylo-cytosine);
+
+	--settings-option-bg: var(--phylo-bg-primary);
+	--settings-option-hover-bg: var(--phylo-bg-secondary);
 
 	--settings-number-hint-size: 11px;
 	--settings-number-hint-color: var(--phylo-text-secondary);
@@ -149,6 +155,106 @@
 
 .settings-footer-spacer {
 	flex: 1;
+}
+
+.ai-provider-pane .mode-selection {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.mode-option {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	padding: 16px;
+	border: 1px solid var(--settings-input-border);
+	border-radius: var(--settings-input-radius);
+	background: var(--settings-option-bg);
+	cursor: pointer;
+	transition: background-color 0.2s ease;
+}
+
+.mode-option:hover {
+	background: var(--settings-option-hover-bg);
+}
+
+.mode-content {
+	flex: 1;
+}
+
+.mode-title {
+	font-weight: 600;
+	margin-bottom: 4px;
+}
+
+.mode-description {
+	color: var(--settings-hint-color);
+	font-size: 0.9em;
+}
+
+.external-agent-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 16px;
+}
+
+.external-agent-header h3 {
+	margin: 0;
+}
+
+.agent-list {
+	display: flex;
+	flex-direction: column;
+	border: 1px solid var(--settings-input-border);
+	border-radius: var(--settings-input-radius);
+	overflow: hidden;
+}
+
+.agent-item {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	padding: 16px;
+	border-bottom: 1px solid var(--settings-input-border);
+	cursor: pointer;
+	transition: background-color 0.2s ease;
+}
+
+.agent-item:last-child {
+	border-bottom: none;
+}
+
+.agent-item:hover:not(.disabled) {
+	background: var(--settings-option-hover-bg);
+}
+
+.agent-item.disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.agent-info {
+	flex: 1;
+}
+
+.agent-name {
+	font-weight: 500;
+	margin-bottom: 4px;
+}
+
+.agent-path {
+	font-size: 0.85em;
+	color: var(--settings-hint-color);
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+.agent-empty {
+	padding: 24px;
+	text-align: center;
+	color: var(--settings-hint-color);
 }
 
 @media (max-width: 640px) {
