@@ -234,3 +234,27 @@ impl ProjectController {
         Ok(runtime)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn runtime_for_path_creates_reprod_dir() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let workspace = temp.path().join("workspace");
+        std::fs::create_dir_all(&workspace).expect("create workspace");
+
+        let controller = ProjectController::new(Arc::new(Mutex::new(Config::default())))
+            .await
+            .expect("controller");
+        let runtime = controller
+            .runtime_for_path(&workspace)
+            .await
+            .expect("runtime");
+
+        let reprod_dir = runtime.descriptor.root_path.join(".reprod");
+        assert!(reprod_dir.is_dir());
+        assert!(reprod_dir.join("config.json").exists());
+    }
+}
