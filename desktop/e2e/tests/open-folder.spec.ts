@@ -46,11 +46,11 @@ test.describe("Open Folder", () => {
 			.first();
 		await expect(fileNode).toBeVisible({ timeout: 30000 });
 
-		const editorTitle = page.locator(selectors.editorTitle);
-		await expect(editorTitle).toContainText("Untitled.R");
+		const activeTab = page.locator(selectors.tabActive);
+		await expect(activeTab).toContainText("Untitled", { timeout: 30000 });
 
 		await fileNode.dblclick();
-		await expect(editorTitle).toContainText(fixtureFileName, { timeout: 30000 });
+		await expect(activeTab).toContainText(fixtureFileName, { timeout: 30000 });
 
 		await page.waitForFunction(
 			(expected) => {

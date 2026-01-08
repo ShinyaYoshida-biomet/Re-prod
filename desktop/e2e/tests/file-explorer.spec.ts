@@ -49,8 +49,8 @@ test.describe("File Explorer", () => {
 		await expect(fixtureNode).toBeVisible({ timeout: 30000 });
 		await fixtureNode.dblclick();
 
-		const editorTitle = page.locator(selectors.editorTitle);
-		await expect(editorTitle).toContainText(fixtureFileName, { timeout: 30000 });
+		const activeTab = page.locator(selectors.tabActive);
+		await expect(activeTab).toContainText(fixtureFileName, { timeout: 30000 });
 
 		await page.waitForFunction(
 			(expected) => {
