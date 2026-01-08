@@ -1,5 +1,6 @@
 import type { CodeBlock } from "@/types";
 import { isEmptyString } from "@/utils/string";
+import { EDITOR_BUFFER_PLACEHOLDER_PATTERNS } from "@/constants/placeholders";
 import type { CodeActionContext, CodeActionValidation, ICodeAction } from "./ICodeAction";
 
 /**
@@ -59,14 +60,8 @@ export abstract class BaseCodeAction implements ICodeAction {
 	): boolean {
 		if (!targetFile) return true;
 
-		const placeholderPatterns = [
-			"<current editor buffer>",
-			"current editor buffer",
-			"current_editor_buffer",
-		];
-
 		return (
-			placeholderPatterns.some((pattern) => targetFile.includes(pattern)) ||
+			EDITOR_BUFFER_PLACEHOLDER_PATTERNS.some((pattern) => targetFile.includes(pattern)) ||
 			targetFile.startsWith("<") ||
 			targetFile === editorFilepath
 		);

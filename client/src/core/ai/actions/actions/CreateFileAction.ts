@@ -1,5 +1,6 @@
 import type { CodeBlock } from "@/types";
 import { isEmptyString } from "@/utils/string";
+import { EDITOR_BUFFER_PLACEHOLDER_PATTERNS } from "@/constants/placeholders";
 import type { CodeActionContext, CodeActionValidation, ICodeAction } from "../ICodeAction";
 
 /**
@@ -23,13 +24,9 @@ export class CreateFileAction implements ICodeAction {
 		}
 
 		// Check for placeholder/invalid paths
-		const invalidPatterns = [
-			"<current editor buffer>",
-			"current editor buffer",
-			"current_editor_buffer",
-		];
-
-		if (invalidPatterns.some((pattern) => codeBlock.filepath?.includes(pattern))) {
+		if (
+			EDITOR_BUFFER_PLACEHOLDER_PATTERNS.some((pattern) => codeBlock.filepath?.includes(pattern))
+		) {
 			return {
 				valid: false,
 				error: "Cannot create file with placeholder path",
