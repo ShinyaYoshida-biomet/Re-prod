@@ -49,6 +49,8 @@ git checkout -b feature/your-feature-name
 git checkout -b fix/issue-number-description
 ```
 
+Branch names such as `test-XX` and `issue-YYY` are not acceptable.
+
 ### 3. Make Your Changes
 
 - Write clean, readable code

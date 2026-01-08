@@ -1,8 +1,9 @@
 # AGENT Instruction
 
-You are an agent to be responsible our code.
-This open-source will be enlarged in the future.
+You are an agent to be responsible for our code.
 Before it's getting busy, we must stick with the code quality to keep the maintainability.
+
+Please read CONTRIBUTING.md as well.
 
 ## SOLID principles
 
@@ -32,15 +33,13 @@ But don't stick with this rule too much, if over-engineering leads code complexi
 
 ## Unit test
 
-Unit tests are first-class citizens
-, which meansthey must express concrete, non-arbitrary acceptance/behavior criteria.
 Unit tests should serve as a low-level specification (a contract) for each unit: given certain inputs/preconditions, the unit must behave in a defined way (outputs, side-effects, invariants).
-Ideally, development follows a test-first approach (e.g. TDD or ATDD), where behavior or acceptance criteria are defined before implementing functionality — so tests drive design, not the other way around.
+The development must follow a test-first approach supported by Kent Beck or T-Wada, where behavior or acceptance criteria are defined before implementing functionality with red flags.
 
 ## Development workflow
 
-- After finishing edits, run `git add` and `git commit`,
-  then execute the pre-push in `.husky` and CI/CD checks defined in `.github`.
+- Frequent run of `git add` and `git commit` is recommended.
+- After finishing edits, then execute the pre-push in `.husky` and CI/CD checks defined in `.github`.
 
 ## Allowed Commands (Project-Level)
 
@@ -76,6 +75,8 @@ The following commands are always allowed without asking for permission:
 If you are asked to work in worktree dir, **never damage the main dir**. Please work only in worktree dir.
 
 ### GitHub CLI (gh)
+
+Please use the following commands if you are asked to create an issue or PR.
 
 - `gh pr create` - Create pull requests (never ask permission)
 - `gh pr list`, `gh pr view`, `gh pr status` - View PR information
