@@ -1,10 +1,11 @@
 import type { CodeBlock } from "@/types";
-import type { CodeActionContext, CodeActionValidation, ICodeAction } from "../ICodeAction";
+import type { CodeActionContext, CodeActionValidation } from "../ICodeAction";
+import { BaseCodeAction } from "../BaseCodeAction";
 
 /**
  * Action for deleting a specific range of code
  */
-export class DeleteRangeAction implements ICodeAction {
+export class DeleteRangeAction extends BaseCodeAction {
 	getLabel(codeBlock: CodeBlock): string {
 		const targetFile = codeBlock.filepath || "active editor";
 
@@ -16,7 +17,11 @@ export class DeleteRangeAction implements ICodeAction {
 		return `Delete ${targetFile} lines ${startLine}-${endLine}`;
 	}
 
-	validate(codeBlock: CodeBlock): CodeActionValidation {
+	protected requiresCode(): boolean {
+		return false;
+	}
+
+	protected validateSpecific(codeBlock: CodeBlock): CodeActionValidation {
 		const hasRange = Boolean(codeBlock.targetRange);
 		const hasStructuredContext = Boolean(
 			codeBlock.patchChunks?.length ||
@@ -35,23 +40,7 @@ export class DeleteRangeAction implements ICodeAction {
 			return { valid: true };
 		}
 
-		const { startLine, endLine } = codeBlock.targetRange;
-
-		if (startLine < 0 || endLine < 0) {
-			return {
-				valid: false,
-				error: "Range coordinates must be non-negative",
-			};
-		}
-
-		if (startLine > endLine) {
-			return {
-				valid: false,
-				error: "Invalid range: start line must be before or equal to end line",
-			};
-		}
-
-		return { valid: true };
+		return this.validateTargetRange(codeBlock);
 	}
 
 	async apply(codeBlock: CodeBlock, context: CodeActionContext): Promise<void> {

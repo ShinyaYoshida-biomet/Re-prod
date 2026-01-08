@@ -1,10 +1,11 @@
 import type { CodeBlock } from "@/types";
-import type { CodeActionContext, CodeActionValidation, ICodeAction } from "../ICodeAction";
+import type { CodeActionContext, CodeActionValidation } from "../ICodeAction";
+import { BaseCodeAction } from "../BaseCodeAction";
 
 /**
  * Action for replacing a specific range of code
  */
-export class ReplaceRangeAction implements ICodeAction {
+export class ReplaceRangeAction extends BaseCodeAction {
 	getLabel(codeBlock: CodeBlock): string {
 		const targetFile = codeBlock.filepath || "active editor";
 
@@ -16,7 +17,7 @@ export class ReplaceRangeAction implements ICodeAction {
 		return `Replace ${targetFile} ${startLine}:${startColumn}-${endLine}:${endColumn}`;
 	}
 
-	validate(codeBlock: CodeBlock): CodeActionValidation {
+	protected validateSpecific(codeBlock: CodeBlock): CodeActionValidation {
 		const hasRange = Boolean(codeBlock.targetRange);
 		const hasStructuredContext = Boolean(
 			codeBlock.patchChunks?.length ||
@@ -35,23 +36,7 @@ export class ReplaceRangeAction implements ICodeAction {
 			return { valid: true };
 		}
 
-		const { startLine, startColumn, endLine, endColumn } = codeBlock.targetRange;
-
-		if (startLine < 0 || endLine < 0 || startColumn < 0 || endColumn < 0) {
-			return {
-				valid: false,
-				error: "Range coordinates must be non-negative",
-			};
-		}
-
-		if (startLine > endLine || (startLine === endLine && startColumn > endColumn)) {
-			return {
-				valid: false,
-				error: "Invalid range: start position must be before end position",
-			};
-		}
-
-		return { valid: true };
+		return this.validateTargetRange(codeBlock);
 	}
 
 	async apply(codeBlock: CodeBlock, context: CodeActionContext): Promise<void> {
