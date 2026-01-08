@@ -51,18 +51,18 @@ test.describe("Editor tabs", () => {
 		await expect(page.locator(selectors.fileBrowser)).toBeVisible({ timeout: 30000 });
 
 		await openFixture(page, firstFile);
+		await expect(page.locator(selectors.tabActive)).toContainText(firstFile);
 		await openFixture(page, secondFile);
+		await expect(page.locator(selectors.tabActive)).toContainText(secondFile);
 
 		const tabs = page.locator(selectors.tab);
-		await expect(tabs).toHaveCount(2);
+		await expect(tabs.filter({ hasText: firstFile })).toHaveCount(1);
+		await expect(tabs.filter({ hasText: secondFile })).toHaveCount(1);
 
 		const activeTab = page.locator(selectors.tabActive);
 		await expect(activeTab).toContainText(secondFile);
 
-		await page
-			.locator(selectors.tab)
-			.filter({ has: page.locator(selectors.tabLabel, { hasText: firstFile }) });
-		first().click();
+		await page.locator(selectors.tab).filter({ hasText: firstFile }).first().click();
 		await expect(page.locator(selectors.tabActive)).toContainText(firstFile);
 
 		await page.locator(selectors.editor).click();

@@ -6,11 +6,11 @@ export const selectors = {
 	// Editor
 	editor: ".monaco-editor textarea",
 	tabBar: ".tab-bar",
-	tab: ".tab",
-	tabActive: ".tab.active",
-	tabLabel: ".tab-label",
-	tabDirty: ".tab-dirty-indicator",
-	tabClose: ".tab-close",
+	tab: ".tab-bar .tab",
+	tabActive: ".tab-bar .tab.active",
+	tabLabel: ".tab-bar .tab-label",
+	tabDirty: ".tab-bar .tab-dirty-indicator",
+	tabClose: ".tab-bar .tab-close",
 
 	// File browser
 	fileBrowser: ".file-browser",
