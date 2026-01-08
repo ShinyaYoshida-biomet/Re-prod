@@ -3,7 +3,7 @@ import { useStore } from "@/core";
 import { buildMenuSections } from "@/core/menu/menuConfig";
 
 export function useMenuSections() {
-	const isEditorDirty = useStore((state) => state.editor?.isDirty ?? false);
+	const isEditorDirty = useStore((state) => state.getActiveBuffer()?.isDirty ?? false);
 	const isExecutionRunning = useStore((state) => state.execution?.isRunning ?? false);
 	const viewPanes = useStore((state) => state.view.panes);
 
