@@ -31,13 +31,13 @@ print_status() {
     fi
 }
 
-# Check 1: Biome formatting check
-echo -e "${YELLOW}[1/4]${NC} Checking Biome formatting..."
-if pnpm biome format > /dev/null 2>&1; then
-    print_status 0 "Biome formatting check passed"
+# Check 1: Biome formatting (auto-apply)
+echo -e "${YELLOW}[1/4]${NC} Formatting with Biome..."
+if pnpm format > /dev/null 2>&1; then
+    print_status 0 "Biome formatting applied"
 else
-    print_status 1 "Biome formatting issues found"
-    echo "  → Run 'pnpm format' to fix formatting"
+    print_status 1 "Biome formatting failed"
+    echo "  → Run 'pnpm format' to see details"
     echo ""
 fi
 
