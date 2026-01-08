@@ -5,6 +5,12 @@
 export const selectors = {
 	// Editor
 	editor: ".monaco-editor textarea",
+	editorTitle: ".editor-panel .panel-title",
+
+	// File browser
+	fileBrowser: ".file-browser",
+	fileTreeNode: ".file-tree-node",
+	fileTreeLabel: ".file-tree-label",
 
 	// Buttons
 	runButton: 'button[title="Run All (Cmd/Ctrl+Shift+Enter)"]',
