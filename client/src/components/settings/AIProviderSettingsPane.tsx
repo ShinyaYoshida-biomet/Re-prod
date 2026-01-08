@@ -16,6 +16,7 @@ function ModeOption({ checked, description, label, mode, onSelect }: ModeOptionP
 	return (
 		<label className="mode-option">
 			<input
+				aria-label={label}
 				type="radio"
 				name="ai-provider-mode"
 				checked={checked}
