@@ -46,9 +46,16 @@ beforeEach(() => {
 	useStore.setState((state) => ({
 		editor: {
 			...state.editor,
-			content: "",
-			filepath: "",
-			isDirty: false,
+			buffers: [
+				{
+					id: "buffer-1",
+					filepath: null,
+					content: "",
+					isDirty: false,
+					cursorPosition: { line: 1, column: 1 },
+				},
+			],
+			activeBufferId: "buffer-1",
 		},
 	}));
 });
@@ -87,9 +94,9 @@ describe("StreamingMessage read file indicator", () => {
 			expect(readFileMock).toHaveBeenCalledWith("analysis.R");
 		});
 
-		const state = useStore.getState().editor;
-		expect(state.filepath).toBe("analysis.R");
-		expect(state.content).toBe("file contents");
-		expect(state.isDirty).toBe(false);
+		const activeBuffer = useStore.getState().getActiveBuffer();
+		expect(activeBuffer?.filepath).toBe("analysis.R");
+		expect(activeBuffer?.content).toBe("file contents");
+		expect(activeBuffer?.isDirty).toBe(false);
 	});
 });

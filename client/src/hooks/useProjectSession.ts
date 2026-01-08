@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { useStore } from "@/core";
 import { useFileSystemStore } from "@/core/fileSystemStore";
+import { DEFAULT_R_SCRIPT, type Buffer } from "@/core/state/slices/editorSlice";
+import { createBufferId } from "@/core/state/utils/createBufferId";
 import { requestPlotHistory } from "@/services/plotHistoryService";
 import { DEFAULT_VIEW_STATE } from "@/services/sessionPersistence";
 import { socketService } from "@/services/socket";
@@ -8,8 +10,20 @@ import type { ProjectRecord } from "@/types";
 
 function resetWorkspace(): void {
 	const store = useStore.getState();
+	const buffer: Buffer = {
+		id: createBufferId(),
+		filepath: null,
+		content: DEFAULT_R_SCRIPT,
+		isDirty: false,
+		cursorPosition: { line: 1, column: 1 },
+		displayName: "Untitled-1",
+	};
 	useStore.setState((state) => ({
-		editor: { ...state.editor, content: "", filepath: "", isDirty: false },
+		editor: {
+			...state.editor,
+			buffers: [buffer],
+			activeBufferId: buffer.id,
+		},
 		view: {
 			panes: { ...DEFAULT_VIEW_STATE.panes },
 			modals: { ...DEFAULT_VIEW_STATE.modals },

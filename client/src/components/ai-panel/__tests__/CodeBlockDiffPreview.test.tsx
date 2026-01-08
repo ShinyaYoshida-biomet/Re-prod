@@ -30,8 +30,16 @@ beforeEach(() => {
 	useStore.setState((state) => ({
 		editor: {
 			...state.editor,
-			content: 'print("old")',
-			filepath: "analysis.R",
+			buffers: [
+				{
+					id: "buffer-1",
+					filepath: "analysis.R",
+					content: 'print("old")',
+					isDirty: false,
+					cursorPosition: { line: 1, column: 1 },
+				},
+			],
+			activeBufferId: "buffer-1",
 		},
 	}));
 });
@@ -55,8 +63,16 @@ describe("CodeBlockDiffPreview", () => {
 		useStore.setState((state) => ({
 			editor: {
 				...state.editor,
-				content: "different content",
-				filepath: "analysis.R",
+				buffers: [
+					{
+						id: "buffer-1",
+						filepath: "analysis.R",
+						content: "different content",
+						isDirty: false,
+						cursorPosition: { line: 1, column: 1 },
+					},
+				],
+				activeBufferId: "buffer-1",
 			},
 		}));
 

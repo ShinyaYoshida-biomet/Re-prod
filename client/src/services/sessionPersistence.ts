@@ -1,5 +1,7 @@
 import { useStore } from "@/core";
 import { useFileSystemStore } from "@/core/fileSystemStore";
+import { DEFAULT_R_SCRIPT, type Buffer } from "@/core/state/slices/editorSlice";
+import { createBufferId } from "@/core/state/utils/createBufferId";
 import type { ViewData } from "@/core/state/slices/viewSlice";
 import { fileSystem } from "@/services/fileSystem";
 import { queryTimeline } from "@/services/timelineService";
@@ -60,41 +62,72 @@ const resetDomainState = (): void => {
 	state.reset();
 };
 
+const createSnapshotBuffer = (content: string, filepath: string | null): Buffer => ({
+	id: createBufferId(),
+	filepath,
+	content,
+	isDirty: false,
+	cursorPosition: { line: 1, column: 1 },
+	displayName: filepath ? undefined : "Untitled-1",
+});
+
 const restoreEditorFromFilesystem = async (filepath: string | null): Promise<void> => {
 	const normalizedPath = filepath ?? "";
 	useFileSystemStore.getState().setActivePath(normalizedPath || null);
 
 	if (!normalizedPath) {
+		const buffer = createSnapshotBuffer(DEFAULT_R_SCRIPT, null);
 		useStore.setState((state) => ({
-			editor: { ...state.editor, content: "", filepath: "", isDirty: false },
+			editor: {
+				...state.editor,
+				buffers: [buffer],
+				activeBufferId: buffer.id,
+			},
 		}));
 		return;
 	}
 
+	const buffer = createSnapshotBuffer("", normalizedPath);
 	useStore.setState((state) => ({
-		editor: { ...state.editor, content: "", filepath: normalizedPath, isDirty: false },
+		editor: {
+			...state.editor,
+			buffers: [buffer],
+			activeBufferId: buffer.id,
+		},
 	}));
 
 	try {
 		const content = await fileSystem.readFile(normalizedPath);
 		useStore.setState((state) => ({
-			editor: { ...state.editor, content, filepath: normalizedPath, isDirty: false },
+			editor: {
+				...state.editor,
+				buffers: [
+					{
+						...buffer,
+						content,
+					},
+				],
+			},
 		}));
 	} catch (error) {
 		console.error("Failed to load file from filesystem", error);
 		useStore.setState((state) => ({
-			editor: { ...state.editor, content: "", filepath: normalizedPath, isDirty: false },
+			editor: {
+				...state.editor,
+				buffers: [buffer],
+			},
 		}));
 	}
 };
 
 export function getSessionSnapshot(): SessionSnapshot {
 	const state = useStore.getState();
+	const activeBuffer = state.getActiveBuffer();
 	return {
 		version: SNAPSHOT_VERSION,
 		savedAt: Date.now(),
 		editor: {
-			filepath: state.editor.filepath || null,
+			filepath: activeBuffer?.filepath || null,
 		},
 		view: mergeViewState(state.view),
 	};

@@ -36,9 +36,10 @@ export function useEditorExecution({
 	editorRef,
 	cells,
 }: UseEditorExecutionProps): UseEditorExecutionReturn {
-	const editorContent = useStore((state) => state.editor.content);
-	const editorFilepath = useStore((state) => state.editor.filepath);
-	const cursorLine = useStore((state) => state.editor.cursorPosition.line);
+	const activeBuffer = useStore((state) => state.getActiveBuffer());
+	const editorContent = activeBuffer?.content ?? "";
+	const editorFilepath = activeBuffer?.filepath ?? "";
+	const cursorLine = activeBuffer?.cursorPosition.line ?? 1;
 	const setIsRunning = useStore((state) => state.setIsRunning);
 	const setExecutionError = useStore((state) => state.setExecutionError);
 

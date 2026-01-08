@@ -10,6 +10,8 @@ import {
 } from "@/components/shared";
 import { useFileSystemStore, useStore } from "@/core";
 import { normalizeRelativePath, normalizeSeparators, ROOT_PATH } from "@/core/pathUtils";
+import type { Buffer } from "@/core/state/slices/editorSlice";
+import { createBufferId } from "@/core/state/utils/createBufferId";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useFileBrowserState } from "@/hooks/useFileBrowserState";
 import { useFileSystemData } from "@/hooks/useFileSystemData";
@@ -136,16 +138,16 @@ const buildAbsolutePath = (workspaceRoot: string, path: string): string => {
 };
 
 const useEditorActions = () => {
-	const setEditorContent = useStore((state) => state.setEditorContent);
-	const setEditorFilepath = useStore((state) => state.setEditorFilepath);
-	const setEditorIsDirty = useStore((state) => state.setEditorIsDirty);
-	return { setEditorContent, setEditorFilepath, setEditorIsDirty };
+	const addBuffer = useStore((state) => state.addBuffer);
+	const setActiveBuffer = useStore((state) => state.setActiveBuffer);
+	const getBufferByFilepath = useStore((state) => state.getBufferByFilepath);
+	return { addBuffer, setActiveBuffer, getBufferByFilepath };
 };
 
 export function FileBrowserPane(): JSX.Element {
 	useFileSystemData();
 	const toast = useToast();
-	const { setEditorContent, setEditorFilepath, setEditorIsDirty } = useEditorActions();
+	const { addBuffer, setActiveBuffer, getBufferByFilepath } = useEditorActions();
 	const files = useFileSystemStore((state) => state.files);
 	const expandedFolders = useFileSystemStore((state) => state.expandedFolders);
 	const pendingFolders = useFileSystemStore((state) => state.pendingFolders);
@@ -318,10 +320,20 @@ export function FileBrowserPane(): JSX.Element {
 				}
 			}
 			try {
+				const existingBuffer = getBufferByFilepath(node.path);
+				if (existingBuffer) {
+					setActiveBuffer(existingBuffer.id);
+					return;
+				}
 				const content = await fileSystem.readFile(node.path);
-				setEditorContent(content);
-				setEditorFilepath(node.path);
-				setEditorIsDirty(false);
+				const buffer: Buffer = {
+					id: createBufferId(),
+					filepath: node.path,
+					content,
+					isDirty: false,
+					cursorPosition: { line: 1, column: 1 },
+				};
+				addBuffer(buffer);
 			} catch (error) {
 				alertFileOperationError(
 					toast,
@@ -329,7 +341,7 @@ export function FileBrowserPane(): JSX.Element {
 				);
 			}
 		},
-		[openInSystemViewer, setEditorContent, setEditorFilepath, setEditorIsDirty, toast],
+		[addBuffer, getBufferByFilepath, openInSystemViewer, setActiveBuffer, toast],
 	);
 
 	const handleContextMenu = useCallback(

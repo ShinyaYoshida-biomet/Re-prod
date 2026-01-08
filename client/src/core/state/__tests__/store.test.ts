@@ -22,10 +22,16 @@ describe("Zustand Store", () => {
 	beforeEach(() => {
 		useStore.setState({
 			editor: {
-				content: "",
-				filepath: "",
-				isDirty: false,
-				cursorPosition: { line: 1, column: 1 },
+				buffers: [
+					{
+						id: "buffer-1",
+						filepath: null,
+						content: "",
+						isDirty: false,
+						cursorPosition: { line: 1, column: 1 },
+					},
+				],
+				activeBufferId: "buffer-1",
 			},
 			applyCodeChange: null,
 			execution: {
@@ -52,13 +58,13 @@ describe("Zustand Store", () => {
 	});
 
 	it("updates editor content and dirty flag", () => {
-		const setEditorContent = useStore.getState().setEditorContent;
+		const updateBuffer = useStore.getState().updateBuffer;
 
-		setEditorContent("x <- 1");
+		updateBuffer("buffer-1", { content: "x <- 1", isDirty: true });
 
 		const state = useStore.getState();
-		expect(state.editor.content).toBe("x <- 1");
-		expect(state.editor.isDirty).toBe(true);
+		expect(state.editor.buffers[0].content).toBe("x <- 1");
+		expect(state.editor.buffers[0].isDirty).toBe(true);
 	});
 
 	it("tracks execution results in history", () => {

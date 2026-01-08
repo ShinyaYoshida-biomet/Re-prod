@@ -60,8 +60,11 @@ export function useAIConversation() {
 	const startStreamingMessage = useStore((state) => state.startStreamingMessage);
 	const setAILoading = useStore((state) => state.setAILoading);
 	const completeStreamingMessage = useStore((state) => state.completeStreamingMessage);
-	const editorContent = useStore((state) => state.editor.content);
-	const editorFilepath = useStore((state) => state.editor.filepath);
+	const activeBuffer = useStore((state) => state.getActiveBuffer());
+	const updateBuffer = useStore((state) => state.updateBuffer);
+	const editorContent = activeBuffer?.content ?? "";
+	const editorFilepath = activeBuffer?.filepath ?? "";
+	const activeBufferId = activeBuffer?.id ?? null;
 	const consoleHistory = useStore((state) => state.execution.results);
 	const workspaceRoot = useFileSystemStore((state) => state.workspaceRoot);
 
@@ -107,7 +110,6 @@ export function useAIConversation() {
 
 	const { handleApplyCode } = useAICodeApplication(postAssistantMessage);
 	const registerPendingEdit = useStore((state) => state.registerPendingEdit);
-	const setEditorContent = useStore((state) => state.setEditorContent);
 
 	const clearActiveRequest = useCallback((options: { dispose?: boolean } = {}) => {
 		if (!activeRequestRef.current) {
@@ -279,7 +281,12 @@ export function useAIConversation() {
 
 						const registered = registerPendingEdit(pendingEdit);
 						if (registered && pendingEdit.filePath === normalizedEditorPath) {
-							setEditorContent(pendingEdit.newContent);
+							if (activeBufferId) {
+								updateBuffer(activeBufferId, {
+									content: pendingEdit.newContent,
+									isDirty: true,
+								});
+							}
 						}
 					}
 				}
@@ -293,6 +300,7 @@ export function useAIConversation() {
 			appendAcpChunk(streamingId, chunk.kind, chunk.text);
 		},
 		[
+			activeBufferId,
 			appendAcpChunk,
 			extractAcpChunk,
 			finalizeAcpStream,
@@ -304,7 +312,7 @@ export function useAIConversation() {
 			summarizeAcpToolUpdate,
 			registerPendingEdit,
 			editorFilepath,
-			setEditorContent,
+			updateBuffer,
 			startStreamingMessage,
 			workspaceRoot,
 			updatePlan,

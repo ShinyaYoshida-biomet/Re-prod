@@ -10,8 +10,9 @@ interface Props {
 }
 
 export function CodeBlockDiffPreview({ codeBlock, onRetry }: Props): JSX.Element | null {
-	const editorContent = useStore((state) => state.editor.content);
-	const editorFilepath = useStore((state) => state.editor.filepath);
+	const activeBuffer = useStore((state) => state.getActiveBuffer());
+	const editorContent = activeBuffer?.content ?? "";
+	const editorFilepath = activeBuffer?.filepath ?? "";
 
 	const diffData = useMemo(
 		() => buildDiffFromCodeBlock(codeBlock, editorContent, editorFilepath),

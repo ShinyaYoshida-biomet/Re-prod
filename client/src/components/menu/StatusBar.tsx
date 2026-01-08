@@ -9,7 +9,7 @@ import { classNames } from "@/utils/classNames";
 // }
 
 export function StatusBar(): JSX.Element {
-	const editor = useStore((state) => state.editor);
+	const activeBuffer = useStore((state) => state.getActiveBuffer());
 	const settings = useStore((state) => state.settings);
 	const execution = useStore((state) => state.execution);
 	const project = useStore((state) => state.project);
@@ -32,10 +32,15 @@ export function StatusBar(): JSX.Element {
 		<div className="statusbar">
 			<div className="statusbar-left">
 				{project && <span className="statusbar-item">Project: {project.name}</span>}
-				<span className="statusbar-item">{editor.filepath || "Untitled"}</span>
-				{editor.isDirty && <span className="statusbar-item statusbar-modified">Modified</span>}
 				<span className="statusbar-item">
-					Ln {editor.cursorPosition.line}, Col {editor.cursorPosition.column}
+					{activeBuffer?.filepath || activeBuffer?.displayName || "Untitled"}
+				</span>
+				{activeBuffer?.isDirty && (
+					<span className="statusbar-item statusbar-modified">Modified</span>
+				)}
+				<span className="statusbar-item">
+					Ln {activeBuffer?.cursorPosition.line ?? 1}, Col{" "}
+					{activeBuffer?.cursorPosition.column ?? 1}
 				</span>
 			</div>
 			<div className="statusbar-right">

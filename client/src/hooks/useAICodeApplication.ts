@@ -10,10 +10,12 @@ type PostAssistantMessage = (content: string, extras?: Partial<AIMessage>) => vo
 
 export function useAICodeApplication(postAssistantMessage: PostAssistantMessage) {
 	const applyCodeChange = useStore((state) => state.applyCodeChange);
-	const editorFilepath = useStore((state) => state.editor.filepath);
+	const activeBuffer = useStore((state) => state.getActiveBuffer());
+	const updateBuffer = useStore((state) => state.updateBuffer);
+	const editorFilepath = activeBuffer?.filepath ?? "";
 	const pendingEdit = useStore((state) => state.pendingEdits[editorFilepath]);
 	const registerPendingEdit = useStore((state) => state.registerPendingEdit);
-	const setEditorContent = useStore((state) => state.setEditorContent);
+	const activeBufferId = activeBuffer?.id ?? null;
 
 	const handleApplyCode = useCallback(
 		async (codeBlock: CodeBlock): Promise<void> => {
@@ -60,7 +62,12 @@ export function useAICodeApplication(postAssistantMessage: PostAssistantMessage)
 
 							const registered = registerPendingEdit(pendingEdit);
 							if (!registered) {
-								setEditorContent(snapshot.oldContent);
+								if (activeBufferId) {
+									updateBuffer(activeBufferId, {
+										content: snapshot.oldContent,
+										isDirty: true,
+									});
+								}
 								postAssistantMessage("A pending edit already exists for this file.");
 							}
 							return snapshot;
@@ -81,11 +88,12 @@ export function useAICodeApplication(postAssistantMessage: PostAssistantMessage)
 		},
 		[
 			applyCodeChange,
+			activeBufferId,
 			editorFilepath,
 			pendingEdit,
 			postAssistantMessage,
 			registerPendingEdit,
-			setEditorContent,
+			updateBuffer,
 		],
 	);
 

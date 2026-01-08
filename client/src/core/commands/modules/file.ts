@@ -1,5 +1,6 @@
 import { DEFAULT_FILENAMES } from "@/constants/ui";
-import { DEFAULT_R_SCRIPT } from "@/core/state/slices/editorSlice";
+import { DEFAULT_R_SCRIPT, type Buffer } from "@/core/state/slices/editorSlice";
+import { createBufferId } from "@/core/state/utils/createBufferId";
 import { useStore } from "@/core/state/store";
 import { socketService } from "@/services/socket";
 import { downloadFile, openFile } from "@/utils/fileOperations";
@@ -15,17 +16,18 @@ export function setupFileCommands() {
 			keybinding: "Mod+N",
 			execute: () => {
 				const store = useStore.getState();
-				const isDirty = store.editor?.isDirty;
-
-				if (isDirty) {
-					if (!confirm("Discard unsaved changes?")) {
-						return;
-					}
-				}
-
-				store.setEditorContent(DEFAULT_R_SCRIPT);
-				store.setEditorFilepath(DEFAULT_FILENAMES.NEW_R_SCRIPT);
-				store.setEditorIsDirty(false);
+				const untitledCount = store.editor.buffers.filter((buffer) =>
+					buffer.displayName?.startsWith("Untitled"),
+				).length;
+				const buffer: Buffer = {
+					id: createBufferId(),
+					filepath: null,
+					content: DEFAULT_R_SCRIPT,
+					isDirty: true,
+					cursorPosition: { line: 1, column: 1 },
+					displayName: `Untitled-${untitledCount + 1}`,
+				};
+				store.addBuffer(buffer);
 			},
 		},
 		{
@@ -40,9 +42,19 @@ export function setupFileCommands() {
 
 					const content = await file.text();
 					const store = useStore.getState();
-					store.setEditorContent(content);
-					store.setEditorFilepath(file.name);
-					store.setEditorIsDirty(false);
+					const existing = store.getBufferByFilepath(file.name);
+					if (existing) {
+						store.setActiveBuffer(existing.id);
+						return;
+					}
+					const buffer: Buffer = {
+						id: createBufferId(),
+						filepath: file.name,
+						content,
+						isDirty: false,
+						cursorPosition: { line: 1, column: 1 },
+					};
+					store.addBuffer(buffer);
 				} catch (error) {}
 			},
 		},
@@ -69,20 +81,24 @@ export function setupFileCommands() {
 			keybinding: "Mod+S",
 			execute: () => {
 				const store = useStore.getState();
-				const { filepath, content } = store.editor || {};
+				const activeBuffer = store.getActiveBuffer();
 
-				if (!filepath) {
-					return commandRegistry.execute("file.saveAs");
-				}
-
-				if (!content) {
+				if (!activeBuffer) {
 					return;
 				}
 
-				downloadFile(filepath, content);
-				store.setEditorIsDirty(false);
+				if (!activeBuffer.filepath) {
+					return commandRegistry.execute("file.saveAs");
+				}
+
+				if (!activeBuffer.content) {
+					return;
+				}
+
+				downloadFile(activeBuffer.filepath, activeBuffer.content);
+				store.updateBuffer(activeBuffer.id, { isDirty: false });
 			},
-			enabled: () => useStore.getState().editor?.isDirty ?? false,
+			enabled: () => useStore.getState().getActiveBuffer()?.isDirty ?? false,
 		},
 		{
 			id: "file.saveAs",
@@ -91,13 +107,20 @@ export function setupFileCommands() {
 			keybinding: "Mod+Shift+S",
 			execute: () => {
 				const store = useStore.getState();
-				const { content } = store.editor || {};
+				const activeBuffer = store.getActiveBuffer();
 
-				if (!content) {
+				if (!activeBuffer?.content) {
 					return;
 				}
 
-				downloadFile(DEFAULT_FILENAMES.UNTITLED_R_SCRIPT, content);
+				const filename =
+					activeBuffer.filepath || activeBuffer.displayName || DEFAULT_FILENAMES.UNTITLED_R_SCRIPT;
+				downloadFile(filename, activeBuffer.content);
+				store.updateBuffer(activeBuffer.id, {
+					isDirty: false,
+					filepath: activeBuffer.filepath ?? filename,
+					displayName: activeBuffer.filepath ? activeBuffer.displayName : undefined,
+				});
 			},
 		},
 	]);

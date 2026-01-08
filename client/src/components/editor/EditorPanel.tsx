@@ -36,6 +36,7 @@ import {
 	type DiffChange,
 	type DiffHunk,
 } from "@/utils/pendingEditDiff";
+import { TabBar } from "./TabBar";
 import { PendingEditDiffView } from "./PendingEditDiffView";
 import type { EditorRef } from "./editorRef";
 
@@ -52,12 +53,11 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	}, []);
 
 	const toast = useToast();
-	const editor = useStore((state) => state.editor);
+	const activeBuffer = useStore((state) => state.getActiveBuffer());
 	const execution = useStore((state) => state.execution);
 	const settings = useStore((state) => state.settings);
 	const workspaceRoot = useFileSystemStore((state) => state.workspaceRoot);
-	const setEditorContent = useStore((state) => state.setEditorContent);
-	const setEditorCursorPosition = useStore((state) => state.setEditorCursorPosition);
+	const updateBuffer = useStore((state) => state.updateBuffer);
 	const setApplyCodeChange = useStore((state) => state.setApplyCodeChange);
 	const setRunCurrentCell = useStore((state) => state.setRunCurrentCell);
 	const setRunAll = useStore((state) => state.setRunAll);
@@ -65,9 +65,12 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	const setEditorRef = useStore((state) => state.setEditorRef);
 	const recordPatchMatchFailure = useStore((state) => state.recordPatchMatchFailure);
 	const recordPatchMatchSuccess = useStore((state) => state.recordPatchMatchSuccess);
+	const activeBufferId = activeBuffer?.id ?? null;
+	const editorContent = activeBuffer?.content ?? "";
+	const editorFilepath = activeBuffer?.filepath ?? "";
 	const normalizedEditorPath = useMemo(
-		() => normalizeWorkspaceRelativePath(editor.filepath, workspaceRoot, { keepRootEmpty: true }),
-		[editor.filepath, workspaceRoot],
+		() => normalizeWorkspaceRelativePath(editorFilepath, workspaceRoot, { keepRootEmpty: true }),
+		[editorFilepath, workspaceRoot],
 	);
 	const pendingEdit = useStore((state) => state.pendingEdits[normalizedEditorPath]);
 	const clearPendingEdit = useStore((state) => state.clearPendingEdit);
@@ -76,6 +79,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	const setPendingEditReviewMap = useStore((state) => state.setPendingEditReviewMap);
 	const editorMethodsRef = useRef<EditorRef | null>(null);
 	const monacoEditorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
+	const activeBufferIdRef = useRef<string | null>(activeBufferId);
 	const { dialogState, showConfirm, handleConfirm, handleCancel } = useConfirmDialog();
 	const pendingEditWarningRef = useRef(false);
 	const skipPendingNoticeRef = useRef(false);
@@ -89,6 +93,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	const [activeHunkId, setActiveHunkId] = useState<string | null>(null);
 	const pendingEditReviewMap = pendingEdit?.reviewedChanges ?? {};
 	const [pendingEditDiff, setPendingEditDiff] = useState<PendingEditDiff | null>(null);
+	const activeCursorPosition = activeBuffer?.cursorPosition;
 	const reviewedContent = useMemo(() => {
 		if (!pendingEdit || !pendingEditDiff) return null;
 		return applyPendingEditChanges(
@@ -180,7 +185,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		};
 	}, [monacoInstance, pendingEdit]);
 
-	const cells = useEditorCells(editor.content, editor.filepath);
+	const cells = useEditorCells(editorContent, editorFilepath);
 	const { state, actions } = useEditorExecution({
 		editorRef: monacoEditorRef,
 		cells,
@@ -200,12 +205,27 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	}, [pendingEdit?.id]);
 
 	useEffect(() => {
+		activeBufferIdRef.current = activeBufferId;
+	}, [activeBufferId]);
+
+	useEffect(() => {
+		if (!activeCursorPosition) return;
+		const monacoEditor = monacoEditorRef.current;
+		if (!monacoEditor) return;
+		const { line, column } = activeCursorPosition;
+		monacoEditor.setPosition({ lineNumber: line, column });
+		monacoEditor.revealLineInCenter(line);
+	}, [activeBufferId, activeCursorPosition]);
+
+	useEffect(() => {
 		if (!pendingEdit) return;
 		if (reviewedContent === null) return;
-		if (editor.content === reviewedContent) return;
+		if (editorContent === reviewedContent) return;
 		skipPendingNoticeRef.current = true;
-		setEditorContent(reviewedContent);
-	}, [editor.content, pendingEdit, reviewedContent, setEditorContent]);
+		if (activeBufferId) {
+			updateBuffer(activeBufferId, { content: reviewedContent, isDirty: true });
+		}
+	}, [activeBufferId, editorContent, pendingEdit, reviewedContent, updateBuffer]);
 
 	useEffect(() => {
 		if (!pendingEdit || !pendingEditDiff) return;
@@ -225,7 +245,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	const handlePendingAccept = useCallback(async () => {
 		if (!pendingEdit) return;
 		const resolvedContent = reviewedContent ?? pendingEdit.newContent;
-		if (editor.content !== resolvedContent) {
+		if (editorContent !== resolvedContent) {
 			setPendingNotice({
 				type: "warning",
 				message: "Editor content changed since the pending edit review.",
@@ -251,7 +271,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		}
 	}, [
 		clearPendingEdit,
-		editor.content,
+		editorContent,
 		pendingEdit,
 		reviewedContent,
 		updatePendingEdit,
@@ -262,7 +282,9 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		if (!pendingEdit) return;
 		try {
 			await rejectPendingEdit(pendingEdit);
-			setEditorContent(pendingEdit.oldContent);
+			if (activeBufferId) {
+				updateBuffer(activeBufferId, { content: pendingEdit.oldContent, isDirty: true });
+			}
 			updatePendingEditStatus(pendingEdit.filePath, "rejected");
 			clearPendingEdit(pendingEdit.filePath);
 			setPendingNotice(null);
@@ -275,7 +297,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 					: message,
 			});
 		}
-	}, [clearPendingEdit, pendingEdit, setEditorContent, updatePendingEditStatus]);
+	}, [activeBufferId, clearPendingEdit, pendingEdit, updateBuffer, updatePendingEditStatus]);
 
 	const navigateToLine = useCallback((lineNumber: number): void => {
 		const monacoEditor = monacoEditorRef.current;
@@ -394,7 +416,9 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		if (value !== undefined) {
 			if (pendingEdit && skipPendingNoticeRef.current) {
 				skipPendingNoticeRef.current = false;
-				setEditorContent(value);
+				if (activeBufferId) {
+					updateBuffer(activeBufferId, { content: value, isDirty: true });
+				}
 				return;
 			}
 			if (pendingEdit && !pendingEditWarningRef.current) {
@@ -406,7 +430,9 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 				}
 				pendingEditWarningRef.current = true;
 			}
-			setEditorContent(value);
+			if (activeBufferId) {
+				updateBuffer(activeBufferId, { content: value, isDirty: true });
+			}
 		}
 	};
 
@@ -490,7 +516,9 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 						text,
 					},
 				]);
-				setEditorContent(monacoEditor.getValue());
+				if (activeBufferId) {
+					updateBuffer(activeBufferId, { content: monacoEditor.getValue(), isDirty: true });
+				}
 			};
 
 			const applySnapshotEdit = (snapshot: string, range: CodeRange, text: string): string => {
@@ -651,7 +679,9 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 					const confirmed = await showConfirm("Confirm Replace All", confirmationMessage);
 					if (confirmed) {
 						monacoEditor.setValue(codeBlock.code);
-						setEditorContent(codeBlock.code);
+						if (activeBufferId) {
+							updateBuffer(activeBufferId, { content: codeBlock.code, isDirty: true });
+						}
 						return finalizeChange();
 					}
 					return null;
@@ -674,7 +704,9 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 					);
 					if (confirmed) {
 						monacoEditor.setValue(codeBlock.code);
-						setEditorContent(codeBlock.code);
+						if (activeBufferId) {
+							updateBuffer(activeBufferId, { content: codeBlock.code, isDirty: true });
+						}
 						return finalizeChange();
 					}
 					return null;
@@ -711,7 +743,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 					return null;
 			}
 		},
-		[setEditorContent, showConfirm, recordPatchMatchFailure, recordPatchMatchSuccess],
+		[activeBufferId, updateBuffer, showConfirm, recordPatchMatchFailure, recordPatchMatchSuccess],
 	);
 
 	useEffect(() => {
@@ -740,10 +772,15 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 
 		// Track cursor position
 		monacoEditor.onDidChangeCursorPosition((e) => {
-			setEditorCursorPosition({
-				line: e.position.lineNumber,
-				column: e.position.column,
-			});
+			const currentBufferId = activeBufferIdRef.current;
+			if (currentBufferId) {
+				updateBuffer(currentBufferId, {
+					cursorPosition: {
+						line: e.position.lineNumber,
+						column: e.position.column,
+					},
+				});
+			}
 		});
 
 		// Keyboard shortcuts
@@ -764,11 +801,8 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	return (
 		<>
 			<div className="panel editor-panel">
-				<div className="panel-header">
-					<div className="panel-title">
-						{editor.filepath || "Untitled.R"}
-						{editor.isDirty && <span className="dirty-marker"> •</span>}
-					</div>
+				<div className="panel-header editor-panel-header">
+					<TabBar />
 					<div className="panel-actions">
 						<button
 							className="btn"
@@ -887,7 +921,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 									height="100%"
 									defaultLanguage="r"
 									theme="vs"
-									value={editor.content}
+									value={editorContent}
 									onChange={handleEditorChange}
 									options={{
 										fontSize: settings.fontSize,
@@ -939,7 +973,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 							height="100%"
 							defaultLanguage="r"
 							theme="vs"
-							value={editor.content}
+							value={editorContent}
 							onChange={handleEditorChange}
 							options={{
 								fontSize: settings.fontSize,

@@ -1,9 +1,11 @@
 import { useCallback, useMemo } from "react";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
-import { useStore } from "@/core";
 import { BrailleSpinner, useToast } from "@/components/shared";
+import { useStore } from "@/core";
+import type { Buffer } from "@/core/state/slices/editorSlice";
+import { createBufferId } from "@/core/state/utils/createBufferId";
 import { fileSystem } from "@/services/fileSystem";
 import type { AIMessage, CodeBlock, ToolCallLog as ToolCallLogEntry } from "@/types";
 import { classNames } from "@/utils/classNames";
@@ -13,7 +15,6 @@ import { FileAccessIndicator } from "./FileAccessIndicator";
 import { ToolCallLog } from "./ToolCallLog";
 import "github-markdown-css/github-markdown.css";
 import "./Markdown.css";
-import type { Components } from "react-markdown";
 
 interface Props {
 	message: AIMessage;
@@ -69,9 +70,9 @@ const extractReadFilePaths = (logs?: ToolCallLogEntry[]): string[] => {
 };
 
 export function StreamingMessage({ message, onApplyCode }: Props): JSX.Element {
-	const setEditorContent = useStore((state) => state.setEditorContent);
-	const setEditorFilepath = useStore((state) => state.setEditorFilepath);
-	const setEditorIsDirty = useStore((state) => state.setEditorIsDirty);
+	const addBuffer = useStore((state) => state.addBuffer);
+	const setActiveBuffer = useStore((state) => state.setActiveBuffer);
+	const getBufferByFilepath = useStore((state) => state.getBufferByFilepath);
 	const toast = useToast();
 	const isAssistant = message.role === "assistant";
 	const isStreaming = Boolean(message.streamingId && !message.isComplete);
@@ -86,16 +87,26 @@ export function StreamingMessage({ message, onApplyCode }: Props): JSX.Element {
 	const handleOpenPath = useCallback(
 		async (path: string) => {
 			try {
+				const existingBuffer = getBufferByFilepath(path);
+				if (existingBuffer) {
+					setActiveBuffer(existingBuffer.id);
+					return;
+				}
 				const content = await fileSystem.readFile(path);
-				setEditorContent(content);
-				setEditorFilepath(path);
-				setEditorIsDirty(false);
+				const buffer: Buffer = {
+					id: createBufferId(),
+					filepath: path,
+					content,
+					isDirty: false,
+					cursorPosition: { line: 1, column: 1 },
+				};
+				addBuffer(buffer);
 			} catch (error) {
 				const message = error instanceof Error ? error.message : "Unknown error";
 				toast.showError(`Failed to open file: ${message}`);
 			}
 		},
-		[setEditorContent, setEditorFilepath, setEditorIsDirty, toast],
+		[addBuffer, getBufferByFilepath, setActiveBuffer, toast],
 	);
 
 	// Custom components for react-markdown
