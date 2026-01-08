@@ -56,6 +56,8 @@ export class CodeActionFactory {
 			const action = CodeActionFactory.getAction(codeBlock);
 			return action.getLabel(codeBlock);
 		} catch {
+			// Intentionally ignored: Unknown action types fall back to generic label.
+			// This allows UI to display a reasonable label even for unsupported actions.
 			return "Apply suggested change";
 		}
 	}

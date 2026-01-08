@@ -18,7 +18,8 @@ export function applyTheme(theme: ThemeName): ThemeName {
 	try {
 		window.localStorage.setItem(STORAGE_KEY, theme);
 	} catch {
-		/* ignore storage failures (private mode, etc.) */
+		// Intentionally ignored: localStorage write failures (private mode, quota exceeded)
+		// do not prevent theme application. Theme is applied to DOM regardless.
 	}
 
 	return theme;
@@ -31,6 +32,8 @@ export function getStoredTheme(): ThemeName | null {
 		const stored = window.localStorage.getItem(STORAGE_KEY);
 		return stored === "phylo" ? stored : null;
 	} catch {
+		// Intentionally ignored: localStorage read failures (private mode, disabled storage)
+		// return null, causing the app to fall back to default theme.
 		return null;
 	}
 }

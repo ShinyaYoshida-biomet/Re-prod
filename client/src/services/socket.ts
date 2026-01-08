@@ -63,7 +63,10 @@ class SocketService {
 				this.dispatch("*", response);
 				// Deliver to one-shot handler matching this message
 				this.consumeOneShot(response);
-			} catch (e) {}
+			} catch (e) {
+				// Intentionally ignored: Malformed WebSocket messages are ignored to prevent
+				// service disruption. The connection remains open and will process valid messages.
+			}
 		};
 
 		this.ws.onerror = () => {
@@ -272,7 +275,10 @@ class SocketService {
 		handlers?.forEach((handler) => {
 			try {
 				handler(message);
-			} catch {}
+			} catch {
+				// Intentionally ignored: Individual handler errors should not prevent other
+				// handlers from processing the message. Faulty handlers are isolated.
+			}
 		});
 	}
 
@@ -290,14 +296,20 @@ class SocketService {
 		const [{ handler }] = this.oneShotHandlers.splice(index, 1);
 		try {
 			handler(message);
-		} catch {}
+		} catch {
+			// Intentionally ignored: One-shot handler errors are isolated to prevent
+			// disruption of the WebSocket service. The handler is consumed and removed.
+		}
 	}
 
 	private notifyConnection(status: ConnectionStatus): void {
 		this.connectionListeners.forEach((listener) => {
 			try {
 				listener(status);
-			} catch {}
+			} catch {
+				// Intentionally ignored: Individual listener errors should not prevent other
+				// listeners from being notified. Faulty listeners are isolated.
+			}
 		});
 	}
 

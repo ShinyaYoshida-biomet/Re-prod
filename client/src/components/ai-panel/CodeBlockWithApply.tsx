@@ -37,7 +37,10 @@ export function CodeBlockWithApply({ codeBlock, onApply, showDiffPreview }: Prop
 		try {
 			await onApply(currentBlock);
 			setApplied(true);
-		} catch {}
+		} catch {
+			// Intentionally ignored: Apply errors are handled by the onApply callback.
+			// The UI state remains unchanged, allowing users to retry or edit.
+		}
 	};
 
 	const handleCopy = (): void => {
@@ -47,7 +50,10 @@ export function CodeBlockWithApply({ codeBlock, onApply, showDiffPreview }: Prop
 				setCopied(true);
 				setTimeout(() => setCopied(false), COPY_FEEDBACK_DURATION);
 			})
-			.catch(() => {});
+			.catch(() => {
+				// Intentionally ignored: Clipboard write failures are silent.
+				// The copy button simply won't show success feedback if it fails.
+			});
 	};
 
 	const handleRetry = (): void => {
