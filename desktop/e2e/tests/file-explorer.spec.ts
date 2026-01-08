@@ -18,6 +18,11 @@ test.describe("File Explorer", () => {
 			});
 		};
 
+		const fileTreeNodeByLabel = (name: string) =>
+			page
+				.locator(selectors.fileTreeNode)
+				.filter({ has: page.locator(selectors.fileTreeLabel, { hasText: name }) });
+
 		const ensureFolderExpanded = async (
 			name: string,
 			depth: number,
@@ -38,8 +43,9 @@ test.describe("File Explorer", () => {
 		await ensureFolderExpanded("desktop", 0, "e2e", 1);
 		await ensureFolderExpanded("e2e", 1, "shared", 2);
 		await ensureFolderExpanded("shared", 2, "fixtures", 3);
+		await ensureFolderExpanded("fixtures", 3, fixtureFileName, 4);
 
-		const fixtureNode = fileTreeNodeAtDepth(fixtureFileName, 4).first();
+		const fixtureNode = fileTreeNodeByLabel(fixtureFileName).first();
 		await expect(fixtureNode).toBeVisible({ timeout: 30000 });
 		await fixtureNode.dblclick();
 
