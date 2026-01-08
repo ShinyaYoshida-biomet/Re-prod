@@ -32,8 +32,7 @@ pub use config::Config;
 pub use executor::{CommandOutput, CommandRunner, RExecutor, RExecutorBuilder};
 pub use plot_history::*;
 pub use project::{
-    default_config_path, default_registry_path, locate_config, ProjectConfig, ProjectDescriptor,
-    ProjectRecord, ProjectRegistry,
+    default_config_path, locate_config, ProjectConfig, ProjectDescriptor, ProjectRecord,
 };
 
 // Re-export tools (excluding ToolExecutionResult to avoid conflict with protocol)

@@ -2,5 +2,5 @@
 	"identifier": "default",
 	"description": "Default capabilities for development",
 	"windows": ["main"],
-	"permissions": ["core:default", "pty:default"]
+	"permissions": ["core:default", "pty:default", "dialog:default"]
 }

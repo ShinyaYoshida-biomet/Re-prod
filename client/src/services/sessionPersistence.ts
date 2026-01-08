@@ -21,7 +21,6 @@ export const DEFAULT_VIEW_STATE: ViewData = {
 		about: false,
 		sessionInfo: false,
 		settings: false,
-		projects: false,
 	},
 	zoom: 1,
 };

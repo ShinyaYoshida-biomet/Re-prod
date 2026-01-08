@@ -120,17 +120,7 @@ export type ClientMessage =
 			content?: string;
 			to?: string;
 	  }
-	| { type: "project_list" }
-	| { type: "project_open"; project_id: string }
-	| { type: "project_create"; name: string; path: string }
-	| { type: "project_add_existing"; path: string }
-	| { type: "project_clone"; remote: string; path: string; name?: string }
-	| { type: "project_state_load"; project_id: string }
-	| {
-			type: "project_state_save";
-			project_id: string;
-			state: Record<string, unknown>;
-	  }
+	| { type: "project_switch_folder"; path: string }
 	| { type: "plot_history_get" }
 	| { type: "plot_history_set_active"; plot_id: string }
 	| { type: "plot_history_export"; plot_id: string; path: string; format?: PlotHistoryExportFormat }
@@ -181,10 +171,7 @@ export type ServerMessage =
 			data?: FileEntryPayload[] | string | null;
 			error?: string | null;
 	  }
-	| { type: "project_list"; projects: ProjectRecord[] }
 	| { type: "project_opened"; project: ProjectRecord; state?: Record<string, unknown> | null }
-	| { type: "project_state"; project_id: string; state?: Record<string, unknown> | null }
-	| { type: "project_state_saved"; project_id: string }
 	| {
 			type: "plot_history_state";
 			activePlotId?: string | null;

@@ -79,7 +79,7 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
 
     let _ = send_responses(
         &mut socket,
-        vec![build_project_opened_response(&state, &current_runtime).await],
+        vec![build_project_opened_response(&current_runtime).await],
     )
     .await;
 
@@ -679,22 +679,12 @@ pub(in crate::handlers) async fn send_responses(
 }
 
 pub(in crate::handlers) async fn build_project_opened_response(
-    state: &AppState,
     runtime: &Arc<ProjectRuntime>,
 ) -> WSResponse {
     let record = ProjectRecord::from(&runtime.descriptor);
-    let project_state = state
-        .projects
-        .load_state(&record.id)
-        .await
-        .unwrap_or_else(|error| {
-            tracing::warn!("Failed to load project state for {}: {}", record.id, error);
-            None
-        });
-
     WSResponse::ProjectOpened {
         project: record,
-        state: project_state,
+        state: None,
     }
 }
 

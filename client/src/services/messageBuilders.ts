@@ -16,54 +16,6 @@ import type {
 	ToolExecutionRequestPayload,
 } from "@/types";
 
-// Project messages
-export const projectMessages = {
-	list: (): Extract<ClientMessage, { type: "project_list" }> => ({
-		type: "project_list",
-	}),
-
-	open: (projectId: string): Extract<ClientMessage, { type: "project_open" }> => ({
-		type: "project_open",
-		project_id: projectId,
-	}),
-
-	create: (name: string, path: string): Extract<ClientMessage, { type: "project_create" }> => ({
-		type: "project_create",
-		name,
-		path,
-	}),
-
-	addExisting: (path: string): Extract<ClientMessage, { type: "project_add_existing" }> => ({
-		type: "project_add_existing",
-		path,
-	}),
-
-	clone: (
-		remote: string,
-		path: string,
-		name?: string,
-	): Extract<ClientMessage, { type: "project_clone" }> => ({
-		type: "project_clone",
-		remote,
-		path,
-		name,
-	}),
-
-	loadState: (projectId: string): Extract<ClientMessage, { type: "project_state_load" }> => ({
-		type: "project_state_load",
-		project_id: projectId,
-	}),
-
-	saveState: (
-		projectId: string,
-		state: Record<string, unknown>,
-	): Extract<ClientMessage, { type: "project_state_save" }> => ({
-		type: "project_state_save",
-		project_id: projectId,
-		state,
-	}),
-} as const;
-
 // Plot history messages
 export const plotHistoryMessages = {
 	get: (): Extract<ClientMessage, { type: "plot_history_get" }> => ({

@@ -1,7 +1,9 @@
 import { DEFAULT_FILENAMES } from "@/constants/ui";
 import { DEFAULT_R_SCRIPT } from "@/core/state/slices/editorSlice";
 import { useStore } from "@/core/state/store";
+import { socketService } from "@/services/socket";
 import { downloadFile, openFile } from "@/utils/fileOperations";
+import { openFolder } from "@/utils/folderOperations";
 import { commandRegistry } from "../registry";
 
 export function setupFileCommands() {
@@ -45,6 +47,22 @@ export function setupFileCommands() {
 			},
 		},
 		{
+			id: "file.openFolder",
+			title: "Open Folder...",
+			category: "File",
+			keybinding: "Mod+Shift+O",
+			execute: async () => {
+				try {
+					const folderPath = await openFolder();
+					if (!folderPath) return;
+					socketService.send({
+						type: "project_switch_folder",
+						path: folderPath,
+					});
+				} catch (error) {}
+			},
+		},
+		{
 			id: "file.save",
 			title: "Save",
 			category: "File",
@@ -80,14 +98,6 @@ export function setupFileCommands() {
 				}
 
 				downloadFile(DEFAULT_FILENAMES.UNTITLED_R_SCRIPT, content);
-			},
-		},
-		{
-			id: "file.projects",
-			title: "Projects...",
-			category: "File",
-			execute: () => {
-				useStore.getState().setModalOpen("projects", true);
 			},
 		},
 	]);

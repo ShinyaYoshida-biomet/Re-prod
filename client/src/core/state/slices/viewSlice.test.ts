@@ -21,7 +21,6 @@ describe("viewSlice", () => {
 			about: false,
 			sessionInfo: false,
 			settings: false,
-			projects: false,
 		});
 		expect(store.view.zoom).toBe(1);
 	});

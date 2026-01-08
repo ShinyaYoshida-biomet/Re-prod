@@ -46,6 +46,7 @@ async fn main() {
         .manage(server_state.clone())
         .manage(acp_state.clone())
         .plugin(tauri_plugin_pty::init())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             commands::execute_r_code,
             commands::send_ai_message,

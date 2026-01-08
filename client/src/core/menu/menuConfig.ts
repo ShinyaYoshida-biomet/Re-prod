@@ -28,6 +28,12 @@ export function buildMenuSections(snapshot: MenuStateSnapshot): MenuSection[] {
 					shortcut: "⌘O",
 					action: () => commandRegistry.execute("file.open"),
 				},
+				{
+					id: "file:open-folder",
+					label: "Open Folder...",
+					shortcut: "⌘⇧O",
+					action: () => commandRegistry.execute("file.openFolder"),
+				},
 				{ type: "separator" },
 				{
 					id: "file:save",
@@ -41,11 +47,6 @@ export function buildMenuSections(snapshot: MenuStateSnapshot): MenuSection[] {
 					label: "Save As...",
 					shortcut: "⌘⇧S",
 					action: () => commandRegistry.execute("file.saveAs"),
-				},
-				{
-					id: "file:projects",
-					label: "Projects...",
-					action: () => commandRegistry.execute("file.projects"),
 				},
 			],
 		},

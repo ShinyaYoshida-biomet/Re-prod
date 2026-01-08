@@ -128,25 +128,8 @@ pub(super) enum WSRequest {
         #[serde(default)]
         to: Option<String>,
     },
-    #[serde(rename = "project_list")]
-    ProjectList,
-    #[serde(rename = "project_open")]
-    ProjectOpen { project_id: String },
-    #[serde(rename = "project_create")]
-    ProjectCreate { name: String, path: String },
-    #[serde(rename = "project_add_existing")]
-    ProjectAddExisting { path: String },
-    #[serde(rename = "project_clone")]
-    ProjectClone {
-        remote: String,
-        path: String,
-        #[serde(default)]
-        name: Option<String>,
-    },
-    #[serde(rename = "project_state_load")]
-    ProjectStateLoad { project_id: String },
-    #[serde(rename = "project_state_save")]
-    ProjectStateSave { project_id: String, state: Value },
+    #[serde(rename = "project_switch_folder")]
+    ProjectSwitchFolder { path: String },
     #[serde(rename = "plot_history_get")]
     PlotHistoryGet,
     #[serde(rename = "plot_history_set_active")]
@@ -257,22 +240,12 @@ pub(super) enum WSResponse {
         #[serde(skip_serializing_if = "Option::is_none")]
         error: Option<String>,
     },
-    #[serde(rename = "project_list")]
-    ProjectList { projects: Vec<ProjectRecord> },
     #[serde(rename = "project_opened")]
     ProjectOpened {
         project: ProjectRecord,
         #[serde(skip_serializing_if = "Option::is_none")]
         state: Option<Value>,
     },
-    #[serde(rename = "project_state")]
-    ProjectState {
-        project_id: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        state: Option<Value>,
-    },
-    #[serde(rename = "project_state_saved")]
-    ProjectStateSaved { project_id: String },
     #[serde(rename = "acp_pending_edit_resolved")]
     AcpPendingEditResolved {
         edit_id: String,

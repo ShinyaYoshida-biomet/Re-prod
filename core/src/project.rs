@@ -5,10 +5,6 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
-use crate::config::app_config_dir;
-
-const REGISTRY_VERSION: u32 = 1;
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectConfig {
     pub id: String,
@@ -138,103 +134,6 @@ impl From<&ProjectDescriptor> for ProjectRecord {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct RegistryDocument {
-    version: u32,
-    #[serde(default)]
-    projects: Vec<ProjectRecord>,
-}
-
-impl Default for RegistryDocument {
-    fn default() -> Self {
-        Self {
-            version: REGISTRY_VERSION,
-            projects: Vec::new(),
-        }
-    }
-}
-
-pub struct ProjectRegistry {
-    path: PathBuf,
-    doc: RegistryDocument,
-}
-
-impl ProjectRegistry {
-    pub fn load(path: PathBuf) -> Result<Self> {
-        if !path.exists() {
-            if let Some(parent) = path.parent() {
-                fs::create_dir_all(parent).with_context(|| {
-                    format!(
-                        "Failed to create project registry directory {}",
-                        parent.display()
-                    )
-                })?;
-            }
-            return Ok(Self {
-                path,
-                doc: RegistryDocument::default(),
-            });
-        }
-
-        let content = fs::read_to_string(&path)
-            .with_context(|| format!("Failed to read {}", path.display()))?;
-        let doc: RegistryDocument =
-            serde_json::from_str(&content).context("Failed to parse project registry")?;
-        Ok(Self { path, doc })
-    }
-
-    pub fn records(&self) -> &[ProjectRecord] {
-        &self.doc.projects
-    }
-
-    pub fn upsert(&mut self, record: ProjectRecord) {
-        if let Some(existing) = self
-            .doc
-            .projects
-            .iter_mut()
-            .find(|entry| entry.id == record.id)
-        {
-            *existing = record;
-        } else {
-            self.doc.projects.push(record);
-        }
-    }
-
-    pub fn remove(&mut self, project_id: &str) {
-        self.doc.projects.retain(|entry| entry.id != project_id);
-    }
-
-    pub fn save(&self) -> Result<()> {
-        let content =
-            serde_json::to_string_pretty(&self.doc).context("Failed to serialize registry")?;
-        fs::write(&self.path, content)
-            .with_context(|| format!("Failed to write {}", self.path.display()))
-    }
-}
-
-pub fn default_registry_path() -> Result<PathBuf> {
-    let new_path = app_config_dir()?.join("projects.json");
-    if new_path.exists() {
-        return Ok(new_path);
-    }
-
-    if let Some(legacy) = legacy_registry_path() {
-        if legacy.exists() {
-            if let Some(parent) = new_path.parent() {
-                fs::create_dir_all(parent)?;
-            }
-            fs::copy(&legacy, &new_path)
-                .with_context(|| format!("Failed to migrate registry from {}", legacy.display()))?;
-            return Ok(new_path);
-        }
-    }
-
-    if let Some(parent) = new_path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    Ok(new_path)
-}
-
 pub fn locate_config(root: &Path) -> Result<PathBuf> {
     let primary = default_config_path(root);
     if primary.exists() {
@@ -261,67 +160,4 @@ fn now_millis() -> u64 {
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_millis() as u64
-}
-
-fn legacy_registry_path() -> Option<PathBuf> {
-    dirs::home_dir().map(|home| home.join(".reprod").join("projects.json"))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::config::APP_DIR_ENV;
-    use std::sync::Mutex;
-    use tempfile::tempdir;
-
-    static ENV_LOCK: Mutex<()> = Mutex::new(());
-
-    fn with_env_lock<T>(f: impl FnOnce() -> T) -> T {
-        let _guard = ENV_LOCK.lock().unwrap();
-        f()
-    }
-
-    fn set_env_var(key: &str, value: &str) -> Option<String> {
-        let prev = std::env::var(key).ok();
-        std::env::set_var(key, value);
-        prev
-    }
-
-    fn restore_env_var(key: &str, prev: Option<String>) {
-        match prev {
-            Some(val) => std::env::set_var(key, val),
-            None => std::env::remove_var(key),
-        }
-    }
-
-    #[test]
-    fn test_registry_path_migrates_from_legacy() {
-        with_env_lock(|| {
-            let temp = tempdir().unwrap();
-            let app_dir = temp.path().join("appdata");
-            let home_dir = temp.path().join("home");
-
-            let prev_app = set_env_var(APP_DIR_ENV, app_dir.to_string_lossy().as_ref());
-            let prev_home = set_env_var("HOME", home_dir.to_string_lossy().as_ref());
-
-            let legacy = home_dir.join(".reprod").join("projects.json");
-            std::fs::create_dir_all(legacy.parent().unwrap()).unwrap();
-            std::fs::write(
-                &legacy,
-                r#"{"version":1,"projects":[{"id":"1","name":"legacy","path":"/tmp","created_at":1,"last_opened_at":null}]}"#,
-            )
-            .unwrap();
-
-            let expected = app_config_dir().unwrap().join("projects.json");
-            let path = default_registry_path().unwrap();
-            assert_eq!(path, expected);
-            assert!(path.exists());
-
-            let migrated = std::fs::read_to_string(path).unwrap();
-            assert!(migrated.contains("legacy"));
-
-            restore_env_var(APP_DIR_ENV, prev_app);
-            restore_env_var("HOME", prev_home);
-        });
-    }
 }
