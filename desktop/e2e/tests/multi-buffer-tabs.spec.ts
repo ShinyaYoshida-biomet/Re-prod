@@ -65,8 +65,15 @@ test.describe("Editor tabs", () => {
 		await page.locator(selectors.tab).filter({ hasText: firstFile }).first().click();
 		await expect(page.locator(selectors.tabActive)).toContainText(firstFile);
 
-		await page.locator(selectors.editor).click();
-		await page.keyboard.type("\n# dirty");
+		await page.waitForSelector(".monaco-editor", { timeout: 30000 });
+		await page.evaluate(() => {
+			const monaco = (window as any).monaco;
+			const editors = monaco?.editor?.getEditors?.() ?? [];
+			if (!editors.length) return;
+			const editor = editors[0];
+			editor.setValue(`${editor.getValue()}\n# dirty`);
+			editor.focus();
+		});
 		await expect(page.locator(selectors.tabActive).locator(selectors.tabDirty)).toBeVisible();
 
 		await page.locator(selectors.tabActive).locator(selectors.tabClose).click();
