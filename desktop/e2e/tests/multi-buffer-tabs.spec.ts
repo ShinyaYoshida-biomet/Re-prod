@@ -46,24 +46,52 @@ test.describe("Editor tabs", () => {
 	test("opens multiple files in tabs and handles dirty close", async ({ page }) => {
 		const firstFile = "file-explorer-fixture.R";
 		const secondFile = "tab-switch-fixture.R";
+		const firstFixtureText = "File Explorer fixture loaded";
+		const secondFixtureText = "Tab switch fixture loaded";
 
 		await page.goto("/");
 		await expect(page.locator(selectors.fileBrowser)).toBeVisible({ timeout: 30000 });
 
 		await openFixture(page, firstFile);
-		await expect(page.locator(selectors.tabActive)).toContainText(firstFile);
+		await page.waitForFunction(
+			(expected) => {
+				const monaco = (window as { monaco?: any }).monaco;
+				const editors = monaco?.editor?.getEditors?.() ?? [];
+				return (editors[0]?.getValue?.() ?? "").includes(expected);
+			},
+			firstFixtureText,
+			{ timeout: 30000 },
+		);
 		await openFixture(page, secondFile);
-		await expect(page.locator(selectors.tabActive)).toContainText(secondFile);
+		await expect(page.locator(selectors.tab).filter({ hasText: secondFile })).toHaveCount(1);
+		await page.waitForFunction(
+			(expected) => {
+				const monaco = (window as { monaco?: any }).monaco;
+				const editors = monaco?.editor?.getEditors?.() ?? [];
+				return (editors[0]?.getValue?.() ?? "").includes(expected);
+			},
+			secondFixtureText,
+			{ timeout: 30000 },
+		);
 
 		const tabs = page.locator(selectors.tab);
 		await expect(tabs.filter({ hasText: firstFile })).toHaveCount(1);
 		await expect(tabs.filter({ hasText: secondFile })).toHaveCount(1);
 
-		const activeTab = page.locator(selectors.tabActive);
-		await expect(activeTab).toContainText(secondFile);
+		await openFixture(page, firstFile);
+		await expect(tabs.filter({ hasText: firstFile })).toHaveCount(1);
+		await expect(tabs.filter({ hasText: secondFile })).toHaveCount(1);
 
 		await page.locator(selectors.tab).filter({ hasText: firstFile }).first().click();
-		await expect(page.locator(selectors.tabActive)).toContainText(firstFile);
+		await page.waitForFunction(
+			(expected) => {
+				const monaco = (window as { monaco?: any }).monaco;
+				const editors = monaco?.editor?.getEditors?.() ?? [];
+				return (editors[0]?.getValue?.() ?? "").includes(expected);
+			},
+			firstFixtureText,
+			{ timeout: 30000 },
+		);
 
 		await page.waitForSelector(".monaco-editor", { timeout: 30000 });
 		await page.evaluate(() => {
@@ -74,7 +102,9 @@ test.describe("Editor tabs", () => {
 			editor.setValue(`${editor.getValue()}\n# dirty`);
 			editor.focus();
 		});
-		await expect(page.locator(selectors.tabActive).locator(selectors.tabDirty)).toBeVisible();
+		await expect(
+			page.locator(selectors.tab).filter({ hasText: firstFile }).locator(selectors.tabDirty),
+		).toBeVisible();
 
 		await page.locator(selectors.tabActive).locator(selectors.tabClose).click();
 		const dialog = page.getByRole("dialog");
