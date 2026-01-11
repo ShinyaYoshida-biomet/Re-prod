@@ -15,6 +15,7 @@ import { aiMessages } from "@/services/messageBuilders";
 import { socketService } from "@/services/socket";
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/core";
+import { ArtifactListView } from "./ArtifactListView";
 import { TaskGraphView } from "./TaskGraphView";
 
 interface Props {
@@ -141,6 +142,10 @@ export function AgentEventStream({ events, approvals }: Props): JSX.Element | nu
 		() => (events ?? []).filter((event): event is TaskEvent => event.type === "task"),
 		[events],
 	);
+	const artifacts = useMemo(
+		() => (events ?? []).filter((event): event is ArtifactEvent => event.type === "artifact"),
+		[events],
+	);
 
 	const submitDecision = (decision: ApprovalOption) => {
 		if (!approval) return;
@@ -224,6 +229,7 @@ export function AgentEventStream({ events, approvals }: Props): JSX.Element | nu
 				</div>
 			)}
 			{tasks.length > 0 && <TaskGraphView tasks={tasks} />}
+			{artifacts.length > 0 && <ArtifactListView artifacts={artifacts} />}
 
 			{hasEvents && (
 				<>

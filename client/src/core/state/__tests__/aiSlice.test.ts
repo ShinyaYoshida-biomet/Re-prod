@@ -28,6 +28,23 @@ describe("aiSlice streaming helpers", () => {
 		});
 		expect(store.getState().ai.messages.at(-1)?.toolLogs).toHaveLength(1);
 
+		store.getState().appendAgentEvent("msg-1", {
+			id: "event-1",
+			type: "thought",
+			status: "done",
+			timestamp: Date.now(),
+			text: "Thinking",
+		});
+		expect(store.getState().ai.messages.at(-1)?.events).toHaveLength(1);
+
+		store.getState().addApprovalRequest("msg-1", {
+			eventId: "event-1",
+			tool: "write_text_file",
+			preview: { kind: "diff" },
+			options: ["approve_once", "deny"],
+		});
+		expect(store.getState().ai.messages.at(-1)?.approvalQueue).toHaveLength(1);
+
 		store.getState().completeStreamingMessage("msg-1", "Hello world!");
 		const message = store.getState().ai.messages.at(-1);
 		expect(message?.isComplete).toBe(true);
