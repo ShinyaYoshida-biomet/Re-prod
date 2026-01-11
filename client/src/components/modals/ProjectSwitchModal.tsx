@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { IS_TAURI } from "@/constants/features";
 import { socketService } from "@/services/socket";
-import type { ProjectRecord } from "@/types";
+import type { ExtractServerMessage, ProjectRecord } from "@/types";
 import { getErrorMessage } from "@/utils/error";
 import { ModalShell } from "./ModalShell";
 
@@ -73,10 +73,17 @@ export function ProjectSwitchModal({ open, onClose }: ProjectSwitchModalProps): 
 		setCreating(true);
 		setError(null);
 		try {
-			const response = await socketService.request(
+			const response = await socketService.sendAndWait(
 				{ type: "project_create", name },
-				"project_created",
+				(
+					message,
+				): message is ExtractServerMessage<"project_created"> | ExtractServerMessage<"error"> =>
+					message.type === "project_created" || message.type === "error",
 			);
+			if (response.type === "error") {
+				setError(response.message);
+				return;
+			}
 			setProjects((prev) => [response.project, ...prev]);
 			setSelectedId(response.project.id);
 			setNewProjectName("");

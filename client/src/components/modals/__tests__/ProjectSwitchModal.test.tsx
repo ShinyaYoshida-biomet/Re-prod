@@ -5,6 +5,7 @@ import { ProjectSwitchModal } from "../ProjectSwitchModal";
 
 const requestMock = vi.fn();
 const sendMock = vi.fn();
+const sendAndWaitMock = vi.fn();
 
 vi.mock("@/constants/features", () => ({
 	IS_TAURI: false,
@@ -15,6 +16,7 @@ vi.mock("@/services/socket", () => ({
 	socketService: {
 		request: (...args: any[]) => requestMock(...args),
 		send: (...args: any[]) => sendMock(...args),
+		sendAndWait: (...args: any[]) => sendAndWaitMock(...args),
 	},
 }));
 
@@ -22,6 +24,7 @@ describe("ProjectSwitchModal", () => {
 	beforeEach(() => {
 		requestMock.mockReset();
 		sendMock.mockReset();
+		sendAndWaitMock.mockReset();
 	});
 
 	it("loads and renders project list", async () => {
@@ -42,20 +45,13 @@ describe("ProjectSwitchModal", () => {
 	});
 
 	it("creates a project and adds it to the list", async () => {
-		requestMock.mockImplementation(async (payload: { type: string }) => {
-			if (payload.type === "project_list") {
-				return {
-					type: "project_list_result",
-					projects: [],
-				};
-			}
-			if (payload.type === "project_create") {
-				return {
-					type: "project_created",
-					project: { id: "3", name: "New Project", path: "/srv/new", created_at: 3 },
-				};
-			}
-			throw new Error("Unexpected request");
+		requestMock.mockResolvedValueOnce({
+			type: "project_list_result",
+			projects: [],
+		});
+		sendAndWaitMock.mockResolvedValueOnce({
+			type: "project_created",
+			project: { id: "3", name: "New Project", path: "/srv/new", created_at: 3 },
 		});
 
 		render(<ProjectSwitchModal open onClose={vi.fn()} />);
