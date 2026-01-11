@@ -7,6 +7,8 @@ import { classNames } from "@/utils/classNames";
 export function ExternalAgentSettingsPane(): JSX.Element {
 	const activeAgent = useStore((state) => state.activeAgent);
 	const detectedAgents = useStore((state) => state.detectedAgents);
+	const setActiveMode = useStore((state) => state.setActiveMode);
+	const setActiveAgent = useStore((state) => state.setActiveAgent);
 	const setDetectedAgents = useStore((state) => state.setDetectedAgents);
 	const acpAdminClient = useMemo(() => getAcpAdminClient(), []);
 
