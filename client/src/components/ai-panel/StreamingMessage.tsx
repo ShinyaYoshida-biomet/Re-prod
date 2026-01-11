@@ -10,6 +10,7 @@ import { fileSystem } from "@/services/fileSystem";
 import type { AIMessage, CodeBlock, ToolCallLog as ToolCallLogEntry } from "@/types";
 import { classNames } from "@/utils/classNames";
 import { AIPlanCard } from "./AIPlanCard";
+import { AgentEventStream } from "./AgentEventStream";
 import { CodeBlockWithApply } from "./CodeBlockWithApply";
 import { FileAccessIndicator } from "./FileAccessIndicator";
 import { ToolCallLog } from "./ToolCallLog";
@@ -79,6 +80,7 @@ export function StreamingMessage({ message, onApplyCode }: Props): JSX.Element {
 	const hasPlan = Boolean(message.planSteps && message.planSteps.length > 0);
 	const hasTools = Boolean(message.toolLogs && message.toolLogs.length > 0);
 	const hasCodeBlocks = Boolean(message.codeBlocks && message.codeBlocks.length > 0);
+	const hasEvents = Boolean(message.events && message.events.length > 0);
 	const shouldShowLegacyCode = Boolean(message.code && !hasCodeBlocks);
 
 	// Strip patch blocks from content to avoid duplicate display
@@ -199,7 +201,11 @@ export function StreamingMessage({ message, onApplyCode }: Props): JSX.Element {
 						<FileAccessIndicator filePaths={readFilePaths} onOpenPath={handleOpenPath} />
 					)}
 
-					{hasPlan && <AIPlanCard steps={message.planSteps} />}
+					{hasEvents && (
+						<AgentEventStream events={message.events} approvals={message.approvalQueue} />
+					)}
+
+					{!hasEvents && hasPlan && <AIPlanCard steps={message.planSteps} />}
 
 					{hasTools && <ToolCallLog logs={message.toolLogs} />}
 
