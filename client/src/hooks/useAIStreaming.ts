@@ -10,7 +10,8 @@ type RegisterStreamingHandlersOptions = {
 };
 
 export function useAIStreaming() {
-	const { appendChunk, finalize, recordTool, updatePlan } = useAssistantEventAdapter();
+	const { appendChunk, finalize, recordAgentEvent, recordTool, enqueueApproval } =
+		useAssistantEventAdapter();
 
 	const registerStreamingHandlers = useCallback(
 		(requestId: string, options: RegisterStreamingHandlersOptions = {}) => {
@@ -57,11 +58,20 @@ export function useAIStreaming() {
 			);
 
 			disposers.push(
-				socketService.on("ai_plan_updated", (message) => {
-					if (message.type !== "ai_plan_updated" || !shouldProcess(message.id)) {
+				socketService.on("agent_event", (message) => {
+					if (message.type !== "agent_event" || !shouldProcess(message.id)) {
 						return;
 					}
-					updatePlan(requestId, message.plan);
+					recordAgentEvent(requestId, message.event);
+				}),
+			);
+
+			disposers.push(
+				socketService.on("approval_request", (message) => {
+					if (message.type !== "approval_request" || !shouldProcess(message.id)) {
+						return;
+					}
+					enqueueApproval(requestId, message.request);
 				}),
 			);
 
@@ -137,7 +147,7 @@ export function useAIStreaming() {
 
 			return cleanup;
 		},
-		[appendChunk, finalize, recordTool, updatePlan],
+		[appendChunk, enqueueApproval, finalize, recordAgentEvent, recordTool],
 	);
 
 	return { registerStreamingHandlers };

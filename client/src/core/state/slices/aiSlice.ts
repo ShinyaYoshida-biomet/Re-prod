@@ -1,5 +1,14 @@
 import type { StateCreator } from "zustand";
-import type { AIMessage, AIMode, CodeBlock, PlanStep, ToolCallLog } from "@/types";
+import type {
+	AIMessage,
+	AIMode,
+	AgentEvent,
+	ApprovalRequest,
+	ArtifactEvent,
+	CodeBlock,
+	PlanStep,
+	ToolCallLog,
+} from "@/types";
 
 type StreamingExtras = {
 	codeBlocks?: CodeBlock[];
@@ -38,6 +47,49 @@ const upsertToolLog = (logs: ToolCallLog[] | undefined, incoming: ToolCallLog): 
 	const next = [...logs];
 	next[idx] = { ...next[idx], ...incoming };
 	return next;
+};
+
+const upsertAgentEvent = (events: AgentEvent[] | undefined, incoming: AgentEvent): AgentEvent[] => {
+	if (!events) {
+		return [incoming];
+	}
+
+	const idx = events.findIndex((event) => event.id === incoming.id);
+	if (idx === -1) {
+		return [...events, incoming];
+	}
+
+	const next = [...events];
+	next[idx] = { ...next[idx], ...incoming };
+	return next;
+};
+
+const appendArtifact = (
+	artifacts: ArtifactEvent[] | undefined,
+	incoming: ArtifactEvent,
+): ArtifactEvent[] => {
+	if (!artifacts) {
+		return [incoming];
+	}
+	return [...artifacts, incoming];
+};
+
+const appendApprovalRequest = (
+	queue: ApprovalRequest[] | undefined,
+	request: ApprovalRequest,
+): ApprovalRequest[] => {
+	if (!queue) {
+		return [request];
+	}
+	return [...queue, request];
+};
+
+const removeApprovalRequest = (
+	queue: ApprovalRequest[] | undefined,
+	eventId: string,
+): ApprovalRequest[] | undefined => {
+	if (!queue) return queue;
+	return queue.filter((request) => request.eventId !== eventId);
 };
 
 const mergePlanSteps = (current: PlanStep[] | undefined, incoming: PlanStep[]): PlanStep[] => {
@@ -79,6 +131,9 @@ export interface AIState {
 	startStreamingMessage: (streamingId: string, mode?: AIMode) => void;
 	appendStreamingChunk: (streamingId: string, chunk: string) => void;
 	updateStreamingPlan: (streamingId: string, plan: PlanStep[]) => void;
+	appendAgentEvent: (streamingId: string, event: AgentEvent) => void;
+	addApprovalRequest: (streamingId: string, request: ApprovalRequest) => void;
+	resolveApprovalRequest: (eventId: string) => void;
 	recordToolEvent: (streamingId: string, log: ToolCallLog) => void;
 	completeStreamingMessage: (
 		streamingId: string,
@@ -170,6 +225,44 @@ export const createAISlice: StateCreator<AIState> = (set) => ({
 				messages: updateStreamingMessage(state.ai.messages, streamingId, (message) => ({
 					...message,
 					planSteps: mergePlanSteps(message.planSteps, plan),
+				})),
+			},
+		})),
+	appendAgentEvent: (streamingId, event) =>
+		set((state) => ({
+			ai: {
+				...state.ai,
+				messages: updateStreamingMessage(state.ai.messages, streamingId, (message) => {
+					const nextEvents = upsertAgentEvent(message.events, event);
+					const nextArtifacts =
+						event.type === "artifact"
+							? appendArtifact(message.artifacts, event as ArtifactEvent)
+							: message.artifacts;
+					return {
+						...message,
+						events: nextEvents,
+						artifacts: nextArtifacts,
+					};
+				}),
+			},
+		})),
+	addApprovalRequest: (streamingId, request) =>
+		set((state) => ({
+			ai: {
+				...state.ai,
+				messages: updateStreamingMessage(state.ai.messages, streamingId, (message) => ({
+					...message,
+					approvalQueue: appendApprovalRequest(message.approvalQueue, request),
+				})),
+			},
+		})),
+	resolveApprovalRequest: (eventId) =>
+		set((state) => ({
+			ai: {
+				...state.ai,
+				messages: state.ai.messages.map((message) => ({
+					...message,
+					approvalQueue: removeApprovalRequest(message.approvalQueue, eventId),
 				})),
 			},
 		})),

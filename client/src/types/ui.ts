@@ -174,6 +174,107 @@ export interface ToolCallLog {
 	locations?: string[];
 }
 
+export type AgentEventType =
+	| "thought"
+	| "tool_request"
+	| "tool_result"
+	| "task"
+	| "artifact"
+	| "error";
+
+export type AgentEventStatus =
+	| "pending"
+	| "running"
+	| "done"
+	| "error"
+	| "blocked"
+	| "approved"
+	| "denied";
+
+export type ArtifactKind = "file_read" | "file_write" | "command" | "test_result";
+
+export interface ToolPreview {
+	kind: "diff" | "command" | "read";
+	filepath?: string;
+	diff?: string;
+	command?: string;
+	affectedLines?: number;
+}
+
+export interface AgentEvent {
+	id: string;
+	type: AgentEventType;
+	status: AgentEventStatus;
+	timestamp: number;
+	parentId?: string;
+}
+
+export interface ThoughtEvent extends AgentEvent {
+	type: "thought";
+	text: string;
+	reasoning?: string;
+}
+
+export interface ToolRequestEvent extends AgentEvent {
+	type: "tool_request";
+	tool: string;
+	input: Record<string, unknown>;
+	requiresApproval: boolean;
+	preview?: ToolPreview;
+}
+
+export interface ToolResultEvent extends AgentEvent {
+	type: "tool_result";
+	tool: string;
+	requestId: string;
+	output?: Record<string, unknown>;
+	error?: string;
+}
+
+export interface TaskEvent extends AgentEvent {
+	type: "task";
+	label: string;
+	deps: string[];
+}
+
+export interface ArtifactEvent extends AgentEvent {
+	type: "artifact";
+	kind: ArtifactKind;
+	path?: string;
+	summary: string;
+	details?: {
+		diff?: string;
+		exitCode?: number;
+		stdout?: string;
+		stderr?: string;
+		testsPassed?: number;
+		testsFailed?: number;
+	};
+}
+
+export interface ErrorEvent extends AgentEvent {
+	type: "error";
+	message: string;
+	recoverable: boolean;
+	suggestedAction?: string;
+}
+
+export type ApprovalOption = "approve_once" | "approve_session" | "edit" | "deny";
+
+export interface ApprovalRequest {
+	eventId: string;
+	tool: string;
+	preview: ToolPreview;
+	options: ApprovalOption[];
+	input?: Record<string, unknown>;
+}
+
+export interface ApprovalResponse {
+	eventId: string;
+	decision: ApprovalOption;
+	editedInput?: Record<string, unknown>;
+}
+
 // UI State Types
 export interface LayoutState {
 	editorWidth: number;
@@ -209,6 +310,9 @@ export interface AIMessage {
 	mode?: AIMode;
 	code?: string; // Deprecated: use codeBlocks instead
 	codeBlocks?: CodeBlock[];
+	events?: AgentEvent[];
+	approvalQueue?: ApprovalRequest[];
+	artifacts?: ArtifactEvent[];
 	planSteps?: PlanStep[];
 	toolLogs?: ToolCallLog[];
 	streamingId?: string;

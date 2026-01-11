@@ -9,6 +9,7 @@ import type {
 	AIMode,
 	ChatMessagePayload,
 	ClientMessage,
+	ApprovalResponse,
 	ExecutionRequestPayload,
 	ExportRMarkdownRequestPayload,
 	FileSystemAction,
@@ -73,6 +74,12 @@ export const aiMessages = {
 		request_id: options?.requestId,
 		stream: options?.stream,
 		mode: options?.mode,
+	}),
+	approvalDecision: (
+		decision: ApprovalResponse,
+	): Extract<ClientMessage, { type: "agent_approval_decision" }> => ({
+		type: "agent_approval_decision",
+		decision,
 	}),
 } as const;
 

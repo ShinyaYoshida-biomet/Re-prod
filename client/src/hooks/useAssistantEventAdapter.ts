@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useStore } from "@/core";
 import { extractCodeBlocks } from "@/core/ai/codeBlockUtils";
-import type { PlanStep, ToolCallLog } from "@/types";
+import type { AgentEvent, ApprovalRequest, PlanStep, ToolCallLog } from "@/types";
 import type { AcpPlanStep } from "@/types/generated/AcpPlanStep";
 import type { AcpSessionUpdate } from "@/types/generated/AcpSessionUpdate";
 
@@ -28,6 +28,8 @@ const toToolPayload = (value: unknown): Record<string, unknown> | undefined => {
 export const useAssistantEventAdapter = () => {
 	const appendStreamingChunk = useStore((state) => state.appendStreamingChunk);
 	const updateStreamingPlan = useStore((state) => state.updateStreamingPlan);
+	const appendAgentEvent = useStore((state) => state.appendAgentEvent);
+	const addApprovalRequest = useStore((state) => state.addApprovalRequest);
 	const recordToolEvent = useStore((state) => state.recordToolEvent);
 	const completeStreamingMessage = useStore((state) => state.completeStreamingMessage);
 	const setAILoading = useStore((state) => state.setAILoading);
@@ -51,6 +53,20 @@ export const useAssistantEventAdapter = () => {
 			recordToolEvent(streamingId, log);
 		},
 		[recordToolEvent],
+	);
+
+	const recordAgentEvent = useCallback(
+		(streamingId: string, event: AgentEvent) => {
+			appendAgentEvent(streamingId, event);
+		},
+		[appendAgentEvent],
+	);
+
+	const enqueueApproval = useCallback(
+		(streamingId: string, request: ApprovalRequest) => {
+			addApprovalRequest(streamingId, request);
+		},
+		[addApprovalRequest],
 	);
 
 	const finalize = useCallback(
@@ -112,6 +128,8 @@ export const useAssistantEventAdapter = () => {
 	return {
 		appendChunk,
 		updatePlan,
+		recordAgentEvent,
+		enqueueApproval,
 		recordTool,
 		finalize,
 		mapPlanSteps,
