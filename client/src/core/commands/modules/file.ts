@@ -3,9 +3,12 @@ import { DEFAULT_FILENAMES } from "@/constants/ui";
 import { DEFAULT_R_SCRIPT, type Buffer } from "@/core/state/slices/editorSlice";
 import { createBufferId } from "@/core/state/utils/createBufferId";
 import { useStore } from "@/core/state/store";
+import { useFileSystemStore } from "@/core/fileSystemStore";
 import { socketService } from "@/services/socket";
+import { showError } from "@/services/toastService";
 import { downloadFile, openFile } from "@/utils/fileOperations";
 import { openFolder } from "@/utils/folderOperations";
+import type { ExtractServerMessage } from "@/types";
 import { CommandBuilder } from "../builders";
 import { CommandResolver } from "../resolvers";
 import { commandRegistry } from "../registry";
@@ -83,10 +86,21 @@ export function setupFileCommands() {
 				if (isTauri()) {
 					const folderPath = await openFolder();
 					if (!folderPath) return;
-					socketService.send({
-						type: "project_switch_folder",
-						path: folderPath,
-					});
+					const response = await socketService.sendAndWait(
+						{ type: "project_switch_folder", path: folderPath },
+						(
+							message,
+						): message is ExtractServerMessage<"project_opened"> | ExtractServerMessage<"error"> =>
+							message.type === "project_opened" || message.type === "error",
+					);
+					if (response.type === "error") {
+						showError(response.message);
+						return;
+					}
+					useFileSystemStore
+						.getState()
+						.resetAndLoadRoot()
+						.catch(() => {});
 					return;
 				}
 				useStore.getState().setModalOpen("projectSwitch", true);
