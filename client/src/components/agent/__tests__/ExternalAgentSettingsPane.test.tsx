@@ -39,6 +39,23 @@ describe("ExternalAgentSettingsPane", () => {
 		expect(useStore.getState().detectedAgents).toHaveLength(1);
 	});
 
+	it("does not reset active mode while refreshing agents", async () => {
+		useStore.setState({
+			activeMode: "external_agent",
+			activeAgent: "claude",
+			detectedAgents: [],
+		});
+		detectAgentsMock.mockResolvedValue([
+			{ id: "claude", name: "Claude", command: "claude-code-acp", available: true, path: null },
+		]);
+
+		render(<ExternalAgentSettingsPane />);
+
+		await waitFor(() => expect(detectAgentsMock).toHaveBeenCalled());
+		expect(useStore.getState().activeMode).toBe("external_agent");
+		expect(useStore.getState().activeAgent).toBe("claude");
+	});
+
 	it("persists selection when choosing an agent", async () => {
 		detectAgentsMock.mockResolvedValue([
 			{ id: "claude", name: "Claude", command: "claude-code-acp", available: true, path: null },
