@@ -3,6 +3,40 @@ import { expect, test } from "@playwright/test";
 import { selectors } from "../shared/selectors";
 
 test.describe("Open Folder", () => {
+	test("updates file explorer after workspace switch", async ({ page }) => {
+		const repoRoot = path.resolve(process.cwd(), "../..");
+		const fixtureFolder = path.join(repoRoot, "desktop/e2e/shared/fixtures/open-folder");
+		const fixtureFileName = "sample.R";
+
+		await page.goto("/");
+
+		const fileBrowser = page.locator(selectors.fileBrowser);
+		await expect(fileBrowser).toBeVisible({ timeout: 30000 });
+		await expect(page.getByText("Connected")).toBeVisible({ timeout: 30000 });
+		await page.waitForFunction(() => {
+			const helper = (window as { reprodTest?: { isConnected?: () => boolean } }).reprodTest;
+			return helper?.isConnected?.();
+		});
+
+		const didSend = await page.evaluate((folderPath) => {
+			const helper = (window as { reprodTest?: { sendMessage: (payload: any) => boolean } })
+				.reprodTest;
+			if (!helper?.sendMessage) {
+				throw new Error("reprodTest helper not available");
+			}
+			return helper.sendMessage({ type: "project_switch_folder", path: folderPath });
+		}, fixtureFolder);
+		expect(didSend).toBeTruthy();
+
+		await expect(page.getByText("Project: open-folder")).toBeVisible({ timeout: 30000 });
+
+		const fixtureLabel = page.locator(selectors.fileTreeLabel).filter({ hasText: fixtureFileName });
+		await expect(fixtureLabel).toBeVisible({ timeout: 30000 });
+
+		const repoFile = page.locator(selectors.fileTreeLabel).filter({ hasText: "AGENTS.md" });
+		await expect(repoFile).toHaveCount(0);
+	});
+
 	test("switches workspace and loads file content", async ({ page }) => {
 		const repoRoot = path.resolve(process.cwd(), "../..");
 		const fixtureFolder = path.join(repoRoot, "desktop/e2e/shared/fixtures/open-folder");
