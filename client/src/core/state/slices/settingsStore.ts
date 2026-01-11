@@ -8,6 +8,28 @@ import {
 } from "@/constants/urls";
 import { type ProviderMetadata, resolveProviderMetadata } from "@/domain/provider/ProviderMetadata";
 
+/**
+ * Type guard to safely extract error messages from unknown error types.
+ * Handles Error objects, strings, and objects with message properties.
+ */
+function getErrorMessage(error: unknown): string {
+	if (error instanceof Error) {
+		return error.message;
+	}
+	if (typeof error === "string") {
+		return error;
+	}
+	if (
+		typeof error === "object" &&
+		error !== null &&
+		"message" in error &&
+		typeof error.message === "string"
+	) {
+		return error.message;
+	}
+	return "An unknown error occurred";
+}
+
 interface Provider {
 	name: string;
 	displayName: string;
@@ -110,8 +132,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 				isLoading: false,
 				hasFetched: true,
 			});
-		} catch (err: any) {
-			set({ error: err.message, isLoading: false, hasFetched: true });
+		} catch (err: unknown) {
+			set({ error: getErrorMessage(err), isLoading: false, hasFetched: true });
 		}
 	},
 
@@ -125,8 +147,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 			});
 			if (!res.ok) throw new Error("Failed to set active provider");
 			set({ activeProvider: provider, isLoading: false });
-		} catch (err: any) {
-			set({ error: err.message, isLoading: false });
+		} catch (err: unknown) {
+			set({ error: getErrorMessage(err), isLoading: false });
 		}
 	},
 
@@ -142,8 +164,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
 			// Refresh settings to get the masked key
 			await get().fetchSettings();
-		} catch (err: any) {
-			set({ error: err.message, isLoading: false });
+		} catch (err: unknown) {
+			set({ error: getErrorMessage(err), isLoading: false });
 		}
 	},
 
@@ -170,9 +192,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 			if (!res.ok) throw new Error("Failed to set model");
 
 			set({ isLoading: false });
-		} catch (err: any) {
+		} catch (err: unknown) {
 			set((state) => ({
-				error: err.message,
+				error: getErrorMessage(err),
 				isLoading: false,
 				providers: state.providers,
 			}));
@@ -188,8 +210,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 			if (!res.ok) throw new Error("Connection test failed");
 			set({ isLoading: false });
 			return true;
-		} catch (err: any) {
-			set({ error: err.message, isLoading: false });
+		} catch (err: unknown) {
+			set({ error: getErrorMessage(err), isLoading: false });
 			return false;
 		}
 	},
