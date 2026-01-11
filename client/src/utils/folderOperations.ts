@@ -1,11 +1,8 @@
+import { isTauri } from "@/constants/features";
 import { showError } from "@/services/toastService";
 
-type TauriWindow = Window & { __TAURI__?: object };
-
 export const openFolder = async (): Promise<string | null> => {
-	const tauriWindow = window as TauriWindow;
-	if (!tauriWindow.__TAURI__) {
-		showError("Open Folder is only available in the desktop app.");
+	if (!isTauri()) {
 		return null;
 	}
 

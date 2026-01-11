@@ -1,4 +1,5 @@
 import type { ViewPane } from "@/core/state/slices/viewSlice";
+import { IS_TAURI } from "@/constants/features";
 import { MenuBuilder } from "./builders";
 import type { MenuSection } from "./domain";
 import { IsViewPaneVisible, When } from "./specifications";
@@ -22,7 +23,7 @@ export function buildMenuSections(): MenuSection[] {
 		.item("file:open", "Open...", "file.open", {
 			shortcut: "⌘O",
 		})
-		.item("file:open-folder", "Open Folder...", "file.openFolder", {
+		.item("file:open-folder", IS_TAURI ? "Open Folder..." : "Open Project...", "file.openFolder", {
 			shortcut: "⌘⇧O",
 		})
 		.separator()

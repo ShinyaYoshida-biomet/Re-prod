@@ -1,7 +1,13 @@
 import type { StateCreator } from "zustand";
 
 export type ViewPane = "files" | "editor" | "assistant";
-export type ModalType = "export" | "shortcuts" | "about" | "sessionInfo" | "settings";
+export type ModalType =
+	| "export"
+	| "shortcuts"
+	| "about"
+	| "sessionInfo"
+	| "settings"
+	| "projectSwitch";
 
 export interface ViewData {
 	panes: Record<ViewPane, boolean>;
@@ -56,6 +62,7 @@ export const createViewSlice: StateCreator<ViewState> = (set, get) => ({
 			about: false,
 			sessionInfo: false,
 			settings: false,
+			projectSwitch: false,
 		},
 		zoom: 1,
 	},

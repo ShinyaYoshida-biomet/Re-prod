@@ -20,16 +20,13 @@ describe("openFolder", () => {
 		(window as unknown as { __TAURI__?: object }).__TAURI__ = originalTauri;
 	});
 
-	it("returns null and shows an error when not running in Tauri", async () => {
+	it("returns null when not running in Tauri", async () => {
 		(window as unknown as { __TAURI__?: object }).__TAURI__ = undefined;
-		const toast = await import("@/services/toastService");
-
 		const result = await openFolder();
 
 		expect(result).toBeNull();
-		expect(toast.showError).toHaveBeenCalledWith(
-			"Open Folder is only available in the desktop app.",
-		);
+		const toast = await import("@/services/toastService");
+		expect(toast.showError).not.toHaveBeenCalled();
 	});
 
 	it("returns the selected folder path", async () => {

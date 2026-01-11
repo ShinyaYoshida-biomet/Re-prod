@@ -1,4 +1,5 @@
 import { DEFAULT_FILENAMES } from "@/constants/ui";
+import { IS_TAURI, isTauri } from "@/constants/features";
 import { DEFAULT_R_SCRIPT, type Buffer } from "@/core/state/slices/editorSlice";
 import { createBufferId } from "@/core/state/utils/createBufferId";
 import { useStore } from "@/core/state/store";
@@ -8,6 +9,7 @@ import { openFolder } from "@/utils/folderOperations";
 import { commandRegistry } from "../registry";
 
 export function setupFileCommands() {
+	const openFolderTitle = IS_TAURI ? "Open Folder..." : "Open Project...";
 	commandRegistry.registerMany([
 		{
 			id: "file.new",
@@ -60,17 +62,21 @@ export function setupFileCommands() {
 		},
 		{
 			id: "file.openFolder",
-			title: "Open Folder...",
+			title: openFolderTitle,
 			category: "File",
 			keybinding: "Mod+Shift+O",
 			execute: async () => {
 				try {
-					const folderPath = await openFolder();
-					if (!folderPath) return;
-					socketService.send({
-						type: "project_switch_folder",
-						path: folderPath,
-					});
+					if (isTauri()) {
+						const folderPath = await openFolder();
+						if (!folderPath) return;
+						socketService.send({
+							type: "project_switch_folder",
+							path: folderPath,
+						});
+						return;
+					}
+					useStore.getState().setModalOpen("projectSwitch", true);
 				} catch (error) {}
 			},
 		},

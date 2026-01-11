@@ -11,6 +11,7 @@ import { MenuBar, StatusBar } from "@/components/menu";
 import {
 	AboutModal,
 	KeyboardShortcutsModal,
+	ProjectSwitchModal,
 	SessionInfoModal,
 	SettingsModal,
 } from "@/components/modals";
@@ -130,6 +131,10 @@ function App(): JSX.Element {
 					onClose={() => setModalOpen("sessionInfo", false)}
 				/>
 				<SettingsModal open={modals.settings} onClose={() => setModalOpen("settings", false)} />
+				<ProjectSwitchModal
+					open={modals.projectSwitch}
+					onClose={() => setModalOpen("projectSwitch", false)}
+				/>
 				<PermissionRequestManager />
 			</div>
 		</ToastProvider>

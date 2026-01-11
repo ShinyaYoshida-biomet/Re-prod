@@ -12,7 +12,7 @@ use reprod_core::{
     web_search::{cloud_provider::CloudWebSearchProvider, WebSearchRegistry},
 };
 use reprod_core::{
-    project::{locate_config, ProjectDescriptor},
+    project::{locate_config, ProjectDescriptor, ProjectRecord},
     Config, ExecutionEvent, RExecutor, RunOutputChunk, RunSummary,
 };
 use std::{
@@ -233,11 +233,127 @@ impl ProjectController {
 
         Ok(runtime)
     }
+
+    pub async fn list_projects(&self, root: &Path) -> Result<Vec<ProjectRecord>> {
+        if !root.exists() {
+            return Err(anyhow!("Project root {} does not exist", root.display()));
+        }
+        if !root.is_dir() {
+            return Err(anyhow!("Project root {} is not a directory", root.display()));
+        }
+
+        let mut records = Vec::new();
+        if locate_config(root).is_ok() {
+            let descriptor = ProjectDescriptor::load(root)?;
+            records.push(ProjectRecord::from(&descriptor));
+        }
+
+        for entry in std::fs::read_dir(root)
+            .with_context(|| format!("Failed to read {}", root.display()))?
+        {
+            let entry = entry?;
+            if !entry.file_type()?.is_dir() {
+                continue;
+            }
+            let path = entry.path();
+            if locate_config(&path).is_err() {
+                continue;
+            }
+            let descriptor = ProjectDescriptor::load(&path)?;
+            records.push(ProjectRecord::from(&descriptor));
+        }
+
+        records.sort_by(|a, b| {
+            let a_opened = a.last_opened_at.unwrap_or(0);
+            let b_opened = b.last_opened_at.unwrap_or(0);
+            b_opened.cmp(&a_opened).then_with(|| a.name.cmp(&b.name))
+        });
+
+        Ok(records)
+    }
+
+    pub async fn runtime_for_project_id(
+        &self,
+        root: &Path,
+        project_id: &str,
+    ) -> Result<Arc<ProjectRuntime>> {
+        let records = self.list_projects(root).await?;
+        let record = records
+            .into_iter()
+            .find(|record| record.id == project_id)
+            .ok_or_else(|| anyhow!("Project {} not found", project_id))?;
+        let path = PathBuf::from(record.path);
+        self.runtime_for_path(&path).await
+    }
+
+    pub async fn create_project(
+        &self,
+        root: &Path,
+        name: &str,
+        base_path: Option<&Path>,
+    ) -> Result<ProjectRecord> {
+        if name.trim().is_empty() {
+            return Err(anyhow!("Project name cannot be empty"));
+        }
+
+        if !root.exists() {
+            return Err(anyhow!("Project root {} does not exist", root.display()));
+        }
+        if !root.is_dir() {
+            return Err(anyhow!("Project root {} is not a directory", root.display()));
+        }
+
+        let canonical_root = root
+            .canonicalize()
+            .with_context(|| format!("Failed to resolve {}", root.display()))?;
+        let base = base_path.unwrap_or(root);
+        let canonical_base = base
+            .canonicalize()
+            .with_context(|| format!("Failed to resolve {}", base.display()))?;
+        if !canonical_base.starts_with(&canonical_root) {
+            return Err(anyhow!("Project base path is outside the allowed root"));
+        }
+
+        let slug = slugify_project_dir(name);
+        let mut candidate = canonical_base.join(&slug);
+        let mut suffix = 2u32;
+        while candidate.exists() {
+            candidate = canonical_base.join(format!("{slug}-{suffix}"));
+            suffix += 1;
+        }
+
+        std::fs::create_dir_all(&candidate).with_context(|| {
+            format!("Failed to create project directory {}", candidate.display())
+        })?;
+        let descriptor = ProjectDescriptor::create(&candidate, name, None)?;
+        Ok(ProjectRecord::from(&descriptor))
+    }
+}
+
+fn slugify_project_dir(name: &str) -> String {
+    let mut out = String::new();
+    let mut prev_dash = false;
+    for ch in name.trim().chars() {
+        if ch.is_ascii_alphanumeric() {
+            out.push(ch.to_ascii_lowercase());
+            prev_dash = false;
+        } else if !prev_dash {
+            out.push('-');
+            prev_dash = true;
+        }
+    }
+    let trimmed = out.trim_matches('-').to_string();
+    if trimmed.is_empty() {
+        "project".to_string()
+    } else {
+        trimmed
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashSet;
 
     #[tokio::test]
     async fn runtime_for_path_creates_reprod_dir() {
@@ -270,5 +386,72 @@ mod tests {
         let result = controller.runtime_for_path(&file_path).await;
 
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn list_projects_returns_project_records() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let root = temp.path().join("projects");
+        std::fs::create_dir_all(&root).expect("create root");
+
+        let alpha_path = root.join("alpha");
+        std::fs::create_dir_all(&alpha_path).expect("create alpha");
+        let alpha = ProjectDescriptor::create(&alpha_path, "Alpha", None).expect("alpha");
+
+        let beta_path = root.join("beta");
+        std::fs::create_dir_all(&beta_path).expect("create beta");
+        let beta = ProjectDescriptor::create(&beta_path, "Beta", None).expect("beta");
+
+        let controller = ProjectController::new(Arc::new(Mutex::new(Config::default())))
+            .await
+            .expect("controller");
+        let projects = controller.list_projects(&root).await.expect("projects");
+
+        let ids: HashSet<String> = projects.into_iter().map(|p| p.id).collect();
+        assert_eq!(ids.len(), 2);
+        assert!(ids.contains(&alpha.config.id));
+        assert!(ids.contains(&beta.config.id));
+    }
+
+    #[tokio::test]
+    async fn runtime_for_project_id_finds_matching_project() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let root = temp.path().join("projects");
+        std::fs::create_dir_all(&root).expect("create root");
+
+        let project_path = root.join("gamma");
+        std::fs::create_dir_all(&project_path).expect("create project");
+        let descriptor =
+            ProjectDescriptor::create(&project_path, "Gamma", None).expect("descriptor");
+
+        let controller = ProjectController::new(Arc::new(Mutex::new(Config::default())))
+            .await
+            .expect("controller");
+        let runtime = controller
+            .runtime_for_project_id(&root, &descriptor.config.id)
+            .await
+            .expect("runtime");
+
+        assert_eq!(runtime.descriptor.config.id, descriptor.config.id);
+    }
+
+    #[tokio::test]
+    async fn create_project_creates_unique_directory() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let root = temp.path().join("projects");
+        std::fs::create_dir_all(&root).expect("create root");
+
+        let controller = ProjectController::new(Arc::new(Mutex::new(Config::default())))
+            .await
+            .expect("controller");
+        let project = controller
+            .create_project(&root, "My Project", None)
+            .await
+            .expect("project");
+
+        let project_path = PathBuf::from(&project.path);
+        assert!(project_path.exists());
+        assert!(project_path.join(".reprod").join("config.json").exists());
+        assert_eq!(project.name, "My Project");
     }
 }
