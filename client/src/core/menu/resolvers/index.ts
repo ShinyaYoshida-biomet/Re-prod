@@ -1,0 +1,1 @@
+export { MenuResolver } from "./MenuResolver";
