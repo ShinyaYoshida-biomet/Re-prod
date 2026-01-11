@@ -1,4 +1,7 @@
-use std::sync::{atomic::AtomicU64, Arc, OnceLock};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::{atomic::AtomicU64, Arc, OnceLock},
+};
 
 use crate::projects::ProjectController;
 use reprod_core::acp::types::{
@@ -17,7 +20,7 @@ use reprod_core::{
 };
 use serde::Deserialize;
 use serde_json::Value;
-use tokio::sync::Mutex;
+use tokio::sync::{oneshot, Mutex};
 
 #[derive(Debug, Deserialize)]
 struct SystemPrompts {
@@ -57,6 +60,7 @@ pub struct AppState {
     pub tool_executor: Arc<ToolExecutor>,
     pub request_counter: Arc<AtomicU64>,
     pub projects: Arc<ProjectController>,
+    pub approvals: Arc<ApprovalManager>,
 }
 
 pub(super) fn with_system_prompts(messages: &[ChatMessage], mode: AIMode) -> Vec<ChatMessage> {
@@ -101,6 +105,8 @@ pub(super) enum WSRequest {
         #[serde(default)]
         mode: AIMode,
     },
+    #[serde(rename = "agent_approval_decision")]
+    AgentApprovalDecision { decision: ApprovalDecisionPayload },
     #[serde(rename = "list_tools")]
     ListTools,
     #[serde(rename = "execute_tool")]
@@ -200,11 +206,12 @@ pub(super) enum WSResponse {
         #[serde(rename = "codeBlocks", skip_serializing_if = "Option::is_none")]
         code_blocks: Option<Vec<Value>>,
     },
-    #[allow(dead_code)] // Reserved for future AI planning feature
-    #[serde(rename = "ai_plan_updated")]
-    AIPlanUpdated {
+    #[serde(rename = "agent_event")]
+    AgentEvent { id: String, event: AgentEventPayload },
+    #[serde(rename = "approval_request")]
+    ApprovalRequest {
         id: String,
-        plan: Vec<PlanStepPayload>,
+        request: ApprovalRequestPayload,
     },
     #[serde(rename = "ai_tool_started")]
     AIToolStarted { id: String, tool: ToolLogPayload },
@@ -345,70 +352,217 @@ pub(super) enum WSResponse {
     },
 }
 
-#[allow(dead_code)] // Reserved for future AI planning feature
-#[derive(serde::Serialize, Clone)]
-pub(super) struct PlanStepPayload {
-    pub(super) id: String,
-    pub(super) title: String,
-    pub(super) status: PlanStepStatus,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) kind: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) error: Option<String>,
-    #[serde(rename = "startedAt", skip_serializing_if = "Option::is_none")]
-    pub(super) started_at: Option<i64>,
-    #[serde(rename = "finishedAt", skip_serializing_if = "Option::is_none")]
-    pub(super) finished_at: Option<i64>,
-    #[serde(rename = "waitingReason", skip_serializing_if = "Option::is_none")]
-    pub(super) waiting_reason: Option<String>,
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
+pub(super) enum ApprovalOption {
+    ApproveOnce,
+    ApproveSession,
+    Edit,
+    Deny,
 }
 
-#[allow(dead_code)] // Reserved for future AI planning feature
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+pub(super) struct ApprovalRequestPayload {
+    #[serde(rename = "eventId")]
+    pub event_id: String,
+    pub tool: String,
+    pub preview: ToolPreviewPayload,
+    pub options: Vec<ApprovalOption>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input: Option<Value>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+pub(super) struct ApprovalDecisionPayload {
+    #[serde(rename = "eventId")]
+    pub event_id: String,
+    pub decision: ApprovalOption,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "editedInput")]
+    pub edited_input: Option<Value>,
+}
+
+pub(super) struct ApprovalManager {
+    pending: Mutex<HashMap<String, oneshot::Sender<ApprovalDecisionPayload>>>,
+    session_allowlist: Mutex<HashMap<String, HashSet<String>>>,
+}
+
+impl ApprovalManager {
+    pub(super) fn new() -> Self {
+        Self {
+            pending: Mutex::new(HashMap::new()),
+            session_allowlist: Mutex::new(HashMap::new()),
+        }
+    }
+
+    pub(super) async fn register(
+        &self,
+        event_id: String,
+    ) -> oneshot::Receiver<ApprovalDecisionPayload> {
+        let (tx, rx) = oneshot::channel();
+        let mut pending = self.pending.lock().await;
+        pending.insert(event_id, tx);
+        rx
+    }
+
+    pub(super) async fn resolve(&self, decision: ApprovalDecisionPayload) -> bool {
+        let tx = {
+            let mut pending = self.pending.lock().await;
+            pending.remove(&decision.event_id)
+        };
+        match tx {
+            Some(sender) => sender.send(decision).is_ok(),
+            None => false,
+        }
+    }
+
+    pub(super) async fn is_allowed(&self, stream_id: &str, tool: &str) -> bool {
+        let allowlist = self.session_allowlist.lock().await;
+        allowlist
+            .get(stream_id)
+            .map(|tools| tools.contains(tool))
+            .unwrap_or(false)
+    }
+
+    pub(super) async fn allow_for_session(&self, stream_id: &str, tool: &str) {
+        let mut allowlist = self.session_allowlist.lock().await;
+        allowlist
+            .entry(stream_id.to_string())
+            .or_default()
+            .insert(tool.to_string());
+    }
+}
+
 #[derive(serde::Serialize, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
-pub(super) enum PlanStepStatus {
+pub(super) enum AgentEventStatus {
     Pending,
     Running,
     Done,
     Error,
+    Blocked,
+    Approved,
+    Denied,
 }
 
-impl PlanStepPayload {
-    pub(super) fn new(
-        id: impl Into<String>,
-        title: impl Into<String>,
-        kind: Option<String>,
-    ) -> Self {
-        Self {
-            id: id.into(),
-            title: title.into(),
-            status: PlanStepStatus::Pending,
-            kind,
-            error: None,
-            started_at: None,
-            finished_at: None,
-            waiting_reason: None,
-        }
-    }
-
-    pub(super) fn mark_status(&mut self, status: PlanStepStatus) {
-        self.status = status;
-        match status {
-            PlanStepStatus::Running => {
-                if self.started_at.is_none() {
-                    self.started_at = Some(now_millis());
-                }
-            }
-            PlanStepStatus::Done | PlanStepStatus::Error => {
-                if self.started_at.is_none() {
-                    self.started_at = Some(now_millis());
-                }
-                self.finished_at = Some(now_millis());
-            }
-            PlanStepStatus::Pending => {}
-        }
-    }
+#[derive(serde::Serialize, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
+pub(super) enum ArtifactKind {
+    FileRead,
+    FileWrite,
+    Command,
+    TestResult,
 }
+
+#[derive(serde::Serialize, Clone)]
+pub(super) struct ToolPreviewPayload {
+    pub kind: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub filepath: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub diff: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub command: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "affectedLines")]
+    pub affected_lines: Option<u32>,
+}
+
+#[derive(serde::Serialize, Clone)]
+pub(super) struct ArtifactDetailsPayload {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub diff: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "exitCode")]
+    pub exit_code: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stdout: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stderr: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "testsPassed")]
+    pub tests_passed: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "testsFailed")]
+    pub tests_failed: Option<u32>,
+}
+
+#[derive(serde::Serialize, Clone)]
+#[serde(tag = "type")]
+pub(super) enum AgentEventPayload {
+    #[serde(rename = "thought")]
+    Thought {
+        id: String,
+        status: AgentEventStatus,
+        timestamp: i64,
+        text: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        reasoning: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none", rename = "parentId")]
+        parent_id: Option<String>,
+    },
+    #[serde(rename = "tool_request")]
+    ToolRequest {
+        id: String,
+        status: AgentEventStatus,
+        timestamp: i64,
+        tool: String,
+        input: Value,
+        #[serde(rename = "requiresApproval")]
+        requires_approval: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        preview: Option<ToolPreviewPayload>,
+        #[serde(skip_serializing_if = "Option::is_none", rename = "parentId")]
+        parent_id: Option<String>,
+    },
+    #[serde(rename = "tool_result")]
+    ToolResult {
+        id: String,
+        status: AgentEventStatus,
+        timestamp: i64,
+        #[serde(rename = "requestId")]
+        request_id: String,
+        tool: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        output: Option<Value>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        error: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none", rename = "parentId")]
+        parent_id: Option<String>,
+    },
+    #[serde(rename = "task")]
+    Task {
+        id: String,
+        status: AgentEventStatus,
+        timestamp: i64,
+        label: String,
+        deps: Vec<String>,
+        #[serde(skip_serializing_if = "Option::is_none", rename = "parentId")]
+        parent_id: Option<String>,
+    },
+    #[serde(rename = "artifact")]
+    Artifact {
+        id: String,
+        status: AgentEventStatus,
+        timestamp: i64,
+        kind: ArtifactKind,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        path: Option<String>,
+        summary: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        details: Option<ArtifactDetailsPayload>,
+        #[serde(skip_serializing_if = "Option::is_none", rename = "parentId")]
+        parent_id: Option<String>,
+    },
+    #[serde(rename = "error")]
+    Error {
+        id: String,
+        status: AgentEventStatus,
+        timestamp: i64,
+        message: String,
+        recoverable: bool,
+        #[serde(skip_serializing_if = "Option::is_none", rename = "suggestedAction")]
+        suggested_action: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none", rename = "parentId")]
+        parent_id: Option<String>,
+    },
+}
+
 
 #[derive(serde::Serialize, Clone)]
 pub(super) struct ToolLogPayload {

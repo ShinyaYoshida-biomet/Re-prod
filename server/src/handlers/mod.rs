@@ -33,7 +33,7 @@ pub mod stream_buffer;
 mod timeline_handler;
 mod tool_handler;
 
-pub use common::AppState;
+pub use common::{AppState, ApprovalManager};
 
 use crate::projects::RuntimeBroadcastEvent;
 use acp_handler::{
@@ -41,7 +41,7 @@ use acp_handler::{
     handle_acp_permission_decision, handle_acp_session_cancel, handle_acp_session_create,
     handle_acp_session_prompt,
 };
-use ai_handler::handle_ai_message;
+use ai_handler::{handle_agent_approval_decision, handle_ai_message};
 use common::{error_response, WSRequest, WSResponse};
 use export_handler::handle_export_request;
 use plot_history_handler::{
@@ -69,6 +69,7 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
     let mut run_event_rx: broadcast::Receiver<RuntimeBroadcastEvent> =
         current_runtime.run_events.subscribe();
     let (fs_event_tx, mut fs_event_rx) = tokio_mpsc::unbounded_channel::<FileSystemEvent>();
+    let (ai_event_tx, mut ai_event_rx) = tokio_mpsc::unbounded_channel::<WSResponse>();
     let mut fs_watcher = Some(spawn_fs_watcher(
         current_runtime.descriptor.root_path.clone(),
         fs_event_tx.clone(),
@@ -147,6 +148,13 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                     }
                 }
             }
+            ai_event = ai_event_rx.recv() => {
+                if let Some(response) = ai_event {
+                    if !send_responses(&mut socket, vec![response]).await {
+                        break 'ws_loop;
+                    }
+                }
+            }
             msg = socket.recv() => {
                 if !handle_ws_text(
                     msg,
@@ -158,6 +166,7 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                     &mut fs_watcher,
                     &fs_event_tx,
                     &mut fs_events_closed,
+                    &ai_event_tx,
                     &mut socket,
                 )
                 .await {
@@ -182,6 +191,7 @@ async fn handle_ws_text(
     fs_watcher: &mut Option<FsWatcherHandle>,
     fs_event_tx: &tokio_mpsc::UnboundedSender<FileSystemEvent>,
     fs_events_closed: &mut bool,
+    ai_event_tx: &tokio_mpsc::UnboundedSender<WSResponse>,
     socket: &mut WebSocket,
 ) -> bool {
     match msg {
@@ -205,6 +215,31 @@ async fn handle_ws_text(
                 }
 
                 match request {
+                    WSRequest::AIMessage {
+                        messages,
+                        enable_tools,
+                        request_id,
+                        stream,
+                        mode,
+                    } => {
+                        let state = state.clone();
+                        let runtime = current_runtime.clone();
+                        let sender = ai_event_tx.clone();
+                        tokio::spawn(async move {
+                            let _ = handle_ai_message(
+                                &state,
+                                &runtime,
+                                messages,
+                                enable_tools,
+                                request_id,
+                                stream,
+                                mode,
+                                Some(sender),
+                            )
+                            .await;
+                        });
+                        true
+                    }
                     WSRequest::Execute { request } => {
                         handle_execution_request_streaming(socket, current_runtime, request).await
                     }
@@ -249,8 +284,12 @@ async fn handle_ws_request(
                 request_id,
                 stream,
                 mode,
+                None,
             )
             .await
+        }
+        WSRequest::AgentApprovalDecision { decision } => {
+            handle_agent_approval_decision(state, decision).await
         }
         WSRequest::ListTools => handle_list_tools(state),
         WSRequest::ExecuteTool {

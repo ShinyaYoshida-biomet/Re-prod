@@ -6,62 +6,262 @@ use reprod_core::{
         self,
         tools::{
             get_console_tools, get_filesystem_tools, get_r_context_tools, get_web_search_tools,
+            WriteTextFileRequest,
         },
     },
+    edit::{EditOperation, EditTextFileRequest, TextEdit},
     ChatMessage,
 };
+use similar::TextDiff;
+use tokio::sync::mpsc::UnboundedSender;
+use tokio::time::{timeout, Duration};
 
 use super::{
     common::{
-        build_streaming_payload, error_response, now_millis, tool_log_from_call,
-        with_system_prompts, AIMode, AppState, PlanStepPayload, PlanStepStatus, ToolLogStatus,
-        WSResponse,
+        build_streaming_payload, error_response, now_millis, tool_log_from_call, with_system_prompts,
+        AgentEventPayload, AgentEventStatus, AIMode, AppState, ApprovalDecisionPayload,
+        ApprovalOption, ApprovalRequestPayload, ArtifactDetailsPayload, ArtifactKind, ToolLogStatus,
+        ToolPreviewPayload, WSResponse,
     },
     tool_handler::execute_ai_tool_call,
 };
 
-const PLAN_STEP_DISPATCH: &str = "plan-dispatch";
-const PLAN_STEP_FETCH: &str = "locate-data";
-const PLAN_STEP_INSPECT: &str = "inspect-data";
-const PLAN_STEP_EXECUTE: &str = "execute-task";
-const PLAN_STEP_SUMMARIZE: &str = "summarize";
+type ResponseSender = Option<UnboundedSender<WSResponse>>;
 
-fn build_initial_plan() -> Vec<PlanStepPayload> {
-    let steps = vec![
-        PlanStepPayload::new(PLAN_STEP_DISPATCH, "Plan request", Some("plan".to_string())),
-        PlanStepPayload::new(
-            PLAN_STEP_FETCH,
-            "Fetch or locate data (download/path check)",
-            Some("exec".to_string()),
-        ),
-        PlanStepPayload {
-            waiting_reason: Some("Waiting for data or permission; resume once available".into()),
-            ..PlanStepPayload::new(
-                PLAN_STEP_INSPECT,
-                "Inspect data structure (head/sample)",
-                Some("peek".to_string()),
-            )
-        },
-        PlanStepPayload::new(
-            PLAN_STEP_EXECUTE,
-            "Execute requested task (analysis/plots)",
-            Some("exec".to_string()),
-        ),
-        PlanStepPayload::new(
-            PLAN_STEP_SUMMARIZE,
-            "Summarize results and next steps",
-            Some("exec".to_string()),
-        ),
-    ];
-
-    steps
+fn push_response(responses: &mut Vec<WSResponse>, sender: &ResponseSender, response: WSResponse) {
+    if let Some(sender) = sender {
+        let _ = sender.send(response);
+    } else {
+        responses.push(response);
+    }
 }
 
-fn push_plan_update(responses: &mut Vec<WSResponse>, request_id: &str, plan: &[PlanStepPayload]) {
-    responses.push(WSResponse::AIPlanUpdated {
-        id: request_id.to_string(),
-        plan: plan.to_vec(),
+fn push_responses(responses: &mut Vec<WSResponse>, sender: &ResponseSender, next: Vec<WSResponse>) {
+    for response in next {
+        push_response(responses, sender, response);
+    }
+}
+
+struct EventStream {
+    stream_id: String,
+    counter: u64,
+    sender: ResponseSender,
+}
+
+impl EventStream {
+    fn new(stream_id: &str, sender: ResponseSender) -> Self {
+        Self {
+            stream_id: stream_id.to_string(),
+            counter: 0,
+            sender,
+        }
+    }
+
+    fn next_event_id(&mut self) -> String {
+        self.counter += 1;
+        format!("{}-event-{}", self.stream_id, self.counter)
+    }
+
+    fn emit(&self, responses: &mut Vec<WSResponse>, event: AgentEventPayload) {
+        push_response(
+            responses,
+            &self.sender,
+            WSResponse::AgentEvent {
+                id: self.stream_id.clone(),
+                event,
+            },
+        );
+    }
+}
+
+fn tool_requires_approval(name: &str) -> bool {
+    matches!(name, "write_text_file" | "edit_text_file")
+}
+
+fn extract_path_from_input(input: &serde_json::Value) -> Option<String> {
+    input
+        .get("path")
+        .and_then(|value| value.as_str())
+        .map(|value| value.to_string())
+}
+
+fn build_diff(path: &str, old_text: &str, new_text: &str) -> String {
+    TextDiff::from_lines(old_text, new_text)
+        .unified_diff()
+        .header(path, path)
+        .to_string()
+}
+
+fn apply_edits_preview(original: &str, edits: &[TextEdit]) -> Result<String, String> {
+    let mut result = original.to_string();
+    let mut sorted = edits.to_vec();
+    sorted.sort_by(|a, b| {
+        (
+            b.range.start_line,
+            b.range.start_col,
+            b.range.end_line,
+            b.range.end_col,
+        )
+            .cmp(&(
+                a.range.start_line,
+                a.range.start_col,
+                a.range.end_line,
+                a.range.end_col,
+            ))
     });
+
+    for edit in sorted {
+        let start = line_col_to_index(&result, edit.range.start_line, edit.range.start_col)?;
+        let end = line_col_to_index(&result, edit.range.end_line, edit.range.end_col)?;
+        if start > end {
+            return Err("Edit range start is after end".to_string());
+        }
+        result.replace_range(start..end, &edit.text);
+    }
+
+    Ok(result)
+}
+
+fn line_col_to_index(text: &str, line: u32, col: u32) -> Result<usize, String> {
+    if line == 0 || col == 0 {
+        return Err("Line/column indices must be 1-based".to_string());
+    }
+    let mut current_line = 1u32;
+    let mut current_col = 1u32;
+    for (idx, ch) in text.char_indices() {
+        if current_line == line && current_col == col {
+            return Ok(idx);
+        }
+        if ch == '\n' {
+            current_line += 1;
+            current_col = 1;
+        } else {
+            current_col += 1;
+        }
+    }
+    if current_line == line && current_col == col {
+        return Ok(text.len());
+    }
+    Err("Line/column out of range".to_string())
+}
+
+async fn build_tool_preview(
+    tool_call: &reprod_core::ToolCall,
+    runtime: &Arc<ProjectRuntime>,
+) -> Option<ToolPreviewPayload> {
+    match tool_call.name.as_str() {
+        "read_text_file" => Some(ToolPreviewPayload {
+            kind: "read".to_string(),
+            filepath: extract_path_from_input(&tool_call.input),
+            diff: None,
+            command: None,
+            affected_lines: None,
+        }),
+        "write_text_file" => {
+            let request: WriteTextFileRequest =
+                serde_json::from_value(tool_call.input.clone()).ok()?;
+            let read_result = runtime.edit_service.read_text_file(&request.path).await;
+            let old_text = read_result.map(|result| result.text).unwrap_or_default();
+            let diff = build_diff(&request.path, &old_text, &request.content);
+            Some(ToolPreviewPayload {
+                kind: "diff".to_string(),
+                filepath: Some(request.path),
+                diff: Some(diff),
+                command: None,
+                affected_lines: None,
+            })
+        }
+        "edit_text_file" => {
+            let request: EditTextFileRequest =
+                serde_json::from_value(tool_call.input.clone()).ok()?;
+            let read_result = runtime.edit_service.read_text_file(&request.path).await;
+            let old_text = read_result.map(|result| result.text).unwrap_or_default();
+            let new_text = match request.operation {
+                EditOperation::Delete => String::new(),
+                EditOperation::Create | EditOperation::Replace => {
+                    request.new_text.clone().unwrap_or_default()
+                }
+                EditOperation::ApplyEdits => {
+                    let edits = request.edits.clone().unwrap_or_default();
+                    apply_edits_preview(&old_text, &edits).ok()?
+                }
+            };
+            let diff = build_diff(&request.path, &old_text, &new_text);
+            Some(ToolPreviewPayload {
+                kind: "diff".to_string(),
+                filepath: Some(request.path),
+                diff: Some(diff),
+                command: None,
+                affected_lines: None,
+            })
+        }
+        _ => None,
+    }
+}
+
+fn summarize_tool_result(tool_call: &reprod_core::ToolCall, outcome: &serde_json::Value) -> String {
+    match tool_call.name.as_str() {
+        "read_text_file" => extract_path_from_input(&tool_call.input)
+            .map(|path| format!("Read file {}", path))
+            .unwrap_or_else(|| "Read file".to_string()),
+        "write_text_file" | "edit_text_file" => extract_path_from_input(&tool_call.input)
+            .map(|path| format!("Updated file {}", path))
+            .unwrap_or_else(|| "Updated file".to_string()),
+        _ => outcome.to_string(),
+    }
+}
+
+fn artifact_for_tool_result(
+    tool_call: &reprod_core::ToolCall,
+    diff_summary: &str,
+    display_summary: &str,
+) -> Option<(ArtifactKind, Option<String>, String, Option<ArtifactDetailsPayload>)> {
+    match tool_call.name.as_str() {
+        "read_text_file" => Some((
+            ArtifactKind::FileRead,
+            extract_path_from_input(&tool_call.input),
+            display_summary.to_string(),
+            None,
+        )),
+        "write_text_file" | "edit_text_file" => Some((
+            ArtifactKind::FileWrite,
+            extract_path_from_input(&tool_call.input),
+            display_summary.to_string(),
+            Some(ArtifactDetailsPayload {
+                diff: Some(diff_summary.to_string()),
+                exit_code: None,
+                stdout: None,
+                stderr: None,
+                tests_passed: None,
+                tests_failed: None,
+            }),
+        )),
+        "web_search" => Some((
+            ArtifactKind::Command,
+            None,
+            "Web search".to_string(),
+            None,
+        )),
+        _ => None,
+    }
+}
+
+fn is_recoverable_error(message: &str) -> bool {
+    !(message.contains("permission denied") || message.contains("not found"))
+}
+
+fn suggest_recovery(message: &str) -> Option<String> {
+    let lowered = message.to_lowercase();
+    if lowered.contains("not found") {
+        return Some("Verify the path and retry".to_string());
+    }
+    if lowered.contains("permission denied") {
+        return Some("Request permission or choose a different location".to_string());
+    }
+    if lowered.contains("syntax") {
+        return Some("Check syntax and try again".to_string());
+    }
+    None
 }
 
 pub(super) async fn handle_ai_message(
@@ -72,6 +272,7 @@ pub(super) async fn handle_ai_message(
     request_id: Option<String>,
     stream: bool,
     mode: AIMode,
+    sender: ResponseSender,
 ) -> Vec<WSResponse> {
     let cfg = state.config.lock().await.clone();
     let provider = ai::from_config(&cfg);
@@ -81,12 +282,19 @@ pub(super) async fn handle_ai_message(
     });
     let messages_with_prompts = with_system_prompts(&messages, mode);
 
-    let mut plan = build_initial_plan();
     let mut outbound = Vec::new();
-    if let Some(dispatch) = plan.iter_mut().find(|s| s.id == PLAN_STEP_DISPATCH) {
-        dispatch.mark_status(PlanStepStatus::Running);
-    }
-    push_plan_update(&mut outbound, &stream_id, &plan);
+    let mut event_stream = EventStream::new(&stream_id, sender.clone());
+    event_stream.emit(
+        &mut outbound,
+        AgentEventPayload::Thought {
+            id: event_stream.next_event_id(),
+            status: AgentEventStatus::Done,
+            timestamp: now_millis(),
+            text: "Analyzing request to determine next actions.".to_string(),
+            reasoning: Some("Establish context before acting.".to_string()),
+            parent_id: None,
+        },
+    );
 
     let responses = if enable_tools {
         let mut tools = get_filesystem_tools();
@@ -94,19 +302,6 @@ pub(super) async fn handle_ai_message(
         tools.extend(get_console_tools());
         tools.extend(get_web_search_tools());
         let mut responses = Vec::new();
-
-        // Mark fetch/inspect/execute phases as running in order as we start tool processing.
-        if let Some(fetch) = plan.iter_mut().find(|s| s.id == PLAN_STEP_FETCH) {
-            fetch.mark_status(PlanStepStatus::Running);
-        }
-        if let Some(inspect) = plan.iter_mut().find(|s| s.id == PLAN_STEP_INSPECT) {
-            inspect.mark_status(PlanStepStatus::Running);
-            inspect.waiting_reason = None;
-        }
-        if let Some(exec) = plan.iter_mut().find(|s| s.id == PLAN_STEP_EXECUTE) {
-            exec.mark_status(PlanStepStatus::Running);
-        }
-        push_plan_update(&mut responses, &stream_id, &plan);
 
         match provider
             .send_message_with_tools(messages_with_prompts.clone(), tools.clone())
@@ -117,41 +312,315 @@ pub(super) async fn handle_ai_message(
                     let mut tool_results = Vec::new();
 
                     for tool_call in tool_calls {
-                        let mut log = tool_log_from_call(tool_call);
-                        responses.push(WSResponse::AIToolStarted {
-                            id: stream_id.clone(),
-                            tool: log.clone(),
-                        });
+                        let mut tool_call = tool_call.clone();
+                        let mut requires_approval = tool_requires_approval(&tool_call.name)
+                            && !state
+                                .approvals
+                                .is_allowed(&stream_id, &tool_call.name)
+                                .await;
+                        let request_event_id = event_stream.next_event_id();
+                        let task_event_id = event_stream.next_event_id();
+                        let preview = build_tool_preview(&tool_call, runtime).await;
+                        event_stream.emit(
+                            &mut responses,
+                            AgentEventPayload::ToolRequest {
+                                id: request_event_id.clone(),
+                                status: if requires_approval {
+                                    AgentEventStatus::Blocked
+                                } else {
+                                    AgentEventStatus::Running
+                                },
+                                timestamp: now_millis(),
+                                tool: tool_call.name.clone(),
+                                input: tool_call.input.clone(),
+                                requires_approval,
+                                preview: preview.clone(),
+                                parent_id: None,
+                            },
+                        );
 
-                        let tool_result = execute_ai_tool_call(tool_call, runtime).await;
+                        let mut approved_input = tool_call.input.clone();
+                        if requires_approval {
+                            let approval_preview = preview.unwrap_or(ToolPreviewPayload {
+                                kind: "diff".to_string(),
+                                filepath: extract_path_from_input(&tool_call.input),
+                                diff: None,
+                                command: None,
+                                affected_lines: None,
+                            });
+                            push_response(
+                                &mut responses,
+                                &sender,
+                                WSResponse::ApprovalRequest {
+                                    id: stream_id.clone(),
+                                    request: ApprovalRequestPayload {
+                                        event_id: request_event_id.clone(),
+                                        tool: tool_call.name.clone(),
+                                        preview: approval_preview,
+                                        options: vec![
+                                            ApprovalOption::ApproveOnce,
+                                            ApprovalOption::ApproveSession,
+                                            ApprovalOption::Edit,
+                                            ApprovalOption::Deny,
+                                        ],
+                                        input: Some(tool_call.input.clone()),
+                                    },
+                                },
+                            );
+
+                            let receiver = state
+                                .approvals
+                                .register(request_event_id.clone())
+                                .await;
+                            let decision = match timeout(Duration::from_secs(300), receiver).await {
+                                Ok(Ok(decision)) => decision,
+                                _ => ApprovalDecisionPayload {
+                                    event_id: request_event_id.clone(),
+                                    decision: ApprovalOption::Deny,
+                                    edited_input: None,
+                                },
+                            };
+
+                            match decision.decision {
+                                ApprovalOption::ApproveOnce => {
+                                    event_stream.emit(
+                                        &mut responses,
+                                        AgentEventPayload::ToolRequest {
+                                            id: request_event_id.clone(),
+                                            status: AgentEventStatus::Approved,
+                                            timestamp: now_millis(),
+                                            tool: tool_call.name.clone(),
+                                            input: tool_call.input.clone(),
+                                            requires_approval: true,
+                                            preview: None,
+                                            parent_id: None,
+                                        },
+                                    );
+                                }
+                                ApprovalOption::ApproveSession => {
+                                    state
+                                        .approvals
+                                        .allow_for_session(&stream_id, &tool_call.name)
+                                        .await;
+                                    event_stream.emit(
+                                        &mut responses,
+                                        AgentEventPayload::ToolRequest {
+                                            id: request_event_id.clone(),
+                                            status: AgentEventStatus::Approved,
+                                            timestamp: now_millis(),
+                                            tool: tool_call.name.clone(),
+                                            input: tool_call.input.clone(),
+                                            requires_approval: true,
+                                            preview: None,
+                                            parent_id: None,
+                                        },
+                                    );
+                                }
+                                ApprovalOption::Edit => {
+                                    if let Some(input) = decision.edited_input.clone() {
+                                        approved_input = input;
+                                    }
+                                    event_stream.emit(
+                                        &mut responses,
+                                        AgentEventPayload::ToolRequest {
+                                            id: request_event_id.clone(),
+                                            status: AgentEventStatus::Approved,
+                                            timestamp: now_millis(),
+                                            tool: tool_call.name.clone(),
+                                            input: approved_input.clone(),
+                                            requires_approval: true,
+                                            preview: None,
+                                            parent_id: None,
+                                        },
+                                    );
+                                }
+                                ApprovalOption::Deny => {
+                                    event_stream.emit(
+                                        &mut responses,
+                                        AgentEventPayload::ToolRequest {
+                                            id: request_event_id.clone(),
+                                            status: AgentEventStatus::Denied,
+                                            timestamp: now_millis(),
+                                            tool: tool_call.name.clone(),
+                                            input: tool_call.input.clone(),
+                                            requires_approval: true,
+                                            preview: None,
+                                            parent_id: None,
+                                        },
+                                    );
+                                    let denied_message = "User denied tool execution".to_string();
+                                    event_stream.emit(
+                                        &mut responses,
+                                        AgentEventPayload::ToolResult {
+                                            id: event_stream.next_event_id(),
+                                            status: AgentEventStatus::Denied,
+                                            timestamp: now_millis(),
+                                            request_id: request_event_id.clone(),
+                                            tool: tool_call.name.clone(),
+                                            output: None,
+                                            error: Some(denied_message.clone()),
+                                            parent_id: None,
+                                        },
+                                    );
+                                    tool_results.push((
+                                        tool_call.id.clone(),
+                                        format!("Denied: {}", denied_message),
+                                    ));
+                                    continue;
+                                }
+                            }
+                        }
+                        event_stream.emit(
+                            &mut responses,
+                            AgentEventPayload::Task {
+                                id: task_event_id.clone(),
+                                status: AgentEventStatus::Running,
+                                timestamp: now_millis(),
+                                label: format!("Run tool: {}", tool_call.name),
+                                deps: Vec::new(),
+                                parent_id: None,
+                            },
+                        );
+
+                        tool_call.input = approved_input;
+                        let mut log = tool_log_from_call(&tool_call);
+                        push_response(
+                            &mut responses,
+                            &sender,
+                            WSResponse::AIToolStarted {
+                                id: stream_id.clone(),
+                                tool: log.clone(),
+                            },
+                        );
+
+                        let tool_result = execute_ai_tool_call(&tool_call, runtime).await;
                         match tool_result {
                             Ok(result) => {
                                 log.status = ToolLogStatus::Done;
                                 log.output = Some(result.output.clone());
-                                tool_results.push((tool_call.id.clone(), result.summary));
+                                tool_results
+                                    .push((tool_call.id.clone(), result.summary.clone()));
+
+                                let display_summary =
+                                    summarize_tool_result(&tool_call, &result.output);
+                                event_stream.emit(
+                                    &mut responses,
+                                    AgentEventPayload::ToolResult {
+                                        id: event_stream.next_event_id(),
+                                        status: AgentEventStatus::Done,
+                                        timestamp: now_millis(),
+                                        request_id: request_event_id.clone(),
+                                        tool: tool_call.name.clone(),
+                                        output: Some(result.output.clone()),
+                                        error: None,
+                                        parent_id: None,
+                                    },
+                                );
+
+                                if let Some((kind, path, summary, details)) =
+                                    artifact_for_tool_result(
+                                        &tool_call,
+                                        &result.summary,
+                                        &display_summary,
+                                    )
+                                {
+                                    event_stream.emit(
+                                        &mut responses,
+                                        AgentEventPayload::Artifact {
+                                            id: event_stream.next_event_id(),
+                                            status: AgentEventStatus::Done,
+                                            timestamp: now_millis(),
+                                            kind,
+                                            path,
+                                            summary,
+                                            details,
+                                            parent_id: None,
+                                        },
+                                    );
+                                }
+
+                                event_stream.emit(
+                                    &mut responses,
+                                    AgentEventPayload::Task {
+                                        id: task_event_id,
+                                        status: AgentEventStatus::Done,
+                                        timestamp: now_millis(),
+                                        label: format!("Run tool: {}", tool_call.name),
+                                        deps: Vec::new(),
+                                        parent_id: None,
+                                    },
+                                );
                             }
                             Err(err) => {
                                 log.status = ToolLogStatus::Error;
                                 log.error = Some(err.clone());
                                 tool_results
                                     .push((tool_call.id.clone(), format!("Error: {}", err)));
+
+                                let recoverable = is_recoverable_error(&err);
+                                let suggested_action = suggest_recovery(&err);
+                                event_stream.emit(
+                                    &mut responses,
+                                    AgentEventPayload::ToolResult {
+                                        id: event_stream.next_event_id(),
+                                        status: AgentEventStatus::Error,
+                                        timestamp: now_millis(),
+                                        request_id: request_event_id.clone(),
+                                        tool: tool_call.name.clone(),
+                                        output: None,
+                                        error: Some(err.clone()),
+                                        parent_id: None,
+                                    },
+                                );
+                                event_stream.emit(
+                                    &mut responses,
+                                    AgentEventPayload::Error {
+                                        id: event_stream.next_event_id(),
+                                        status: AgentEventStatus::Error,
+                                        timestamp: now_millis(),
+                                        message: err.clone(),
+                                        recoverable,
+                                        suggested_action: suggested_action.clone(),
+                                        parent_id: None,
+                                    },
+                                );
+                                event_stream.emit(
+                                    &mut responses,
+                                    AgentEventPayload::Thought {
+                                        id: event_stream.next_event_id(),
+                                        status: AgentEventStatus::Running,
+                                        timestamp: now_millis(),
+                                        text: format!(
+                                            "Tool failed: {}. Considering alternative.",
+                                            err
+                                        ),
+                                        reasoning: suggested_action,
+                                        parent_id: None,
+                                    },
+                                );
+                                event_stream.emit(
+                                    &mut responses,
+                                    AgentEventPayload::Task {
+                                        id: task_event_id,
+                                        status: AgentEventStatus::Error,
+                                        timestamp: now_millis(),
+                                        label: format!("Run tool: {}", tool_call.name),
+                                        deps: Vec::new(),
+                                        parent_id: None,
+                                    },
+                                );
                             }
                         }
                         log.finished_at = Some(now_millis());
-                        responses.push(WSResponse::AIToolFinished {
-                            id: stream_id.clone(),
-                            tool: log,
-                        });
+                        push_response(
+                            &mut responses,
+                            &sender,
+                            WSResponse::AIToolFinished {
+                                id: stream_id.clone(),
+                                tool: log,
+                            },
+                        );
                     }
-
-                    // Mark fetch/inspect done after tool calls finish.
-                    if let Some(fetch) = plan.iter_mut().find(|s| s.id == PLAN_STEP_FETCH) {
-                        fetch.mark_status(PlanStepStatus::Done);
-                    }
-                    if let Some(inspect) = plan.iter_mut().find(|s| s.id == PLAN_STEP_INSPECT) {
-                        inspect.mark_status(PlanStepStatus::Done);
-                    }
-                    push_plan_update(&mut responses, &stream_id, &plan);
 
                     let mut follow_up_messages = messages.clone();
                     follow_up_messages.push(ChatMessage {
@@ -169,75 +638,71 @@ pub(super) async fn handle_ai_message(
                     let follow_up_with_prompts = with_system_prompts(&follow_up_messages, mode);
                     match provider.send_message(follow_up_with_prompts).await {
                         Ok(final_response) => {
-                            responses.extend(build_streaming_payload(
-                                stream,
-                                &stream_id,
-                                final_response,
-                            ));
-                            if let Some(exec) = plan.iter_mut().find(|s| s.id == PLAN_STEP_EXECUTE)
-                            {
-                                exec.mark_status(PlanStepStatus::Done);
-                            }
-                            if let Some(sum) = plan.iter_mut().find(|s| s.id == PLAN_STEP_SUMMARIZE)
-                            {
-                                sum.mark_status(PlanStepStatus::Done);
-                            }
-                            push_plan_update(&mut responses, &stream_id, &plan);
+                            push_responses(
+                                &mut responses,
+                                &sender,
+                                build_streaming_payload(stream, &stream_id, final_response),
+                            );
                             responses
                         }
                         Err(e) => {
-                            responses.push(WSResponse::Error {
-                                message: format!("Failed to get final response: {}", e),
-                            });
-                            if let Some(exec) = plan.iter_mut().find(|s| s.id == PLAN_STEP_EXECUTE)
-                            {
-                                exec.error = Some(format!("Failed to get final response: {}", e));
-                                exec.mark_status(PlanStepStatus::Error);
-                            }
+                            push_response(
+                                &mut responses,
+                                &sender,
+                                WSResponse::Error {
+                                    message: format!("Failed to get final response: {}", e),
+                                },
+                            );
                             responses
                         }
                     }
                 } else {
-                    let mut responses =
-                        build_streaming_payload(stream, &stream_id, response.content.clone());
-                    responses.push(WSResponse::AIResponseWithTools { response });
-                    if let Some(exec) = plan.iter_mut().find(|s| s.id == PLAN_STEP_EXECUTE) {
-                        exec.mark_status(PlanStepStatus::Done);
-                    }
-                    if let Some(sum) = plan.iter_mut().find(|s| s.id == PLAN_STEP_SUMMARIZE) {
-                        sum.mark_status(PlanStepStatus::Done);
-                    }
-                    push_plan_update(&mut responses, &stream_id, &plan);
+                    let mut responses = Vec::new();
+                    push_responses(
+                        &mut responses,
+                        &sender,
+                        build_streaming_payload(stream, &stream_id, response.content.clone()),
+                    );
+                    push_response(
+                        &mut responses,
+                        &sender,
+                        WSResponse::AIResponseWithTools { response },
+                    );
                     responses
                 }
             }
-            Err(e) => error_response(e.to_string()),
+            Err(e) => {
+                let mut responses = Vec::new();
+                push_responses(&mut responses, &sender, error_response(e.to_string()));
+                responses
+            }
         }
     } else {
         match provider.send_message(messages_with_prompts).await {
-            Ok(response) => build_streaming_payload(stream, &stream_id, response),
-            Err(e) => error_response(e.to_string()),
+            Ok(response) => {
+                let mut responses = Vec::new();
+                push_responses(&mut responses, &sender, build_streaming_payload(stream, &stream_id, response));
+                responses
+            }
+            Err(e) => {
+                let mut responses = Vec::new();
+                push_responses(&mut responses, &sender, error_response(e.to_string()));
+                responses
+            }
         }
     };
 
-    let first_error_message = responses.iter().find_map(|response| {
-        if let WSResponse::Error { message } = response {
-            Some(message.clone())
-        } else {
-            None
-        }
-    });
-
-    if let Some(step) = plan.iter_mut().find(|step| step.id == PLAN_STEP_DISPATCH) {
-        if let Some(error_message) = first_error_message {
-            step.error = Some(error_message);
-            step.mark_status(PlanStepStatus::Error);
-        } else {
-            step.mark_status(PlanStepStatus::Done);
-        }
-    }
     outbound.extend(responses);
-    push_plan_update(&mut outbound, &stream_id, &plan);
-
     outbound
+}
+
+pub(super) async fn handle_agent_approval_decision(
+    state: &AppState,
+    decision: ApprovalDecisionPayload,
+) -> Vec<WSResponse> {
+    if state.approvals.resolve(decision).await {
+        Vec::new()
+    } else {
+        error_response("No pending approval for decision")
+    }
 }
