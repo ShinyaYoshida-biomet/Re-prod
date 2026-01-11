@@ -15,6 +15,7 @@ import { aiMessages } from "@/services/messageBuilders";
 import { socketService } from "@/services/socket";
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/core";
+import { TaskGraphView } from "./TaskGraphView";
 
 interface Props {
 	events?: AgentEvent[];
@@ -136,6 +137,11 @@ export function AgentEventStream({ events, approvals }: Props): JSX.Element | nu
 		return "";
 	}, [approval]);
 
+	const tasks = useMemo(
+		() => (events ?? []).filter((event): event is TaskEvent => event.type === "task"),
+		[events],
+	);
+
 	const submitDecision = (decision: ApprovalOption) => {
 		if (!approval) return;
 		let payload: ApprovalResponse = {
@@ -217,6 +223,8 @@ export function AgentEventStream({ events, approvals }: Props): JSX.Element | nu
 					</div>
 				</div>
 			)}
+			{tasks.length > 0 && <TaskGraphView tasks={tasks} />}
+
 			{hasEvents && (
 				<>
 					<div className="agent-event-stream__header">

@@ -1,0 +1,74 @@
+.task-graph {
+	margin-top: 12px;
+	border-radius: 8px;
+	background: var(--bg-secondary);
+	overflow: hidden;
+}
+
+.task-graph__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 12px;
+}
+
+.task-graph__title {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-secondary);
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+}
+
+.task-graph__count {
+	font-size: 12px;
+	color: var(--text-secondary);
+}
+
+.task-graph__list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	font-size: 12px;
+}
+
+.task-graph__item {
+	border-top: 1px solid var(--border-light);
+	padding: 10px 12px;
+	display: grid;
+	gap: 6px;
+}
+
+.task-graph__meta {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	flex-wrap: wrap;
+}
+
+.task-graph__label {
+	font-weight: 600;
+	color: var(--text-primary);
+}
+
+.task-graph__status {
+	padding: 2px 6px;
+	border-radius: 999px;
+	background: var(--bg-tertiary);
+	color: var(--text-secondary);
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.task-graph__deps {
+	color: var(--text-secondary);
+}
+
+.task-graph__item[data-status="error"] .task-graph__status,
+.task-graph__item[data-status="denied"] .task-graph__status {
+	color: var(--phylo-error-medium);
+}
+
+.task-graph__item[data-status="blocked"] .task-graph__status {
+	color: var(--phylo-warning-medium);
+}
