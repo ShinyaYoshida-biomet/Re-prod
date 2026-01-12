@@ -1,5 +1,5 @@
 import { commandRegistry } from "@/core/commands/registry";
-import type { MenuEntry, MenuSection as LegacyMenuSection } from "@/types/menu";
+import type { MenuEntry, MenuSection as LegacyMenuSection, MenuSectionId } from "@/types/menu";
 import type { MenuItemWithConditions } from "../builders";
 import type { MenuNode } from "../domain";
 import { MenuItem, MenuSection } from "../domain";
@@ -23,7 +23,7 @@ export class MenuResolver {
 
 	private resolveSection(section: MenuSection): LegacyMenuSection {
 		return {
-			id: section.id as any, // MenuSectionId
+			id: section.id as MenuSectionId,
 			label: section.label,
 			items: section.getChildren().map((child) => this.resolveNode(child)),
 		};
@@ -41,7 +41,7 @@ export class MenuResolver {
 		const item = node as MenuItem & MenuItemWithConditions;
 
 		const enabledWhen = item.enabledWhen || new AlwaysTrue();
-		const checkedWhen = (item as any).checkedWhen;
+		const checkedWhen = item.checkedWhen;
 
 		const baseItem = {
 			id: item.id,
