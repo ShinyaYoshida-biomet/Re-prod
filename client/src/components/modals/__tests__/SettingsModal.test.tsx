@@ -4,27 +4,20 @@ import { DEFAULT_SETTINGS } from "@/constants/defaultSettings";
 import { useStore } from "@/core";
 import { SettingsModal } from "../SettingsModal";
 
-const bootstrapMock = vi.fn();
+const detectAgentsMock = vi.fn();
 
 vi.mock("@/services/acpAdminClient", () => ({
 	getAcpAdminClient: () => ({
-		bootstrap: (...args: any[]) => bootstrapMock(...args),
+		bootstrap: vi.fn(),
 		setConfig: vi.fn(),
-		detectAgents: vi.fn(),
+		detectAgents: (...args: any[]) => detectAgentsMock(...args),
 		getConfig: vi.fn(),
 	}),
 }));
 
 describe("SettingsModal", () => {
 	beforeEach(() => {
-		bootstrapMock.mockResolvedValue({
-			config: {
-				active_mode: "external_agent",
-				active_agent: null,
-				active_agent_command: null,
-			},
-			agents: [],
-		});
+		detectAgentsMock.mockResolvedValue([]);
 
 		useStore.setState({
 			settings: { ...DEFAULT_SETTINGS },
@@ -69,7 +62,7 @@ describe("SettingsModal", () => {
 
 		render(<SettingsModal open onClose={vi.fn()} />);
 
-		await waitFor(() => expect(bootstrapMock).toHaveBeenCalled());
+		await waitFor(() => expect(detectAgentsMock).toHaveBeenCalled());
 		expect(screen.getByRole("heading", { name: "AI Provider" })).toBeTruthy();
 		expect(screen.getByRole("heading", { name: "External Agents (ACP)" })).toBeTruthy();
 		expect(screen.queryByRole("heading", { name: "API Providers" })).toBeNull();

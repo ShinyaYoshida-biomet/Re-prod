@@ -23,6 +23,7 @@ export const DEFAULT_VIEW_STATE: ViewData = {
 		about: false,
 		sessionInfo: false,
 		settings: false,
+		projectSwitch: false,
 	},
 	zoom: 1,
 };

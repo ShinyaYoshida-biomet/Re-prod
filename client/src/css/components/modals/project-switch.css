@@ -1,0 +1,87 @@
+.project-switch {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.project-switch-header,
+.project-switch-create {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.project-switch-header label,
+.project-switch-create label {
+	font-size: 0.85rem;
+	color: var(--modal-subtext-color);
+}
+
+.project-switch-header input,
+.project-switch-create input {
+	background: var(--modal-contrast-bg);
+	border: 1px solid var(--modal-contrast-border);
+	border-radius: 8px;
+	padding: 10px 12px;
+	color: inherit;
+}
+
+.project-switch-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	max-height: 280px;
+	overflow-y: auto;
+	padding: 8px;
+	border: 1px solid var(--modal-surface-border);
+	border-radius: var(--modal-surface-radius);
+	background: var(--modal-surface-bg);
+}
+
+.project-switch-item {
+	text-align: left;
+	border: 1px solid var(--modal-card-border);
+	border-radius: var(--modal-card-radius);
+	background: var(--modal-card-bg);
+	padding: 10px 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	color: inherit;
+	cursor: pointer;
+}
+
+.project-switch-item.selected {
+	border-color: var(--modal-accent);
+	box-shadow: 0 0 0 1px var(--modal-accent);
+}
+
+.project-switch-name {
+	font-weight: 600;
+}
+
+.project-switch-path {
+	font-size: 0.85rem;
+	color: var(--modal-muted-color);
+}
+
+.project-switch-empty,
+.project-switch-loading,
+.project-switch-error {
+	font-size: 0.9rem;
+	color: var(--modal-subtext-color);
+}
+
+.project-switch-error {
+	color: #ffb3b3;
+}
+
+.project-switch-create-row {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+.project-switch-create-row input {
+	flex: 1;
+}

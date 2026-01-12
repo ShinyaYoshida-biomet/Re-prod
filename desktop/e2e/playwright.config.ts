@@ -1,3 +1,4 @@
+import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 /**
@@ -71,5 +72,9 @@ export default defineConfig({
 		timeout: 120000,
 		stdout: "ignore",
 		stderr: "ignore",
+		env: {
+			...process.env,
+			REPROD_WORKSPACE_ROOT: path.resolve(__dirname, "shared/fixtures/projects"),
+		},
 	},
 });

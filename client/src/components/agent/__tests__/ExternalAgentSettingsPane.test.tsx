@@ -3,22 +3,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useStore } from "@/core";
 import { ExternalAgentSettingsPane } from "../ExternalAgentSettingsPane";
 
-const bootstrapMock = vi.fn();
 const setConfigMock = vi.fn();
+const detectAgentsMock = vi.fn();
 
 vi.mock("@/services/acpAdminClient", () => ({
 	getAcpAdminClient: () => ({
-		bootstrap: (...args: any[]) => bootstrapMock(...args),
+		bootstrap: vi.fn(),
 		setConfig: (...args: any[]) => setConfigMock(...args),
-		detectAgents: vi.fn(),
+		detectAgents: (...args: any[]) => detectAgentsMock(...args),
 		getConfig: vi.fn(),
 	}),
 }));
 
 describe("ExternalAgentSettingsPane", () => {
 	beforeEach(() => {
-		bootstrapMock.mockReset();
 		setConfigMock.mockReset();
+		detectAgentsMock.mockReset();
 		useStore.setState({
 			activeMode: "api",
 			activeAgent: null,
@@ -26,37 +26,40 @@ describe("ExternalAgentSettingsPane", () => {
 		});
 	});
 
-	it("bootstraps agent config and detection on mount", async () => {
-		bootstrapMock.mockResolvedValue({
-			config: {
-				active_mode: "external_agent",
-				active_agent: "claude",
-				active_agent_command: null,
-			},
-			agents: [
-				{ id: "claude", name: "Claude", command: "claude-code-acp", available: true, path: null },
-			],
-		});
+	it("loads available agents on mount", async () => {
+		detectAgentsMock.mockResolvedValue([
+			{ id: "claude", name: "Claude", command: "claude-code-acp", available: true, path: null },
+		]);
 
 		render(<ExternalAgentSettingsPane />);
 
-		await waitFor(() => expect(bootstrapMock).toHaveBeenCalled());
-		expect(useStore.getState().activeMode).toBe("external_agent");
-		expect(useStore.getState().activeAgent).toBe("claude");
+		await waitFor(() => expect(detectAgentsMock).toHaveBeenCalled());
+		expect(useStore.getState().activeMode).toBe("api");
+		expect(useStore.getState().activeAgent).toBeNull();
 		expect(useStore.getState().detectedAgents).toHaveLength(1);
 	});
 
-	it("persists selection when choosing an agent", async () => {
-		bootstrapMock.mockResolvedValue({
-			config: {
-				active_mode: "external_agent",
-				active_agent: null,
-				active_agent_command: null,
-			},
-			agents: [
-				{ id: "claude", name: "Claude", command: "claude-code-acp", available: true, path: null },
-			],
+	it("does not reset active mode while refreshing agents", async () => {
+		useStore.setState({
+			activeMode: "external_agent",
+			activeAgent: "claude",
+			detectedAgents: [],
 		});
+		detectAgentsMock.mockResolvedValue([
+			{ id: "claude", name: "Claude", command: "claude-code-acp", available: true, path: null },
+		]);
+
+		render(<ExternalAgentSettingsPane />);
+
+		await waitFor(() => expect(detectAgentsMock).toHaveBeenCalled());
+		expect(useStore.getState().activeMode).toBe("external_agent");
+		expect(useStore.getState().activeAgent).toBe("claude");
+	});
+
+	it("persists selection when choosing an agent", async () => {
+		detectAgentsMock.mockResolvedValue([
+			{ id: "claude", name: "Claude", command: "claude-code-acp", available: true, path: null },
+		]);
 		setConfigMock.mockResolvedValue({
 			active_mode: "external_agent",
 			active_agent: "claude",
@@ -73,10 +76,10 @@ describe("ExternalAgentSettingsPane", () => {
 	});
 
 	it("toggles the refresh button label based on loading state", async () => {
-		let resolveBootstrap: ((value: any) => void) | null = null;
-		bootstrapMock.mockReturnValue(
+		let resolveAgents: ((value: any) => void) | null = null;
+		detectAgentsMock.mockReturnValue(
 			new Promise((resolve) => {
-				resolveBootstrap = resolve;
+				resolveAgents = resolve;
 			}),
 		);
 
@@ -84,14 +87,7 @@ describe("ExternalAgentSettingsPane", () => {
 
 		await waitFor(() => expect(getByText("Refreshing...")).toBeTruthy());
 
-		resolveBootstrap?.({
-			config: {
-				active_mode: "external_agent",
-				active_agent: null,
-				active_agent_command: null,
-			},
-			agents: [],
-		});
+		resolveAgents?.([]);
 
 		await waitFor(() => expect(getByText("Refresh")).toBeTruthy());
 	});

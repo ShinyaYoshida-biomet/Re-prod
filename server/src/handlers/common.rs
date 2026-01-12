@@ -130,6 +130,16 @@ pub(super) enum WSRequest {
     },
     #[serde(rename = "project_switch_folder")]
     ProjectSwitchFolder { path: String },
+    #[serde(rename = "project_list")]
+    ProjectList,
+    #[serde(rename = "project_switch")]
+    ProjectSwitch { project_id: String },
+    #[serde(rename = "project_create")]
+    ProjectCreate {
+        name: String,
+        #[serde(default)]
+        base_path: Option<String>,
+    },
     #[serde(rename = "plot_history_get")]
     PlotHistoryGet,
     #[serde(rename = "plot_history_set_active")]
@@ -246,6 +256,10 @@ pub(super) enum WSResponse {
         #[serde(skip_serializing_if = "Option::is_none")]
         state: Option<Value>,
     },
+    #[serde(rename = "project_list_result")]
+    ProjectListResult { projects: Vec<ProjectRecord> },
+    #[serde(rename = "project_created")]
+    ProjectCreated { project: ProjectRecord },
     #[serde(rename = "acp_pending_edit_resolved")]
     AcpPendingEditResolved {
         edit_id: String,

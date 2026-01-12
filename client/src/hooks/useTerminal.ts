@@ -130,7 +130,10 @@ export function useTerminal(): UseTerminalResult {
 			if (pty) {
 				try {
 					await pty.kill();
-				} catch (error) {}
+				} catch (error) {
+					// Ignore errors during terminal process kill; process may already be dead or cleaned up.
+					// User experience: No impact, as session is being closed regardless.
+				}
 			}
 
 			removeSession(sessionId);
@@ -170,7 +173,10 @@ export function useTerminal(): UseTerminalResult {
 
 		try {
 			await pty.resize(cols, rows);
-		} catch (error) {}
+		} catch (error) {
+			// Ignore resize errors; terminal UI will remain at previous size if resize fails.
+			// User experience: Terminal may not resize, but remains usable.
+		}
 	}, []);
 
 	const registerOutputHandler = useCallback(
@@ -295,6 +301,9 @@ class SimplePty {
 			});
 			this.exited = true;
 			this.onExitHandlers.forEach((h) => h(code));
-		} catch (e) {}
+		} catch (e) {
+			// Ignore errors when fetching exit status; process may have already exited or status is unavailable.
+			// User experience: No impact, as terminal session is ending.
+		}
 	}
 }

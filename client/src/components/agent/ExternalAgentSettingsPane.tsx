@@ -6,22 +6,20 @@ import { classNames } from "@/utils/classNames";
 
 export function ExternalAgentSettingsPane(): JSX.Element {
 	const activeAgent = useStore((state) => state.activeAgent);
-	const detectedAgents = useStore((state) => state.detectedAgents);
+	const detectedAgents = useStore((state) => state.detectedAgents) ?? [];
 	const setActiveMode = useStore((state) => state.setActiveMode);
 	const setActiveAgent = useStore((state) => state.setActiveAgent);
 	const setDetectedAgents = useStore((state) => state.setDetectedAgents);
 	const acpAdminClient = useMemo(() => getAcpAdminClient(), []);
 
 	const fetchAgentsAsync = useCallback(async () => {
-		const { config, agents } = await acpAdminClient.bootstrap();
+		const agents = await acpAdminClient.detectAgents();
 		setDetectedAgents(agents);
-		setActiveMode((config.active_mode as "api" | "external_agent") ?? "api");
-		setActiveAgent(config.active_agent);
 		return null;
-	}, [acpAdminClient, setDetectedAgents, setActiveMode, setActiveAgent]);
+	}, [acpAdminClient, setDetectedAgents]);
 
 	const { loading, execute: fetchAgents } = useAsyncState(fetchAgentsAsync, {
-		onError: (error) => console.error("Failed to load ACP agents/config", error),
+		onError: (error) => console.error("Failed to load ACP agents", error),
 	});
 
 	useEffect(() => {

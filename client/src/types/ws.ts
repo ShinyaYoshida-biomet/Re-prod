@@ -121,6 +121,9 @@ export type ClientMessage =
 			to?: string;
 	  }
 	| { type: "project_switch_folder"; path: string }
+	| { type: "project_list" }
+	| { type: "project_switch"; project_id: string }
+	| { type: "project_create"; name: string; base_path?: string }
 	| { type: "plot_history_get" }
 	| { type: "plot_history_set_active"; plot_id: string }
 	| { type: "plot_history_export"; plot_id: string; path: string; format?: PlotHistoryExportFormat }
@@ -172,6 +175,8 @@ export type ServerMessage =
 			error?: string | null;
 	  }
 	| { type: "project_opened"; project: ProjectRecord; state?: Record<string, unknown> | null }
+	| { type: "project_list_result"; projects: ProjectRecord[] }
+	| { type: "project_created"; project: ProjectRecord }
 	| {
 			type: "plot_history_state";
 			activePlotId?: string | null;

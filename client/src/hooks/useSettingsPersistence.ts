@@ -17,7 +17,10 @@ export function useSettingsPersistence(): void {
 				const parsed = JSON.parse(raw);
 				updateSettings(parsed);
 			}
-		} catch (error) {}
+		} catch (error) {
+			// Ignore errors when loading persisted settings; corrupted or missing data will be skipped.
+			// User experience: App loads with default settings if localStorage is invalid.
+		}
 
 		setHydrated(true);
 	}, [updateSettings]);
@@ -29,6 +32,9 @@ export function useSettingsPersistence(): void {
 
 		try {
 			window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-		} catch (error) {}
+		} catch (error) {
+			// Ignore errors when saving settings; localStorage may be full or unavailable.
+			// User experience: Settings changes may not persist, but app remains functional.
+		}
 	}, [hydrated, settings]);
 }

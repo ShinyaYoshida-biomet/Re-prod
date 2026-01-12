@@ -1,10 +1,14 @@
+import { IS_TAURI, isTauri } from "@/constants/features";
 import { DEFAULT_FILENAMES } from "@/constants/ui";
 import { DEFAULT_R_SCRIPT, type Buffer } from "@/core/state/slices/editorSlice";
 import { createBufferId } from "@/core/state/utils/createBufferId";
 import { useStore } from "@/core/state/store";
+import { useFileSystemStore } from "@/core/fileSystemStore";
 import { socketService } from "@/services/socket";
+import { showError } from "@/services/toastService";
 import { downloadFile, openFile } from "@/utils/fileOperations";
 import { openFolder } from "@/utils/folderOperations";
+import type { ExtractServerMessage } from "@/types";
 import { CommandBuilder } from "../builders";
 import { CommandResolver } from "../resolvers";
 import { commandRegistry } from "../registry";
@@ -26,6 +30,8 @@ function getCommandState(): CommandStateSnapshot {
 }
 
 export function setupFileCommands() {
+	const openFolderTitle = IS_TAURI ? "Open Folder..." : "Open Project...";
+
 	const commandsWithConditions = CommandBuilder.create()
 		.command("file.new", "New R Script")
 		.category("File")
@@ -69,21 +75,45 @@ export function setupFileCommands() {
 					cursorPosition: { line: 1, column: 1 },
 				};
 				store.addBuffer(buffer);
-			} catch (error) {}
+			} catch (error) {
+				// Ignore file open errors; user may cancel dialog or file may be unreadable.
+				// User experience: No file is opened, app continues normally.
+			}
 		})
 
-		.command("file.openFolder", "Open Folder...")
+		.command("file.openFolder", openFolderTitle)
 		.category("File")
 		.keybinding("Mod+Shift+O")
 		.handler(async () => {
 			try {
-				const folderPath = await openFolder();
-				if (!folderPath) return;
-				socketService.send({
-					type: "project_switch_folder",
-					path: folderPath,
-				});
-			} catch (error) {}
+				if (isTauri()) {
+					const folderPath = await openFolder();
+					if (!folderPath) return;
+					const response = await socketService.sendAndWait(
+						{ type: "project_switch_folder", path: folderPath },
+						(
+							message,
+						): message is ExtractServerMessage<"project_opened"> | ExtractServerMessage<"error"> =>
+							message.type === "project_opened" || message.type === "error",
+					);
+					if (response.type === "error") {
+						showError(response.message);
+						return;
+					}
+					useFileSystemStore
+						.getState()
+						.resetAndLoadRoot()
+						.catch(() => {
+							// Ignore errors when resetting and loading root; file system may be unavailable or user cancelled.
+							// User experience: File tree may not refresh, but app remains usable.
+						});
+					return;
+				}
+				useStore.getState().setModalOpen("projectSwitch", true);
+			} catch (error) {
+				// Ignore errors during folder open; user may cancel dialog or folder may be inaccessible.
+				// User experience: No folder is opened, app continues normally.
+			}
 		})
 
 		.command("file.save", "Save")
