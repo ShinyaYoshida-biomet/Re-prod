@@ -213,9 +213,19 @@ fn summarize_tool_result(tool_call: &reprod_core::ToolCall, outcome: &serde_json
 
 fn artifact_for_tool_result(
     tool_call: &reprod_core::ToolCall,
+    output: &serde_json::Value,
     diff_summary: &str,
     display_summary: &str,
 ) -> Option<(ArtifactKind, Option<String>, String, Option<ArtifactDetailsPayload>)> {
+    let old_text = output
+        .get("old_text")
+        .and_then(|value| value.as_str())
+        .map(|value| value.to_string());
+    let new_text = output
+        .get("new_text")
+        .and_then(|value| value.as_str())
+        .map(|value| value.to_string());
+
     match tool_call.name.as_str() {
         "read_text_file" => Some((
             ArtifactKind::FileRead,
@@ -234,6 +244,8 @@ fn artifact_for_tool_result(
                 stderr: None,
                 tests_passed: None,
                 tests_failed: None,
+                old_text,
+                new_text,
             }),
         )),
         "web_search" => Some((
@@ -520,6 +532,7 @@ pub(super) async fn handle_ai_message(
                                 if let Some((kind, path, summary, details)) =
                                     artifact_for_tool_result(
                                         &tool_call,
+                                        &result.output,
                                         &result.summary,
                                         &display_summary,
                                     )

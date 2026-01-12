@@ -480,6 +480,10 @@ pub(super) struct ArtifactDetailsPayload {
     pub tests_passed: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "testsFailed")]
     pub tests_failed: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "oldText")]
+    pub old_text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "newText")]
+    pub new_text: Option<String>,
 }
 
 #[derive(serde::Serialize, Clone)]

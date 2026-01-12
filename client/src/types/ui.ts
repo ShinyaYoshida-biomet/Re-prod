@@ -249,6 +249,8 @@ export interface ArtifactEvent extends AgentEvent {
 		stderr?: string;
 		testsPassed?: number;
 		testsFailed?: number;
+		oldText?: string;
+		newText?: string;
 	};
 }
 
