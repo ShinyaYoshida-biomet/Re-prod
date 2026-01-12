@@ -68,6 +68,22 @@
 	word-break: break-word;
 }
 
+.artifact-list__button {
+	border-radius: 6px;
+	border: 1px solid var(--border-light);
+	background: var(--bg-tertiary);
+	color: var(--text-primary);
+	font-size: 11px;
+	padding: 4px 10px;
+	cursor: pointer;
+	width: fit-content;
+}
+
+.artifact-list__button:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
 .artifact-list__diff {
 	white-space: pre-wrap;
 	background: var(--bg-tertiary);

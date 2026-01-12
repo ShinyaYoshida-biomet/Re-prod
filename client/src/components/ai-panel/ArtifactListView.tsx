@@ -1,4 +1,7 @@
 import type { ArtifactEvent } from "@/types";
+import { fileSystem } from "@/services/fileSystem";
+import { useToast } from "@/components/shared";
+import { useState } from "react";
 
 interface Props {
 	artifacts: ArtifactEvent[];
@@ -19,6 +22,23 @@ export function ArtifactListView({ artifacts }: Props): JSX.Element | null {
 		return null;
 	}
 
+	const toast = useToast();
+	const [busyId, setBusyId] = useState<string | null>(null);
+
+	const handleUndo = async (artifact: ArtifactEvent) => {
+		if (!artifact.path || !artifact.details?.oldText) return;
+		setBusyId(artifact.id);
+		try {
+			await fileSystem.writeFile(artifact.path, artifact.details.oldText);
+			toast.showSuccess(`Reverted ${artifact.path}`);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Unknown error";
+			toast.showError(`Failed to revert ${artifact.path}: ${message}`);
+		} finally {
+			setBusyId(null);
+		}
+	};
+
 	return (
 		<div className="artifact-list">
 			<div className="artifact-list__header">
@@ -36,6 +56,16 @@ export function ArtifactListView({ artifacts }: Props): JSX.Element | null {
 							{artifact.summary}
 							{artifact.path ? ` (${artifact.path})` : ""}
 						</div>
+						{artifact.kind === "file_write" && artifact.path && artifact.details?.oldText && (
+							<button
+								type="button"
+								className="artifact-list__button"
+								onClick={() => handleUndo(artifact)}
+								disabled={busyId === artifact.id}
+							>
+								{busyId === artifact.id ? "Reverting..." : "Undo"}
+							</button>
+						)}
 						{artifact.details?.diff && (
 							<pre className="artifact-list__diff">{artifact.details.diff}</pre>
 						)}
