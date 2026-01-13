@@ -245,7 +245,8 @@ Request review only when all checks pass and TODOs are cleared.
 - **Location**: `desktop/e2e/` for end-to-end tests
 - **Purpose**: Validate desktop-specific workflows
 - **Local runs**: Use Docker (local E2E is disabled outside Docker/CI)
-  - `pnpm --filter @reprod/e2e test:docker`
+  - Playwright (web): `pnpm --filter @reprod/e2e test:docker`
+  - WebDriverIO (desktop): `pnpm --filter @reprod/e2e test:docker:webdriver`
   - Optional: `REPROD_E2E_DOCKER_MEMORY=8g REPROD_E2E_DOCKER_CPUS=6 pnpm --filter @reprod/e2e test:docker`
 
 ## Git Hooks

@@ -13,11 +13,11 @@ This test suite uses a **hybrid approach** to maximize coverage and developer pr
 - **Use Case**: Daily development and CI validation (Docker locally)
 - **Benefits**: Works everywhere, fast, great debugging tools
 
-### WebDriverIO Tests (Desktop Validation - Linux/Windows only)
+### WebDriverIO Tests (Desktop Validation - Docker/Linux/Windows)
 - **Location**: `webdriver-specs/` directory
 - **Target**: Tauri desktop application
-- **Platforms**: Linux, Windows only (macOS NOT supported)
-- **Use Case**: Optional desktop validation on Linux/Windows hosts
+- **Platforms**: Docker (Linux) for local runs, CI/manual runs on Linux/Windows
+- **Use Case**: Desktop validation via Docker or Linux/Windows runners
 - **Benefits**: Tests actual desktop app behavior
 
 ## Test Coverage
@@ -34,7 +34,7 @@ Both test suites cover the same core workflows:
 
 **IMPORTANT**: Local E2E runs are disabled outside Docker/CI to avoid OS-specific flakiness. Use the Docker runner on any platform.
 
-- ✅ **Docker**: Supported for all contributors
+- ✅ **Docker**: Playwright + WebDriverIO supported (desktop suite takes longer)
 - ✅ **CI (Ubuntu)**: Runs Playwright tests
 - ❌ **Native host runs**: Blocked by guardrails (non-Docker)
 
@@ -56,6 +56,14 @@ From the repository root:
 pnpm --filter @reprod/e2e test:docker
 ```
 
+Run Desktop (WebDriverIO) E2E tests in Docker:
+
+```bash
+pnpm --filter @reprod/e2e test:docker:webdriver
+```
+
+This builds the desktop app and runs WebDriverIO under Xvfb, so expect a longer runtime.
+
 To run a specific command inside the container:
 
 ```bash
@@ -67,6 +75,10 @@ Optional resource caps:
 
 ```bash
 REPROD_E2E_DOCKER_MEMORY=8g REPROD_E2E_DOCKER_CPUS=6 pnpm --filter @reprod/e2e test:docker
+```
+
+```bash
+REPROD_E2E_DOCKER_MODE=webdriver pnpm --filter @reprod/e2e test:docker
 ```
 
 Rebuild the image when the Dockerfile changes:
@@ -101,16 +113,14 @@ pnpm --filter @reprod/e2e test:docker -- pnpm --filter @reprod/e2e test full-wor
 pnpm --filter @reprod/e2e test:docker -- pnpm --filter @reprod/e2e test tests/r-execution.spec.ts
 ```
 
-**WebDriverIO (Linux/Windows):**
+**WebDriverIO (Docker):**
 
 ```bash
-# Run only R execution tests
-pnpm --filter @reprod/e2e test:webdriver -- --spec ./webdriver-specs/r-execution.e2e.ts
+# Run full desktop suite in Docker
+pnpm --filter @reprod/e2e test:docker:webdriver
 
-# Run only Timeline tests
-pnpm --filter @reprod/e2e test:webdriver -- --spec ./webdriver-specs/timeline.e2e.ts
-
-# Other WebDriverIO tests follow same pattern...
+# Run a specific WebDriverIO spec in Docker
+pnpm --filter @reprod/e2e test:docker -- pnpm tauri build --debug && xvfb-run --auto-servernum pnpm --filter @reprod/e2e test:webdriver -- --spec ./webdriver-specs/r-execution.e2e.ts
 ```
 
 ### Debug Mode
@@ -128,14 +138,14 @@ pnpm --filter @reprod/e2e test:docker -- pnpm --filter @reprod/e2e test:playwrig
 pnpm --filter @reprod/e2e test:docker -- pnpm --filter @reprod/e2e test:playwright:headed
 ```
 
-**WebDriverIO:**
+**WebDriverIO (Docker):**
 
 ```bash
 # Run with verbose logging
-LOG_LEVEL=debug pnpm --filter @reprod/e2e test:webdriver
+pnpm --filter @reprod/e2e test:docker -- LOG_LEVEL=debug pnpm tauri build --debug && xvfb-run --auto-servernum pnpm --filter @reprod/e2e test:webdriver
 
 # Run with debugging enabled
-pnpm --filter @reprod/e2e test:webdriver:debug
+pnpm --filter @reprod/e2e test:docker -- pnpm tauri build --debug && xvfb-run --auto-servernum pnpm --filter @reprod/e2e test:webdriver:debug
 ```
 
 ## Test Structure
@@ -148,7 +158,7 @@ desktop/e2e/
 │   ├── export.spec.ts         # Export dialog and functionality
 │   ├── error-handling.spec.ts # Error scenarios and recovery
 │   └── full-workflow.spec.ts  # Complete user workflows
-├── webdriver-specs/           # WebDriverIO tests (Linux/Windows)
+├── webdriver-specs/           # WebDriverIO tests (Docker/Linux/Windows)
 │   ├── r-execution.e2e.ts    # Basic R code execution
 │   ├── timeline.e2e.ts       # Timeline feature tests
 │   ├── export.e2e.ts         # Export dialog and functionality
@@ -254,6 +264,7 @@ Tests complete end-to-end user journeys:
 |----------|-------------|---------|
 | `REPROD_E2E_DOCKER_MEMORY` | Docker memory limit for `test:docker` | `6g` |
 | `REPROD_E2E_DOCKER_CPUS` | Docker CPU limit for `test:docker` | `4` |
+| `REPROD_E2E_DOCKER_MODE` | Default Docker command (`playwright` or `webdriver`) | `playwright` |
 
 **Example**:
 ```bash
@@ -262,7 +273,7 @@ REPROD_E2E_DOCKER_MEMORY=8g REPROD_E2E_DOCKER_CPUS=6 pnpm --filter @reprod/e2e t
 
 ### WebDriverIO (Desktop)
 
-Customize desktop test execution with these environment variables:
+Customize desktop test execution with these environment variables. For Docker runs, prefix them inside the `test:docker -- ...` command.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -278,10 +289,10 @@ Customize desktop test execution with these environment variables:
 
 **Example**:
 ```bash
-# Use custom binary path
+# Linux/Windows runner: use custom binary path
 TAURI_DRIVER_APP=/path/to/custom/binary pnpm --filter @reprod/e2e test:webdriver
 
-# Increase timeout for slow systems
+# Linux/Windows runner: increase timeout for slow systems
 TAURI_DRIVER_READY_TIMEOUT=30000 pnpm --filter @reprod/e2e test:webdriver
 ```
 
@@ -328,7 +339,7 @@ jobs:
 
 ### CI Strategy
 
-CI currently runs Playwright (Chromium) only. WebDriverIO desktop tests are manual on Linux/Windows.
+CI currently runs Playwright (Chromium) only. WebDriverIO desktop tests are manual or run via Docker.
 
 ### Before Creating develop → main PR
 
@@ -344,16 +355,13 @@ pnpm --filter @reprod/e2e test:docker
 gh pr create --base main --head develop
 ```
 
-**Linux/Windows developers** (Optional - desktop app validation):
+**Desktop app validation (Optional)**:
 
 ```bash
-# 1. Build the Tauri app
-pnpm tauri build --debug
+# 1. Run the desktop suite in Docker
+pnpm --filter @reprod/e2e test:docker:webdriver
 
-# 2. Run WebDriverIO tests
-pnpm --filter @reprod/e2e test:webdriver
-
-# 3. Create PR
+# 2. Create PR
 gh pr create --base main --head develop
 ```
 
@@ -371,7 +379,7 @@ Error: tauri-driver is not supported on this platform
 
 **Solution**:
 - Use Docker for Playwright: `pnpm --filter @reprod/e2e test:docker`
-- Run WebDriverIO tests on Linux/Windows only (or rely on CI)
+- Run WebDriverIO tests in Docker: `pnpm --filter @reprod/e2e test:docker:webdriver`
 
 **2. "tauri-driver not found"** (Linux/Windows)
 
@@ -386,10 +394,13 @@ tauri-driver --version
 **3. "App binary not found"**
 
 ```bash
-# Rebuild the app
+# Docker: rebuild automatically by rerunning the suite
+pnpm --filter @reprod/e2e test:docker:webdriver
+
+# Linux/Windows runner: rebuild the app
 pnpm tauri build --debug
 
-# Or specify custom path
+# Linux/Windows runner: specify custom path
 TAURI_DRIVER_APP=/path/to/binary pnpm --filter @reprod/e2e test:webdriver
 ```
 
@@ -410,7 +421,7 @@ sudo apt-get install r-base
 
 ```bash
 # Increase timeout
-TAURI_DRIVER_READY_TIMEOUT=30000 pnpm --filter @reprod/e2e test:webdriver
+pnpm --filter @reprod/e2e test:docker -- TAURI_DRIVER_READY_TIMEOUT=30000 pnpm tauri build --debug && xvfb-run --auto-servernum pnpm --filter @reprod/e2e test:webdriver
 
 # Check if port 9515 is already in use
 lsof -i :9515
@@ -421,10 +432,9 @@ kill -9 <PID>
 **6. Tests fail on Linux (missing display)**
 
 ```bash
-# Install Xvfb
+# Docker already uses Xvfb for WebDriverIO.
+# Linux runner example:
 sudo apt-get install xvfb
-
-# Run with Xvfb
 xvfb-run --auto-servernum pnpm --filter @reprod/e2e test:webdriver
 ```
 
@@ -473,7 +483,7 @@ sudo apt-get install -y \
 # Playwright (Docker)
 touch desktop/e2e/tests/my-feature.spec.ts
 
-# WebDriverIO (Linux/Windows)
+# WebDriverIO (Docker)
 touch desktop/e2e/webdriver-specs/my-feature.e2e.ts
 ```
 
@@ -505,8 +515,8 @@ describe('My Feature', () => {
 # Playwright (Docker)
 pnpm --filter @reprod/e2e test:docker -- pnpm --filter @reprod/e2e test tests/my-feature.spec.ts
 
-# WebDriverIO (Linux/Windows)
-pnpm --filter @reprod/e2e test:webdriver -- --spec ./webdriver-specs/my-feature.e2e.ts
+# WebDriverIO (Docker)
+pnpm --filter @reprod/e2e test:docker -- pnpm tauri build --debug && xvfb-run --auto-servernum pnpm --filter @reprod/e2e test:webdriver -- --spec ./webdriver-specs/my-feature.e2e.ts
 ```
 
 ### Common Selectors
