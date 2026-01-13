@@ -69,6 +69,7 @@ docker run --rm -i \
   -e PNPM_DISABLE_SELF_UPDATE_CHECK=1 \
   -e PNPM_STORE_DIR=/pnpm-store \
   -e PNPM_CONFIG_STORE_DIR=/pnpm-store \
+  --tmpfs /workspace/.cargo \
   -v "${ROOT_DIR}":/workspace \
   -v "${PNPM_STORE_VOLUME}:/pnpm-store" \
   -v "${NODE_MODULES_VOLUME}:/workspace/node_modules" \
