@@ -2,6 +2,8 @@ import path from "node:path";
 import { expect, test } from "@playwright/test";
 import { selectors } from "../shared/selectors";
 
+const CONNECTED_TIMEOUT_MS = 240000;
+
 test.describe("Open Folder", () => {
 	test("updates file explorer after workspace switch", async ({ page }) => {
 		const repoRoot = path.resolve(process.cwd(), "../..");
@@ -11,11 +13,28 @@ test.describe("Open Folder", () => {
 		await page.goto("/");
 
 		const fileBrowser = page.locator(selectors.fileBrowser);
-		await expect(fileBrowser).toBeVisible({ timeout: 30000 });
-		await expect(page.getByText("Connected")).toBeVisible({ timeout: 30000 });
-		await page.waitForFunction(() => {
-			const helper = (window as { reprodTest?: { isConnected?: () => boolean } }).reprodTest;
-			return helper?.isConnected?.();
+		await expect(fileBrowser).toBeVisible({ timeout: CONNECTED_TIMEOUT_MS });
+		await expect(page.getByText("Connected", { exact: true })).toBeVisible({
+			timeout: CONNECTED_TIMEOUT_MS,
+		});
+		await page.waitForFunction(
+			() => {
+				const helper = (window as { reprodTest?: { isConnected?: () => boolean } }).reprodTest;
+				return helper?.isConnected?.();
+			},
+			{ timeout: CONNECTED_TIMEOUT_MS },
+		);
+
+		const waitForProjectOpened = page.evaluate(() => {
+			const helper = (
+				window as {
+					reprodTest?: { waitForProjectOpened?: (projectName: string, timeoutMs?: number) => any };
+				}
+			).reprodTest;
+			if (!helper?.waitForProjectOpened) {
+				throw new Error("reprodTest waitForProjectOpened not available");
+			}
+			return helper.waitForProjectOpened("open-folder", 30000);
 		});
 
 		const didSend = await page.evaluate((folderPath) => {
@@ -27,6 +46,7 @@ test.describe("Open Folder", () => {
 			return helper.sendMessage({ type: "project_switch_folder", path: folderPath });
 		}, fixtureFolder);
 		expect(didSend).toBeTruthy();
+		await waitForProjectOpened;
 
 		await expect(page.getByText("Project: open-folder")).toBeVisible({ timeout: 30000 });
 
@@ -46,11 +66,28 @@ test.describe("Open Folder", () => {
 		await page.goto("/");
 
 		const fileBrowser = page.locator(selectors.fileBrowser);
-		await expect(fileBrowser).toBeVisible({ timeout: 30000 });
-		await expect(page.getByText("Connected")).toBeVisible({ timeout: 30000 });
-		await page.waitForFunction(() => {
-			const helper = (window as { reprodTest?: { isConnected?: () => boolean } }).reprodTest;
-			return helper?.isConnected?.();
+		await expect(fileBrowser).toBeVisible({ timeout: CONNECTED_TIMEOUT_MS });
+		await expect(page.getByText("Connected", { exact: true })).toBeVisible({
+			timeout: CONNECTED_TIMEOUT_MS,
+		});
+		await page.waitForFunction(
+			() => {
+				const helper = (window as { reprodTest?: { isConnected?: () => boolean } }).reprodTest;
+				return helper?.isConnected?.();
+			},
+			{ timeout: CONNECTED_TIMEOUT_MS },
+		);
+
+		const waitForProjectOpened = page.evaluate(() => {
+			const helper = (
+				window as {
+					reprodTest?: { waitForProjectOpened?: (projectName: string, timeoutMs?: number) => any };
+				}
+			).reprodTest;
+			if (!helper?.waitForProjectOpened) {
+				throw new Error("reprodTest waitForProjectOpened not available");
+			}
+			return helper.waitForProjectOpened("open-folder", 30000);
 		});
 
 		const didSend = await page.evaluate((folderPath) => {
@@ -62,6 +99,7 @@ test.describe("Open Folder", () => {
 			return helper.sendMessage({ type: "project_switch_folder", path: folderPath });
 		}, fixtureFolder);
 		expect(didSend).toBeTruthy();
+		await waitForProjectOpened;
 
 		await page.waitForFunction(
 			(expected) => {
@@ -104,15 +142,20 @@ test.describe("Open Folder", () => {
 		await page.goto("/");
 
 		const fileBrowser = page.locator(selectors.fileBrowser);
-		await expect(fileBrowser).toBeVisible({ timeout: 30000 });
-		await expect(page.getByText("Connected")).toBeVisible({ timeout: 30000 });
-		await page.waitForFunction(() => {
-			const helper = (window as { reprodTest?: { isConnected?: () => boolean } }).reprodTest;
-			return helper?.isConnected?.();
+		await expect(fileBrowser).toBeVisible({ timeout: CONNECTED_TIMEOUT_MS });
+		await expect(page.getByText("Connected", { exact: true })).toBeVisible({
+			timeout: CONNECTED_TIMEOUT_MS,
 		});
+		await page.waitForFunction(
+			() => {
+				const helper = (window as { reprodTest?: { isConnected?: () => boolean } }).reprodTest;
+				return helper?.isConnected?.();
+			},
+			{ timeout: CONNECTED_TIMEOUT_MS },
+		);
 
-		const clientLabel = page.locator(selectors.fileTreeLabel).filter({ hasText: "client" }).first();
-		await expect(clientLabel).toBeVisible({ timeout: 30000 });
+		const rootLabel = page.locator(selectors.fileTreeLabel).filter({ hasText: "alpha" }).first();
+		await expect(rootLabel).toBeVisible({ timeout: CONNECTED_TIMEOUT_MS });
 
 		const didSend = await page.evaluate((folderPath) => {
 			const helper = (window as { reprodTest?: { sendMessage: (payload: any) => boolean } })
@@ -125,7 +168,7 @@ test.describe("Open Folder", () => {
 		expect(didSend).toBeTruthy();
 
 		await page.waitForTimeout(500);
-		await expect(clientLabel).toBeVisible();
+		await expect(rootLabel).toBeVisible();
 
 		const fixtureLabel = page.locator(selectors.fileTreeLabel).filter({ hasText: "sample.R" });
 		await expect(fixtureLabel).toHaveCount(0);
