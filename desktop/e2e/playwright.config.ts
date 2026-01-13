@@ -1,5 +1,29 @@
+import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
+
+const isMac = process.platform === "darwin";
+const chromeExecutablePath =
+	isMac && fs.existsSync("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+		? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+		: undefined;
+const chromiumHome = path.resolve(__dirname, ".pw-home");
+const chromiumLaunchOptions = isMac
+	? {
+			args: [
+				"--disable-crashpad",
+				"--disable-breakpad",
+				"--disable-crash-reporter",
+				"--disable-features=Crashpad",
+				"--no-crashpad",
+			],
+			env: {
+				...process.env,
+				HOME: chromiumHome,
+			},
+			executablePath: chromeExecutablePath,
+		}
+	: undefined;
 
 /**
  * Playwright E2E Test Configuration
@@ -7,6 +31,27 @@ import { defineConfig, devices } from "@playwright/test";
  * Tests the Re-prod web application in a browser.
  * Works on all platforms (macOS, Linux, Windows).
  */
+const projectMap = {
+	chromium: {
+		name: "chromium",
+		use: { ...devices["Desktop Chrome"], launchOptions: chromiumLaunchOptions },
+	},
+	firefox: {
+		name: "firefox",
+		use: { ...devices["Desktop Firefox"] },
+	},
+	webkit: {
+		name: "webkit",
+		use: { ...devices["Desktop Safari"] },
+	},
+};
+
+const browserOverride = process.env.E2E_BROWSER?.toLowerCase();
+const projects =
+	browserOverride && browserOverride in projectMap
+		? [projectMap[browserOverride as keyof typeof projectMap]]
+		: [projectMap.chromium];
+
 export default defineConfig({
 	// Test directory
 	testDir: "./tests",
@@ -42,27 +87,12 @@ export default defineConfig({
 
 		// Video on failure
 		video: "retain-on-failure",
+
+		headless: process.env.CI ? true : !isMac,
 	},
 
 	// Configure projects for major browsers
-	projects: [
-		{
-			name: "chromium",
-			use: { ...devices["Desktop Chrome"] },
-		},
-
-		// Uncomment to test on Firefox
-		// {
-		//   name: 'firefox',
-		//   use: { ...devices['Desktop Firefox'] },
-		// },
-
-		// Uncomment to test on WebKit (Safari)
-		// {
-		//   name: 'webkit',
-		//   use: { ...devices['Desktop Safari'] },
-		// },
-	],
+	projects,
 
 	// Run your local dev server before starting the tests
 	webServer: {
