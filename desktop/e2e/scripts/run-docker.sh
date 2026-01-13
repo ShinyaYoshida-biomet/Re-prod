@@ -5,6 +5,9 @@ ROOT_DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 IMAGE_NAME="reprod-e2e"
 PNPM_STORE_VOLUME="reprod-e2e-pnpm-store"
 NODE_MODULES_VOLUME="reprod-e2e-node-modules"
+CARGO_REGISTRY_VOLUME="reprod-e2e-cargo-registry"
+CARGO_GIT_VOLUME="reprod-e2e-cargo-git"
+CARGO_TARGET_VOLUME="reprod-e2e-cargo-target"
 DOCKER_MEMORY="${REPROD_E2E_DOCKER_MEMORY:-6g}"
 DOCKER_CPUS="${REPROD_E2E_DOCKER_CPUS:-4}"
 DOCKERFILE_PATH="${ROOT_DIR}/desktop/e2e/Dockerfile"
@@ -69,8 +72,12 @@ docker run --rm -i \
   -e PNPM_DISABLE_SELF_UPDATE_CHECK=1 \
   -e PNPM_STORE_DIR=/pnpm-store \
   -e PNPM_CONFIG_STORE_DIR=/pnpm-store \
+  -e CARGO_TARGET_DIR=/cargo-target \
   --tmpfs /workspace/.cargo \
   -v "${ROOT_DIR}":/workspace \
+  -v "${CARGO_REGISTRY_VOLUME}:/root/.cargo/registry" \
+  -v "${CARGO_GIT_VOLUME}:/root/.cargo/git" \
+  -v "${CARGO_TARGET_VOLUME}:/cargo-target" \
   -v "${PNPM_STORE_VOLUME}:/pnpm-store" \
   -v "${NODE_MODULES_VOLUME}:/workspace/node_modules" \
   -w /workspace \

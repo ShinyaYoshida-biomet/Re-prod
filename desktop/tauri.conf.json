@@ -6,7 +6,7 @@
 	"build": {
 		"beforeDevCommand": "pnpm --dir .. --filter client dev",
 		"devUrl": "http://localhost:5173",
-		"beforeBuildCommand": "pnpm --dir .. --filter client build",
+		"beforeBuildCommand": "pnpm --dir .. --filter ./client build",
 		"frontendDist": "../client/dist"
 	},
 	"bundle": {
