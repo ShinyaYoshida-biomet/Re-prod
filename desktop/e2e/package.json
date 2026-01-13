@@ -7,6 +7,7 @@
 		"test:playwright:ui": "playwright test --ui",
 		"test:playwright:headed": "playwright test --headed",
 		"test:playwright:debug": "playwright test --debug",
+		"test:docker": "bash ./scripts/run-docker.sh",
 		"test:webdriver": "wdio run wdio.conf.ts",
 		"test:webdriver:debug": "wdio run wdio.conf.ts --debug",
 		"test:all": "pnpm test:playwright && pnpm test:webdriver"
