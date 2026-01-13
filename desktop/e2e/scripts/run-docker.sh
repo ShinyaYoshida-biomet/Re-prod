@@ -45,7 +45,7 @@ if [[ -n "${1-}" ]]; then
   COMMAND="$*"
 else
   if [[ "${MODE}" == "webdriver" ]]; then
-    COMMAND="pnpm install --frozen-lockfile && pnpm tauri build --debug && xvfb-run --auto-servernum pnpm --filter @reprod/e2e test:webdriver"
+    COMMAND="pnpm install --frozen-lockfile && pnpm tauri build --debug --no-bundle && xvfb-run --auto-servernum pnpm --filter @reprod/e2e test:webdriver"
   else
     COMMAND="pnpm install --frozen-lockfile && pnpm --filter @reprod/e2e test -- --workers=1"
   fi
