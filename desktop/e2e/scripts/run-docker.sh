@@ -26,6 +26,9 @@ fi
 docker run --rm -it \
   --memory="${DOCKER_MEMORY}" \
   --cpus="${DOCKER_CPUS}" \
+  -e COREPACK_ENABLE_PROMPT=0 \
+  -e PNPM_CONFIRM_MODULES_PURGE=false \
+  -e PNPM_DISABLE_SELF_UPDATE_CHECK=1 \
   -v "${ROOT_DIR}":/workspace \
   -v "${PNPM_STORE_VOLUME}:/root/.local/share/pnpm/store" \
   -w /workspace \
