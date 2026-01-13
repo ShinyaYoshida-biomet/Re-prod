@@ -20,10 +20,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN corepack enable pnpm
 
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-RUN cargo install tauri-driver
+RUN cargo install tauri-driver \
+    && rustup component remove rust-docs \
+    && rm -rf /root/.cargo/registry /root/.cargo/git /root/.rustup/toolchains/*/share/doc
 
 ENV REPROD_E2E_DOCKER=1
 WORKDIR /workspace
