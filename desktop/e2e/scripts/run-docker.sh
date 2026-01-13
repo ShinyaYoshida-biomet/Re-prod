@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 IMAGE_NAME="reprod-e2e"
 PNPM_STORE_VOLUME="reprod-e2e-pnpm-store"
+NODE_MODULES_VOLUME="reprod-e2e-node-modules"
 DOCKER_MEMORY="${REPROD_E2E_DOCKER_MEMORY:-6g}"
 DOCKER_CPUS="${REPROD_E2E_DOCKER_CPUS:-4}"
 DOCKERFILE_PATH="${ROOT_DIR}/desktop/e2e/Dockerfile"
@@ -41,8 +42,11 @@ docker run --rm -it \
   -e PNPM_CONFIG_CONFIRM_MODULES_PURGE=false \
   -e PNPM_CONFIRM_MODULES_PURGE=false \
   -e PNPM_DISABLE_SELF_UPDATE_CHECK=1 \
+  -e PNPM_STORE_DIR=/pnpm-store \
+  -e PNPM_CONFIG_STORE_DIR=/pnpm-store \
   -v "${ROOT_DIR}":/workspace \
-  -v "${PNPM_STORE_VOLUME}:/root/.local/share/pnpm/store" \
+  -v "${PNPM_STORE_VOLUME}:/pnpm-store" \
+  -v "${NODE_MODULES_VOLUME}:/workspace/node_modules" \
   -w /workspace \
   "${IMAGE_NAME}" \
   bash -lc "${COMMAND}"
