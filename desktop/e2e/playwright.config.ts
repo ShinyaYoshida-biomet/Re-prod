@@ -7,6 +7,7 @@ const chromeExecutablePath =
 	isMac && fs.existsSync("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
 		? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 		: undefined;
+const isDocker = fs.existsSync("/.dockerenv") || process.env.REPROD_E2E_DOCKER === "1";
 const chromiumHome = path.resolve(__dirname, ".pw-home");
 const chromiumLaunchOptions = isMac
 	? {
@@ -51,6 +52,12 @@ const projects =
 	browserOverride && browserOverride in projectMap
 		? [projectMap[browserOverride as keyof typeof projectMap]]
 		: [projectMap.chromium];
+
+if (!process.env.CI && !isDocker) {
+	throw new Error(
+		"E2E tests are disabled on local machines. Use the Docker setup in desktop/e2e/Dockerfile.",
+	);
+}
 
 export default defineConfig({
 	// Test directory

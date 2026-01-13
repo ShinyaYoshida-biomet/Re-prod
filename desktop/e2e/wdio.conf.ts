@@ -1,4 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
+import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import type { Options } from "@wdio/types";
@@ -13,6 +14,13 @@ const driverExecutable = process.env.TAURI_DRIVER_EXECUTABLE ?? "tauri-driver";
 const driverArgs = process.env.TAURI_DRIVER_ARGS
 	? process.env.TAURI_DRIVER_ARGS.split(" ").filter(Boolean)
 	: ["--port", driverPort.toString(), "--binary", binaryPath];
+const isDocker = fs.existsSync("/.dockerenv") || process.env.REPROD_E2E_DOCKER === "1";
+
+if (!process.env.CI && !isDocker) {
+	throw new Error(
+		"E2E tests are disabled on local machines. Use the Docker setup in desktop/e2e/Dockerfile.",
+	);
+}
 
 let tauriOptions: Record<string, unknown> = {};
 if (process.env.TAURI_DRIVER_TAURI_OPTIONS) {
