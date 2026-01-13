@@ -17,7 +17,7 @@ const binaryPath = process.env.TAURI_DRIVER_APP ?? defaultBinaryPath;
 const driverExecutable = process.env.TAURI_DRIVER_EXECUTABLE ?? "tauri-driver";
 const driverArgs = process.env.TAURI_DRIVER_ARGS
 	? process.env.TAURI_DRIVER_ARGS.split(" ").filter(Boolean)
-	: ["--port", driverPort.toString(), "--binary", binaryPath];
+	: ["--port", driverPort.toString()];
 const isDocker = fs.existsSync("/.dockerenv") || process.env.REPROD_E2E_DOCKER === "1";
 
 if (!process.env.CI && !isDocker) {
@@ -116,6 +116,13 @@ export const config: Options.Testrunner = {
 	runner: "local",
 	specs: ["./webdriver-specs/**/*.ts"],
 	maxInstances: 1,
+	autoCompileOpts: {
+		autoCompile: true,
+		tsNodeOpts: {
+			project: path.resolve(__dirname, "tsconfig.json"),
+			transpileOnly: true,
+		},
+	},
 	capabilities: [
 		{
 			browserName: "tauri" as any,
