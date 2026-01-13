@@ -45,7 +45,7 @@ if [[ -n "${1-}" ]]; then
   COMMAND="$*"
 else
   if [[ "${MODE}" == "webdriver" ]]; then
-    COMMAND="pnpm install --frozen-lockfile && pnpm tauri build --debug --no-bundle && echo '[e2e] starting WebDriverIO tests' && xvfb-run --auto-servernum pnpm --filter @reprod/e2e test:webdriver"
+    COMMAND="pnpm install --frozen-lockfile && pnpm tauri build --debug --no-bundle && echo '[e2e] starting WebDriverIO tests' && { Xvfb :99 -screen 0 1280x720x24 -nolisten tcp & XVFB_PID=\$!; export DISPLAY=:99; pnpm --filter @reprod/e2e test:webdriver; status=\$?; kill \$XVFB_PID; exit \$status; }"
   else
     COMMAND="pnpm install --frozen-lockfile && pnpm --filter @reprod/e2e test -- --workers=1"
   fi
