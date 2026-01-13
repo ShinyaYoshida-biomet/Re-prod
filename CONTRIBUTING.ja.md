@@ -244,6 +244,9 @@ PR がマージされる前に、以下を確認してください:
 
 - **場所**: E2E テストは `desktop/e2e/` に配置
 - **目的**: デスクトップ固有のワークフローを検証
+- **ローカル実行**: Docker を使用 (Docker/CI 以外のローカル実行は無効)
+  - `pnpm --filter @reprod/e2e test:docker`
+  - 任意: `REPROD_E2E_DOCKER_MEMORY=8g REPROD_E2E_DOCKER_CPUS=6 pnpm --filter @reprod/e2e test:docker`
 
 ## Git フック
 
