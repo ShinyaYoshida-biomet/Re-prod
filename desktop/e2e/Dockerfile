@@ -1,6 +1,9 @@
 FROM mcr.microsoft.com/playwright:v1.56.1-jammy
 
-RUN apt-get update && apt-get install -y \
+ENV DEBIAN_FRONTEND=noninteractive \
+    TZ=Etc/UTC
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     build-essential \
     pkg-config \
@@ -12,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     patchelf \
     xvfb \
     r-base \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 RUN corepack enable pnpm
