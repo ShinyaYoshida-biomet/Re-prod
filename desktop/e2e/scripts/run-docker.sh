@@ -12,15 +12,40 @@ DOCKERFILE_LABEL_KEY="reprod.e2e.dockerfile-sha"
 DOCKERFILE_SHA="$(shasum -a 256 "${DOCKERFILE_PATH}" | awk '{print $1}')"
 
 FORCE_BUILD=0
-if [[ "${1-}" == "--build" ]]; then
-  FORCE_BUILD=1
-  shift
-fi
+MODE="${REPROD_E2E_DOCKER_MODE:-playwright}"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --build)
+      FORCE_BUILD=1
+      shift
+      ;;
+    --webdriver)
+      MODE="webdriver"
+      shift
+      ;;
+    --playwright)
+      MODE="playwright"
+      shift
+      ;;
+    --)
+      shift
+      break
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
 
 if [[ -n "${1-}" ]]; then
   COMMAND="$*"
 else
-  COMMAND="pnpm install --frozen-lockfile && pnpm --filter @reprod/e2e test -- --workers=1"
+  if [[ "${MODE}" == "webdriver" ]]; then
+    COMMAND="pnpm install --frozen-lockfile && pnpm tauri build --debug && xvfb-run --auto-servernum pnpm --filter @reprod/e2e test:webdriver"
+  else
+    COMMAND="pnpm install --frozen-lockfile && pnpm --filter @reprod/e2e test -- --workers=1"
+  fi
 fi
 
 CURRENT_SHA="$(docker image inspect --format '{{ index .Config.Labels "'"${DOCKERFILE_LABEL_KEY}"'" }}' "${IMAGE_NAME}" 2>/dev/null || true)"
