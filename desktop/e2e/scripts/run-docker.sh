@@ -14,7 +14,7 @@ fi
 if [[ -n "${1-}" ]]; then
   COMMAND="$*"
 else
-  COMMAND="pnpm install && pnpm --filter @reprod/e2e test"
+  COMMAND="pnpm install && pnpm --filter @reprod/e2e test -- --workers=1"
 fi
 
 if ! docker image inspect "${IMAGE_NAME}" >/dev/null 2>&1 || [[ "${FORCE_BUILD}" -eq 1 ]]; then
