@@ -314,382 +314,408 @@ pub(super) async fn handle_ai_message(
         tools.extend(get_console_tools());
         tools.extend(get_web_search_tools());
         let mut responses = Vec::new();
+        let mut conversation = messages.clone();
+        let mut loop_count = 0;
+        const MAX_TOOL_LOOPS: usize = 5;
 
-        match provider
-            .send_message_with_tools(messages_with_prompts.clone(), tools.clone())
-            .await
-        {
-            Ok(response) => {
-                if let Some(ref tool_calls) = response.tool_calls {
-                    let mut tool_results = Vec::new();
+        loop {
+            let messages_with_prompts = with_system_prompts(&conversation, mode);
+            let response = match provider
+                .send_message_with_tools(messages_with_prompts.clone(), tools.clone())
+                .await
+            {
+                Ok(response) => response,
+                Err(e) => {
+                    push_responses(&mut responses, &sender, error_response(e.to_string()));
+                    break;
+                }
+            };
 
-                    for tool_call in tool_calls {
-                        let mut tool_call = tool_call.clone();
-                        let mut requires_approval = tool_requires_approval(&tool_call.name)
-                            && !state
-                                .approvals
-                                .is_allowed(&stream_id, &tool_call.name)
-                                .await;
-                        let request_event_id = event_stream.next_event_id();
-                        let task_event_id = event_stream.next_event_id();
-                        let preview = build_tool_preview(&tool_call, runtime).await;
-                        event_stream.emit(
-                            &mut responses,
-                            AgentEventPayload::ToolRequest {
-                                id: request_event_id.clone(),
-                                status: if requires_approval {
-                                    AgentEventStatus::Blocked
-                                } else {
-                                    AgentEventStatus::Running
-                                },
-                                timestamp: now_millis(),
-                                tool: tool_call.name.clone(),
-                                input: tool_call.input.clone(),
-                                requires_approval,
-                                preview: preview.clone(),
-                                parent_id: None,
+            if let Some(ref tool_calls) = response.tool_calls {
+                let mut tool_results = Vec::new();
+                let mut saw_error = false;
+
+                for tool_call in tool_calls {
+                    let mut tool_call = tool_call.clone();
+                    let mut requires_approval = tool_requires_approval(&tool_call.name)
+                        && !state
+                            .approvals
+                            .is_allowed(&stream_id, &tool_call.name)
+                            .await;
+                    let request_event_id = event_stream.next_event_id();
+                    let task_event_id = event_stream.next_event_id();
+                    let preview = build_tool_preview(&tool_call, runtime).await;
+                    event_stream.emit(
+                        &mut responses,
+                        AgentEventPayload::ToolRequest {
+                            id: request_event_id.clone(),
+                            status: if requires_approval {
+                                AgentEventStatus::Blocked
+                            } else {
+                                AgentEventStatus::Running
                             },
-                        );
+                            timestamp: now_millis(),
+                            tool: tool_call.name.clone(),
+                            input: tool_call.input.clone(),
+                            requires_approval,
+                            preview: preview.clone(),
+                            parent_id: None,
+                        },
+                    );
 
-                        let mut approved_input = tool_call.input.clone();
-                        if requires_approval {
-                            let approval_preview = preview.unwrap_or(ToolPreviewPayload {
-                                kind: "diff".to_string(),
-                                filepath: extract_path_from_input(&tool_call.input),
-                                diff: None,
-                                command: None,
-                                affected_lines: None,
-                            });
-                            push_response(
-                                &mut responses,
-                                &sender,
-                                WSResponse::ApprovalRequest {
-                                    id: stream_id.clone(),
-                                    request: ApprovalRequestPayload {
-                                        event_id: request_event_id.clone(),
-                                        tool: tool_call.name.clone(),
-                                        preview: approval_preview,
-                                        options: vec![
-                                            ApprovalOption::ApproveOnce,
-                                            ApprovalOption::ApproveSession,
-                                            ApprovalOption::Edit,
-                                            ApprovalOption::Deny,
-                                        ],
-                                        input: Some(tool_call.input.clone()),
-                                    },
-                                },
-                            );
-
-                            let receiver = state
-                                .approvals
-                                .register(request_event_id.clone())
-                                .await;
-                            let decision = match timeout(Duration::from_secs(300), receiver).await {
-                                Ok(Ok(decision)) => decision,
-                                _ => ApprovalDecisionPayload {
-                                    event_id: request_event_id.clone(),
-                                    decision: ApprovalOption::Deny,
-                                    edited_input: None,
-                                },
-                            };
-
-                            match decision.decision {
-                                ApprovalOption::ApproveOnce => {
-                                    event_stream.emit(
-                                        &mut responses,
-                                        AgentEventPayload::ToolRequest {
-                                            id: request_event_id.clone(),
-                                            status: AgentEventStatus::Approved,
-                                            timestamp: now_millis(),
-                                            tool: tool_call.name.clone(),
-                                            input: tool_call.input.clone(),
-                                            requires_approval: true,
-                                            preview: None,
-                                            parent_id: None,
-                                        },
-                                    );
-                                }
-                                ApprovalOption::ApproveSession => {
-                                    state
-                                        .approvals
-                                        .allow_for_session(&stream_id, &tool_call.name)
-                                        .await;
-                                    event_stream.emit(
-                                        &mut responses,
-                                        AgentEventPayload::ToolRequest {
-                                            id: request_event_id.clone(),
-                                            status: AgentEventStatus::Approved,
-                                            timestamp: now_millis(),
-                                            tool: tool_call.name.clone(),
-                                            input: tool_call.input.clone(),
-                                            requires_approval: true,
-                                            preview: None,
-                                            parent_id: None,
-                                        },
-                                    );
-                                }
-                                ApprovalOption::Edit => {
-                                    if let Some(input) = decision.edited_input.clone() {
-                                        approved_input = input;
-                                    }
-                                    event_stream.emit(
-                                        &mut responses,
-                                        AgentEventPayload::ToolRequest {
-                                            id: request_event_id.clone(),
-                                            status: AgentEventStatus::Approved,
-                                            timestamp: now_millis(),
-                                            tool: tool_call.name.clone(),
-                                            input: approved_input.clone(),
-                                            requires_approval: true,
-                                            preview: None,
-                                            parent_id: None,
-                                        },
-                                    );
-                                }
-                                ApprovalOption::Deny => {
-                                    event_stream.emit(
-                                        &mut responses,
-                                        AgentEventPayload::ToolRequest {
-                                            id: request_event_id.clone(),
-                                            status: AgentEventStatus::Denied,
-                                            timestamp: now_millis(),
-                                            tool: tool_call.name.clone(),
-                                            input: tool_call.input.clone(),
-                                            requires_approval: true,
-                                            preview: None,
-                                            parent_id: None,
-                                        },
-                                    );
-                                    let denied_message = "User denied tool execution".to_string();
-                                    event_stream.emit(
-                                        &mut responses,
-                                        AgentEventPayload::ToolResult {
-                                            id: event_stream.next_event_id(),
-                                            status: AgentEventStatus::Denied,
-                                            timestamp: now_millis(),
-                                            request_id: request_event_id.clone(),
-                                            tool: tool_call.name.clone(),
-                                            output: None,
-                                            error: Some(denied_message.clone()),
-                                            parent_id: None,
-                                        },
-                                    );
-                                    tool_results.push((
-                                        tool_call.id.clone(),
-                                        format!("Denied: {}", denied_message),
-                                    ));
-                                    continue;
-                                }
-                            }
-                        }
-                        event_stream.emit(
-                            &mut responses,
-                            AgentEventPayload::Task {
-                                id: task_event_id.clone(),
-                                status: AgentEventStatus::Running,
-                                timestamp: now_millis(),
-                                label: format!("Run tool: {}", tool_call.name),
-                                deps: Vec::new(),
-                                parent_id: None,
-                            },
-                        );
-
-                        tool_call.input = approved_input;
-                        let mut log = tool_log_from_call(&tool_call);
+                    let mut approved_input = tool_call.input.clone();
+                    if requires_approval {
+                        let approval_preview = preview.unwrap_or(ToolPreviewPayload {
+                            kind: "diff".to_string(),
+                            filepath: extract_path_from_input(&tool_call.input),
+                            diff: None,
+                            command: None,
+                            affected_lines: None,
+                        });
                         push_response(
                             &mut responses,
                             &sender,
-                            WSResponse::AIToolStarted {
+                            WSResponse::ApprovalRequest {
                                 id: stream_id.clone(),
-                                tool: log.clone(),
+                                request: ApprovalRequestPayload {
+                                    event_id: request_event_id.clone(),
+                                    tool: tool_call.name.clone(),
+                                    preview: approval_preview,
+                                    options: vec![
+                                        ApprovalOption::ApproveOnce,
+                                        ApprovalOption::ApproveSession,
+                                        ApprovalOption::Edit,
+                                        ApprovalOption::Deny,
+                                    ],
+                                    input: Some(tool_call.input.clone()),
+                                },
                             },
                         );
 
-                        let tool_result = execute_ai_tool_call(&tool_call, runtime).await;
-                        match tool_result {
-                            Ok(result) => {
-                                log.status = ToolLogStatus::Done;
-                                log.output = Some(result.output.clone());
-                                tool_results
-                                    .push((tool_call.id.clone(), result.summary.clone()));
+                        let receiver = state.approvals.register(request_event_id.clone()).await;
+                        let decision = match timeout(Duration::from_secs(300), receiver).await {
+                            Ok(Ok(decision)) => decision,
+                            _ => ApprovalDecisionPayload {
+                                event_id: request_event_id.clone(),
+                                decision: ApprovalOption::Deny,
+                                edited_input: None,
+                            },
+                        };
 
-                                let display_summary =
-                                    summarize_tool_result(&tool_call, &result.output);
+                        match decision.decision {
+                            ApprovalOption::ApproveOnce => {
                                 event_stream.emit(
                                     &mut responses,
-                                    AgentEventPayload::ToolResult {
-                                        id: event_stream.next_event_id(),
-                                        status: AgentEventStatus::Done,
+                                    AgentEventPayload::ToolRequest {
+                                        id: request_event_id.clone(),
+                                        status: AgentEventStatus::Approved,
                                         timestamp: now_millis(),
-                                        request_id: request_event_id.clone(),
                                         tool: tool_call.name.clone(),
-                                        output: Some(result.output.clone()),
-                                        error: None,
-                                        parent_id: None,
-                                    },
-                                );
-
-                                if let Some((kind, path, summary, details)) =
-                                    artifact_for_tool_result(
-                                        &tool_call,
-                                        &result.output,
-                                        &result.summary,
-                                        &display_summary,
-                                    )
-                                {
-                                    event_stream.emit(
-                                        &mut responses,
-                                        AgentEventPayload::Artifact {
-                                            id: event_stream.next_event_id(),
-                                            status: AgentEventStatus::Done,
-                                            timestamp: now_millis(),
-                                            kind,
-                                            path,
-                                            summary,
-                                            details,
-                                            parent_id: None,
-                                        },
-                                    );
-                                }
-
-                                event_stream.emit(
-                                    &mut responses,
-                                    AgentEventPayload::Task {
-                                        id: task_event_id,
-                                        status: AgentEventStatus::Done,
-                                        timestamp: now_millis(),
-                                        label: format!("Run tool: {}", tool_call.name),
-                                        deps: Vec::new(),
+                                        input: tool_call.input.clone(),
+                                        requires_approval: true,
+                                        preview: None,
                                         parent_id: None,
                                     },
                                 );
                             }
-                            Err(err) => {
-                                log.status = ToolLogStatus::Error;
-                                log.error = Some(err.clone());
-                                tool_results
-                                    .push((tool_call.id.clone(), format!("Error: {}", err)));
-
-                                let recoverable = is_recoverable_error(&err);
-                                let suggested_action = suggest_recovery(&err);
+                            ApprovalOption::ApproveSession => {
+                                state
+                                    .approvals
+                                    .allow_for_session(&stream_id, &tool_call.name)
+                                    .await;
+                                event_stream.emit(
+                                    &mut responses,
+                                    AgentEventPayload::ToolRequest {
+                                        id: request_event_id.clone(),
+                                        status: AgentEventStatus::Approved,
+                                        timestamp: now_millis(),
+                                        tool: tool_call.name.clone(),
+                                        input: tool_call.input.clone(),
+                                        requires_approval: true,
+                                        preview: None,
+                                        parent_id: None,
+                                    },
+                                );
+                            }
+                            ApprovalOption::Edit => {
+                                if let Some(input) = decision.edited_input.clone() {
+                                    approved_input = input;
+                                }
+                                event_stream.emit(
+                                    &mut responses,
+                                    AgentEventPayload::ToolRequest {
+                                        id: request_event_id.clone(),
+                                        status: AgentEventStatus::Approved,
+                                        timestamp: now_millis(),
+                                        tool: tool_call.name.clone(),
+                                        input: approved_input.clone(),
+                                        requires_approval: true,
+                                        preview: None,
+                                        parent_id: None,
+                                    },
+                                );
+                            }
+                            ApprovalOption::Deny => {
+                                event_stream.emit(
+                                    &mut responses,
+                                    AgentEventPayload::ToolRequest {
+                                        id: request_event_id.clone(),
+                                        status: AgentEventStatus::Denied,
+                                        timestamp: now_millis(),
+                                        tool: tool_call.name.clone(),
+                                        input: tool_call.input.clone(),
+                                        requires_approval: true,
+                                        preview: None,
+                                        parent_id: None,
+                                    },
+                                );
+                                let denied_message = "User denied tool execution".to_string();
                                 event_stream.emit(
                                     &mut responses,
                                     AgentEventPayload::ToolResult {
                                         id: event_stream.next_event_id(),
-                                        status: AgentEventStatus::Error,
+                                        status: AgentEventStatus::Denied,
                                         timestamp: now_millis(),
                                         request_id: request_event_id.clone(),
                                         tool: tool_call.name.clone(),
                                         output: None,
-                                        error: Some(err.clone()),
+                                        error: Some(denied_message.clone()),
                                         parent_id: None,
                                     },
                                 );
+                                tool_results.push((
+                                    tool_call.id.clone(),
+                                    format!("Denied: {}", denied_message),
+                                ));
+                                saw_error = true;
+                                continue;
+                            }
+                        }
+                    }
+                    event_stream.emit(
+                        &mut responses,
+                        AgentEventPayload::Task {
+                            id: task_event_id.clone(),
+                            status: AgentEventStatus::Running,
+                            timestamp: now_millis(),
+                            label: format!("Run tool: {}", tool_call.name),
+                            deps: Vec::new(),
+                            parent_id: None,
+                        },
+                    );
+
+                    tool_call.input = approved_input;
+                    let mut log = tool_log_from_call(&tool_call);
+                    push_response(
+                        &mut responses,
+                        &sender,
+                        WSResponse::AIToolStarted {
+                            id: stream_id.clone(),
+                            tool: log.clone(),
+                        },
+                    );
+
+                    let tool_result = execute_ai_tool_call(&tool_call, runtime).await;
+                    match tool_result {
+                        Ok(result) => {
+                            log.status = ToolLogStatus::Done;
+                            log.output = Some(result.output.clone());
+                            tool_results.push((tool_call.id.clone(), result.summary.clone()));
+
+                            let display_summary =
+                                summarize_tool_result(&tool_call, &result.output);
+                            event_stream.emit(
+                                &mut responses,
+                                AgentEventPayload::ToolResult {
+                                    id: event_stream.next_event_id(),
+                                    status: AgentEventStatus::Done,
+                                    timestamp: now_millis(),
+                                    request_id: request_event_id.clone(),
+                                    tool: tool_call.name.clone(),
+                                    output: Some(result.output.clone()),
+                                    error: None,
+                                    parent_id: None,
+                                },
+                            );
+
+                            if let Some((kind, path, summary, details)) =
+                                artifact_for_tool_result(
+                                    &tool_call,
+                                    &result.output,
+                                    &result.summary,
+                                    &display_summary,
+                                )
+                            {
                                 event_stream.emit(
                                     &mut responses,
-                                    AgentEventPayload::Error {
+                                    AgentEventPayload::Artifact {
                                         id: event_stream.next_event_id(),
-                                        status: AgentEventStatus::Error,
+                                        status: AgentEventStatus::Done,
                                         timestamp: now_millis(),
-                                        message: err.clone(),
-                                        recoverable,
-                                        suggested_action: suggested_action.clone(),
-                                        parent_id: None,
-                                    },
-                                );
-                                event_stream.emit(
-                                    &mut responses,
-                                    AgentEventPayload::Thought {
-                                        id: event_stream.next_event_id(),
-                                        status: AgentEventStatus::Running,
-                                        timestamp: now_millis(),
-                                        text: format!(
-                                            "Tool failed: {}. Considering alternative.",
-                                            err
-                                        ),
-                                        reasoning: suggested_action,
-                                        parent_id: None,
-                                    },
-                                );
-                                event_stream.emit(
-                                    &mut responses,
-                                    AgentEventPayload::Task {
-                                        id: task_event_id,
-                                        status: AgentEventStatus::Error,
-                                        timestamp: now_millis(),
-                                        label: format!("Run tool: {}", tool_call.name),
-                                        deps: Vec::new(),
+                                        kind,
+                                        path,
+                                        summary,
+                                        details,
                                         parent_id: None,
                                     },
                                 );
                             }
-                        }
-                        log.finished_at = Some(now_millis());
-                        push_response(
-                            &mut responses,
-                            &sender,
-                            WSResponse::AIToolFinished {
-                                id: stream_id.clone(),
-                                tool: log,
-                            },
-                        );
-                    }
 
-                    let mut follow_up_messages = messages.clone();
-                    follow_up_messages.push(ChatMessage {
-                        role: "assistant".to_string(),
-                        content: response.content.clone(),
-                    });
-
-                    for (tool_id, result) in tool_results {
-                        follow_up_messages.push(ChatMessage {
-                            role: "user".to_string(),
-                            content: format!("Tool '{}' result: {}", tool_id, result),
-                        });
-                    }
-
-                    let follow_up_with_prompts = with_system_prompts(&follow_up_messages, mode);
-                    match provider.send_message(follow_up_with_prompts).await {
-                        Ok(final_response) => {
-                            push_responses(
+                            event_stream.emit(
                                 &mut responses,
-                                &sender,
-                                build_streaming_payload(stream, &stream_id, final_response),
-                            );
-                            responses
-                        }
-                        Err(e) => {
-                            push_response(
-                                &mut responses,
-                                &sender,
-                                WSResponse::Error {
-                                    message: format!("Failed to get final response: {}", e),
+                                AgentEventPayload::Task {
+                                    id: task_event_id,
+                                    status: AgentEventStatus::Done,
+                                    timestamp: now_millis(),
+                                    label: format!("Run tool: {}", tool_call.name),
+                                    deps: Vec::new(),
+                                    parent_id: None,
                                 },
                             );
-                            responses
+                        }
+                        Err(err) => {
+                            log.status = ToolLogStatus::Error;
+                            log.error = Some(err.clone());
+                            tool_results.push((tool_call.id.clone(), format!("Error: {}", err)));
+                            saw_error = true;
+
+                            let recoverable = is_recoverable_error(&err);
+                            let suggested_action = suggest_recovery(&err);
+                            event_stream.emit(
+                                &mut responses,
+                                AgentEventPayload::ToolResult {
+                                    id: event_stream.next_event_id(),
+                                    status: AgentEventStatus::Error,
+                                    timestamp: now_millis(),
+                                    request_id: request_event_id.clone(),
+                                    tool: tool_call.name.clone(),
+                                    output: None,
+                                    error: Some(err.clone()),
+                                    parent_id: None,
+                                },
+                            );
+                            event_stream.emit(
+                                &mut responses,
+                                AgentEventPayload::Error {
+                                    id: event_stream.next_event_id(),
+                                    status: AgentEventStatus::Error,
+                                    timestamp: now_millis(),
+                                    message: err.clone(),
+                                    recoverable,
+                                    suggested_action: suggested_action.clone(),
+                                    parent_id: None,
+                                },
+                            );
+                            event_stream.emit(
+                                &mut responses,
+                                AgentEventPayload::Thought {
+                                    id: event_stream.next_event_id(),
+                                    status: AgentEventStatus::Running,
+                                    timestamp: now_millis(),
+                                    text: format!(
+                                        "Tool failed: {}. Considering alternative.",
+                                        err
+                                    ),
+                                    reasoning: suggested_action.clone(),
+                                    parent_id: None,
+                                },
+                            );
+                            event_stream.emit(
+                                &mut responses,
+                                AgentEventPayload::Task {
+                                    id: event_stream.next_event_id(),
+                                    status: AgentEventStatus::Pending,
+                                    timestamp: now_millis(),
+                                    label: format!(
+                                        "Recover from {} failure",
+                                        tool_call.name
+                                    ),
+                                    deps: Vec::new(),
+                                    parent_id: None,
+                                },
+                            );
+                            event_stream.emit(
+                                &mut responses,
+                                AgentEventPayload::Task {
+                                    id: task_event_id,
+                                    status: AgentEventStatus::Error,
+                                    timestamp: now_millis(),
+                                    label: format!("Run tool: {}", tool_call.name),
+                                    deps: Vec::new(),
+                                    parent_id: None,
+                                },
+                            );
                         }
                     }
-                } else {
-                    let mut responses = Vec::new();
-                    push_responses(
+                    log.finished_at = Some(now_millis());
+                    push_response(
                         &mut responses,
                         &sender,
-                        build_streaming_payload(stream, &stream_id, response.content.clone()),
+                        WSResponse::AIToolFinished {
+                            id: stream_id.clone(),
+                            tool: log,
+                        },
+                    );
+                }
+
+                conversation.push(ChatMessage {
+                    role: "assistant".to_string(),
+                    content: response.content.clone(),
+                });
+                for (tool_id, result) in tool_results {
+                    conversation.push(ChatMessage {
+                        role: "user".to_string(),
+                        content: format!("Tool '{}' result: {}", tool_id, result),
+                    });
+                }
+                if saw_error {
+                    conversation.push(ChatMessage {
+                        role: "user".to_string(),
+                        content: "One or more tools failed. Please adapt and continue."
+                            .to_string(),
+                    });
+                }
+
+                loop_count += 1;
+                if loop_count >= MAX_TOOL_LOOPS {
+                    event_stream.emit(
+                        &mut responses,
+                        AgentEventPayload::Error {
+                            id: event_stream.next_event_id(),
+                            status: AgentEventStatus::Error,
+                            timestamp: now_millis(),
+                            message: "Tool loop limit reached".to_string(),
+                            recoverable: false,
+                            suggested_action: None,
+                            parent_id: None,
+                        },
                     );
                     push_response(
                         &mut responses,
                         &sender,
-                        WSResponse::AIResponseWithTools { response },
+                        WSResponse::Error {
+                            message: "Tool loop limit reached".to_string(),
+                        },
                     );
-                    responses
+                    break;
                 }
+                continue;
             }
-            Err(e) => {
-                let mut responses = Vec::new();
-                push_responses(&mut responses, &sender, error_response(e.to_string()));
-                responses
-            }
+
+            push_responses(
+                &mut responses,
+                &sender,
+                build_streaming_payload(stream, &stream_id, response.content.clone()),
+            );
+            push_response(
+                &mut responses,
+                &sender,
+                WSResponse::AIResponseWithTools { response },
+            );
+            break;
         }
+
+        responses
     } else {
         match provider.send_message(messages_with_prompts).await {
             Ok(response) => {
