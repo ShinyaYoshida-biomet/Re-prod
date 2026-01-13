@@ -24,7 +24,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --pr
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 RUN cargo install tauri-driver \
-    && rustup component remove rust-docs \
+    && rustup component remove rust-docs || true \
     && rm -rf /root/.cargo/registry /root/.cargo/git /root/.rustup/toolchains/*/share/doc
 
 ENV REPROD_E2E_DOCKER=1
