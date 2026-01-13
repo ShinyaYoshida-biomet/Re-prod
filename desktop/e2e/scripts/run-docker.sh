@@ -61,7 +61,7 @@ fi
 docker run --rm -it \
   --memory="${DOCKER_MEMORY}" \
   --cpus="${DOCKER_CPUS}" \
-  -e CI=1 \
+  -e CI=true \
   -e COREPACK_ENABLE_PROMPT=0 \
   -e COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
   -e PNPM_CONFIG_CONFIRM_MODULES_PURGE=false \
