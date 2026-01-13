@@ -296,10 +296,11 @@ pub(super) async fn handle_ai_message(
 
     let mut outbound = Vec::new();
     let mut event_stream = EventStream::new(&stream_id, sender.clone());
+    let thought_id = event_stream.next_event_id();
     event_stream.emit(
         &mut outbound,
         AgentEventPayload::Thought {
-            id: event_stream.next_event_id(),
+            id: thought_id,
             status: AgentEventStatus::Done,
             timestamp: now_millis(),
             text: "Analyzing request to determine next actions.".to_string(),
@@ -337,7 +338,7 @@ pub(super) async fn handle_ai_message(
 
                 for tool_call in tool_calls {
                     let mut tool_call = tool_call.clone();
-                    let mut requires_approval = tool_requires_approval(&tool_call.name)
+                    let requires_approval = tool_requires_approval(&tool_call.name)
                         && !state
                             .approvals
                             .is_allowed(&stream_id, &tool_call.name)
@@ -470,10 +471,11 @@ pub(super) async fn handle_ai_message(
                                     },
                                 );
                                 let denied_message = "User denied tool execution".to_string();
+                                let denied_event_id = event_stream.next_event_id();
                                 event_stream.emit(
                                     &mut responses,
                                     AgentEventPayload::ToolResult {
-                                        id: event_stream.next_event_id(),
+                                        id: denied_event_id,
                                         status: AgentEventStatus::Denied,
                                         timestamp: now_millis(),
                                         request_id: request_event_id.clone(),
@@ -524,10 +526,11 @@ pub(super) async fn handle_ai_message(
 
                             let display_summary =
                                 summarize_tool_result(&tool_call, &result.output);
+                            let tool_result_id = event_stream.next_event_id();
                             event_stream.emit(
                                 &mut responses,
                                 AgentEventPayload::ToolResult {
-                                    id: event_stream.next_event_id(),
+                                    id: tool_result_id,
                                     status: AgentEventStatus::Done,
                                     timestamp: now_millis(),
                                     request_id: request_event_id.clone(),
@@ -546,10 +549,11 @@ pub(super) async fn handle_ai_message(
                                     &display_summary,
                                 )
                             {
+                                let artifact_id = event_stream.next_event_id();
                                 event_stream.emit(
                                     &mut responses,
                                     AgentEventPayload::Artifact {
-                                        id: event_stream.next_event_id(),
+                                        id: artifact_id,
                                         status: AgentEventStatus::Done,
                                         timestamp: now_millis(),
                                         kind,
@@ -581,10 +585,11 @@ pub(super) async fn handle_ai_message(
 
                             let recoverable = is_recoverable_error(&err);
                             let suggested_action = suggest_recovery(&err);
+                            let tool_error_id = event_stream.next_event_id();
                             event_stream.emit(
                                 &mut responses,
                                 AgentEventPayload::ToolResult {
-                                    id: event_stream.next_event_id(),
+                                    id: tool_error_id,
                                     status: AgentEventStatus::Error,
                                     timestamp: now_millis(),
                                     request_id: request_event_id.clone(),
@@ -594,10 +599,11 @@ pub(super) async fn handle_ai_message(
                                     parent_id: None,
                                 },
                             );
+                            let error_event_id = event_stream.next_event_id();
                             event_stream.emit(
                                 &mut responses,
                                 AgentEventPayload::Error {
-                                    id: event_stream.next_event_id(),
+                                    id: error_event_id,
                                     status: AgentEventStatus::Error,
                                     timestamp: now_millis(),
                                     message: err.clone(),
@@ -606,10 +612,11 @@ pub(super) async fn handle_ai_message(
                                     parent_id: None,
                                 },
                             );
+                            let thought_event_id = event_stream.next_event_id();
                             event_stream.emit(
                                 &mut responses,
                                 AgentEventPayload::Thought {
-                                    id: event_stream.next_event_id(),
+                                    id: thought_event_id,
                                     status: AgentEventStatus::Running,
                                     timestamp: now_millis(),
                                     text: format!(
@@ -620,10 +627,11 @@ pub(super) async fn handle_ai_message(
                                     parent_id: None,
                                 },
                             );
+                            let recovery_task_id = event_stream.next_event_id();
                             event_stream.emit(
                                 &mut responses,
                                 AgentEventPayload::Task {
-                                    id: event_stream.next_event_id(),
+                                    id: recovery_task_id,
                                     status: AgentEventStatus::Pending,
                                     timestamp: now_millis(),
                                     label: format!(
@@ -678,10 +686,11 @@ pub(super) async fn handle_ai_message(
 
                 loop_count += 1;
                 if loop_count >= MAX_TOOL_LOOPS {
+                    let loop_error_id = event_stream.next_event_id();
                     event_stream.emit(
                         &mut responses,
                         AgentEventPayload::Error {
-                            id: event_stream.next_event_id(),
+                            id: loop_error_id,
                             status: AgentEventStatus::Error,
                             timestamp: now_millis(),
                             message: "Tool loop limit reached".to_string(),

@@ -381,13 +381,13 @@ pub(super) struct ApprovalDecisionPayload {
     pub edited_input: Option<Value>,
 }
 
-pub(super) struct ApprovalManager {
+pub struct ApprovalManager {
     pending: Mutex<HashMap<String, oneshot::Sender<ApprovalDecisionPayload>>>,
     session_allowlist: Mutex<HashMap<String, HashSet<String>>>,
 }
 
 impl ApprovalManager {
-    pub(super) fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             pending: Mutex::new(HashMap::new()),
             session_allowlist: Mutex::new(HashMap::new()),
@@ -453,7 +453,7 @@ pub(super) enum ArtifactKind {
     TestResult,
 }
 
-#[derive(serde::Serialize, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub(super) struct ToolPreviewPayload {
     pub kind: String,
     #[serde(skip_serializing_if = "Option::is_none")]
