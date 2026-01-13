@@ -15,9 +15,19 @@ const defaultBinaryPath = cargoTargetDir
 	: path.resolve(__dirname, "../target/debug/reprod-desktop");
 const binaryPath = process.env.TAURI_DRIVER_APP ?? defaultBinaryPath;
 const driverExecutable = process.env.TAURI_DRIVER_EXECUTABLE ?? "tauri-driver";
+const nativeDriverCandidates = [
+	"/usr/libexec/webkit2gtk-4.1/WebKitWebDriver",
+	"/usr/libexec/webkit2gtk-4.0/WebKitWebDriver",
+	"/usr/bin/WebKitWebDriver",
+];
+const nativeDriverPath = nativeDriverCandidates.find((candidate) => fs.existsSync(candidate));
+const defaultDriverArgs = ["--port", driverPort.toString()];
+if (nativeDriverPath) {
+	defaultDriverArgs.push("--native-driver", nativeDriverPath);
+}
 const driverArgs = process.env.TAURI_DRIVER_ARGS
 	? process.env.TAURI_DRIVER_ARGS.split(" ").filter(Boolean)
-	: ["--port", driverPort.toString()];
+	: defaultDriverArgs;
 const isDocker = fs.existsSync("/.dockerenv") || process.env.REPROD_E2E_DOCKER === "1";
 
 if (!process.env.CI && !isDocker) {

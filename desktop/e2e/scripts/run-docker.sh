@@ -72,6 +72,7 @@ docker run --rm -i \
   -e PNPM_DISABLE_SELF_UPDATE_CHECK=1 \
   -e PNPM_STORE_DIR=/pnpm-store \
   -e PNPM_CONFIG_STORE_DIR=/pnpm-store \
+  -e TS_NODE_TRANSPILE_ONLY=1 \
   -e CARGO_TARGET_DIR=/cargo-target \
   -e LOG_LEVEL \
   -e DEBUG \
