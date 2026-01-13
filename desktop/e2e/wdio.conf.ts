@@ -8,8 +8,11 @@ const driverHost = process.env.TAURI_DRIVER_HOST ?? "127.0.0.1";
 const driverPort = Number(process.env.TAURI_DRIVER_PORT ?? "9515");
 const driverPath = process.env.TAURI_DRIVER_PATH ?? "/";
 const driverReadyTimeout = Number(process.env.TAURI_DRIVER_READY_TIMEOUT ?? "15000");
-const binaryPath =
-	process.env.TAURI_DRIVER_APP ?? path.resolve(__dirname, "../target/debug/reprod-desktop");
+const cargoTargetDir = process.env.CARGO_TARGET_DIR;
+const defaultBinaryPath = cargoTargetDir
+	? path.resolve(cargoTargetDir, "debug/reprod-desktop")
+	: path.resolve(__dirname, "../target/debug/reprod-desktop");
+const binaryPath = process.env.TAURI_DRIVER_APP ?? defaultBinaryPath;
 const driverExecutable = process.env.TAURI_DRIVER_EXECUTABLE ?? "tauri-driver";
 const driverArgs = process.env.TAURI_DRIVER_ARGS
 	? process.env.TAURI_DRIVER_ARGS.split(" ").filter(Boolean)
