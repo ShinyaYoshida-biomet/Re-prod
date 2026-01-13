@@ -110,7 +110,10 @@ jobs:
           echo "**Demo Readiness**: ✅ Viral phylogenomics workflow validated" >> $GITHUB_STEP_SUMMARY
 
   e2e-tests:
-    if: false # temporarily disabled
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
-      - run: echo "E2E tests are currently disabled in CI."
+      - uses: actions/checkout@v4
+
+      - name: Run E2E in Docker
+        run: desktop/e2e/scripts/run-docker.sh
