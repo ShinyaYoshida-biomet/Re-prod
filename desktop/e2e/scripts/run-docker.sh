@@ -73,6 +73,14 @@ docker run --rm -i \
   -e PNPM_STORE_DIR=/pnpm-store \
   -e PNPM_CONFIG_STORE_DIR=/pnpm-store \
   -e CARGO_TARGET_DIR=/cargo-target \
+  -e LOG_LEVEL \
+  -e DEBUG \
+  -e TAURI_DRIVER_APP \
+  -e TAURI_DRIVER_ARGS \
+  -e TAURI_DRIVER_HOST \
+  -e TAURI_DRIVER_PATH \
+  -e TAURI_DRIVER_PORT \
+  -e TAURI_DRIVER_READY_TIMEOUT \
   --tmpfs /workspace/.cargo \
   -v "${ROOT_DIR}":/workspace \
   -v "${CARGO_REGISTRY_VOLUME}:/root/.cargo/registry" \
