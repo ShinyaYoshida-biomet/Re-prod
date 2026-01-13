@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     libssl-dev \
     libwebkit2gtk-4.1-dev \
+    webkit2gtk-driver \
     libgtk-3-dev \
     libayatana-appindicator3-dev \
     librsvg2-dev \
@@ -23,6 +24,7 @@ RUN corepack prepare pnpm@9.12.1 --activate
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
 ENV PATH="/root/.cargo/bin:${PATH}"
+ENV PATH="/usr/libexec/webkit2gtk-4.1:/usr/libexec/webkit2gtk-4.0:${PATH}"
 
 RUN cargo install tauri-driver \
     && rustup component remove rust-docs || true \
