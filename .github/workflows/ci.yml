@@ -115,5 +115,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run E2E in Docker
-        run: desktop/e2e/scripts/run-docker.sh
+      - run: corepack enable pnpm
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: "pnpm"
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter @reprod/e2e exec playwright install --with-deps chromium
+
+      - name: Run E2E (Chromium)
+        run: pnpm --filter @reprod/e2e test
