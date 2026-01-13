@@ -8,6 +8,7 @@ const driverHost = process.env.TAURI_DRIVER_HOST ?? "127.0.0.1";
 const driverPort = Number(process.env.TAURI_DRIVER_PORT ?? "9515");
 const driverPath = process.env.TAURI_DRIVER_PATH ?? "/";
 const driverReadyTimeout = Number(process.env.TAURI_DRIVER_READY_TIMEOUT ?? "15000");
+const logLevel = (process.env.LOG_LEVEL ?? "info") as Options.Testrunner["logLevel"];
 const cargoTargetDir = process.env.CARGO_TARGET_DIR;
 const defaultBinaryPath = cargoTargetDir
 	? path.resolve(cargoTargetDir, "debug/reprod-desktop")
@@ -41,6 +42,7 @@ function startDriver(): void {
 		return;
 	}
 
+	console.log(`[tauri-driver] starting (${driverExecutable} ${driverArgs.join(" ")})`);
 	driverProcess = spawn(driverExecutable, driverArgs, {
 		stdio: ["ignore", "pipe", "pipe"],
 	});
@@ -69,6 +71,9 @@ function stopDriver(): void {
 
 async function waitForDriverReady(): Promise<void> {
 	const deadline = Date.now() + driverReadyTimeout;
+	const statusUrl = `http://${driverHost}:${driverPort}/status`;
+
+	console.log(`[tauri-driver] waiting for readiness at ${statusUrl}`);
 
 	while (Date.now() < deadline) {
 		try {
@@ -120,7 +125,7 @@ export const config: Options.Testrunner = {
 			},
 		} as any,
 	],
-	logLevel: "info",
+	logLevel,
 	bail: 0,
 	waitforTimeout: 30000,
 	connectionRetryTimeout: 120000,
