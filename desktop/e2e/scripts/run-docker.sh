@@ -58,7 +58,7 @@ if ! docker image inspect "${IMAGE_NAME}" >/dev/null 2>&1 || [[ "${FORCE_BUILD}"
     "${ROOT_DIR}"
 fi
 
-docker run --rm -it \
+docker run --rm -i \
   --memory="${DOCKER_MEMORY}" \
   --cpus="${DOCKER_CPUS}" \
   -e CI=true \
