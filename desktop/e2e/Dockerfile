@@ -19,8 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tzdata \
     && rm -rf /var/lib/apt/lists/*
 
-RUN corepack enable pnpm
-RUN corepack prepare pnpm@9.12.1 --activate
+RUN npm install -g pnpm@9.12.1
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
 ENV PATH="/root/.cargo/bin:${PATH}"
