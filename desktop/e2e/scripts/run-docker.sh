@@ -49,7 +49,7 @@ PREBUILD_COMMAND=""
 if [[ "${PREBUILD_BACKEND}" == "1" ]]; then
   PREBUILD_COMMAND="cargo build -p reprod-server && "
 fi
-PRE_COMMAND='cache_dir="/root/.cache"; mkdir -p "$cache_dir"; toolchain_marker="$cache_dir/reprod-e2e-toolchain-ok"; if [[ ! -f "$toolchain_marker" ]]; then if command -v pgrep >/dev/null 2>&1; then for _ in {1..60}; do if pgrep -x apt-get >/dev/null || pgrep -x dpkg >/dev/null; then sleep 2; else break; fi; done; fi; collect2_path=$(gcc -print-file-name=collect2 2>/dev/null || true); openssl_pc=""; for candidate in /usr/lib/*/pkgconfig/openssl.pc /usr/lib/pkgconfig/openssl.pc; do if [[ -e "$candidate" ]]; then openssl_pc="$candidate"; break; fi; done; if [[ ( -n "$collect2_path" && -f "$collect2_path" && ! -s "$collect2_path" ) || -z "$openssl_pc" || ! -s "$openssl_pc" ]]; then apt-get update && apt-get install --reinstall -y gcc-11 g++-11 libssl-dev pkg-config && rm -rf /var/lib/apt/lists/* && touch "$toolchain_marker"; else touch "$toolchain_marker"; fi; fi;'
+PRE_COMMAND='bash /workspace/desktop/e2e/scripts/docker-preflight.sh'
 
 if [[ -n "${1-}" ]]; then
   COMMAND="${PRE_COMMAND} pnpm install --frozen-lockfile && ${PREBUILD_COMMAND}$*"
