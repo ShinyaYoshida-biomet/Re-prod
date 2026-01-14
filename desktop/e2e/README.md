@@ -266,10 +266,17 @@ Tests complete end-to-end user journeys:
 | `REPROD_E2E_DOCKER_CPUS` | Docker CPU limit for `test:docker` | `4` |
 | `REPROD_E2E_DOCKER_MODE` | Default Docker command (`playwright` or `webdriver`) | `playwright` |
 | `REPROD_E2E_DOCKER_KEEP_OLD_IMAGE` | Keep the previous `reprod-e2e` image after a rebuild | `0` |
+| `REPROD_E2E_DOCKER_REUSE_CONTAINER` | Reuse a running container (`auto`, `1`, `0`) | `auto` |
+| `REPROD_E2E_DOCKER_CONTAINER_NAME` | Docker container name when reusing | `reprod-e2e-runner` |
 
 **Example**:
 ```bash
 REPROD_E2E_DOCKER_MEMORY=8g REPROD_E2E_DOCKER_CPUS=6 pnpm --filter @reprod/e2e test:docker
+```
+
+Use a long-lived runner to avoid creating new containers on each run:
+```bash
+REPROD_E2E_DOCKER_REUSE_CONTAINER=1 pnpm --filter @reprod/e2e test:docker
 ```
 
 ### WebDriverIO (Desktop)

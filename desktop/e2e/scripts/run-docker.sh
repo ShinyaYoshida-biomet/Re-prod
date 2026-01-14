@@ -14,6 +14,8 @@ DOCKERFILE_PATH="${ROOT_DIR}/desktop/e2e/Dockerfile"
 DOCKERFILE_LABEL_KEY="reprod.e2e.dockerfile-sha"
 DOCKERFILE_SHA="$(shasum -a 256 "${DOCKERFILE_PATH}" | awk '{print $1}')"
 KEEP_OLD_IMAGE="${REPROD_E2E_DOCKER_KEEP_OLD_IMAGE:-0}"
+REUSE_CONTAINER="${REPROD_E2E_DOCKER_REUSE_CONTAINER:-auto}"
+CONTAINER_NAME="${REPROD_E2E_DOCKER_CONTAINER_NAME:-reprod-e2e-runner}"
 
 FORCE_BUILD=0
 MODE="${REPROD_E2E_DOCKER_MODE:-playwright}"
@@ -69,7 +71,7 @@ if ! docker image inspect "${IMAGE_NAME}" >/dev/null 2>&1 || [[ "${FORCE_BUILD}"
   fi
 fi
 
-docker run --rm -i \
+DOCKER_BASE_ARGS=(
   --memory="${DOCKER_MEMORY}" \
   --cpus="${DOCKER_CPUS}" \
   -e CI=true \
@@ -98,5 +100,59 @@ docker run --rm -i \
   -v "${PNPM_STORE_VOLUME}:/pnpm-store" \
   -v "${NODE_MODULES_VOLUME}:/workspace/node_modules" \
   -w /workspace \
+)
+
+if [[ "${REUSE_CONTAINER}" != "0" ]]; then
+  IMAGE_ID="$(docker image inspect --format '{{ .Id }}' "${IMAGE_NAME}" 2>/dev/null || true)"
+  CONTAINER_ID="$(docker container ls -aq -f "name=^/${CONTAINER_NAME}$")"
+  if [[ -n "${CONTAINER_ID}" ]]; then
+    CONTAINER_IMAGE_ID="$(docker container inspect --format '{{ .Image }}' "${CONTAINER_NAME}" 2>/dev/null || true)"
+    if [[ -n "${IMAGE_ID}" && "${CONTAINER_IMAGE_ID}" != "${IMAGE_ID}" ]]; then
+      if [[ "${REUSE_CONTAINER}" == "1" ]]; then
+        docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+        CONTAINER_ID=""
+      else
+        CONTAINER_ID=""
+      fi
+    fi
+  fi
+
+  if [[ "${REUSE_CONTAINER}" == "1" ]]; then
+    if [[ -z "${CONTAINER_ID}" ]]; then
+      docker run -d --name "${CONTAINER_NAME}" \
+        "${DOCKER_BASE_ARGS[@]}" \
+        "${IMAGE_NAME}" \
+        bash -lc "sleep infinity" >/dev/null
+      CONTAINER_ID="${CONTAINER_NAME}"
+    else
+      RUNNING_STATE="$(docker container inspect --format '{{ .State.Running }}' "${CONTAINER_NAME}" 2>/dev/null || true)"
+      if [[ "${RUNNING_STATE}" != "true" ]]; then
+        docker start "${CONTAINER_NAME}" >/dev/null
+      fi
+    fi
+  fi
+
+  if [[ -n "${CONTAINER_ID}" ]]; then
+    RUNNING_STATE="$(docker container inspect --format '{{ .State.Running }}' "${CONTAINER_NAME}" 2>/dev/null || true)"
+    if [[ "${RUNNING_STATE}" == "true" ]]; then
+      EXEC_ENV_ARGS=()
+      for var in LOG_LEVEL DEBUG TAURI_DRIVER_APP TAURI_DRIVER_ARGS TAURI_DRIVER_HOST TAURI_DRIVER_PATH TAURI_DRIVER_PORT TAURI_DRIVER_READY_TIMEOUT; do
+        value="${!var-}"
+        if [[ -n "${value}" ]]; then
+          EXEC_ENV_ARGS+=(-e "${var}=${value}")
+        fi
+      done
+
+      docker exec -i -w /workspace \
+        "${EXEC_ENV_ARGS[@]}" \
+        "${CONTAINER_NAME}" \
+        bash -lc "${COMMAND}"
+      exit 0
+    fi
+  fi
+fi
+
+docker run --rm -i \
+  "${DOCKER_BASE_ARGS[@]}" \
   "${IMAGE_NAME}" \
   bash -lc "${COMMAND}"
