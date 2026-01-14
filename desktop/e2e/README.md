@@ -266,7 +266,7 @@ Tests complete end-to-end user journeys:
 | `REPROD_E2E_DOCKER_CPUS` | Docker CPU limit for `test:docker` | `4` |
 | `REPROD_E2E_DOCKER_MODE` | Default Docker command (`playwright` or `webdriver`) | `playwright` |
 | `REPROD_E2E_DOCKER_KEEP_OLD_IMAGE` | Keep the previous `reprod-e2e` image after a rebuild | `0` |
-| `REPROD_E2E_DOCKER_REUSE_CONTAINER` | Reuse a running container (`auto`, `1`, `0`) | `auto` |
+| `REPROD_E2E_DOCKER_REUSE_CONTAINER` | Reuse a running container (`1` to reuse, `0` to disable) | `1` |
 | `REPROD_E2E_DOCKER_CONTAINER_NAME` | Docker container name when reusing | `reprod-e2e-runner` |
 | `REPROD_E2E_DOCKER_PREBUILD` | Prebuild the backend (`cargo build -p reprod-server`) before running tests | `1` |
 
@@ -275,14 +275,15 @@ Tests complete end-to-end user journeys:
 REPROD_E2E_DOCKER_MEMORY=8g REPROD_E2E_DOCKER_CPUS=6 pnpm --filter @reprod/e2e test:docker
 ```
 
-Use a long-lived runner to avoid creating new containers on each run:
+The Docker runner is reused by default to avoid creating new containers on each run.
+To force a fresh container for a single run:
 ```bash
-REPROD_E2E_DOCKER_REUSE_CONTAINER=1 pnpm --filter @reprod/e2e test:docker
+REPROD_E2E_DOCKER_REUSE_CONTAINER=0 pnpm --filter @reprod/e2e test:docker
 ```
 
-Stop or remove the reused container when the run finishes:
+Reset the reusable runner if it gets into a bad state:
 ```bash
-REPROD_E2E_DOCKER_REUSE_CONTAINER=1 pnpm --filter @reprod/e2e test:docker
+docker rm -f reprod-e2e-runner
 ```
 
 ### WebDriverIO (Desktop)

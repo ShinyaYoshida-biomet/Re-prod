@@ -14,7 +14,7 @@ DOCKERFILE_PATH="${ROOT_DIR}/desktop/e2e/Dockerfile"
 DOCKERFILE_LABEL_KEY="reprod.e2e.dockerfile-sha"
 DOCKERFILE_SHA="$(shasum -a 256 "${DOCKERFILE_PATH}" | awk '{print $1}')"
 KEEP_OLD_IMAGE="${REPROD_E2E_DOCKER_KEEP_OLD_IMAGE:-0}"
-REUSE_CONTAINER="${REPROD_E2E_DOCKER_REUSE_CONTAINER:-auto}"
+REUSE_CONTAINER="${REPROD_E2E_DOCKER_REUSE_CONTAINER:-1}"
 CONTAINER_NAME="${REPROD_E2E_DOCKER_CONTAINER_NAME:-reprod-e2e-runner}"
 PREBUILD_BACKEND="${REPROD_E2E_DOCKER_PREBUILD:-1}"
 
@@ -116,6 +116,7 @@ cleanup_container() {
 }
 
 if [[ "${REUSE_CONTAINER}" != "0" ]]; then
+  REUSE_CONTAINER="1"
   IMAGE_ID="$(docker image inspect --format '{{ .Id }}' "${IMAGE_NAME}" 2>/dev/null || true)"
   CONTAINER_ID="$(docker container ls -aq -f "name=^/${CONTAINER_NAME}$")"
   if [[ -n "${CONTAINER_ID}" ]]; then
