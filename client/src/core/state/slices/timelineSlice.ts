@@ -122,5 +122,9 @@ export const createTimelineSlice: StateCreator<TimelineState> = (set) => ({
 			offset: state.offset + state.limit,
 		})),
 
-	reset: () => set(initialState),
+	reset: () =>
+		set((state) => ({
+			...initialState,
+			timelinePanelRef: state.timelinePanelRef,
+		})),
 });
