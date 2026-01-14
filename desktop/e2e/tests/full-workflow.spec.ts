@@ -94,7 +94,7 @@ cat("Total sum:", result, "\\n")`;
 		await openTimelineDialog(page);
 
 		const newEvent = page.locator(".timeline-event-code", { hasText: "result <- sum(data)" });
-		await expect(newEvent).toBeVisible();
+		await expect(newEvent.first()).toBeVisible();
 
 		await closeDialog(page);
 
