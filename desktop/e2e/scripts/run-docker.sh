@@ -50,14 +50,15 @@ PREBUILD_COMMAND=""
 if [[ "${PREBUILD_BACKEND}" == "1" ]]; then
   PREBUILD_COMMAND="cargo build -p reprod-server && "
 fi
+PRE_COMMAND='collect2_path=$(gcc -print-file-name=collect2 2>/dev/null || true); openssl_pc=""; for candidate in /usr/lib/*/pkgconfig/openssl.pc /usr/lib/pkgconfig/openssl.pc; do if [[ -e "$candidate" ]]; then openssl_pc="$candidate"; break; fi; done; if [[ ( -n "$collect2_path" && -f "$collect2_path" && ! -s "$collect2_path" ) || -z "$openssl_pc" || ! -s "$openssl_pc" ]]; then apt-get update && apt-get install --reinstall -y gcc-11 g++-11 libssl-dev pkg-config && rm -rf /var/lib/apt/lists/*; fi;'
 
 if [[ -n "${1-}" ]]; then
-  COMMAND="collect2_path=\$(gcc -print-file-name=collect2 2>/dev/null || true); if [[ -n \"\${collect2_path}\" && -f \"\${collect2_path}\" && ! -s \"\${collect2_path}\" ]]; then apt-get update && apt-get install --reinstall -y gcc-11 g++-11 && rm -rf /var/lib/apt/lists/*; fi; pnpm install --frozen-lockfile && ${PREBUILD_COMMAND}$*"
+  COMMAND="${PRE_COMMAND} pnpm install --frozen-lockfile && ${PREBUILD_COMMAND}$*"
 else
   if [[ "${MODE}" == "webdriver" ]]; then
-    COMMAND="collect2_path=\$(gcc -print-file-name=collect2 2>/dev/null || true); if [[ -n \"\${collect2_path}\" && -f \"\${collect2_path}\" && ! -s \"\${collect2_path}\" ]]; then apt-get update && apt-get install --reinstall -y gcc-11 g++-11 && rm -rf /var/lib/apt/lists/*; fi; pnpm install --frozen-lockfile && ${PREBUILD_COMMAND}pnpm tauri build --debug --no-bundle && echo '[e2e] starting WebDriverIO tests' && { Xvfb :99 -screen 0 1280x720x24 -nolisten tcp & XVFB_PID=\$!; export DISPLAY=:99; pnpm --filter @reprod/e2e test:webdriver; status=\$?; kill \$XVFB_PID; exit \$status; }"
+    COMMAND="${PRE_COMMAND} pnpm install --frozen-lockfile && ${PREBUILD_COMMAND}pnpm tauri build --debug --no-bundle && echo '[e2e] starting WebDriverIO tests' && { Xvfb :99 -screen 0 1280x720x24 -nolisten tcp & XVFB_PID=\$!; export DISPLAY=:99; pnpm --filter @reprod/e2e test:webdriver; status=\$?; kill \$XVFB_PID; exit \$status; }"
   else
-    COMMAND="collect2_path=\$(gcc -print-file-name=collect2 2>/dev/null || true); if [[ -n \"\${collect2_path}\" && -f \"\${collect2_path}\" && ! -s \"\${collect2_path}\" ]]; then apt-get update && apt-get install --reinstall -y gcc-11 g++-11 && rm -rf /var/lib/apt/lists/*; fi; pnpm install --frozen-lockfile && ${PREBUILD_COMMAND}pnpm --filter @reprod/e2e test -- --workers=1"
+    COMMAND="${PRE_COMMAND} pnpm install --frozen-lockfile && ${PREBUILD_COMMAND}pnpm --filter @reprod/e2e test -- --workers=1"
   fi
 fi
 
