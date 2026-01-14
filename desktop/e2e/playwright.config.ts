@@ -9,6 +9,10 @@ const chromeExecutablePath =
 		: undefined;
 const isDocker = fs.existsSync("/.dockerenv") || process.env.REPROD_E2E_DOCKER === "1";
 const chromiumHome = path.resolve(__dirname, ".pw-home");
+const defaultWebPort = 5173;
+const envWebPortRaw = process.env.REPROD_E2E_WEB_PORT ?? process.env.VITE_PORT;
+const envWebPort = envWebPortRaw ? Number.parseInt(envWebPortRaw, 10) : Number.NaN;
+const webPort = Number.isFinite(envWebPort) && envWebPort > 0 ? envWebPort : defaultWebPort;
 const chromiumLaunchOptions = isMac
 	? {
 			args: [
@@ -84,7 +88,7 @@ export default defineConfig({
 	// Shared settings for all the projects below
 	use: {
 		// Base URL to use in actions like `await page.goto('/')`
-		baseURL: "http://localhost:5173",
+		baseURL: `http://localhost:${webPort}`,
 
 		// Collect trace when retrying the failed test
 		trace: "on-first-retry",
@@ -104,7 +108,7 @@ export default defineConfig({
 	// Run your local dev server before starting the tests
 	webServer: {
 		command: "cd ../.. && pnpm dev",
-		url: "http://localhost:5173",
+		url: `http://localhost:${webPort}`,
 		reuseExistingServer: !process.env.CI,
 		timeout: 120000,
 		stdout: "ignore",
@@ -112,6 +116,7 @@ export default defineConfig({
 		env: {
 			...process.env,
 			REPROD_WORKSPACE_ROOT: path.resolve(__dirname, "shared/fixtures/projects"),
+			VITE_PORT: webPort.toString(),
 		},
 	},
 });

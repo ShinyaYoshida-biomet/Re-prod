@@ -4,6 +4,10 @@ import { fileURLToPath } from "url";
 import { defineConfig } from "vite";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const defaultPort = 5173;
+const envPortRaw = process.env.REPROD_E2E_WEB_PORT ?? process.env.VITE_PORT;
+const envPort = envPortRaw ? Number.parseInt(envPortRaw, 10) : Number.NaN;
+const serverPort = Number.isFinite(envPort) && envPort > 0 ? envPort : defaultPort;
 
 export default defineConfig({
 	plugins: [react()],
@@ -19,7 +23,7 @@ export default defineConfig({
 		},
 	},
 	server: {
-		port: 5173,
+		port: serverPort,
 		// No proxy needed - using native WebSocket at ws://localhost:3001/ws
 	},
 });
