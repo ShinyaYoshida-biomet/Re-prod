@@ -89,6 +89,24 @@ export async function waitForConsoleOutput(
 }
 
 /**
+ * Wait for any console output (stdout or stderr).
+ */
+export async function waitForAnyConsoleOutput(page: Page, options: { timeout?: number } = {}) {
+	const timeout = options.timeout ?? 30000;
+
+	const consoleTab = page.locator('button:has-text("Console")');
+	if (await consoleTab.isVisible()) {
+		await consoleTab.click();
+	}
+
+	await page.waitForFunction(
+		(selector) => document.querySelectorAll(selector).length > 0,
+		".console-stdout,.console-stderr",
+		{ timeout },
+	);
+}
+
+/**
  * Open Timeline dialog
  */
 export async function openTimelineDialog(page: Page) {

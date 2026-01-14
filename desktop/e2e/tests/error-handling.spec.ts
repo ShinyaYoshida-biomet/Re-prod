@@ -1,16 +1,20 @@
 import { expect, test } from "@playwright/test";
-import { consoleHasOutput, executeRCode, waitForConsoleOutput } from "../shared/helpers";
+import {
+	consoleHasOutput,
+	executeRCode,
+	waitForAnyConsoleOutput,
+	waitForConsoleOutput,
+} from "../shared/helpers";
 import { selectors } from "../shared/selectors";
 
 test.describe("Error handling scenarios", () => {
 	test("displays R syntax errors in console", async ({ page }) => {
 		await page.goto("/");
 
-		// Execute code with syntax error (incomplete expression)
-		await executeRCode(page, "x <- 1 +");
+		// Execute code with syntax error (invalid token)
+		await executeRCode(page, "x <- 1 + )");
 
-		// Wait for error to appear (might be in stderr)
-		await page.waitForTimeout(3000);
+		await waitForAnyConsoleOutput(page);
 
 		// Check for error in console (stderr or stdout)
 		const stderrOutputs = page.locator(selectors.consoleError);
@@ -29,23 +33,24 @@ test.describe("Error handling scenarios", () => {
 		// Execute code with type error
 		await executeRCode(page, 'x <- "text"\ny <- x / 2');
 
-		// Wait for error
-		await page.waitForTimeout(3000);
+		await waitForAnyConsoleOutput(page);
 
 		// Verify error is displayed
 		const stderrOutputs = page.locator(selectors.consoleError);
+		const stdoutOutputs = page.locator(selectors.consoleOutput);
 		const stderrCount = await stderrOutputs.count();
+		const stdoutCount = await stdoutOutputs.count();
 
 		// Should have error output
-		expect(stderrCount).toBeGreaterThanOrEqual(0);
+		expect(stderrCount + stdoutCount).toBeGreaterThan(0);
 	});
 
 	test("recovers from errors and allows subsequent executions", async ({ page }) => {
 		await page.goto("/");
 
 		// Execute error code
-		await executeRCode(page, "x <- 1 +");
-		await page.waitForTimeout(2000);
+		await executeRCode(page, "x <- 1 + )");
+		await waitForAnyConsoleOutput(page);
 
 		// Execute valid code
 		await executeRCode(page, "valid_result <- 5 + 5\nvalid_result");
@@ -64,14 +69,15 @@ test.describe("Error handling scenarios", () => {
 		// Reference undefined variable
 		await executeRCode(page, "print(undefined_variable)");
 
-		// Wait for error
-		await page.waitForTimeout(3000);
+		await waitForAnyConsoleOutput(page);
 
 		// Error should be displayed
 		const stderrOutputs = page.locator(selectors.consoleError);
+		const stdoutOutputs = page.locator(selectors.consoleOutput);
 		const stderrCount = await stderrOutputs.count();
+		const stdoutCount = await stdoutOutputs.count();
 
-		expect(stderrCount).toBeGreaterThanOrEqual(0);
+		expect(stderrCount + stdoutCount).toBeGreaterThan(0);
 	});
 
 	test("handles function errors gracefully", async ({ page }) => {
@@ -80,44 +86,46 @@ test.describe("Error handling scenarios", () => {
 		// Call non-existent function
 		await executeRCode(page, "result <- nonExistentFunction(123)");
 
-		// Wait for error
-		await page.waitForTimeout(3000);
+		await waitForAnyConsoleOutput(page);
 
 		// Verify error handling
 		const stderrOutputs = page.locator(selectors.consoleError);
+		const stdoutOutputs = page.locator(selectors.consoleOutput);
 		const stderrCount = await stderrOutputs.count();
+		const stdoutCount = await stdoutOutputs.count();
 
-		expect(stderrCount).toBeGreaterThanOrEqual(0);
+		expect(stderrCount + stdoutCount).toBeGreaterThan(0);
 	});
 
 	test("displays parse errors", async ({ page }) => {
 		await page.goto("/");
 
 		// Execute code with parse error (mismatched parentheses)
-		await executeRCode(page, "result <- (1 + 2");
+		await executeRCode(page, "result <- (1 + )");
 
-		// Wait for error
-		await page.waitForTimeout(3000);
+		await waitForAnyConsoleOutput(page);
 
 		// Verify error is shown
 		const stderrOutputs = page.locator(selectors.consoleError);
+		const stdoutOutputs = page.locator(selectors.consoleOutput);
 		const stderrCount = await stderrOutputs.count();
+		const stdoutCount = await stdoutOutputs.count();
 
-		expect(stderrCount).toBeGreaterThanOrEqual(0);
+		expect(stderrCount + stdoutCount).toBeGreaterThan(0);
 	});
 
 	test("maintains app responsiveness after multiple errors", async ({ page }) => {
 		await page.goto("/");
 
 		// Execute multiple errors
-		await executeRCode(page, "x <- 1 +");
-		await page.waitForTimeout(1000);
+		await executeRCode(page, "x <- 1 + )");
+		await waitForAnyConsoleOutput(page);
 
 		await executeRCode(page, 'y <- "text" / 2');
-		await page.waitForTimeout(1000);
+		await waitForAnyConsoleOutput(page);
 
 		await executeRCode(page, "z <- undefinedVar");
-		await page.waitForTimeout(1000);
+		await waitForAnyConsoleOutput(page);
 
 		// Execute valid code to verify app still works
 		await executeRCode(page, "final_result <- 100\nfinal_result");
