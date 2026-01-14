@@ -52,8 +52,8 @@ test.describe("Error handling scenarios", () => {
 		await executeRCode(page, "x <- 1 + )");
 		await waitForAnyConsoleOutput(page);
 
-		// Execute valid code
-		await executeRCode(page, "valid_result <- 5 + 5\nvalid_result");
+		// Execute valid code (explicit print for non-interactive runs)
+		await executeRCode(page, "valid_result <- 5 + 5\nprint(valid_result)");
 
 		// Wait for successful output
 		await waitForConsoleOutput(page, "[1] 10", { timeout: 30000 });
@@ -127,8 +127,8 @@ test.describe("Error handling scenarios", () => {
 		await executeRCode(page, "z <- undefinedVar");
 		await waitForAnyConsoleOutput(page);
 
-		// Execute valid code to verify app still works
-		await executeRCode(page, "final_result <- 100\nfinal_result");
+		// Execute valid code to verify app still works (explicit print)
+		await executeRCode(page, "final_result <- 100\nprint(final_result)");
 
 		// Wait for successful output
 		await waitForConsoleOutput(page, "[1] 100", { timeout: 30000 });
