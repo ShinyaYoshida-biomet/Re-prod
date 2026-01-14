@@ -16,7 +16,6 @@ DOCKERFILE_SHA="$(shasum -a 256 "${DOCKERFILE_PATH}" | awk '{print $1}')"
 KEEP_OLD_IMAGE="${REPROD_E2E_DOCKER_KEEP_OLD_IMAGE:-0}"
 REUSE_CONTAINER="${REPROD_E2E_DOCKER_REUSE_CONTAINER:-auto}"
 CONTAINER_NAME="${REPROD_E2E_DOCKER_CONTAINER_NAME:-reprod-e2e-runner}"
-ON_EXIT_ACTION="${REPROD_E2E_DOCKER_ON_EXIT:-stop}"
 PREBUILD_BACKEND="${REPROD_E2E_DOCKER_PREBUILD:-1}"
 
 FORCE_BUILD=0
@@ -113,21 +112,7 @@ DOCKER_BASE_ARGS=(
 )
 
 cleanup_container() {
-  if [[ "${ON_EXIT_ACTION}" == "none" ]]; then
-    return
-  fi
-
-  case "${ON_EXIT_ACTION}" in
-    stop)
-      docker stop "${CONTAINER_NAME}" >/dev/null 2>&1 || true
-      ;;
-    delete|remove|rm)
-      docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
-      ;;
-    *)
-      echo "Unknown REPROD_E2E_DOCKER_ON_EXIT=${ON_EXIT_ACTION} (expected: stop, delete, none)" >&2
-      ;;
-  esac
+  docker stop "${CONTAINER_NAME}" >/dev/null 2>&1 || true
 }
 
 if [[ "${REUSE_CONTAINER}" != "0" ]]; then

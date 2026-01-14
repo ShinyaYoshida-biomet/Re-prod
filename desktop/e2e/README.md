@@ -268,7 +268,6 @@ Tests complete end-to-end user journeys:
 | `REPROD_E2E_DOCKER_KEEP_OLD_IMAGE` | Keep the previous `reprod-e2e` image after a rebuild | `0` |
 | `REPROD_E2E_DOCKER_REUSE_CONTAINER` | Reuse a running container (`auto`, `1`, `0`) | `auto` |
 | `REPROD_E2E_DOCKER_CONTAINER_NAME` | Docker container name when reusing | `reprod-e2e-runner` |
-| `REPROD_E2E_DOCKER_ON_EXIT` | Stop/remove reused container after the run (`stop`, `delete`, `none`) | `stop` |
 | `REPROD_E2E_DOCKER_PREBUILD` | Prebuild the backend (`cargo build -p reprod-server`) before running tests | `1` |
 
 **Example**:
@@ -283,8 +282,7 @@ REPROD_E2E_DOCKER_REUSE_CONTAINER=1 pnpm --filter @reprod/e2e test:docker
 
 Stop or remove the reused container when the run finishes:
 ```bash
-REPROD_E2E_DOCKER_REUSE_CONTAINER=1 REPROD_E2E_DOCKER_ON_EXIT=stop pnpm --filter @reprod/e2e test:docker
-REPROD_E2E_DOCKER_REUSE_CONTAINER=1 REPROD_E2E_DOCKER_ON_EXIT=delete pnpm --filter @reprod/e2e test:docker
+REPROD_E2E_DOCKER_REUSE_CONTAINER=1 pnpm --filter @reprod/e2e test:docker
 ```
 
 ### WebDriverIO (Desktop)
