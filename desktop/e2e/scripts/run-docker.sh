@@ -16,6 +16,7 @@ DOCKERFILE_SHA="$(shasum -a 256 "${DOCKERFILE_PATH}" | awk '{print $1}')"
 KEEP_OLD_IMAGE="${REPROD_E2E_DOCKER_KEEP_OLD_IMAGE:-0}"
 REUSE_CONTAINER="${REPROD_E2E_DOCKER_REUSE_CONTAINER:-auto}"
 CONTAINER_NAME="${REPROD_E2E_DOCKER_CONTAINER_NAME:-reprod-e2e-runner}"
+ON_EXIT_ACTION="${REPROD_E2E_DOCKER_ON_EXIT:-stop}"
 
 FORCE_BUILD=0
 MODE="${REPROD_E2E_DOCKER_MODE:-playwright}"
@@ -102,6 +103,24 @@ DOCKER_BASE_ARGS=(
   -w /workspace \
 )
 
+cleanup_container() {
+  if [[ "${ON_EXIT_ACTION}" == "none" ]]; then
+    return
+  fi
+
+  case "${ON_EXIT_ACTION}" in
+    stop)
+      docker stop "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+      ;;
+    delete|remove|rm)
+      docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+      ;;
+    *)
+      echo "Unknown REPROD_E2E_DOCKER_ON_EXIT=${ON_EXIT_ACTION} (expected: stop, delete, none)" >&2
+      ;;
+  esac
+}
+
 if [[ "${REUSE_CONTAINER}" != "0" ]]; then
   IMAGE_ID="$(docker image inspect --format '{{ .Id }}' "${IMAGE_NAME}" 2>/dev/null || true)"
   CONTAINER_ID="$(docker container ls -aq -f "name=^/${CONTAINER_NAME}$")"
@@ -143,11 +162,15 @@ if [[ "${REUSE_CONTAINER}" != "0" ]]; then
         fi
       done
 
+      trap cleanup_container EXIT
+      set +e
       docker exec -i -w /workspace \
         "${EXEC_ENV_ARGS[@]}" \
         "${CONTAINER_NAME}" \
         bash -lc "${COMMAND}"
-      exit 0
+      status=$?
+      set -e
+      exit "${status}"
     fi
   fi
 fi
