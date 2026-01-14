@@ -17,6 +17,7 @@ KEEP_OLD_IMAGE="${REPROD_E2E_DOCKER_KEEP_OLD_IMAGE:-0}"
 REUSE_CONTAINER="${REPROD_E2E_DOCKER_REUSE_CONTAINER:-auto}"
 CONTAINER_NAME="${REPROD_E2E_DOCKER_CONTAINER_NAME:-reprod-e2e-runner}"
 ON_EXIT_ACTION="${REPROD_E2E_DOCKER_ON_EXIT:-stop}"
+PREBUILD_BACKEND="${REPROD_E2E_DOCKER_PREBUILD:-1}"
 
 FORCE_BUILD=0
 MODE="${REPROD_E2E_DOCKER_MODE:-playwright}"
@@ -46,12 +47,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -n "${1-}" ]]; then
-  COMMAND="collect2_path=\$(gcc -print-file-name=collect2 2>/dev/null || true); if [[ -n \"\${collect2_path}\" && -f \"\${collect2_path}\" && ! -s \"\${collect2_path}\" ]]; then apt-get update && apt-get install --reinstall -y gcc-11 g++-11 && rm -rf /var/lib/apt/lists/*; fi; pnpm install --frozen-lockfile && $*"
+  COMMAND="collect2_path=\$(gcc -print-file-name=collect2 2>/dev/null || true); if [[ -n \"\${collect2_path}\" && -f \"\${collect2_path}\" && ! -s \"\${collect2_path}\" ]]; then apt-get update && apt-get install --reinstall -y gcc-11 g++-11 && rm -rf /var/lib/apt/lists/*; fi; pnpm install --frozen-lockfile && $([[ \"${PREBUILD_BACKEND}\" == \"1\" ]] && echo \"cargo build -p reprod-server &&\") $*"
 else
   if [[ "${MODE}" == "webdriver" ]]; then
-    COMMAND="collect2_path=\$(gcc -print-file-name=collect2 2>/dev/null || true); if [[ -n \"\${collect2_path}\" && -f \"\${collect2_path}\" && ! -s \"\${collect2_path}\" ]]; then apt-get update && apt-get install --reinstall -y gcc-11 g++-11 && rm -rf /var/lib/apt/lists/*; fi; pnpm install --frozen-lockfile && pnpm tauri build --debug --no-bundle && echo '[e2e] starting WebDriverIO tests' && { Xvfb :99 -screen 0 1280x720x24 -nolisten tcp & XVFB_PID=\$!; export DISPLAY=:99; pnpm --filter @reprod/e2e test:webdriver; status=\$?; kill \$XVFB_PID; exit \$status; }"
+    COMMAND="collect2_path=\$(gcc -print-file-name=collect2 2>/dev/null || true); if [[ -n \"\${collect2_path}\" && -f \"\${collect2_path}\" && ! -s \"\${collect2_path}\" ]]; then apt-get update && apt-get install --reinstall -y gcc-11 g++-11 && rm -rf /var/lib/apt/lists/*; fi; pnpm install --frozen-lockfile && $([[ \"${PREBUILD_BACKEND}\" == \"1\" ]] && echo \"cargo build -p reprod-server &&\") pnpm tauri build --debug --no-bundle && echo '[e2e] starting WebDriverIO tests' && { Xvfb :99 -screen 0 1280x720x24 -nolisten tcp & XVFB_PID=\$!; export DISPLAY=:99; pnpm --filter @reprod/e2e test:webdriver; status=\$?; kill \$XVFB_PID; exit \$status; }"
   else
-    COMMAND="collect2_path=\$(gcc -print-file-name=collect2 2>/dev/null || true); if [[ -n \"\${collect2_path}\" && -f \"\${collect2_path}\" && ! -s \"\${collect2_path}\" ]]; then apt-get update && apt-get install --reinstall -y gcc-11 g++-11 && rm -rf /var/lib/apt/lists/*; fi; pnpm install --frozen-lockfile && pnpm --filter @reprod/e2e test -- --workers=1"
+    COMMAND="collect2_path=\$(gcc -print-file-name=collect2 2>/dev/null || true); if [[ -n \"\${collect2_path}\" && -f \"\${collect2_path}\" && ! -s \"\${collect2_path}\" ]]; then apt-get update && apt-get install --reinstall -y gcc-11 g++-11 && rm -rf /var/lib/apt/lists/*; fi; pnpm install --frozen-lockfile && $([[ \"${PREBUILD_BACKEND}\" == \"1\" ]] && echo \"cargo build -p reprod-server &&\") pnpm --filter @reprod/e2e test -- --workers=1"
   fi
 fi
 
