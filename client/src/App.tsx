@@ -1,5 +1,4 @@
 import { Allotment } from "allotment";
-import { useEffect, useRef } from "react";
 import "allotment/dist/style.css";
 import { PermissionRequestManager } from "@/components/agent/PermissionRequestManager";
 import { AIPanel } from "@/components/ai-panel";
@@ -16,76 +15,36 @@ import {
 	SettingsModal,
 } from "@/components/modals";
 import { ToastProvider } from "@/components/shared";
-import { TimelineDialog, type TimelineDialogRef } from "@/components/timeline";
+import { TimelineDialog } from "@/components/timeline";
 import { useStore } from "@/core";
-import { setupSocketListeners } from "@/core/init/socketListeners";
-import { useSettingsStore } from "@/core/state/slices/settingsStore";
+import { useACPBootstrap } from "@/hooks/useACPBootstrap";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useProjectSession } from "@/hooks/useProjectSession";
 import { useSettingsPersistence } from "@/hooks/useSettingsPersistence";
 import { useSocketConnection } from "@/hooks/useSocketConnection";
-import { getAcpAdminClient } from "@/services/acpAdminClient";
+import { useSocketListeners } from "@/hooks/useSocketListeners";
+import { useThemeSync } from "@/hooks/useThemeSync";
+import { useTimelineRefSync } from "@/hooks/useTimelineRefSync";
 
 function App(): JSX.Element {
 	const panes = useStore((state) => state.view.panes);
 	const modals = useStore((state) => state.view.modals);
-	const theme = useStore((state) => state.settings.theme);
 	const activeMode = useStore((state) => state.activeMode);
 	const activeAgent = useStore((state) => state.activeAgent);
-	const setActiveMode = useStore((state) => state.setActiveMode);
-	const setActiveAgent = useStore((state) => state.setActiveAgent);
-	const setDetectedAgents = useStore((state) => state.setDetectedAgents);
 	const setAIPanelRef = useStore((state) => state.setAIPanelRef);
-	const setTimelinePanelRef = useStore((state) => state.setTimelinePanelRef);
 	const setModalOpen = useStore((state) => state.setModalOpen);
-	const timelineDialogRef = useRef<TimelineDialogRef | null>(null);
-
-	const { fetchSettings } = useSettingsStore();
 
 	const canUseAssistant = activeMode === "external_agent" ? Boolean(activeAgent) : true;
 
-	// Enable global keyboard shortcuts
+	// Initialization hooks
 	useKeyboardShortcuts();
 	useProjectSession();
 	useSocketConnection();
+	useSocketListeners();
 	useSettingsPersistence();
-
-	// Initialize socket listeners (global events)
-	useEffect(() => {
-		const cleanup = setupSocketListeners();
-		return cleanup;
-	}, []);
-
-	useEffect(() => {
-		document.documentElement.dataset.theme = theme;
-	}, [theme]);
-
-	useEffect(() => {
-		void fetchSettings();
-	}, [fetchSettings]);
-
-	useEffect(() => {
-		setTimelinePanelRef(timelineDialogRef.current);
-		return () => {
-			setTimelinePanelRef(null);
-		};
-	}, [setTimelinePanelRef]);
-
-	useEffect(() => {
-		const bootstrap = async () => {
-			try {
-				const acpAdminClient = getAcpAdminClient();
-				const { config, agents } = await acpAdminClient.bootstrap();
-				setActiveMode((config.active_mode as "api" | "external_agent") ?? "api");
-				setActiveAgent(config.active_agent);
-				setDetectedAgents(agents);
-			} catch (error) {
-				console.error("Failed to bootstrap ACP config", error);
-			}
-		};
-
-		void bootstrap();
-	}, [setActiveAgent, setActiveMode, setDetectedAgents]);
+	useThemeSync();
+	useACPBootstrap();
+	const timelineDialogRef = useTimelineRefSync();
 
 	return (
 		<ToastProvider>
