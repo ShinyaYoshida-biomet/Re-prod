@@ -111,6 +111,11 @@ export async function waitForAnyConsoleOutput(page: Page, options: { timeout?: n
  */
 export async function openTimelineDialog(page: Page) {
 	await page.evaluate(() => {
+		const helper = (window as any).reprodTest as { openTimelineDialog?: () => void } | undefined;
+		if (helper?.openTimelineDialog) {
+			helper.openTimelineDialog();
+			return;
+		}
 		(window as any).openTimelineDialog?.();
 	});
 
@@ -123,6 +128,11 @@ export async function openTimelineDialog(page: Page) {
  */
 export async function openExportDialog(page: Page) {
 	await page.evaluate(() => {
+		const helper = (window as any).reprodTest as { openExportDialog?: () => void } | undefined;
+		if (helper?.openExportDialog) {
+			helper.openExportDialog();
+			return;
+		}
 		(window as any).openExportDialog?.();
 	});
 

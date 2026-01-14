@@ -1,4 +1,5 @@
 import { WEBSOCKET_REQUEST_TIMEOUT } from "@/constants/timeouts";
+import { useStore } from "@/core";
 import { socketService } from "@/services/socket";
 import type { ExtractServerMessage } from "@/types";
 
@@ -10,6 +11,8 @@ type DevWindow = Window & {
 			projectName: string,
 			timeoutMs?: number,
 		) => Promise<ExtractServerMessage<"project_opened">>;
+		openExportDialog: () => void;
+		openTimelineDialog: () => void;
 	};
 };
 
@@ -58,5 +61,14 @@ export const setupDevGlobals = (): void => {
 					reject(new Error(`Timed out waiting for project_opened: ${projectName}`));
 				}, timeoutMs);
 			}),
+		openExportDialog: () => {
+			useStore.getState().setModalOpen("export", true);
+		},
+		openTimelineDialog: () => {
+			const timelineRef = useStore.getState().timelinePanelRef;
+			if (timelineRef) {
+				timelineRef.scrollIntoView();
+			}
+		},
 	};
 };

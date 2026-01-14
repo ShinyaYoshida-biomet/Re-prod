@@ -33,11 +33,8 @@ test.describe("Editor tabs", () => {
 		await expect(childNode.first()).toBeVisible({ timeout: 30000 });
 	};
 
-	const openFixture = async (page: Page, filename: string) => {
-		await ensureFolderExpanded(page, "desktop", 0, "e2e", 1);
-		await ensureFolderExpanded(page, "e2e", 1, "shared", 2);
-		await ensureFolderExpanded(page, "shared", 2, "fixtures", 3);
-		await ensureFolderExpanded(page, "fixtures", 3, filename, 4);
+	const openFixture = async (page: Page, folderName: string, filename: string) => {
+		await ensureFolderExpanded(page, folderName, 0, filename, 1);
 
 		const fixtureNode = fileTreeNodeByLabel(page, filename).first();
 		await expect(fixtureNode).toBeVisible({ timeout: 30000 });
@@ -45,16 +42,16 @@ test.describe("Editor tabs", () => {
 	};
 
 	test("opens multiple files in tabs and handles dirty close", async ({ page }) => {
-		const firstFile = "file-explorer-fixture.R";
-		const secondFile = "tab-switch-fixture.R";
-		const firstFixtureText = "File Explorer fixture loaded";
-		const secondFixtureText = "Tab switch fixture loaded";
+		const firstFile = "alpha.R";
+		const secondFile = "beta.R";
+		const firstFixtureText = "Alpha project loaded";
+		const secondFixtureText = "Beta project loaded";
 
 		await page.goto("/");
 		await waitForAppConnected(page);
 		await expect(page.locator(selectors.fileBrowser)).toBeVisible({ timeout: 30000 });
 
-		await openFixture(page, firstFile);
+		await openFixture(page, "alpha", firstFile);
 		await page.waitForFunction(
 			(expected) => {
 				const monaco = (window as { monaco?: any }).monaco;
@@ -64,7 +61,7 @@ test.describe("Editor tabs", () => {
 			firstFixtureText,
 			{ timeout: 30000 },
 		);
-		await openFixture(page, secondFile);
+		await openFixture(page, "beta", secondFile);
 		await expect(page.locator(selectors.tab).filter({ hasText: secondFile })).toHaveCount(1);
 		await page.waitForFunction(
 			(expected) => {
@@ -80,7 +77,7 @@ test.describe("Editor tabs", () => {
 		await expect(tabs.filter({ hasText: firstFile })).toHaveCount(1);
 		await expect(tabs.filter({ hasText: secondFile })).toHaveCount(1);
 
-		await openFixture(page, firstFile);
+		await openFixture(page, "alpha", firstFile);
 		await expect(tabs.filter({ hasText: firstFile })).toHaveCount(1);
 		await expect(tabs.filter({ hasText: secondFile })).toHaveCount(1);
 
