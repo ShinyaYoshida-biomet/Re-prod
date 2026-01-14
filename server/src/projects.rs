@@ -13,6 +13,7 @@ use reprod_core::{
 };
 use reprod_core::{
     project::{locate_config, ProjectDescriptor, ProjectRecord},
+    config::workspace_root_override,
     Config, ExecutionEvent, RExecutor, RunOutputChunk, RunSummary,
 };
 use std::{
@@ -158,8 +159,12 @@ impl ProjectController {
     }
 
     pub async fn default_runtime(&self) -> Result<Arc<ProjectRuntime>> {
-        let cwd = std::env::current_dir().context("Failed to determine current working directory")?;
-        self.runtime_for_path(&cwd).await
+        let root = match workspace_root_override() {
+            Some(path) => path,
+            None => std::env::current_dir()
+                .context("Failed to determine current working directory")?,
+        };
+        self.runtime_for_path(&root).await
     }
 
     pub async fn runtime_for_path(&self, path: &Path) -> Result<Arc<ProjectRuntime>> {
