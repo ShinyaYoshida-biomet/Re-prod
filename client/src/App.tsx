@@ -1,5 +1,5 @@
 import { Allotment } from "allotment";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import "allotment/dist/style.css";
 import { PermissionRequestManager } from "@/components/agent/PermissionRequestManager";
 import { AIPanel } from "@/components/ai-panel";
@@ -16,7 +16,7 @@ import {
 	SettingsModal,
 } from "@/components/modals";
 import { ToastProvider } from "@/components/shared";
-import { TimelineDialog } from "@/components/timeline";
+import { TimelineDialog, type TimelineDialogRef } from "@/components/timeline";
 import { useStore } from "@/core";
 import { setupSocketListeners } from "@/core/init/socketListeners";
 import { useSettingsStore } from "@/core/state/slices/settingsStore";
@@ -38,6 +38,7 @@ function App(): JSX.Element {
 	const setAIPanelRef = useStore((state) => state.setAIPanelRef);
 	const setTimelinePanelRef = useStore((state) => state.setTimelinePanelRef);
 	const setModalOpen = useStore((state) => state.setModalOpen);
+	const timelineDialogRef = useRef<TimelineDialogRef | null>(null);
 
 	const { fetchSettings } = useSettingsStore();
 
@@ -62,6 +63,13 @@ function App(): JSX.Element {
 	useEffect(() => {
 		void fetchSettings();
 	}, [fetchSettings]);
+
+	useEffect(() => {
+		setTimelinePanelRef(timelineDialogRef.current);
+		return () => {
+			setTimelinePanelRef(null);
+		};
+	}, [setTimelinePanelRef]);
 
 	useEffect(() => {
 		const bootstrap = async () => {
@@ -115,7 +123,7 @@ function App(): JSX.Element {
 				</div>
 				<StatusBar />
 				<ExportDialog open={modals.export} onClose={() => setModalOpen("export", false)} />
-				<TimelineDialog ref={setTimelinePanelRef} />
+				<TimelineDialog ref={timelineDialogRef} />
 				<KeyboardShortcutsModal
 					open={modals.shortcuts}
 					onClose={() => setModalOpen("shortcuts", false)}
