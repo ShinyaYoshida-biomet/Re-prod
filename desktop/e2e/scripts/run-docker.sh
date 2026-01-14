@@ -13,6 +13,7 @@ DOCKER_CPUS="${REPROD_E2E_DOCKER_CPUS:-4}"
 DOCKERFILE_PATH="${ROOT_DIR}/desktop/e2e/Dockerfile"
 DOCKERFILE_LABEL_KEY="reprod.e2e.dockerfile-sha"
 DOCKERFILE_SHA="$(shasum -a 256 "${DOCKERFILE_PATH}" | awk '{print $1}')"
+KEEP_OLD_IMAGE="${REPROD_E2E_DOCKER_KEEP_OLD_IMAGE:-0}"
 
 FORCE_BUILD=0
 MODE="${REPROD_E2E_DOCKER_MODE:-playwright}"
@@ -52,6 +53,7 @@ else
 fi
 
 CURRENT_SHA="$(docker image inspect --format '{{ index .Config.Labels "'"${DOCKERFILE_LABEL_KEY}"'" }}' "${IMAGE_NAME}" 2>/dev/null || true)"
+OLD_IMAGE_ID="$(docker image inspect --format '{{ .Id }}' "${IMAGE_NAME}" 2>/dev/null || true)"
 
 if ! docker image inspect "${IMAGE_NAME}" >/dev/null 2>&1 || [[ "${FORCE_BUILD}" -eq 1 ]] || [[ "${CURRENT_SHA}" != "${DOCKERFILE_SHA}" ]]; then
   docker build \
@@ -59,6 +61,12 @@ if ! docker image inspect "${IMAGE_NAME}" >/dev/null 2>&1 || [[ "${FORCE_BUILD}"
     -f "${DOCKERFILE_PATH}" \
     -t "${IMAGE_NAME}" \
     "${ROOT_DIR}"
+  if [[ "${KEEP_OLD_IMAGE}" != "1" ]]; then
+    NEW_IMAGE_ID="$(docker image inspect --format '{{ .Id }}' "${IMAGE_NAME}" 2>/dev/null || true)"
+    if [[ -n "${OLD_IMAGE_ID}" && -n "${NEW_IMAGE_ID}" && "${OLD_IMAGE_ID}" != "${NEW_IMAGE_ID}" ]]; then
+      docker image rm "${OLD_IMAGE_ID}" >/dev/null 2>&1 || true
+    fi
+  fi
 fi
 
 docker run --rm -i \

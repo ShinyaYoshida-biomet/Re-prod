@@ -265,6 +265,7 @@ Tests complete end-to-end user journeys:
 | `REPROD_E2E_DOCKER_MEMORY` | Docker memory limit for `test:docker` | `6g` |
 | `REPROD_E2E_DOCKER_CPUS` | Docker CPU limit for `test:docker` | `4` |
 | `REPROD_E2E_DOCKER_MODE` | Default Docker command (`playwright` or `webdriver`) | `playwright` |
+| `REPROD_E2E_DOCKER_KEEP_OLD_IMAGE` | Keep the previous `reprod-e2e` image after a rebuild | `0` |
 
 **Example**:
 ```bash
@@ -283,7 +284,7 @@ Customize desktop test execution with these environment variables. For Docker ru
 | `TAURI_DRIVER_PORT` | WebDriver endpoint port | `9515` |
 | `TAURI_DRIVER_PATH` | WebDriver endpoint path | `/` |
 | `TAURI_DRIVER_READY_TIMEOUT` | Driver startup timeout (ms) | `15000` |
-| `TAURI_DRIVER_ARGS` | Additional driver arguments | `--port 9515 --binary <path>` |
+| `TAURI_DRIVER_ARGS` | Additional driver arguments | `--port 9515` |
 | `TAURI_DRIVER_TAURI_OPTIONS` | JSON options for driver | `{}` |
 | `LOG_LEVEL` | Logging verbosity | `info` |
 
