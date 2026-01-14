@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { waitForAppConnected } from "../shared/helpers";
 import { selectors } from "../shared/selectors";
 
 test.describe("Editor tabs", () => {
@@ -50,6 +51,7 @@ test.describe("Editor tabs", () => {
 		const secondFixtureText = "Tab switch fixture loaded";
 
 		await page.goto("/");
+		await waitForAppConnected(page);
 		await expect(page.locator(selectors.fileBrowser)).toBeVisible({ timeout: 30000 });
 
 		await openFixture(page, firstFile);

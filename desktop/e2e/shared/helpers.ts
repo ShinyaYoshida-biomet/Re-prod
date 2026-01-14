@@ -4,6 +4,22 @@
 
 import type { Page } from "@playwright/test";
 
+const DEFAULT_CONNECTED_TIMEOUT_MS = 240000;
+
+/**
+ * Wait for the app backend websocket to be connected.
+ */
+export async function waitForAppConnected(page: Page, options: { timeout?: number } = {}) {
+	const timeout = options.timeout ?? DEFAULT_CONNECTED_TIMEOUT_MS;
+	await page.waitForFunction(
+		() => {
+			const helper = (window as { reprodTest?: { isConnected?: () => boolean } }).reprodTest;
+			return helper?.isConnected?.();
+		},
+		{ timeout },
+	);
+}
+
 /**
  * Wait for element with timeout
  */
@@ -20,6 +36,8 @@ export async function waitForElement(
  * Execute R code in the editor
  */
 export async function executeRCode(page: Page, code: string) {
+	await waitForAppConnected(page);
+
 	// Wait for Monaco Editor to be ready
 	await page.waitForSelector(".monaco-editor", { timeout: 30000 });
 

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { waitForAppConnected } from "../shared/helpers";
 import { selectors } from "../shared/selectors";
 
 test.describe("File Explorer", () => {
@@ -7,6 +8,7 @@ test.describe("File Explorer", () => {
 		const fixtureText = "File Explorer fixture loaded";
 
 		await page.goto("/");
+		await waitForAppConnected(page);
 
 		const fileBrowser = page.locator(selectors.fileBrowser);
 		await expect(fileBrowser).toBeVisible({ timeout: 30000 });
