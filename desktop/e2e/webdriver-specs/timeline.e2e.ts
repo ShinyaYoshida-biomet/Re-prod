@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { closeDialog, openTimelineDialog, setEditorValue } from "./helpers";
 
 const editorSelector = ".monaco-editor textarea";
 const runAllSelector = 'button[title="Run All (Cmd/Ctrl+Shift+Enter)"]';
@@ -12,11 +13,7 @@ describe("Timeline feature", () => {
 		// Execute some R code to create timeline events
 		const editorInput = await browser.$(editorSelector);
 		await editorInput.waitForDisplayed({ timeout: 30000 });
-		await editorInput.click();
-
-		// Clear editor and add code
-		await browser.keys(["Control", "a", "NULL"]);
-		await browser.keys("x <- 1 + 1\nprint(x)");
+		await setEditorValue("x <- 1 + 1\nprint(x)");
 
 		// Run the code
 		const runAllButton = await browser.$(runAllSelector);
@@ -41,14 +38,7 @@ describe("Timeline feature", () => {
 			},
 		);
 
-		// Open timeline dialog via browser.execute
-		await browser.execute(() => {
-			(window as any).openTimelineDialog?.();
-		});
-
-		// Wait for timeline dialog to appear
-		const timelineDialog = await browser.$(timelineDialogSelector);
-		await timelineDialog.waitForDisplayed({ timeout: 10000 });
+		const timelineDialog = await openTimelineDialog();
 
 		// Verify dialog is visible
 		const isDialogVisible = await timelineDialog.isDisplayed();
@@ -65,29 +55,13 @@ describe("Timeline feature", () => {
 		const timelineStats = await browser.$$(timelineStatsSelector);
 		assert.ok(timelineStats.length > 0, "Timeline stats should be displayed");
 
-		// Close dialog with ESC key
-		await browser.keys("Escape");
-
-		// Verify dialog is closed
-		await browser.waitUntil(
-			async () => {
-				return !(await timelineDialog.isDisplayed());
-			},
-			{
-				timeout: 5000,
-				timeoutMsg: "Timeline dialog should close after pressing ESC",
-			},
-		);
+		// Close dialog
+		await closeDialog(timelineDialogSelector, ".timeline-dialog-overlay");
 	});
 
 	it("filters timeline events by type", async () => {
 		// Open timeline dialog
-		await browser.execute(() => {
-			(window as any).openTimelineDialog?.();
-		});
-
-		const timelineDialog = await browser.$(timelineDialogSelector);
-		await timelineDialog.waitForDisplayed({ timeout: 10000 });
+		await openTimelineDialog();
 
 		// Find and click the event type filter dropdown
 		const eventTypeFilter = await browser.$('select[name="event-type"]');
@@ -105,17 +79,12 @@ describe("Timeline feature", () => {
 		}
 
 		// Close dialog
-		await browser.keys("Escape");
+		await closeDialog(timelineDialogSelector, ".timeline-dialog-overlay");
 	});
 
 	it("displays timeline statistics correctly", async () => {
 		// Open timeline dialog
-		await browser.execute(() => {
-			(window as any).openTimelineDialog?.();
-		});
-
-		const timelineDialog = await browser.$(timelineDialogSelector);
-		await timelineDialog.waitForDisplayed({ timeout: 10000 });
+		await openTimelineDialog();
 
 		// Check for stats elements
 		const totalStat = await browser.$(".timeline-stat-value");
@@ -125,16 +94,12 @@ describe("Timeline feature", () => {
 		}
 
 		// Close dialog
-		await browser.keys("Escape");
+		await closeDialog(timelineDialogSelector, ".timeline-dialog-overlay");
 	});
 
 	it("navigates to code location when clicking timeline event", async () => {
 		// Execute code with specific content we can verify
-		const editorInput = await browser.$(editorSelector);
-		await editorInput.click();
-
-		await browser.keys(["Control", "a", "NULL"]);
-		await browser.keys("# Test navigation\ny <- 100");
+		await setEditorValue("# Test navigation\ny <- 100");
 
 		const runAllButton = await browser.$(runAllSelector);
 		await runAllButton.click();
@@ -143,12 +108,7 @@ describe("Timeline feature", () => {
 		await browser.pause(3000);
 
 		// Open timeline
-		await browser.execute(() => {
-			(window as any).openTimelineDialog?.();
-		});
-
-		const timelineDialog = await browser.$(timelineDialogSelector);
-		await timelineDialog.waitForDisplayed({ timeout: 10000 });
+		const timelineDialog = await openTimelineDialog();
 
 		// Click on a timeline event (if clickable events exist)
 		const timelineEvents = await browser.$$(timelineEventSelector);
@@ -160,15 +120,7 @@ describe("Timeline feature", () => {
 				await clickableElement.click();
 
 				// Dialog should close after navigation
-				await browser.waitUntil(
-					async () => {
-						return !(await timelineDialog.isDisplayed());
-					},
-					{
-						timeout: 5000,
-						timeoutMsg: "Timeline dialog should close after clicking event",
-					},
-				);
+				await closeDialog(timelineDialogSelector, ".timeline-dialog-overlay");
 			}
 		}
 	});

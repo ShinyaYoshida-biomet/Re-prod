@@ -2,6 +2,7 @@ import assert from "node:assert";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { closeDialog, openExportDialog, setEditorValue } from "./helpers";
 
 const editorSelector = ".monaco-editor textarea";
 const runAllSelector = 'button[title="Run All (Cmd/Ctrl+Shift+Enter)"]';
@@ -28,10 +29,7 @@ describe("Export functionality", () => {
 		// Execute some R code first
 		const editorInput = await browser.$(editorSelector);
 		await editorInput.waitForDisplayed({ timeout: 30000 });
-		await editorInput.click();
-
-		await browser.keys(["Control", "a", "NULL"]);
-		await browser.keys("# Export test\nresult <- mean(c(1, 2, 3, 4, 5))\nprint(result)");
+		await setEditorValue("# Export test\nresult <- mean(c(1, 2, 3, 4, 5))\nprint(result)");
 
 		const runAllButton = await browser.$(runAllSelector);
 		await runAllButton.waitForClickable({ timeout: 15000 });
@@ -55,14 +53,7 @@ describe("Export functionality", () => {
 			},
 		);
 
-		// Open export dialog via browser.execute
-		await browser.execute(() => {
-			(window as any).openExportDialog?.();
-		});
-
-		// Wait for export dialog to appear
-		const exportDialog = await browser.$(exportDialogSelector);
-		await exportDialog.waitForDisplayed({ timeout: 10000 });
+		const exportDialog = await openExportDialog();
 
 		// Verify dialog is visible
 		const isDialogVisible = await exportDialog.isDisplayed();
@@ -77,29 +68,12 @@ describe("Export functionality", () => {
 		assert.ok(await rmarkdownRadio.isExisting(), "RMarkdown format option should exist");
 		assert.ok(await bothRadio.isExisting(), "Both format option should exist");
 
-		// Close dialog with ESC key
-		await browser.keys("Escape");
-
-		// Verify dialog is closed
-		await browser.waitUntil(
-			async () => {
-				return !(await exportDialog.isDisplayed());
-			},
-			{
-				timeout: 5000,
-				timeoutMsg: "Export dialog should close after pressing ESC",
-			},
-		);
+		// Close dialog
+		await closeDialog(exportDialogSelector, ".export-dialog-overlay");
 	});
 
 	it("allows selecting different export formats", async () => {
-		// Open export dialog
-		await browser.execute(() => {
-			(window as any).openExportDialog?.();
-		});
-
-		const exportDialog = await browser.$(exportDialogSelector);
-		await exportDialog.waitForDisplayed({ timeout: 10000 });
+		await openExportDialog();
 
 		// Test selecting RMarkdown format
 		const rmarkdownRadio = await browser.$('input[value="rmarkdown"]');
@@ -117,17 +91,11 @@ describe("Export functionality", () => {
 		assert.ok(isBundleChecked, "Bundle format should be selectable");
 
 		// Close dialog
-		await browser.keys("Escape");
+		await closeDialog(exportDialogSelector, ".export-dialog-overlay");
 	});
 
 	it("displays export modes (standalone/linked)", async () => {
-		// Open export dialog
-		await browser.execute(() => {
-			(window as any).openExportDialog?.();
-		});
-
-		const exportDialog = await browser.$(exportDialogSelector);
-		await exportDialog.waitForDisplayed({ timeout: 10000 });
+		await openExportDialog();
 
 		// Check for mode selection options
 		const standaloneMode = await browser.$('input[value="standalone"]');
@@ -140,17 +108,11 @@ describe("Export functionality", () => {
 		assert.ok(hasStandaloneMode || hasLinkedMode, "Export modes should be available");
 
 		// Close dialog
-		await browser.keys("Escape");
+		await closeDialog(exportDialogSelector, ".export-dialog-overlay");
 	});
 
 	it("shows export button and validates form", async () => {
-		// Open export dialog
-		await browser.execute(() => {
-			(window as any).openExportDialog?.();
-		});
-
-		const exportDialog = await browser.$(exportDialogSelector);
-		await exportDialog.waitForDisplayed({ timeout: 10000 });
+		await openExportDialog();
 
 		// Find export button
 		const exportBtn = await browser.$(exportButtonSelector);
@@ -169,17 +131,11 @@ describe("Export functionality", () => {
 		}
 
 		// Close dialog
-		await browser.keys("Escape");
+		await closeDialog(exportDialogSelector, ".export-dialog-overlay");
 	});
 
 	it("handles export errors gracefully", async () => {
-		// Open export dialog
-		await browser.execute(() => {
-			(window as any).openExportDialog?.();
-		});
-
-		const exportDialog = await browser.$(exportDialogSelector);
-		await exportDialog.waitForDisplayed({ timeout: 10000 });
+		await openExportDialog();
 
 		// Try to export with invalid/empty path (if path input exists)
 		const pathInput = await browser.$('input[type="text"], input[placeholder*="path"]');
@@ -210,17 +166,11 @@ describe("Export functionality", () => {
 		}
 
 		// Close dialog
-		await browser.keys("Escape");
+		await closeDialog(exportDialogSelector, ".export-dialog-overlay");
 	});
 
 	it("displays RMarkdown-specific options when RMarkdown is selected", async () => {
-		// Open export dialog
-		await browser.execute(() => {
-			(window as any).openExportDialog?.();
-		});
-
-		const exportDialog = await browser.$(exportDialogSelector);
-		await exportDialog.waitForDisplayed({ timeout: 10000 });
+		await openExportDialog();
 
 		// Select RMarkdown format
 		const rmarkdownRadio = await browser.$('input[value="rmarkdown"]');
@@ -236,6 +186,6 @@ describe("Export functionality", () => {
 		assert.ok(rmdOptions.length > 0, "RMarkdown format should show additional options");
 
 		// Close dialog
-		await browser.keys("Escape");
+		await closeDialog(exportDialogSelector, ".export-dialog-overlay");
 	});
 });
