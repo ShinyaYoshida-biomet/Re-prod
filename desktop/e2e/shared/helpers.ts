@@ -153,7 +153,22 @@ export async function openExportDialog(page: Page) {
  */
 export async function closeDialog(page: Page) {
 	await page.keyboard.press("Escape");
-	await page.waitForTimeout(500); // Give time for animation
+	await page.waitForTimeout(200); // Give time for animation
+
+	const overlaySelectors = [
+		".timeline-dialog-overlay",
+		".export-dialog-overlay",
+		".confirm-dialog-overlay",
+	];
+
+	for (const selector of overlaySelectors) {
+		const overlay = page.locator(selector);
+		if (await overlay.isVisible()) {
+			await overlay.click({ force: true });
+		}
+	}
+
+	await page.waitForTimeout(200);
 }
 
 /**
