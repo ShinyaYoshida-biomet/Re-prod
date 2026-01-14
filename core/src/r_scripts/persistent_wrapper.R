@@ -56,9 +56,13 @@ tryCatch({
   cat("REPROD_PNG_ERROR: ", conditionMessage(e), "\n") # stdout mirror
 })
 
+.reprod_source <- "__CODE__"
+
 tryCatch(
   {
-    __CODE__
+    if (nzchar(.reprod_source)) {
+      eval(parse(text = .reprod_source))
+    }
   },
   error = function(e) {
     assign(".reprod_last_error", e, envir = .GlobalEnv)

@@ -54,12 +54,13 @@ impl PlotCapture {
         let plot_height_str = plot_height.to_string();
 
         if persistent {
+            let escaped_code = r_escape(code);
             PERSISTENT_WRAPPER_TEMPLATE
                 .replace("__TEMP_DIR__", &temp_dir_str)
                 .replace("__PLOT_PREFIX__", plot_prefix)
                 .replace("__PLOT_WIDTH__", &plot_width_str)
                 .replace("__PLOT_HEIGHT__", &plot_height_str)
-                .replace("__CODE__", code)
+                .replace("__CODE__", &escaped_code)
                 .replace("__DELIMITER__", PERSISTENT_DELIMITER)
         } else {
             ONESHOT_WRAPPER_TEMPLATE
