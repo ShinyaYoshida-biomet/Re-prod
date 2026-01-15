@@ -44,6 +44,15 @@ if (process.env.TAURI_DRIVER_TAURI_OPTIONS) {
 		console.warn("Unable to parse TAURI_DRIVER_TAURI_OPTIONS", error);
 	}
 }
+const resolvedTauriOptions =
+	"application" in tauriOptions
+		? tauriOptions
+		: {
+				...tauriOptions,
+				application: {
+					path: binaryPath,
+				},
+			};
 
 let driverProcess: ChildProcess | null = null;
 
@@ -137,8 +146,7 @@ export const config: Options.Testrunner = {
 		{
 			browserName: "tauri" as any,
 			"tauri:options": {
-				binaryPath,
-				...tauriOptions,
+				...resolvedTauriOptions,
 			},
 		} as any,
 	],
