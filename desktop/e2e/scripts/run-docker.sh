@@ -15,6 +15,7 @@ DOCKERFILE_LABEL_KEY="reprod.e2e.dockerfile-sha"
 DOCKERFILE_SHA="$(shasum -a 256 "${DOCKERFILE_PATH}" | awk '{print $1}')"
 KEEP_OLD_IMAGE="${REPROD_E2E_DOCKER_KEEP_OLD_IMAGE:-0}"
 REUSE_CONTAINER="${REPROD_E2E_DOCKER_REUSE_CONTAINER:-1}"
+SKIP_BUILD="${REPROD_E2E_DOCKER_SKIP_BUILD:-0}"
 CONTAINER_NAME="${REPROD_E2E_DOCKER_CONTAINER_NAME:-reprod-e2e-runner}"
 PREBUILD_BACKEND="${REPROD_E2E_DOCKER_PREBUILD:-1}"
 
@@ -45,6 +46,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ "${FORCE_BUILD}" -eq 1 ]]; then
+  SKIP_BUILD=0
+fi
+
 PREBUILD_COMMAND=""
 if [[ "${PREBUILD_BACKEND}" == "1" ]]; then
   PREBUILD_COMMAND="cargo build -p reprod-server && "
@@ -64,16 +69,23 @@ fi
 CURRENT_SHA="$(docker image inspect --format '{{ index .Config.Labels "'"${DOCKERFILE_LABEL_KEY}"'" }}' "${IMAGE_NAME}" 2>/dev/null || true)"
 OLD_IMAGE_ID="$(docker image inspect --format '{{ .Id }}' "${IMAGE_NAME}" 2>/dev/null || true)"
 
-if ! docker image inspect "${IMAGE_NAME}" >/dev/null 2>&1 || [[ "${FORCE_BUILD}" -eq 1 ]] || [[ "${CURRENT_SHA}" != "${DOCKERFILE_SHA}" ]]; then
-  docker build \
-    --label "${DOCKERFILE_LABEL_KEY}=${DOCKERFILE_SHA}" \
-    -f "${DOCKERFILE_PATH}" \
-    -t "${IMAGE_NAME}" \
-    "${ROOT_DIR}"
-  if [[ "${KEEP_OLD_IMAGE}" != "1" ]]; then
-    NEW_IMAGE_ID="$(docker image inspect --format '{{ .Id }}' "${IMAGE_NAME}" 2>/dev/null || true)"
-    if [[ -n "${OLD_IMAGE_ID}" && -n "${NEW_IMAGE_ID}" && "${OLD_IMAGE_ID}" != "${NEW_IMAGE_ID}" ]]; then
-      docker image rm "${OLD_IMAGE_ID}" >/dev/null 2>&1 || true
+if [[ "${SKIP_BUILD}" == "1" ]]; then
+  if ! docker image inspect "${IMAGE_NAME}" >/dev/null 2>&1; then
+    echo "[e2e] image ${IMAGE_NAME} not found; unset REPROD_E2E_DOCKER_SKIP_BUILD to build it." >&2
+    exit 1
+  fi
+else
+  if ! docker image inspect "${IMAGE_NAME}" >/dev/null 2>&1 || [[ "${FORCE_BUILD}" -eq 1 ]] || [[ "${CURRENT_SHA}" != "${DOCKERFILE_SHA}" ]]; then
+    docker build \
+      --label "${DOCKERFILE_LABEL_KEY}=${DOCKERFILE_SHA}" \
+      -f "${DOCKERFILE_PATH}" \
+      -t "${IMAGE_NAME}" \
+      "${ROOT_DIR}"
+    if [[ "${KEEP_OLD_IMAGE}" != "1" ]]; then
+      NEW_IMAGE_ID="$(docker image inspect --format '{{ .Id }}' "${IMAGE_NAME}" 2>/dev/null || true)"
+      if [[ -n "${OLD_IMAGE_ID}" && -n "${NEW_IMAGE_ID}" && "${OLD_IMAGE_ID}" != "${NEW_IMAGE_ID}" ]]; then
+        docker image rm "${OLD_IMAGE_ID}" >/dev/null 2>&1 || true
+      fi
     fi
   fi
 fi
