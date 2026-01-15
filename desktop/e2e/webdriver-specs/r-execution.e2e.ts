@@ -7,7 +7,7 @@ describe("R execution flow", () => {
 	it("runs a simple expression and shows the result", async () => {
 		const editorInput = await browser.$(".monaco-editor textarea");
 		await editorInput.waitForDisplayed({ timeout: 30000 });
-		await setEditorValue("1 + 1");
+		await setEditorValue("x <- 1 + 1\nprint(x)");
 		await clickRunAll();
 
 		await browser.waitUntil(
