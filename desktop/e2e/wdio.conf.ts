@@ -44,15 +44,16 @@ if (process.env.TAURI_DRIVER_TAURI_OPTIONS) {
 		console.warn("Unable to parse TAURI_DRIVER_TAURI_OPTIONS", error);
 	}
 }
-const resolvedTauriOptions =
-	"application" in tauriOptions
-		? tauriOptions
-		: {
-				...tauriOptions,
-				application: {
-					path: binaryPath,
-				},
-			};
+const resolvedApplicationPath =
+	typeof (tauriOptions as { application?: unknown }).application === "string"
+		? (tauriOptions as { application: string }).application
+		: typeof (tauriOptions as { application?: { path?: string } }).application?.path === "string"
+			? (tauriOptions as { application: { path: string } }).application.path
+			: binaryPath;
+const resolvedTauriOptions = {
+	...tauriOptions,
+	application: resolvedApplicationPath,
+};
 
 let driverProcess: ChildProcess | null = null;
 
