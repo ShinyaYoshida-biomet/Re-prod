@@ -22,10 +22,6 @@ PREBUILD_BACKEND="${REPROD_E2E_DOCKER_PREBUILD:-1}"
 FORCE_BUILD=0
 MODE="${REPROD_E2E_DOCKER_MODE:-playwright}"
 
-if [[ "${MODE}" == "webdriver" ]]; then
-  export VITE_E2E="${VITE_E2E:-1}"
-fi
-
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --build)
@@ -49,6 +45,10 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ "${MODE}" == "webdriver" ]]; then
+  export VITE_E2E="${VITE_E2E:-1}"
+fi
 
 if [[ "${FORCE_BUILD}" -eq 1 ]]; then
   SKIP_BUILD=0
