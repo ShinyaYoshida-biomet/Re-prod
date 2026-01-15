@@ -145,7 +145,6 @@ export const config: Options.Testrunner = {
 	},
 	capabilities: [
 		{
-			browserName: "tauri" as any,
 			"tauri:options": {
 				...resolvedTauriOptions,
 			},
