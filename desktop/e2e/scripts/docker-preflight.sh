@@ -28,15 +28,22 @@ for candidate in /usr/lib/*/pkgconfig/openssl.pc /usr/lib/pkgconfig/openssl.pc; 
     break
   fi
 done
+glib_pc=""
+for candidate in /usr/lib/*/pkgconfig/glib-2.0.pc /usr/lib/pkgconfig/glib-2.0.pc; do
+  if [[ -e "${candidate}" ]]; then
+    glib_pc="${candidate}"
+    break
+  fi
+done
 
 needs_repair=0
-if [[ ( -n "${collect2_path}" && -f "${collect2_path}" && ! -s "${collect2_path}" ) || -z "${openssl_pc}" || ! -s "${openssl_pc}" ]]; then
+if [[ ( -n "${collect2_path}" && -f "${collect2_path}" && ! -s "${collect2_path}" ) || -z "${openssl_pc}" || ! -s "${openssl_pc}" || -z "${glib_pc}" || ! -s "${glib_pc}" ]]; then
   needs_repair=1
 fi
 
 if [[ "${needs_repair}" == "1" ]]; then
   apt-get update
-  apt-get install --reinstall -y gcc-11 g++-11 libssl-dev pkg-config
+  apt-get install --reinstall -y gcc-11 g++-11 libssl-dev libglib2.0-dev pkg-config
   rm -rf /var/lib/apt/lists/*
 fi
 
