@@ -159,8 +159,17 @@ describe("Export functionality", () => {
 		if (pathInputExists) {
 			await pathInput.click();
 			await browser.keys(["Control", "a", "NULL"]);
-			await pathInput.clearValue();
-			await pathInput.setValue("");
+			// WebDriverIO setValue("") can throw "Missing text parameter" on some drivers.
+			await browser.execute(
+				(input?: HTMLInputElement | null) => {
+					if (!input) return false;
+					input.value = "";
+					input.dispatchEvent(new Event("input", { bubbles: true }));
+					input.dispatchEvent(new Event("change", { bubbles: true }));
+					return true;
+				},
+				await pathInput,
+			);
 
 			// Try to click export button
 			const exportBtn = await exportDialog.$(exportButtonSelector);
@@ -171,7 +180,7 @@ describe("Export functionality", () => {
 				await browser.pause(1000);
 
 				// Check if error message appears or button is disabled
-				const errorMessage = await browser.$('.export-error, .error-message, [role="alert"]');
+				const errorMessage = await exportDialog.$('.export-error, .error-message, [role="alert"]');
 				const hasError = await errorMessage.isExisting();
 
 				// Either error message should appear OR button should remain disabled
