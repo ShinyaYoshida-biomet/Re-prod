@@ -22,6 +22,10 @@ PREBUILD_BACKEND="${REPROD_E2E_DOCKER_PREBUILD:-1}"
 FORCE_BUILD=0
 MODE="${REPROD_E2E_DOCKER_MODE:-playwright}"
 
+if [[ "${MODE}" == "webdriver" ]]; then
+  export VITE_E2E="${VITE_E2E:-1}"
+fi
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --build)
@@ -104,6 +108,7 @@ DOCKER_BASE_ARGS=(
   -e TS_NODE_TRANSPILE_ONLY=1 \
   -e CARGO_TARGET_DIR=/cargo-target \
   -e REPROD_E2E_WEB_PORT \
+  -e VITE_E2E \
   -e VITE_PORT \
   -e LOG_LEVEL \
   -e DEBUG \
@@ -162,7 +167,7 @@ if [[ "${REUSE_CONTAINER}" != "0" ]]; then
     RUNNING_STATE="$(docker container inspect --format '{{ .State.Running }}' "${CONTAINER_NAME}" 2>/dev/null || true)"
     if [[ "${RUNNING_STATE}" == "true" ]]; then
       EXEC_ENV_ARGS=()
-      for var in REPROD_E2E_WEB_PORT VITE_PORT LOG_LEVEL DEBUG TAURI_DRIVER_APP TAURI_DRIVER_ARGS TAURI_DRIVER_HOST TAURI_DRIVER_PATH TAURI_DRIVER_PORT TAURI_DRIVER_READY_TIMEOUT; do
+      for var in REPROD_E2E_WEB_PORT VITE_E2E VITE_PORT LOG_LEVEL DEBUG TAURI_DRIVER_APP TAURI_DRIVER_ARGS TAURI_DRIVER_HOST TAURI_DRIVER_PATH TAURI_DRIVER_PORT TAURI_DRIVER_READY_TIMEOUT; do
         value="${!var-}"
         if [[ -n "${value}" ]]; then
           EXEC_ENV_ARGS+=(-e "${var}=${value}")

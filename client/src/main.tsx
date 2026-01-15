@@ -8,7 +8,9 @@ import { initialiseTheme } from "./theme";
 initialiseTheme();
 initializeCommands();
 
-if (import.meta.env.DEV) {
+const enableDevGlobals = import.meta.env.DEV || import.meta.env.VITE_E2E === "1";
+
+if (enableDevGlobals) {
 	void import("./dev").then(({ setupDevGlobals }) => setupDevGlobals());
 }
 
