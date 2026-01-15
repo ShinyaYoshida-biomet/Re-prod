@@ -134,7 +134,7 @@ async function waitForDriverReady(): Promise<void> {
 
 export const config: Options.Testrunner = {
 	runner: "local",
-	specs: ["./webdriver-specs/**/*.ts"],
+	specs: ["./webdriver-specs/**/*.e2e.ts"],
 	maxInstances: 1,
 	autoCompileOpts: {
 		autoCompile: true,

@@ -179,12 +179,13 @@ describe("Export functionality", () => {
 				// Wait a moment for potential error message
 				await browser.pause(1000);
 
-				// Check if error message appears or button is disabled
-				const errorMessage = await exportDialog.$('.export-error, .error-message, [role="alert"]');
+				// Check if error message appears (dialog may close on failure)
+				const errorMessage = await browser.$('.export-error, .error-message, [role="alert"]');
 				const hasError = await errorMessage.isExisting();
 
-				// Either error message should appear OR button should remain disabled
-				const isButtonDisabled = !(await exportBtn.isEnabled());
+				// If dialog is still open, button should remain disabled or error appears.
+				const dialogStillOpen = await browser.$(exportDialogSelector).isExisting();
+				const isButtonDisabled = dialogStillOpen ? !(await exportBtn.isEnabled()) : false;
 
 				assert.ok(hasError || isButtonDisabled, "Export should handle invalid input gracefully");
 			}
