@@ -35,9 +35,9 @@ export const selectors = {
 	timelineFilterDropdown: ".timeline-filter",
 
 	// Export
-	exportFormatBundleRadio: 'input[value="bundle"]',
 	exportFormatRMarkdownRadio: 'input[value="rmarkdown"]',
+	exportFormatPdfRadio: 'input[value="pdf"]',
 	exportFormatBothRadio: 'input[value="both"]',
-	exportModeStandaloneRadio: 'input[value="standalone"]',
-	exportModeLinkedRadio: 'input[value="linked"]',
+	exportModeTimelineRadio: 'input[value="timeline"]',
+	exportModeDocumentRadio: 'input[value="document"]',
 } as const;

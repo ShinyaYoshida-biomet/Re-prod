@@ -67,11 +67,13 @@ cat("SD:", sd_value, "\\n")`;
 		await expect(exportDialog).toBeVisible();
 
 		// Verify export options are available
-		const bundleRadio = page.locator(selectors.exportFormatBundleRadio);
 		const rmarkdownRadio = page.locator(selectors.exportFormatRMarkdownRadio);
+		const pdfRadio = page.locator(selectors.exportFormatPdfRadio);
+		const bothRadio = page.locator(selectors.exportFormatBothRadio);
 
-		const hasExportOptions = (await bundleRadio.count()) + (await rmarkdownRadio.count());
-		expect(hasExportOptions).toBeGreaterThan(0);
+		const optionCount =
+			(await rmarkdownRadio.count()) + (await pdfRadio.count()) + (await bothRadio.count());
+		expect(optionCount).toBeGreaterThan(0);
 
 		await closeDialog(page);
 

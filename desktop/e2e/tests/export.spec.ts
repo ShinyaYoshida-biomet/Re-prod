@@ -18,13 +18,14 @@ test.describe("Export functionality", () => {
 		await expect(dialog).toBeVisible();
 
 		// Verify export format options exist
-		const bundleRadio = page.locator(selectors.exportFormatBundleRadio);
 		const rmarkdownRadio = page.locator(selectors.exportFormatRMarkdownRadio);
+		const pdfRadio = page.locator(selectors.exportFormatPdfRadio);
+		const bothRadio = page.locator(selectors.exportFormatBothRadio);
 
-		const hasBundleOption = await bundleRadio.count();
-		const hasRMarkdownOption = await rmarkdownRadio.count();
+		const optionCount =
+			(await rmarkdownRadio.count()) + (await pdfRadio.count()) + (await bothRadio.count());
 
-		expect(hasBundleOption + hasRMarkdownOption).toBeGreaterThan(0);
+		expect(optionCount).toBeGreaterThan(0);
 
 		await closeDialog(page);
 	});
@@ -37,13 +38,6 @@ test.describe("Export functionality", () => {
 
 		await openExportDialog(page);
 
-		// Try selecting bundle format
-		const bundleRadio = page.locator(selectors.exportFormatBundleRadio);
-		if ((await bundleRadio.count()) > 0) {
-			await bundleRadio.click();
-			await expect(bundleRadio).toBeChecked();
-		}
-
 		// Try selecting RMarkdown format
 		const rmarkdownRadio = page.locator(selectors.exportFormatRMarkdownRadio);
 		if ((await rmarkdownRadio.count()) > 0) {
@@ -51,10 +45,24 @@ test.describe("Export functionality", () => {
 			await expect(rmarkdownRadio).toBeChecked();
 		}
 
+		// Try selecting PDF format
+		const pdfRadio = page.locator(selectors.exportFormatPdfRadio);
+		if ((await pdfRadio.count()) > 0) {
+			await pdfRadio.click();
+			await expect(pdfRadio).toBeChecked();
+		}
+
+		// Try selecting both formats
+		const bothRadio = page.locator(selectors.exportFormatBothRadio);
+		if ((await bothRadio.count()) > 0) {
+			await bothRadio.click();
+			await expect(bothRadio).toBeChecked();
+		}
+
 		await closeDialog(page);
 	});
 
-	test("allows selecting export mode (standalone vs linked)", async ({ page }) => {
+	test("allows selecting export mode (timeline vs document)", async ({ page }) => {
 		await page.goto("/");
 
 		await executeRCode(page, "y <- 20");
@@ -62,18 +70,18 @@ test.describe("Export functionality", () => {
 
 		await openExportDialog(page);
 
-		// Try selecting standalone mode
-		const standaloneRadio = page.locator(selectors.exportModeStandaloneRadio);
-		if ((await standaloneRadio.count()) > 0) {
-			await standaloneRadio.click();
-			await expect(standaloneRadio).toBeChecked();
+		// Try selecting timeline mode
+		const timelineRadio = page.locator(selectors.exportModeTimelineRadio);
+		if ((await timelineRadio.count()) > 0) {
+			await timelineRadio.click();
+			await expect(timelineRadio).toBeChecked();
 		}
 
-		// Try selecting linked mode
-		const linkedRadio = page.locator(selectors.exportModeLinkedRadio);
-		if ((await linkedRadio.count()) > 0) {
-			await linkedRadio.click();
-			await expect(linkedRadio).toBeChecked();
+		// Try selecting document mode
+		const documentRadio = page.locator(selectors.exportModeDocumentRadio);
+		if ((await documentRadio.count()) > 0) {
+			await documentRadio.click();
+			await expect(documentRadio).toBeChecked();
 		}
 
 		await closeDialog(page);
