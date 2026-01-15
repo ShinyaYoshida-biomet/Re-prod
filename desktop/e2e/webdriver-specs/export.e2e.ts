@@ -2,10 +2,9 @@ import assert from "node:assert";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { closeDialog, openExportDialog, setEditorValue } from "./helpers";
+import { clickRunAll, closeDialog, openExportDialog, setEditorValue } from "./helpers";
 
 const editorSelector = ".monaco-editor textarea";
-const runAllSelector = 'button[title="Run All (Cmd/Ctrl+Shift+Enter)"]';
 const exportDialogSelector = ".export-dialog";
 const exportButtonSelector = '.export-dialog button[type="submit"], .export-dialog .btn-primary';
 const consoleOutputSelector = ".console-stdout";
@@ -31,9 +30,7 @@ describe("Export functionality", () => {
 		await editorInput.waitForDisplayed({ timeout: 30000 });
 		await setEditorValue("# Export test\nresult <- mean(c(1, 2, 3, 4, 5))\nprint(result)");
 
-		const runAllButton = await browser.$(runAllSelector);
-		await runAllButton.waitForClickable({ timeout: 15000 });
-		await runAllButton.click();
+		await clickRunAll();
 
 		// Wait for execution to complete
 		await browser.waitUntil(

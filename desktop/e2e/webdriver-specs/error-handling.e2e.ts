@@ -1,7 +1,7 @@
 import assert from "node:assert";
+import { clickRunAll, setEditorValue } from "./helpers";
 
 const editorSelector = ".monaco-editor textarea";
-const runAllSelector = 'button[title="Run All (Cmd/Ctrl+Shift+Enter)"]';
 const consoleOutputSelector = ".console-output, .console-entry";
 const consoleStderrSelector = ".console-stderr";
 const errorBadgeSelector = ".console-error-badge, .error-badge";
@@ -10,15 +10,10 @@ describe("Error handling scenarios", () => {
 	it("displays R syntax errors in console", async () => {
 		const editorInput = await browser.$(editorSelector);
 		await editorInput.waitForDisplayed({ timeout: 30000 });
-		await editorInput.click();
 
 		// Clear editor and enter invalid R syntax
-		await browser.keys(["Control", "a", "NULL"]);
-		await browser.keys("x <- 1 +"); // Incomplete expression
-
-		const runAllButton = await browser.$(runAllSelector);
-		await runAllButton.waitForClickable({ timeout: 15000 });
-		await runAllButton.click();
+		await setEditorValue("x <- 1 +"); // Incomplete expression
+		await clickRunAll();
 
 		// Wait for error output to appear
 		await browser.waitUntil(
@@ -41,7 +36,7 @@ describe("Error handling scenarios", () => {
 
 		// Verify error appears in console
 		const outputs = await browser.$$(consoleOutputSelector);
-		const errorTexts = await Promise.all(outputs.map(async (output) => await output.getText()));
+		const errorTexts = await outputs.map((output) => output.getText());
 		const hasError = errorTexts.some(
 			(text) => text.toLowerCase().includes("error") || text.toLowerCase().includes("unexpected"),
 		);
@@ -51,18 +46,9 @@ describe("Error handling scenarios", () => {
 
 	it("displays R runtime errors", async () => {
 		const editorInput = await browser.$(editorSelector);
-		await editorInput.click();
-
-		// Clear and enter code that will cause runtime error
-		await browser.keys(["Control", "a", "NULL"]);
-		await browser.keys("x <- c(1, 2, 3)\nprint(x[10])"); // Accessing out-of-bounds index (returns NA, not error)
-
 		// Better runtime error: division by non-numeric
-		await browser.keys(["Control", "a", "NULL"]);
-		await browser.keys('x <- "text"\ny <- x / 2'); // Type error
-
-		const runAllButton = await browser.$(runAllSelector);
-		await runAllButton.click();
+		await setEditorValue('x <- "text"\ny <- x / 2'); // Type error
+		await clickRunAll();
 
 		// Wait for error in console
 		await browser.waitUntil(
@@ -83,7 +69,7 @@ describe("Error handling scenarios", () => {
 		);
 
 		const outputs = await browser.$$(consoleOutputSelector);
-		const errorTexts = await Promise.all(outputs.map(async (output) => await output.getText()));
+		const errorTexts = await outputs.map((output) => output.getText());
 		const hasError = errorTexts.some((text) => text.toLowerCase().includes("error"));
 
 		assert.ok(hasError, "Runtime error should be displayed in console");
@@ -91,14 +77,9 @@ describe("Error handling scenarios", () => {
 
 	it("shows stderr output with error styling", async () => {
 		const editorInput = await browser.$(editorSelector);
-		await editorInput.click();
-
 		// Code that produces error
-		await browser.keys(["Control", "a", "NULL"]);
-		await browser.keys('stop("Intentional error for testing")');
-
-		const runAllButton = await browser.$(runAllSelector);
-		await runAllButton.click();
+		await setEditorValue('stop("Intentional error for testing")');
+		await clickRunAll();
 
 		// Wait for stderr output
 		await browser.waitUntil(
@@ -135,7 +116,7 @@ describe("Error handling scenarios", () => {
 		} else {
 			// Verify error appears somewhere in console
 			const outputs = await browser.$$(consoleOutputSelector);
-			const errorTexts = await Promise.all(outputs.map(async (output) => await output.getText()));
+			const errorTexts = await outputs.map((output) => output.getText());
 			const hasError = errorTexts.some(
 				(text) => text.includes("Intentional error") || text.includes("Error"),
 			);
@@ -146,14 +127,9 @@ describe("Error handling scenarios", () => {
 
 	it("displays error badge for failed executions", async () => {
 		const editorInput = await browser.$(editorSelector);
-		await editorInput.click();
-
 		// Code that will error
-		await browser.keys(["Control", "a", "NULL"]);
-		await browser.keys("undefined_variable");
-
-		const runAllButton = await browser.$(runAllSelector);
-		await runAllButton.click();
+		await setEditorValue("undefined_variable");
+		await clickRunAll();
 
 		// Wait for execution to complete
 		await browser.pause(3000);
@@ -171,7 +147,7 @@ describe("Error handling scenarios", () => {
 
 		// At minimum, verify error appears in console
 		const outputs = await browser.$$(consoleOutputSelector);
-		const errorTexts = await Promise.all(outputs.map(async (output) => await output.getText()));
+		const errorTexts = await outputs.map((output) => output.getText());
 		const hasError = errorTexts.some(
 			(text) => text.toLowerCase().includes("error") || text.toLowerCase().includes("not found"),
 		);
@@ -180,14 +156,8 @@ describe("Error handling scenarios", () => {
 	});
 
 	it("handles undefined function errors", async () => {
-		const editorInput = await browser.$(editorSelector);
-		await editorInput.click();
-
-		await browser.keys(["Control", "a", "NULL"]);
-		await browser.keys("nonexistent_function()");
-
-		const runAllButton = await browser.$(runAllSelector);
-		await runAllButton.click();
+		await setEditorValue("nonexistent_function()");
+		await clickRunAll();
 
 		// Wait for error
 		await browser.waitUntil(
@@ -211,7 +181,7 @@ describe("Error handling scenarios", () => {
 		);
 
 		const outputs = await browser.$$(consoleOutputSelector);
-		const errorTexts = await Promise.all(outputs.map(async (output) => await output.getText()));
+		const errorTexts = await outputs.map((output) => output.getText());
 		const hasError = errorTexts.some(
 			(text) =>
 				text.toLowerCase().includes("could not find function") ||
@@ -223,24 +193,16 @@ describe("Error handling scenarios", () => {
 
 	it("recovers from errors and allows subsequent executions", async () => {
 		const editorInput = await browser.$(editorSelector);
-		await editorInput.click();
-
 		// First: Execute code that errors
-		await browser.keys(["Control", "a", "NULL"]);
-		await browser.keys('stop("Error")');
-
-		const runAllButton = await browser.$(runAllSelector);
-		await runAllButton.click();
+		await setEditorValue('stop("Error")');
+		await clickRunAll();
 
 		// Wait for error
 		await browser.pause(3000);
 
 		// Second: Execute valid code
-		await editorInput.click();
-		await browser.keys(["Control", "a", "NULL"]);
-		await browser.keys("x <- 42\nprint(x)");
-
-		await runAllButton.click();
+		await setEditorValue("x <- 42\nprint(x)");
+		await clickRunAll();
 
 		// Wait for successful output
 		await browser.waitUntil(
@@ -261,7 +223,7 @@ describe("Error handling scenarios", () => {
 		);
 
 		const outputs = await browser.$$(consoleOutputSelector);
-		const outputTexts = await Promise.all(outputs.map(async (output) => await output.getText()));
+		const outputTexts = await outputs.map((output) => output.getText());
 		const hasSuccess = outputTexts.some((text) => text.includes("[1] 42"));
 
 		assert.ok(hasSuccess, "Application should recover from errors and execute new code");
@@ -269,14 +231,9 @@ describe("Error handling scenarios", () => {
 
 	it("handles parse errors gracefully", async () => {
 		const editorInput = await browser.$(editorSelector);
-		await editorInput.click();
-
 		// Completely malformed R code
-		await browser.keys(["Control", "a", "NULL"]);
-		await browser.keys("}{][)( <- %% !!!");
-
-		const runAllButton = await browser.$(runAllSelector);
-		await runAllButton.click();
+		await setEditorValue("}{][)( <- %% !!!");
+		await clickRunAll();
 
 		// Wait for parse error
 		await browser.waitUntil(

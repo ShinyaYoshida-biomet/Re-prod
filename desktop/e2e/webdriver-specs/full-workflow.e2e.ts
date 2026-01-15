@@ -1,8 +1,13 @@
 import assert from "node:assert";
-import { closeDialog, openExportDialog, openTimelineDialog, setEditorValue } from "./helpers";
+import {
+	clickRunAll,
+	closeDialog,
+	openExportDialog,
+	openTimelineDialog,
+	setEditorValue,
+} from "./helpers";
 
 const editorSelector = ".monaco-editor textarea";
-const runAllSelector = 'button[title="Run All (Cmd/Ctrl+Shift+Enter)"]';
 const consoleOutputSelector = ".console-stdout";
 const timelineDialogSelector = ".timeline-dialog";
 const exportDialogSelector = ".export-dialog";
@@ -52,9 +57,7 @@ cat("SD:", sd_value, "\\n")`;
 		await setEditorValue(analysisCode);
 
 		// Execute the code
-		const runAllButton = await browser.$(runAllSelector);
-		await runAllButton.waitForClickable({ timeout: 15000 });
-		await runAllButton.click();
+		await clickRunAll();
 
 		// ========================================
 		// STEP 3: Verify Console Output
@@ -77,7 +80,7 @@ cat("SD:", sd_value, "\\n")`;
 		);
 
 		const outputs = await browser.$$(consoleOutputSelector);
-		const outputTexts = await Promise.all(outputs.map(async (output) => await output.getText()));
+		const outputTexts = await outputs.map((output) => output.getText());
 		const hasOutput = outputTexts.some(
 			(text) => text.includes("Mean:") || text.includes("Median:"),
 		);
@@ -128,7 +131,7 @@ cat("SD:", sd_value, "\\n")`;
 result <- sum(data)
 cat("Total sum:", result, "\\n")`);
 
-		await runAllButton.click();
+		await clickRunAll();
 
 		// Wait for new execution
 		await browser.waitUntil(
@@ -154,9 +157,7 @@ cat("Total sum:", result, "\\n")`);
 		await openTimelineDialog();
 
 		const updatedEventCodes = await browser.$$(".timeline-event-code");
-		const updatedCodeTexts = await Promise.all(
-			updatedEventCodes.map(async (event) => await event.getText()),
-		);
+		const updatedCodeTexts = await updatedEventCodes.map((event) => event.getText());
 		const hasResultEvent = updatedCodeTexts.some((text) => text.includes("result <- sum(data)"));
 		assert.ok(hasResultEvent, "Timeline should include the latest execution");
 
@@ -168,9 +169,7 @@ cat("Total sum:", result, "\\n")`);
 		// ========================================
 		// Verify app is still responsive
 		const finalOutputs = await browser.$$(consoleOutputSelector);
-		const finalTexts = await Promise.all(
-			finalOutputs.map(async (output) => await output.getText()),
-		);
+		const finalTexts = await finalOutputs.map((output) => output.getText());
 
 		const hasBothOutputs =
 			finalTexts.some((text) => text.includes("Mean:")) &&
@@ -191,8 +190,7 @@ cat("Total sum:", result, "\\n")`);
 		// Execute code with error
 		await setEditorValue("x <- 1\ny <- x / 0  # Division by zero warning");
 
-		const runAllButton = await browser.$(runAllSelector);
-		await runAllButton.click();
+		await clickRunAll();
 
 		// Wait for execution (may have warning)
 		await browser.pause(3000);
@@ -200,7 +198,7 @@ cat("Total sum:", result, "\\n")`);
 		// Continue with valid code
 		await setEditorValue("z <- 10\nprint(z * 2)");
 
-		await runAllButton.click();
+		await clickRunAll();
 
 		// Verify recovery
 		await browser.waitUntil(
@@ -235,14 +233,13 @@ cat("Total sum:", result, "\\n")`);
 		// Execute first block
 		await setEditorValue("# Block 1\na <- 5");
 
-		const runAllButton = await browser.$(runAllSelector);
-		await runAllButton.click();
+		await clickRunAll();
 		await browser.pause(2000);
 
 		// Execute second block
 		await setEditorValue("# Block 2\nb <- a * 2\nprint(b)");
 
-		await runAllButton.click();
+		await clickRunAll();
 
 		// Wait for final output
 		await browser.waitUntil(

@@ -93,3 +93,20 @@ export async function setEditorValue(code: string): Promise<void> {
 		{ timeout: 30000, timeoutMsg: "Monaco editor not available" },
 	);
 }
+
+export async function clickRunAll(): Promise<void> {
+	const runAllSelector = 'button[title="Run All (Cmd/Ctrl+Shift+Enter)"]';
+
+	await browser.waitUntil(
+		async () =>
+			browser.execute((selector) => {
+				const button = document.querySelector(selector) as HTMLButtonElement | null;
+				if (!button || button.disabled) {
+					return false;
+				}
+				button.click();
+				return true;
+			}, runAllSelector),
+		{ timeout: 15000, timeoutMsg: "Run All button not available" },
+	);
+}

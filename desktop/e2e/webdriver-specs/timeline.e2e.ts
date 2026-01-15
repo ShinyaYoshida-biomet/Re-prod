@@ -1,8 +1,7 @@
 import assert from "node:assert";
-import { closeDialog, openTimelineDialog, setEditorValue } from "./helpers";
+import { clickRunAll, closeDialog, openTimelineDialog, setEditorValue } from "./helpers";
 
 const editorSelector = ".monaco-editor textarea";
-const runAllSelector = 'button[title="Run All (Cmd/Ctrl+Shift+Enter)"]';
 const timelineDialogSelector = ".timeline-dialog";
 const timelineEventSelector = ".timeline-event";
 const timelineStatsSelector = ".timeline-stat";
@@ -16,9 +15,7 @@ describe("Timeline feature", () => {
 		await setEditorValue("x <- 1 + 1\nprint(x)");
 
 		// Run the code
-		const runAllButton = await browser.$(runAllSelector);
-		await runAllButton.waitForClickable({ timeout: 15000 });
-		await runAllButton.click();
+		await clickRunAll();
 
 		// Wait for execution to complete
 		await browser.waitUntil(
@@ -101,8 +98,7 @@ describe("Timeline feature", () => {
 		// Execute code with specific content we can verify
 		await setEditorValue("# Test navigation\ny <- 100");
 
-		const runAllButton = await browser.$(runAllSelector);
-		await runAllButton.click();
+		await clickRunAll();
 
 		// Wait for execution
 		await browser.pause(3000);
