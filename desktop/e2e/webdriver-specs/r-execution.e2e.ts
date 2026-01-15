@@ -12,14 +12,12 @@ describe("R execution flow", () => {
 
 		await browser.waitUntil(
 			async () => {
-				const outputs = await browser.$$(consoleOutputSelector);
-				for (const output of outputs) {
-					const text = await output.getText();
-					if (text.includes("[1] 2")) {
-						return true;
-					}
-				}
-				return false;
+				const texts = await browser.execute(() =>
+					Array.from(document.querySelectorAll(".console-stdout"), (element) =>
+						(element.textContent ?? "").trim(),
+					),
+				);
+				return texts.some((text) => text.includes("[1] 2"));
 			},
 			{
 				timeout: 30000,
@@ -27,10 +25,14 @@ describe("R execution flow", () => {
 			},
 		);
 
-		const outputs = await browser.$$(consoleOutputSelector);
-		const found = await outputs.map((output) =>
-			output.getText().then((text) => text.includes("[1] 2")),
+		const outputs = await browser.execute(() =>
+			Array.from(document.querySelectorAll(".console-stdout"), (element) =>
+				(element.textContent ?? "").trim(),
+			),
 		);
-		assert.ok(found.some(Boolean), "Console should show the result [1] 2");
+		assert.ok(
+			outputs.some((text) => text.includes("[1] 2")),
+			"Console should show the result [1] 2",
+		);
 	});
 });

@@ -147,19 +147,23 @@ describe("Export functionality", () => {
 	});
 
 	it("handles export errors gracefully", async () => {
-		await openExportDialog();
+		const exportDialog = await openExportDialog();
 
 		// Try to export with invalid/empty path (if path input exists)
-		const pathInput = await browser.$('input[type="text"], input[placeholder*="path"]');
+		let pathInput = await exportDialog.$("#outputPath");
+		if (!(await pathInput.isExisting())) {
+			pathInput = await exportDialog.$('input[type="text"], input[placeholder*="path"]');
+		}
 		const pathInputExists = await pathInput.isExisting();
 
 		if (pathInputExists) {
 			await pathInput.click();
 			await browser.keys(["Control", "a", "NULL"]);
-			await browser.keys(""); // Clear input
+			await pathInput.clearValue();
+			await pathInput.setValue("");
 
 			// Try to click export button
-			const exportBtn = await browser.$(exportButtonSelector);
+			const exportBtn = await exportDialog.$(exportButtonSelector);
 			if (await exportBtn.isExisting()) {
 				await exportBtn.click();
 

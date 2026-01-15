@@ -55,25 +55,41 @@ export async function openExportDialog(): Promise<WebdriverIO.Element> {
 }
 
 export async function closeDialog(dialogSelector: string, overlaySelector: string): Promise<void> {
-	await browser.keys("Escape");
-
 	const dialog = await browser.$(dialogSelector);
-	if (await dialog.isExisting()) {
-		if (await dialog.isDisplayed()) {
-			const overlay = await browser.$(overlaySelector);
-			if (await overlay.isExisting()) {
-				await overlay.click();
-			}
-		}
+	if (!(await dialog.isExisting())) {
+		return;
 	}
 
-	await browser.waitUntil(
-		async () => {
-			const exists = await dialog.isExisting();
-			return !exists || !(await dialog.isDisplayed());
+	await browser.keys("Escape");
+	await browser.execute(
+		(selectors) => {
+			const dialogEl = document.querySelector(selectors.dialogSelector);
+			if (!dialogEl) {
+				return false;
+			}
+			const closeButton =
+				dialogEl.querySelector('[aria-label="Close dialog"]') ||
+				dialogEl.querySelector(".btn.btn-icon");
+			const overlay = document.querySelector(selectors.overlaySelector);
+
+			if (closeButton instanceof HTMLElement) {
+				closeButton.click();
+				return true;
+			}
+			if (overlay instanceof HTMLElement) {
+				overlay.click();
+				return true;
+			}
+			return false;
 		},
-		{ timeout: 5000, timeoutMsg: "Dialog should close" },
+		{ dialogSelector, overlaySelector },
 	);
+
+	await dialog.waitForDisplayed({
+		reverse: true,
+		timeout: 5000,
+		timeoutMsg: "Dialog should close",
+	});
 }
 
 export async function setEditorValue(code: string): Promise<void> {
