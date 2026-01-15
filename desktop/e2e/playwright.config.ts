@@ -58,8 +58,8 @@ const projects =
 		: [projectMap.chromium];
 
 if (!process.env.CI && !isDocker) {
-	throw new Error(
-		"E2E tests are disabled on local machines. Use the Docker setup in desktop/e2e/Dockerfile.",
+	console.warn(
+		"⚠️  Running E2E locally. Use Docker (pnpm --filter @reprod/e2e test:docker) for consistent results.",
 	);
 }
 

@@ -148,6 +148,39 @@ pnpm --filter @reprod/e2e test:docker -- LOG_LEVEL=debug pnpm tauri build --debu
 pnpm --filter @reprod/e2e test:docker -- pnpm tauri build --debug && xvfb-run --auto-servernum pnpm --filter @reprod/e2e test:webdriver:debug
 ```
 
+### Visual Debugging on macOS/Windows (Native Headed Mode)
+
+For visual debugging where you need to see the browser, run Playwright natively on your host machine instead of Docker.
+
+**macOS:**
+
+```bash
+# Run all tests in headed mode (browser visible)
+pnpm --filter @reprod/e2e test:playwright:headed
+
+# Run specific test file
+pnpm --filter @reprod/e2e test:playwright:headed -- tests/r-execution.spec.ts
+
+# Run with Playwright UI mode (interactive)
+pnpm --filter @reprod/e2e test:playwright:ui
+```
+
+**Windows:**
+
+```bash
+# Run all tests in headed mode
+pnpm --filter @reprod/e2e test:playwright:headed
+
+# Run specific test file
+pnpm --filter @reprod/e2e test:playwright:headed -- tests/r-execution.spec.ts
+```
+
+**Notes:**
+
+- A warning will be shown reminding you to use Docker for consistent results
+- macOS automatically uses headed mode with Crashpad disabled for stability
+- For CI/consistent results, always use Docker: `pnpm --filter @reprod/e2e test:docker`
+
 ## Test Structure
 
 ```
