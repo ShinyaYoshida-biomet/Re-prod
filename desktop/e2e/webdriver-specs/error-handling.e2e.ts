@@ -104,24 +104,27 @@ describe("Error handling scenarios", () => {
 		);
 
 		// Verify stderr is styled appropriately
-		const stderrElements = await browser.$$(consoleStderrSelector);
-		if (stderrElements.length > 0) {
-			const firstStderr = stderrElements[0];
-			const text = await firstStderr.getText();
-
-			assert.ok(
-				text.toLowerCase().includes("error") || text.includes("Intentional error"),
-				"Stderr should contain error message",
+		const stderrTexts = await browser.execute((selector) => {
+			return Array.from(document.querySelectorAll(selector)).map(
+				(element) => element.textContent ?? "",
 			);
-		} else {
+		}, consoleStderrSelector);
+		const hasStderrError = stderrTexts.some(
+			(text) => text.toLowerCase().includes("error") || text.includes("Intentional error"),
+		);
+
+		if (!hasStderrError) {
 			// Verify error appears somewhere in console
-			const outputs = await browser.$$(consoleOutputSelector);
-			const errorTexts = await outputs.map((output) => output.getText());
-			const hasError = errorTexts.some(
+			const outputTexts = await browser.execute((selector) => {
+				return Array.from(document.querySelectorAll(selector)).map(
+					(element) => element.textContent ?? "",
+				);
+			}, consoleOutputSelector);
+			const hasOutputError = outputTexts.some(
 				(text) => text.includes("Intentional error") || text.includes("Error"),
 			);
 
-			assert.ok(hasError, "Error message should appear in console output");
+			assert.ok(hasOutputError, "Error message should appear in console output");
 		}
 	});
 
