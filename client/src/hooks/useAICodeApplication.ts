@@ -56,7 +56,6 @@ export function useAICodeApplication(postAssistantMessage: PostAssistantMessage)
 								unifiedDiff: "",
 								baseHash,
 								expectedSha: null,
-								status: "pending",
 								createdAt: Date.now(),
 							};
 

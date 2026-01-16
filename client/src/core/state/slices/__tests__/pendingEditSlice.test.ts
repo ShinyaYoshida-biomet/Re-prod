@@ -15,7 +15,6 @@ const makeEdit = (filePath: string): PendingEdit => ({
 	unifiedDiff: "",
 	baseHash: "",
 	expectedSha: null,
-	status: "pending",
 	createdAt: 0,
 });
 
@@ -34,14 +33,11 @@ describe("pendingEditSlice", () => {
 		expect(store.getState().pendingEdits["foo/bar.R"]?.filePath).toBe("foo/bar.R");
 	});
 
-	it("normalizes file paths on update and clear", () => {
+	it("normalizes file paths on clear", () => {
 		const store = createTestStore();
 		const edit = makeEdit("foo/bar.R");
 
 		store.getState().registerPendingEdit(edit);
-		store.getState().updatePendingEditStatus("/foo/bar.R", "accepted");
-		expect(store.getState().pendingEdits["foo/bar.R"]?.status).toBe("accepted");
-
 		store.getState().clearPendingEdit("/foo/bar.R");
 		expect(store.getState().pendingEdits["foo/bar.R"]).toBeUndefined();
 	});

@@ -275,7 +275,6 @@ export function useAIConversation() {
 							unifiedDiff: String(editPayload.unified_diff ?? ""),
 							baseHash: String(editPayload.base_sha256 ?? ""),
 							expectedSha: editPayload.expected_sha256 ?? null,
-							status: "pending",
 							createdAt: Date.now(),
 						};
 

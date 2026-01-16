@@ -74,7 +74,6 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	);
 	const pendingEdit = useStore((state) => state.pendingEdits[normalizedEditorPath]);
 	const clearPendingEdit = useStore((state) => state.clearPendingEdit);
-	const updatePendingEditStatus = useStore((state) => state.updatePendingEditStatus);
 	const updatePendingEditReview = useStore((state) => state.updatePendingEditReview);
 	const setPendingEditReviewMap = useStore((state) => state.setPendingEditReviewMap);
 	const editorMethodsRef = useRef<EditorRef | null>(null);
@@ -257,7 +256,6 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 				await updatePendingEdit(pendingEdit, resolvedContent);
 			}
 			await acceptPendingEdit(pendingEdit);
-			updatePendingEditStatus(pendingEdit.filePath, "accepted");
 			clearPendingEdit(pendingEdit.filePath);
 			setPendingNotice(null);
 		} catch (error) {
@@ -269,14 +267,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 					: message,
 			});
 		}
-	}, [
-		clearPendingEdit,
-		editorContent,
-		pendingEdit,
-		reviewedContent,
-		updatePendingEdit,
-		updatePendingEditStatus,
-	]);
+	}, [clearPendingEdit, editorContent, pendingEdit, reviewedContent, updatePendingEdit]);
 
 	const handlePendingReject = useCallback(async () => {
 		if (!pendingEdit) return;
@@ -285,7 +276,6 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 			if (activeBufferId) {
 				updateBuffer(activeBufferId, { content: pendingEdit.oldContent, isDirty: true });
 			}
-			updatePendingEditStatus(pendingEdit.filePath, "rejected");
 			clearPendingEdit(pendingEdit.filePath);
 			setPendingNotice(null);
 		} catch (error) {
@@ -297,7 +287,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 					: message,
 			});
 		}
-	}, [activeBufferId, clearPendingEdit, pendingEdit, updateBuffer, updatePendingEditStatus]);
+	}, [activeBufferId, clearPendingEdit, pendingEdit, updateBuffer]);
 
 	const navigateToLine = useCallback((lineNumber: number): void => {
 		const monacoEditor = monacoEditorRef.current;

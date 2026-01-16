@@ -3,14 +3,12 @@ import type {
 	PendingEdit,
 	PendingEditReviewMap,
 	PendingEditReviewStatus,
-	PendingEditStatus,
 } from "@/types/pendingEdit";
 import { normalizeRelativePath } from "@/core/pathUtils";
 
 export interface PendingEditState {
 	pendingEdits: Record<string, PendingEdit>;
 	registerPendingEdit: (edit: PendingEdit) => boolean;
-	updatePendingEditStatus: (filePath: string, status: PendingEditStatus) => void;
 	updatePendingEditReview: (
 		filePath: string,
 		changeId: string,
@@ -40,22 +38,6 @@ export const createPendingEditSlice: StateCreator<PendingEditState> = (set, get)
 			},
 		});
 		return true;
-	},
-	updatePendingEditStatus: (filePath, status) => {
-		const normalizedPath = normalizeRelativePath(filePath, { keepRootEmpty: true });
-		set((state) => {
-			const existing = state.pendingEdits[normalizedPath];
-			if (!existing) return state;
-			return {
-				pendingEdits: {
-					...state.pendingEdits,
-					[normalizedPath]: {
-						...existing,
-						status,
-					},
-				},
-			};
-		});
 	},
 	updatePendingEditReview: (filePath, changeId, status) => {
 		const normalizedPath = normalizeRelativePath(filePath, { keepRootEmpty: true });
