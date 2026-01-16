@@ -450,6 +450,8 @@ pub(super) enum ArtifactKind {
     FileRead,
     FileWrite,
     Command,
+    /// Reserved for future test result artifact tracking.
+    #[allow(dead_code)]
     TestResult,
 }
 

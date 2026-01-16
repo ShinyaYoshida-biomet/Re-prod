@@ -25,6 +25,8 @@ impl StreamBuffer {
     }
 
     /// Finalize a run and return aggregated stdout/stderr.
+    /// Reserved for future use when implementing complete run lifecycle management.
+    #[allow(dead_code)]
     pub fn finalize(&mut self, run_id: &str) -> (String, Option<String>) {
         let chunks = self.chunks.remove(run_id).unwrap_or_default();
         let mut stdout = String::new();
