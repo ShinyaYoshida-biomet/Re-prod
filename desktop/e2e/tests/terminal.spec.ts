@@ -25,7 +25,7 @@ const focusTerminalInput = async (page: any) => {
 };
 
 test.describe("Terminal integration", () => {
-	test(TEST_CASES.terminal[0], async ({ page }) => {
+	test(TEST_CASES["terminal"][0], async ({ page }) => {
 		// Navigate to the app
 		await page.goto("/");
 
@@ -44,7 +44,7 @@ test.describe("Terminal integration", () => {
 		expect(isVisible).toBeTruthy();
 	});
 
-	test(TEST_CASES.terminal[1], async ({ page }) => {
+	test(TEST_CASES["terminal"][1], async ({ page }) => {
 		await page.goto("/");
 
 		const editor = page.locator(selectors.editor);
@@ -69,7 +69,7 @@ test.describe("Terminal integration", () => {
 		expect(outputText).toContain("Hello from terminal");
 	});
 
-	test(TEST_CASES.terminal[2], async ({ page }) => {
+	test(TEST_CASES["terminal"][2], async ({ page }) => {
 		await page.goto("/");
 
 		const editor = page.locator(selectors.editor);
@@ -108,7 +108,7 @@ test.describe("Terminal integration", () => {
 		expect(inputValue2).toContain("first command");
 	});
 
-	test(TEST_CASES.terminal[3], async ({ page }) => {
+	test(TEST_CASES["terminal"][3], async ({ page }) => {
 		await page.goto("/");
 
 		const editor = page.locator(selectors.editor);
@@ -145,7 +145,7 @@ test.describe("Terminal integration", () => {
 		expect(isVisible).toBeTruthy();
 	});
 
-	test(TEST_CASES.terminal[4], async ({ page }) => {
+	test(TEST_CASES["terminal"][4], async ({ page }) => {
 		await page.goto("/");
 
 		const editor = page.locator(selectors.editor);
@@ -171,7 +171,7 @@ test.describe("Terminal integration", () => {
 		expect(tabCount).toBeGreaterThanOrEqual(2);
 	});
 
-	test(TEST_CASES.terminal[5], async ({ page }) => {
+	test(TEST_CASES["terminal"][5], async ({ page }) => {
 		await page.goto("/");
 
 		const editor = page.locator(selectors.editor);

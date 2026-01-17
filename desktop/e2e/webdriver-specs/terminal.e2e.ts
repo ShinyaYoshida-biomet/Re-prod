@@ -75,7 +75,7 @@ const getTerminalOutput = async () =>
 const countMatches = (value: string, needle: string) => value.split(needle).length - 1;
 
 describe("Terminal integration", () => {
-	it(TEST_CASES.terminal[0], async () => {
+	it(TEST_CASES["terminal"][0], async () => {
 		const editorInput = await browser.$(selectors.editor);
 		await editorInput.waitForDisplayed({ timeout: 30000 });
 
@@ -94,7 +94,7 @@ describe("Terminal integration", () => {
 		assert.ok(isVisible, "Terminal pane should be visible");
 	});
 
-	it(TEST_CASES.terminal[1], async () => {
+	it(TEST_CASES["terminal"][1], async () => {
 		const editorInput = await browser.$(selectors.editor);
 		await editorInput.waitForDisplayed({ timeout: 30000 });
 
@@ -119,7 +119,7 @@ describe("Terminal integration", () => {
 		);
 	});
 
-	it(TEST_CASES.terminal[2], async () => {
+	it(TEST_CASES["terminal"][2], async () => {
 		const editorInput = await browser.$(selectors.editor);
 		await editorInput.waitForDisplayed({ timeout: 30000 });
 
@@ -153,7 +153,7 @@ describe("Terminal integration", () => {
 		});
 	});
 
-	it(TEST_CASES.terminal[3], async () => {
+	it(TEST_CASES["terminal"][3], async () => {
 		const editorInput = await browser.$(selectors.editor);
 		await editorInput.waitForDisplayed({ timeout: 30000 });
 
@@ -180,7 +180,7 @@ describe("Terminal integration", () => {
 		});
 	});
 
-	it(TEST_CASES.terminal[4], async () => {
+	it(TEST_CASES["terminal"][4], async () => {
 		const editorInput = await browser.$(selectors.editor);
 		await editorInput.waitForDisplayed({ timeout: 30000 });
 
@@ -203,7 +203,7 @@ describe("Terminal integration", () => {
 		assert.ok(tabCount >= 2, "Should have at least 2 terminal tabs");
 	});
 
-	it(TEST_CASES.terminal[5], async () => {
+	it(TEST_CASES["terminal"][5], async () => {
 		const editorInput = await browser.$(selectors.editor);
 		await editorInput.waitForDisplayed({ timeout: 30000 });
 
