@@ -101,11 +101,11 @@ export function parseRmdCells(content: string): Cell[] {
 		else if (inChunk && line.match(/^```\s*$/)) {
 			const cellLines = lines.slice(chunkStart, i + 1);
 			// Remove the chunk markers
-			const code = cellLines.slice(1, -1).join("\n");
+			const code = cellLines.slice(0, -1).join("\n");
 
 			cells.push({
 				startLine: chunkStart + 1,
-				endLine: i,
+				endLine: i + 1,
 				code,
 				type: "chunk",
 				label: chunkLabel,

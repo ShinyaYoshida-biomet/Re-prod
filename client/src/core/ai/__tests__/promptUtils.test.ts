@@ -155,7 +155,7 @@ describe("promptUtils", () => {
 		});
 
 		it("should truncate output to last 20 lines", () => {
-			const manyLines = Array.from({ length: 30 }, (_, i) => `line ${i + 1}`).join("\n");
+			const manyLines = Array.from({ length: 30 }, (_, i) => `output line ${i + 1}`).join("\n");
 			const consoleHistory: ExecutionLogEntry[] = [
 				{
 					id: "1",
@@ -173,12 +173,12 @@ describe("promptUtils", () => {
 			const prompt = buildPromptWithContext("test.R", "x <- 1", "Question", consoleHistory);
 
 			// Should include recent lines
-			expect(prompt).toContain("line 30");
-			expect(prompt).toContain("line 20");
-			expect(prompt).toContain("line 11");
+			expect(prompt).toContain("output line 30");
+			expect(prompt).toContain("output line 20");
+			expect(prompt).toContain("output line 11");
 			// Should not include early lines
-			expect(prompt).not.toContain("line 1");
-			expect(prompt).not.toContain("line 10");
+			expect(prompt).not.toContain("output line 1\n");
+			expect(prompt).not.toContain("output line 10\n");
 		});
 
 		it("should include stderr in console context", () => {
@@ -295,53 +295,42 @@ describe("promptUtils", () => {
 	describe("createRequestId", () => {
 		it("should use crypto.randomUUID when available", () => {
 			const mockUUID = "123e4567-e89b-12d3-a456-426614174000";
-			const originalCrypto = globalThis.crypto;
 
-			// @ts-expect-error - Mocking crypto
-			globalThis.crypto = {
+			vi.stubGlobal("crypto", {
 				randomUUID: vi.fn().mockReturnValue(mockUUID),
-			};
+			});
 
 			const id = createRequestId();
 
 			expect(id).toBe(mockUUID);
 
-			globalThis.crypto = originalCrypto;
+			vi.unstubAllGlobals();
 		});
 
 		it("should fall back to timestamp-based ID when crypto.randomUUID is unavailable", () => {
-			const originalCrypto = globalThis.crypto;
-
-			// @ts-expect-error - Removing crypto
-			globalThis.crypto = undefined;
+			vi.stubGlobal("crypto", undefined);
 
 			const id = createRequestId();
 
 			expect(id).toMatch(/^req-\d+-[a-f0-9]+$/);
 
-			globalThis.crypto = originalCrypto;
+			vi.unstubAllGlobals();
 		});
 
 		it("should generate unique IDs on each call (fallback)", () => {
-			const originalCrypto = globalThis.crypto;
-
-			// @ts-expect-error - Removing crypto
-			globalThis.crypto = undefined;
+			vi.stubGlobal("crypto", undefined);
 
 			const id1 = createRequestId();
 			const id2 = createRequestId();
 
 			expect(id1).not.toBe(id2);
 
-			globalThis.crypto = originalCrypto;
+			vi.unstubAllGlobals();
 		});
 
 		it("should include timestamp in fallback ID", () => {
-			const originalCrypto = globalThis.crypto;
 			const now = Date.now();
-
-			// @ts-expect-error - Removing crypto
-			globalThis.crypto = undefined;
+			vi.stubGlobal("crypto", undefined);
 
 			const id = createRequestId();
 			const timestampPart = id.split("-")[1];
@@ -350,7 +339,7 @@ describe("promptUtils", () => {
 			expect(timestamp).toBeGreaterThanOrEqual(now);
 			expect(timestamp).toBeLessThanOrEqual(Date.now());
 
-			globalThis.crypto = originalCrypto;
+			vi.unstubAllGlobals();
 		});
 	});
 });
