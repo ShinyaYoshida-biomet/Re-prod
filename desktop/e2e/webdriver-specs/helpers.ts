@@ -165,6 +165,29 @@ export async function clickRunAll(): Promise<void> {
 	);
 }
 
+export async function waitForConsoleOutput(expected: string, timeoutMs = 60000): Promise<string[]> {
+	await browser.waitUntil(
+		async () => {
+			const texts = await browser.execute(() =>
+				Array.from(document.querySelectorAll(".console-stdout"), (element) =>
+					(element.textContent ?? "").trim(),
+				),
+			);
+			return texts.some((text) => text.includes(expected));
+		},
+		{
+			timeout: timeoutMs,
+			timeoutMsg: `Expected R execution output to include ${expected}`,
+		},
+	);
+
+	return (await browser.execute(() =>
+		Array.from(document.querySelectorAll(".console-stdout"), (element) =>
+			(element.textContent ?? "").trim(),
+		),
+	)) as string[];
+}
+
 export async function getFileTreeLabels(): Promise<string[]> {
 	return (await browser.execute(() => {
 		return Array.from(document.querySelectorAll(".file-tree-label"))

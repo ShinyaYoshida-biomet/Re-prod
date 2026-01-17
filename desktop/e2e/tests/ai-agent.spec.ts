@@ -51,7 +51,7 @@ test.describe("AI agent", () => {
 		await input.fill("Test prompt");
 		await input.press("Enter");
 
-		const settingsDialog = page.locator(selectors.settingsDialog);
+		const settingsDialog = page.getByRole("dialog", { name: "Settings" });
 		await settingsDialog.waitFor({ timeout: 10000 });
 		expect(await settingsDialog.isVisible()).toBeTruthy();
 	});

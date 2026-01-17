@@ -49,11 +49,19 @@ describe("Plot visualization", () => {
 		assert.ok((await counter.getText()).includes("1 / 2"));
 
 		const nextButton = await browser.$(selectors.plotNextButton);
+		await nextButton.waitForEnabled({ timeout: 10000 });
 		await nextButton.click();
-		assert.ok((await counter.getText()).includes("2 / 2"));
+		await browser.waitUntil(async () => (await counter.getText()).includes("2 / 2"), {
+			timeout: 10000,
+			timeoutMsg: "Expected plot counter to move to 2 / 2",
+		});
 
 		const prevButton = await browser.$(selectors.plotPrevButton);
+		await prevButton.waitForEnabled({ timeout: 10000 });
 		await prevButton.click();
-		assert.ok((await counter.getText()).includes("1 / 2"));
+		await browser.waitUntil(async () => (await counter.getText()).includes("1 / 2"), {
+			timeout: 10000,
+			timeoutMsg: "Expected plot counter to return to 1 / 2",
+		});
 	});
 });

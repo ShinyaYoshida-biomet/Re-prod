@@ -62,9 +62,11 @@ describe("AI agent", () => {
 			{ timeout: 10000, timeoutMsg: "Send button not available" },
 		);
 
-		const settingsDialog = await browser.$(selectors.settingsDialog);
-		await settingsDialog.waitForDisplayed({ timeout: 20000 });
-		assert.ok(await settingsDialog.isDisplayed());
+		const settingsTitle = await browser.$(
+			'//div[@role="dialog"]//h2[normalize-space()="Settings"]',
+		);
+		await settingsTitle.waitForDisplayed({ timeout: 20000 });
+		assert.ok(await settingsTitle.isDisplayed());
 	});
 
 	it(TEST_CASES["ai-agent"][2], async () => {
