@@ -211,6 +211,7 @@ export async function waitForConnected(timeoutMs = 30000): Promise<void> {
 export async function openFixturesProject(timeoutMs = 30000): Promise<void> {
 	const repoRoot = path.resolve(__dirname, "../../..");
 	const fixturesRoot = path.join(repoRoot, "desktop/e2e/shared/fixtures/projects");
+	await waitForConnected(timeoutMs);
 	await switchProjectFolderAndWait(fixturesRoot, "projects", timeoutMs);
 	await waitForFileTreeLabel("alpha", timeoutMs);
 }
