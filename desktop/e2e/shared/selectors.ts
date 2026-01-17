@@ -54,12 +54,13 @@ export const selectors = {
 	// AI Agent
 	aiPanel: ".ai-panel",
 	aiInput: ".ai-input",
-	aiSendButton: ".ai-send-button",
-	aiMessage: ".ai-message",
-	aiCodeBlock: ".ai-code-block",
-	aiAcceptButton: ".ai-accept-button",
+	aiSendButton: 'button[aria-label="Send message"]',
+	aiMessage: ".ai-messages .message",
+	aiCodeBlock: ".code-block-container",
+	aiAcceptButton: 'button[title="Apply to editor"]',
 	aiRejectButton: ".ai-reject-button",
 	aiProviderSelect: ".ai-provider-select",
+	aiModeSelect: ".mode-dropdown",
 
 	// Plot
 	plotPane: ".plot-pane",
