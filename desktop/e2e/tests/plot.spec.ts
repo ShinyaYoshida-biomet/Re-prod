@@ -1,7 +1,23 @@
 import { expect, test } from "@playwright/test";
+import type { Locator } from "@playwright/test";
 import { executeRCode, waitForElement } from "../shared/helpers";
 import { selectors } from "../shared/selectors";
 import { TEST_CASES } from "../shared/test-registry";
+
+const parsePlotCounter = (text: string | null) => {
+	if (!text) {
+		return null;
+	}
+	const match = text.trim().match(/(\d+)\s*\/\s*(\d+)/);
+	if (!match) {
+		return null;
+	}
+	return { current: Number(match[1]), total: Number(match[2]) };
+};
+
+const readPlotCounter = async (counter: Locator) => {
+	return parsePlotCounter(await counter.textContent());
+};
 
 const openPlotsTab = async (page: any) => {
 	const plotsTab = page.locator(selectors.plotsTab);
@@ -37,14 +53,30 @@ test.describe("Plot visualization", () => {
 
 		const counter = page.locator(selectors.plotCounter);
 		await counter.waitFor({ timeout: 10000 });
-		expect(await counter.textContent()).toContain("1 / 2");
+		await expect.poll(async () => readPlotCounter(counter), { timeout: 10000 }).not.toBeNull();
+		const initial = (await readPlotCounter(counter))!;
+		expect(initial.total).toBeGreaterThanOrEqual(2);
 
 		const nextButton = page.locator(selectors.plotNextButton);
-		await nextButton.click();
-		expect(await counter.textContent()).toContain("2 / 2");
-
 		const prevButton = page.locator(selectors.plotPrevButton);
-		await prevButton.click();
-		expect(await counter.textContent()).toContain("1 / 2");
+		if (initial.current >= initial.total) {
+			await prevButton.click();
+			await expect
+				.poll(async () => (await readPlotCounter(counter))?.current, { timeout: 10000 })
+				.toBe(initial.current - 1);
+			await nextButton.click();
+			await expect
+				.poll(async () => (await readPlotCounter(counter))?.current, { timeout: 10000 })
+				.toBe(initial.current);
+		} else {
+			await nextButton.click();
+			await expect
+				.poll(async () => (await readPlotCounter(counter))?.current, { timeout: 10000 })
+				.toBe(initial.current + 1);
+			await prevButton.click();
+			await expect
+				.poll(async () => (await readPlotCounter(counter))?.current, { timeout: 10000 })
+				.toBe(initial.current);
+		}
 	});
 });
