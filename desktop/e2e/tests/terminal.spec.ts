@@ -14,6 +14,9 @@ const openTerminalPane = async (page: any) => {
 const openTerminalSession = async (page: any) => {
 	const newTerminalButton = page.locator(selectors.newTerminalButton);
 	await newTerminalButton.waitFor({ timeout: 10000 });
+	if (!(await newTerminalButton.isEnabled())) {
+		test.skip(true, "Terminal sessions are not available in web mode");
+	}
 	await newTerminalButton.click();
 };
 

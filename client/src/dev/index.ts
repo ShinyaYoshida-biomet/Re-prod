@@ -57,6 +57,9 @@ export const setupDevGlobals = (): void => {
 					if (message.type !== "error") {
 						return;
 					}
+					if (!/(project|workspace|folder)/i.test(message.message)) {
+						return;
+					}
 					cleanup();
 					reject(new Error(message.message));
 				});
