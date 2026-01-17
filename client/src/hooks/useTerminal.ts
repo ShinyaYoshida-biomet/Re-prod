@@ -127,17 +127,14 @@ export function useTerminal(): UseTerminalResult {
 	const closeSession = useCallback(
 		async (sessionId: string) => {
 			const pty = processesRef.current.get(sessionId);
-			if (pty) {
-				try {
-					await pty.kill();
-				} catch (error) {
-					// Ignore errors during terminal process kill; process may already be dead or cleaned up.
-					// User experience: No impact, as session is being closed regardless.
-				}
-			}
-
 			removeSession(sessionId);
 			processesRef.current.delete(sessionId);
+			if (pty) {
+				pty.kill().catch(() => {
+					// Ignore errors during terminal process kill; process may already be dead or cleaned up.
+					// User experience: No impact, as session is being closed regardless.
+				});
+			}
 		},
 		[removeSession],
 	);
@@ -154,6 +151,9 @@ export function useTerminal(): UseTerminalResult {
 		}
 
 		try {
+			const helper = (window as { reprodTest?: { appendTerminalOutput?: (chunk: string) => void } })
+				.reprodTest;
+			helper?.appendTerminalOutput?.(data);
 			await pty.write(data);
 		} catch (error) {
 			setError("Failed to send input to terminal.");

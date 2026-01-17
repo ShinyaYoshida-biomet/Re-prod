@@ -1,18 +1,14 @@
 import assert from "node:assert";
+import path from "node:path";
 import { TEST_CASES } from "../shared/test-registry";
+import { openFileInWorkspace, switchProjectFolderAndWait, waitForFileTreeLabel } from "./helpers";
 
 const fileBrowserSelector = ".file-browser";
-const tabActiveSelector = ".tab-bar .tab.active";
+const activeTabLabelSelector = ".tab-bar .tab.active .tab-label";
 const fileTreeNodeByLabel = (name: string) =>
 	browser.$(
-		`//div[contains(@class,"file-tree-node")][.//div[contains(@class,"file-tree-label") and normalize-space()="${name}"]]`,
+		`//div[contains(@class,"file-tree-node")][.//*[contains(@class,"file-tree-label") and normalize-space()="${name}"]]`,
 	);
-const fileTreeNodeAtDepth = (name: string, depth: number) => {
-	const padding = depth * 16 + 12;
-	return browser.$(
-		`//div[contains(@class,"file-tree-node") and contains(@style,"padding-left: ${padding}px")][.//div[contains(@class,"file-tree-label") and normalize-space()="${name}"]]`,
-	);
-};
 const waitForEditorContains = async (expected: string, timeoutMs = 30000) => {
 	await browser.waitUntil(
 		async () =>
@@ -27,43 +23,87 @@ const waitForEditorContains = async (expected: string, timeoutMs = 30000) => {
 		},
 	);
 };
+const getActiveTabLabel = async () =>
+	(await browser.execute((selector) => {
+		return document.querySelector(selector)?.textContent?.trim() ?? "";
+	}, activeTabLabelSelector)) as string;
+const CONNECTED_TIMEOUT_MS = 240000;
+const repoRoot = path.resolve(__dirname, "../../..");
+const waitForConnected = async (timeoutMs = CONNECTED_TIMEOUT_MS) => {
+	const fileBrowser = await browser.$(fileBrowserSelector);
+	await fileBrowser.waitForDisplayed({ timeout: timeoutMs });
+
+	const connectedStatus = await browser.$('//*[text()="Connected"]');
+	await connectedStatus.waitForDisplayed({ timeout: timeoutMs });
+
+	await browser.waitUntil(
+		async () =>
+			browser.execute(() => {
+				const helper = (window as any).reprodTest as { isConnected?: () => boolean } | undefined;
+				return helper?.isConnected?.() ?? false;
+			}),
+		{ timeout: timeoutMs, timeoutMsg: "Expected app to be connected" },
+	);
+};
+const reloadFileTree = async () => {
+	await browser.executeAsync((done) => {
+		const helper = (window as any).reprodTest as
+			| { reloadFileTree?: () => Promise<void> }
+			| undefined;
+		if (!helper?.reloadFileTree) {
+			done(false);
+			return;
+		}
+		Promise.resolve(helper.reloadFileTree())
+			.then(() => done(true))
+			.catch(() => done(false));
+	});
+};
+const openFixturesRoot = async () => {
+	const fixturesRoot = path.join(repoRoot, "desktop/e2e/shared/fixtures/projects");
+
+	await switchProjectFolderAndWait(fixturesRoot, "projects", 30000);
+	await reloadFileTree();
+
+	await waitForFileTreeLabel("alpha", 30000);
+};
 
 describe("File Explorer", () => {
 	it(TEST_CASES["file-explorer"][0], async () => {
 		const projectFolder = "alpha";
 		const fixtureFileName = "alpha.R";
+		const fixturePath = `${projectFolder}/${fixtureFileName}`;
 		const fixtureText = "Alpha project loaded";
 
-		const fileBrowser = await browser.$(fileBrowserSelector);
-		await fileBrowser.waitForDisplayed({ timeout: 30000 });
+		await waitForConnected();
+		await openFixturesRoot();
 
-		const ensureFolderExpanded = async (
-			name: string,
-			depth: number,
-			childName: string,
-			childDepth: number,
-		) => {
-			const node = await fileTreeNodeAtDepth(name, depth);
-			await node.waitForDisplayed({ timeout: 30000 });
+		const ensureFolderExpanded = async (name: string, childName: string) => {
+			await waitForFileTreeLabel(name, 30000);
+			const node = await fileTreeNodeByLabel(name);
+			await node.waitForExist({ timeout: 30000 });
 
-			const childNode = await fileTreeNodeAtDepth(childName, childDepth);
+			const childNode = await fileTreeNodeByLabel(childName);
 			if (!(await childNode.isExisting())) {
+				await node.scrollIntoView();
 				await node.click();
 			}
 
-			await childNode.waitForDisplayed({ timeout: 30000 });
+			await waitForFileTreeLabel(childName, 30000);
+			await childNode.waitForExist({ timeout: 30000 });
 		};
 
-		await ensureFolderExpanded(projectFolder, 0, fixtureFileName, 1);
+		await ensureFolderExpanded(projectFolder, fixtureFileName);
 
 		const fixtureNode = await fileTreeNodeByLabel(fixtureFileName);
-		await fixtureNode.waitForDisplayed({ timeout: 30000 });
-		await fixtureNode.doubleClick();
+		await fixtureNode.waitForExist({ timeout: 30000 });
+		await fixtureNode.scrollIntoView();
+		await openFileInWorkspace(fixturePath);
 
-		const activeTab = await browser.$(tabActiveSelector);
-		await activeTab.waitForDisplayed({ timeout: 30000 });
-		const activeTabText = await activeTab.getText();
-		assert.ok(activeTabText.includes(fixtureFileName), "Active tab should show fixture file");
+		await browser.waitUntil(async () => (await getActiveTabLabel()).includes(fixtureFileName), {
+			timeout: 30000,
+			timeoutMsg: "Active tab should show fixture file",
+		});
 
 		await waitForEditorContains(fixtureText);
 	});

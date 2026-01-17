@@ -41,4 +41,12 @@ export const TEST_CASES = {
 	],
 	"project-switch": ["opens modal and switches to a server project"],
 	"settings-acp-mode": ["keeps External Agent (ACP) selected after agent refresh"],
+	terminal: [
+		"opens terminal pane and becomes visible",
+		"executes shell command and displays output",
+		"navigates terminal history with arrow keys",
+		"supports copy and paste operations",
+		"handles multiple terminal sessions",
+		"closes terminal session",
+	],
 } as const;

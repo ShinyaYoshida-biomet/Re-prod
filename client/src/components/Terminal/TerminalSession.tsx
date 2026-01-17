@@ -31,6 +31,10 @@ export function TerminalSession({
 			return;
 		}
 
+		const helper = (window as { reprodTest?: { appendTerminalOutput?: (data: string) => void } })
+			.reprodTest;
+		helper?.appendTerminalOutput?.(chunk);
+
 		terminal.write(chunk);
 		terminal.scrollToBottom();
 	}, []);

@@ -14,12 +14,19 @@ export function useACPBootstrap(): void {
 	const setDetectedAgents = useStore((state) => state.setDetectedAgents);
 
 	useEffect(() => {
+		const initialMode = useStore.getState().activeMode;
+		const initialAgent = useStore.getState().activeAgent;
 		const bootstrap = async () => {
 			try {
 				const acpAdminClient = getAcpAdminClient();
 				const { config, agents } = await acpAdminClient.bootstrap();
-				setActiveMode((config.active_mode as "api" | "external_agent") ?? "api");
-				setActiveAgent(config.active_agent);
+				const current = useStore.getState();
+				if (current.activeMode === initialMode) {
+					setActiveMode((config.active_mode as "api" | "external_agent") ?? "api");
+				}
+				if (current.activeAgent === initialAgent) {
+					setActiveAgent(config.active_agent);
+				}
 				setDetectedAgents(agents);
 			} catch (error) {
 				console.error("Failed to bootstrap ACP config", error);

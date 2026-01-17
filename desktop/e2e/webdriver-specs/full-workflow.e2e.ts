@@ -157,10 +157,17 @@ cat("Total sum:", result, "\\n")`);
 		// ========================================
 		await openTimelineDialog();
 
-		const updatedEventCodes = await browser.$$(".timeline-event-code");
-		const updatedCodeTexts = await updatedEventCodes.map((event) => event.getText());
-		const hasResultEvent = updatedCodeTexts.some((text) => text.includes("result <- sum(data)"));
-		assert.ok(hasResultEvent, "Timeline should include the latest execution");
+		await browser.waitUntil(
+			async () => {
+				const updatedEventCodes = await browser.$$(".timeline-event-code");
+				const updatedCodeTexts = await updatedEventCodes.map((event) => event.getText());
+				return updatedCodeTexts.some((text) => text.includes("result <- sum(data)"));
+			},
+			{
+				timeout: 30000,
+				timeoutMsg: "Timeline should include the latest execution",
+			},
+		);
 
 		// Close timeline
 		await closeDialog(timelineDialogSelector, ".timeline-dialog-overlay");

@@ -28,6 +28,8 @@ export const selectors = {
 	// Dialogs
 	timelineDialog: ".timeline-dialog",
 	exportDialog: ".export-dialog",
+	confirmDialog: ".confirm-dialog",
+	saveDialog: ".save-dialog",
 
 	// Timeline
 	timelineEvent: ".timeline-event",
@@ -40,4 +42,46 @@ export const selectors = {
 	exportFormatBothRadio: 'input[value="both"]',
 	exportModeTimelineRadio: 'input[value="timeline"]',
 	exportModeDocumentRadio: 'input[value="document"]',
+
+	// Terminal
+	terminalPane: ".terminal-pane",
+	terminalTab: ".terminal-pane__tabs .tab",
+	terminalInput: ".terminal-session__term textarea",
+	terminalOutput: ".terminal-session__term .xterm-rows",
+	terminalClose: 'button[title="Close terminal session"]',
+	newTerminalButton: 'button[title="New terminal session"]',
+
+	// AI Agent
+	aiPanel: ".ai-panel",
+	aiInput: ".ai-input",
+	aiSendButton: ".ai-send-button",
+	aiMessage: ".ai-message",
+	aiCodeBlock: ".ai-code-block",
+	aiAcceptButton: ".ai-accept-button",
+	aiRejectButton: ".ai-reject-button",
+	aiProviderSelect: ".ai-provider-select",
+
+	// Plot
+	plotPane: ".plot-pane",
+	plotImage: ".plot-image",
+	plotPrevButton: 'button[title="Previous Plot"]',
+	plotNextButton: 'button[title="Next Plot"]',
+	plotClearButton: 'button[title="Clear Plots"]',
+	plotExportButton: 'button[title="Export Plot"]',
+
+	// Menu
+	menuBar: ".menu-bar",
+	fileMenu: 'button[role="menuitem"]:has-text("File")',
+	editMenu: 'button[role="menuitem"]:has-text("Edit")',
+	viewMenu: 'button[role="menuitem"]:has-text("View")',
+	runMenu: 'button[role="menuitem"]:has-text("Run")',
+	menuItem: '[role="menuitem"]',
+
+	// Connection status
+	connectionStatus: ".connection-status",
+	connectionIndicator: ".connection-indicator",
+
+	// Theme
+	themeSelect: ".theme-select",
+	settingsDialog: ".settings-dialog",
 } as const;

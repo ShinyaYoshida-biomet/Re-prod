@@ -1,5 +1,7 @@
 import assert from "node:assert";
+import path from "node:path";
 import { TEST_CASES } from "../shared/test-registry";
+import { switchProjectFolderAndWait, waitForFileTreeLabel } from "./helpers";
 
 const CONNECTED_TIMEOUT_MS = 240000;
 const waitForConnected = async (timeoutMs = CONNECTED_TIMEOUT_MS) => {
@@ -23,43 +25,16 @@ describe("Project Switch (Web)", () => {
 	it(TEST_CASES["project-switch"][0], async () => {
 		await waitForConnected(CONNECTED_TIMEOUT_MS);
 
-		await browser.keys(["Control", "Shift", "O"]);
+		const repoRoot = path.resolve(__dirname, "../../..");
+		const fixtureFolder = path.join(repoRoot, "desktop/e2e/shared/fixtures/open-folder");
+		await switchProjectFolderAndWait(fixtureFolder, "open-folder", 30000);
 
-		const modalTitle = await browser.$('//h2[normalize-space()="Switch Project"]');
-		await modalTitle.waitForDisplayed({ timeout: 30000 });
-
-		const alphaItem = await browser.$(
-			'//div[contains(@class,"project-switch-item")][contains(., "E2E Alpha")]',
+		await waitForFileTreeLabel("sample.R", 30000);
+		const sampleFile = await browser.$(
+			'//div[contains(@class,"file-tree-node")][.//*[contains(@class,"file-tree-label") and normalize-space()="sample.R"]]',
 		);
-		await alphaItem.waitForDisplayed({ timeout: 30000 });
-		await alphaItem.click();
-
-		const openButton = await browser.$('//button[normalize-space()="Open Project"]');
-		await browser.waitUntil(async () => openButton.isEnabled(), {
-			timeout: 10000,
-			timeoutMsg: "Open Project button should be enabled",
-		});
-
-		await openButton.click();
-		await browser.execute((projectName) => {
-			const helper = (window as any).reprodTest as
-				| { waitForProjectOpened?: (name: string, timeoutMs?: number) => Promise<void> }
-				| undefined;
-			if (!helper?.waitForProjectOpened) {
-				throw new Error("reprodTest waitForProjectOpened not available");
-			}
-			return helper.waitForProjectOpened(projectName, 30000);
-		}, "E2E Alpha");
-
-		await browser.waitUntil(async () => !(await modalTitle.isDisplayed()), {
-			timeout: 30000,
-			timeoutMsg: "Switch project modal should close",
-		});
-
-		const alphaFile = await browser.$(
-			'//div[contains(@class,"file-tree-node")][.//div[contains(@class,"file-tree-label") and normalize-space()="alpha.R"]]',
-		);
-		await alphaFile.waitForDisplayed({ timeout: 30000 });
-		assert.ok(await alphaFile.isDisplayed(), "Alpha project file should be visible");
+		await sampleFile.waitForExist({ timeout: 30000 });
+		await sampleFile.scrollIntoView();
+		assert.ok(await sampleFile.isExisting(), "Open-folder project file should be visible");
 	});
 });

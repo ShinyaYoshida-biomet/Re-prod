@@ -118,6 +118,7 @@ DOCKER_BASE_ARGS=(
   -e TAURI_DRIVER_PATH \
   -e TAURI_DRIVER_PORT \
   -e TAURI_DRIVER_READY_TIMEOUT \
+  -e REPROD_WORKSPACE_ROOT="${REPROD_WORKSPACE_ROOT:-/workspace/desktop/e2e/shared/fixtures/projects}" \
   --tmpfs /workspace/.cargo \
   -v "${ROOT_DIR}":/workspace \
   -v "${CARGO_REGISTRY_VOLUME}:/root/.cargo/registry" \
@@ -167,7 +168,7 @@ if [[ "${REUSE_CONTAINER}" != "0" ]]; then
     RUNNING_STATE="$(docker container inspect --format '{{ .State.Running }}' "${CONTAINER_NAME}" 2>/dev/null || true)"
     if [[ "${RUNNING_STATE}" == "true" ]]; then
       EXEC_ENV_ARGS=()
-      for var in REPROD_E2E_WEB_PORT VITE_E2E VITE_PORT LOG_LEVEL DEBUG TAURI_DRIVER_APP TAURI_DRIVER_ARGS TAURI_DRIVER_HOST TAURI_DRIVER_PATH TAURI_DRIVER_PORT TAURI_DRIVER_READY_TIMEOUT; do
+      for var in REPROD_E2E_WEB_PORT VITE_E2E VITE_PORT LOG_LEVEL DEBUG TAURI_DRIVER_APP TAURI_DRIVER_ARGS TAURI_DRIVER_HOST TAURI_DRIVER_PATH TAURI_DRIVER_PORT TAURI_DRIVER_READY_TIMEOUT REPROD_WORKSPACE_ROOT; do
         value="${!var-}"
         if [[ -n "${value}" ]]; then
           EXEC_ENV_ARGS+=(-e "${var}=${value}")
