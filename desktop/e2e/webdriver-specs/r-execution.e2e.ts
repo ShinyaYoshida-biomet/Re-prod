@@ -1,12 +1,19 @@
 import assert from "node:assert";
-import { clickRunAll, setEditorValue, waitForConnected, waitForConsoleOutput } from "./helpers";
+import {
+	clickRunAll,
+	openFixturesProject,
+	setEditorValue,
+	waitForConnected,
+	waitForConsoleOutput,
+} from "./helpers";
 import { TEST_CASES } from "../shared/test-registry";
 
 describe("R execution flow", () => {
-	beforeEach(async () => {
+	before(async () => {
 		const editorInput = await browser.$(".monaco-editor textarea");
 		await editorInput.waitForDisplayed({ timeout: 30000 });
 		await waitForConnected();
+		await openFixturesProject();
 	});
 
 	it(TEST_CASES["r-execution"][0], async () => {

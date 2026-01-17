@@ -1,3 +1,5 @@
+import path from "node:path";
+
 export async function openTimelineDialog(): Promise<WebdriverIO.Element> {
 	await browser.waitUntil(
 		async () =>
@@ -196,7 +198,7 @@ export async function waitForConnected(timeoutMs = 30000): Promise<void> {
 				if (typeof helper?.isConnected === "function") {
 					return helper.isConnected();
 				}
-				const status = document.querySelector(".connection-status");
+				const status = document.querySelector(".connection-indicator .connection-text");
 				return status?.textContent?.toLowerCase().includes("connected") ?? false;
 			}),
 		{
@@ -204,6 +206,13 @@ export async function waitForConnected(timeoutMs = 30000): Promise<void> {
 			timeoutMsg: "Expected app to be connected before running code",
 		},
 	);
+}
+
+export async function openFixturesProject(timeoutMs = 30000): Promise<void> {
+	const repoRoot = path.resolve(__dirname, "../../..");
+	const fixturesRoot = path.join(repoRoot, "desktop/e2e/shared/fixtures/projects");
+	await switchProjectFolderAndWait(fixturesRoot, "projects", timeoutMs);
+	await waitForFileTreeLabel("alpha", timeoutMs);
 }
 
 export async function getFileTreeLabels(): Promise<string[]> {

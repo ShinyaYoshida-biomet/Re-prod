@@ -1,15 +1,16 @@
 import assert from "node:assert";
-import { clickRunAll, setEditorValue, waitForConnected } from "./helpers";
+import { clickRunAll, openFixturesProject, setEditorValue, waitForConnected } from "./helpers";
 import { TEST_CASES } from "../shared/test-registry";
 
 const editorSelector = ".monaco-editor textarea";
-const consoleOutputSelector = ".console-output, .console-entry";
+const consoleOutputSelector = ".console-stdout, .console-stderr";
 
 describe("Error handling scenarios", () => {
-	beforeEach(async () => {
+	before(async () => {
 		const editorInput = await browser.$(editorSelector);
 		await editorInput.waitForDisplayed({ timeout: 30000 });
 		await waitForConnected();
+		await openFixturesProject();
 	});
 
 	it(TEST_CASES["error-handling"][0], async () => {

@@ -3,6 +3,7 @@ import {
 	clickRunAll,
 	closeDialog,
 	openTimelineDialog,
+	openFixturesProject,
 	setEditorValue,
 	waitForConnected,
 	waitForConsoleOutput,
@@ -14,10 +15,11 @@ const timelineDialogSelector = ".timeline-dialog";
 const timelineEventSelector = ".timeline-event";
 const timelineStatsSelector = ".timeline-stat";
 describe("Timeline feature", () => {
-	beforeEach(async () => {
+	before(async () => {
 		const editorInput = await browser.$(editorSelector);
 		await editorInput.waitForDisplayed({ timeout: 30000 });
 		await waitForConnected();
+		await openFixturesProject();
 	});
 
 	it(TEST_CASES["timeline"][0], async () => {

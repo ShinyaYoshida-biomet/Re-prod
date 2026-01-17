@@ -3,6 +3,7 @@ import {
 	clickRunAll,
 	closeDialog,
 	openExportDialog,
+	openFixturesProject,
 	openTimelineDialog,
 	setEditorValue,
 	waitForConnected,
@@ -28,10 +29,11 @@ const timelineEventSelector = ".timeline-event";
  * 7. Verify timeline updates
  */
 describe("Full user workflow", () => {
-	beforeEach(async () => {
+	before(async () => {
 		const editorInput = await browser.$(editorSelector);
 		await editorInput.waitForDisplayed({ timeout: 30000 });
 		await waitForConnected();
+		await openFixturesProject();
 	});
 
 	it(TEST_CASES["full-workflow"][0], async () => {

@@ -6,6 +6,7 @@ import {
 	clickRunAll,
 	closeDialog,
 	openExportDialog,
+	openFixturesProject,
 	setEditorValue,
 	waitForConnected,
 } from "./helpers";
@@ -35,6 +36,10 @@ describe("Export functionality", () => {
 		const editorInput = await browser.$(editorSelector);
 		await editorInput.waitForDisplayed({ timeout: 30000 });
 		await waitForConnected();
+	});
+
+	before(async () => {
+		await openFixturesProject();
 	});
 
 	it(TEST_CASES["export"][0], async () => {
