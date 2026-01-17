@@ -2,7 +2,13 @@ import assert from "node:assert";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { clickRunAll, closeDialog, openExportDialog, setEditorValue } from "./helpers";
+import {
+	clickRunAll,
+	closeDialog,
+	openExportDialog,
+	setEditorValue,
+	waitForConnected,
+} from "./helpers";
 import { TEST_CASES } from "../shared/test-registry";
 
 const editorSelector = ".monaco-editor textarea";
@@ -25,10 +31,14 @@ describe("Export functionality", () => {
 		}
 	});
 
-	it(TEST_CASES["export"][0], async () => {
-		// Execute some R code first
+	beforeEach(async () => {
 		const editorInput = await browser.$(editorSelector);
 		await editorInput.waitForDisplayed({ timeout: 30000 });
+		await waitForConnected();
+	});
+
+	it(TEST_CASES["export"][0], async () => {
+		// Execute some R code first
 		await setEditorValue("# Export test\nresult <- mean(c(1, 2, 3, 4, 5))\nprint(result)");
 
 		await clickRunAll();

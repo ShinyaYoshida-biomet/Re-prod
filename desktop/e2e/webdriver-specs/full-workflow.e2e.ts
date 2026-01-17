@@ -5,6 +5,7 @@ import {
 	openExportDialog,
 	openTimelineDialog,
 	setEditorValue,
+	waitForConnected,
 } from "./helpers";
 import { TEST_CASES } from "../shared/test-registry";
 
@@ -27,12 +28,17 @@ const timelineEventSelector = ".timeline-event";
  * 7. Verify timeline updates
  */
 describe("Full user workflow", () => {
+	beforeEach(async () => {
+		const editorInput = await browser.$(editorSelector);
+		await editorInput.waitForDisplayed({ timeout: 30000 });
+		await waitForConnected();
+	});
+
 	it(TEST_CASES["full-workflow"][0], async () => {
 		// ========================================
 		// STEP 1: App Launch and Initial State
 		// ========================================
 		const editorInput = await browser.$(editorSelector);
-		await editorInput.waitForDisplayed({ timeout: 30000 });
 
 		const isEditorVisible = await editorInput.isDisplayed();
 		assert.ok(isEditorVisible, "Editor should be visible after app launch");
@@ -193,8 +199,6 @@ cat("Total sum:", result, "\\n")`);
 	});
 
 	it(TEST_CASES["full-workflow"][1], async () => {
-		const editorInput = await browser.$(editorSelector);
-
 		// Execute code with error
 		await setEditorValue("x <- 1\ny <- x / 0  # Division by zero warning");
 
@@ -236,8 +240,6 @@ cat("Total sum:", result, "\\n")`);
 	});
 
 	it(TEST_CASES["full-workflow"][2], async () => {
-		const editorInput = await browser.$(editorSelector);
-
 		// Execute first block
 		await setEditorValue("# Block 1\na <- 5");
 

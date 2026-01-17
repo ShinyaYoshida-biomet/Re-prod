@@ -188,6 +188,24 @@ export async function waitForConsoleOutput(expected: string, timeoutMs = 60000):
 	)) as string[];
 }
 
+export async function waitForConnected(timeoutMs = 30000): Promise<void> {
+	await browser.waitUntil(
+		async () =>
+			browser.execute(() => {
+				const helper = (window as any).reprodTest as { isConnected?: () => boolean } | undefined;
+				if (typeof helper?.isConnected === "function") {
+					return helper.isConnected();
+				}
+				const status = document.querySelector(".connection-status");
+				return status?.textContent?.toLowerCase().includes("connected") ?? false;
+			}),
+		{
+			timeout: timeoutMs,
+			timeoutMsg: "Expected app to be connected before running code",
+		},
+	);
+}
+
 export async function getFileTreeLabels(): Promise<string[]> {
 	return (await browser.execute(() => {
 		return Array.from(document.querySelectorAll(".file-tree-label"))

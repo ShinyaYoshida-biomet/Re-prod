@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { selectors } from "../shared/selectors";
 import { TEST_CASES } from "../shared/test-registry";
-import { clickRunAll, setEditorValue } from "./helpers";
+import { clickRunAll, setEditorValue, waitForConnected } from "./helpers";
 
 const openPlotsTab = async (): Promise<void> => {
 	await browser.waitUntil(
@@ -20,10 +20,13 @@ const openPlotsTab = async (): Promise<void> => {
 };
 
 describe("Plot visualization", () => {
-	it(TEST_CASES.plot[0], async () => {
+	beforeEach(async () => {
 		const editorInput = await browser.$(selectors.editor);
 		await editorInput.waitForDisplayed({ timeout: 30000 });
+		await waitForConnected();
+	});
 
+	it(TEST_CASES.plot[0], async () => {
 		await setEditorValue("plot(1:10)");
 		await clickRunAll();
 		await openPlotsTab();
@@ -34,9 +37,6 @@ describe("Plot visualization", () => {
 	});
 
 	it(TEST_CASES.plot[1], async () => {
-		const editorInput = await browser.$(selectors.editor);
-		await editorInput.waitForDisplayed({ timeout: 30000 });
-
 		await setEditorValue("plot(1:10)\nplot(10:1)");
 		await clickRunAll();
 		await openPlotsTab();

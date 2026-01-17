@@ -4,6 +4,7 @@ import {
 	closeDialog,
 	openTimelineDialog,
 	setEditorValue,
+	waitForConnected,
 	waitForConsoleOutput,
 } from "./helpers";
 import { TEST_CASES } from "../shared/test-registry";
@@ -13,10 +14,14 @@ const timelineDialogSelector = ".timeline-dialog";
 const timelineEventSelector = ".timeline-event";
 const timelineStatsSelector = ".timeline-stat";
 describe("Timeline feature", () => {
-	it(TEST_CASES["timeline"][0], async () => {
-		// Execute some R code to create timeline events
+	beforeEach(async () => {
 		const editorInput = await browser.$(editorSelector);
 		await editorInput.waitForDisplayed({ timeout: 30000 });
+		await waitForConnected();
+	});
+
+	it(TEST_CASES["timeline"][0], async () => {
+		// Execute some R code to create timeline events
 		await setEditorValue("x <- 1 + 1\nprint(x)");
 
 		// Run the code

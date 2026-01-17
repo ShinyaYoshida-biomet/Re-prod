@@ -1,15 +1,18 @@
 import assert from "node:assert";
-import { clickRunAll, setEditorValue } from "./helpers";
+import { clickRunAll, setEditorValue, waitForConnected } from "./helpers";
 import { TEST_CASES } from "../shared/test-registry";
 
 const editorSelector = ".monaco-editor textarea";
 const consoleOutputSelector = ".console-output, .console-entry";
 
 describe("Error handling scenarios", () => {
-	it(TEST_CASES["error-handling"][0], async () => {
+	beforeEach(async () => {
 		const editorInput = await browser.$(editorSelector);
 		await editorInput.waitForDisplayed({ timeout: 30000 });
+		await waitForConnected();
+	});
 
+	it(TEST_CASES["error-handling"][0], async () => {
 		await setEditorValue("x <- 1 +");
 		await clickRunAll();
 
@@ -40,9 +43,6 @@ describe("Error handling scenarios", () => {
 	});
 
 	it(TEST_CASES["error-handling"][1], async () => {
-		const editorInput = await browser.$(editorSelector);
-		await editorInput.waitForDisplayed({ timeout: 30000 });
-
 		await setEditorValue('x <- "text"\ny <- x / 2');
 		await clickRunAll();
 
@@ -71,9 +71,6 @@ describe("Error handling scenarios", () => {
 	});
 
 	it(TEST_CASES["error-handling"][2], async () => {
-		const editorInput = await browser.$(editorSelector);
-		await editorInput.waitForDisplayed({ timeout: 30000 });
-
 		await setEditorValue('stop("Error")');
 		await clickRunAll();
 		await browser.pause(3000);
@@ -106,9 +103,6 @@ describe("Error handling scenarios", () => {
 	});
 
 	it(TEST_CASES["error-handling"][3], async () => {
-		const editorInput = await browser.$(editorSelector);
-		await editorInput.waitForDisplayed({ timeout: 30000 });
-
 		await setEditorValue("print(undefined_variable)");
 		await clickRunAll();
 
@@ -174,9 +168,6 @@ describe("Error handling scenarios", () => {
 	});
 
 	it(TEST_CASES["error-handling"][5], async () => {
-		const editorInput = await browser.$(editorSelector);
-		await editorInput.waitForDisplayed({ timeout: 30000 });
-
 		await setEditorValue("}{][)( <- %% !!!");
 		await clickRunAll();
 
@@ -197,14 +188,12 @@ describe("Error handling scenarios", () => {
 			},
 		);
 
+		const editorInput = await browser.$(editorSelector);
 		const editorStillVisible = await editorInput.isDisplayed();
 		assert.ok(editorStillVisible, "Editor should still be functional after parse error");
 	});
 
 	it(TEST_CASES["error-handling"][6], async () => {
-		const editorInput = await browser.$(editorSelector);
-		await editorInput.waitForDisplayed({ timeout: 30000 });
-
 		await setEditorValue("x <- 1 +");
 		await clickRunAll();
 		await browser.pause(1000);
