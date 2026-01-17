@@ -83,7 +83,9 @@ export default defineConfig({
 	workers: process.env.CI ? 1 : undefined,
 
 	// Reporter to use
-	reporter: process.env.CI ? "github" : "list",
+	reporter: process.env.CI
+		? [["github"], [path.resolve(__dirname, "reporters/playwright-summary-reporter.ts")]]
+		: [["list"], [path.resolve(__dirname, "reporters/playwright-summary-reporter.ts")]],
 
 	// Shared settings for all the projects below
 	use: {

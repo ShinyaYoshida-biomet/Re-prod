@@ -3,6 +3,7 @@ import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import type { Options } from "@wdio/types";
+import E2eSummaryReporter from "./reporters/wdio-summary-reporter";
 
 const driverHost = process.env.TAURI_DRIVER_HOST ?? "127.0.0.1";
 const driverPort = Number(process.env.TAURI_DRIVER_PORT ?? "9515");
@@ -29,6 +30,7 @@ const driverArgs = process.env.TAURI_DRIVER_ARGS
 	? process.env.TAURI_DRIVER_ARGS.split(" ").filter(Boolean)
 	: defaultDriverArgs;
 const isDocker = fs.existsSync("/.dockerenv") || process.env.REPROD_E2E_DOCKER === "1";
+const summaryPath = process.env.WDIO_SUMMARY_PATH ?? path.resolve(__dirname, ".wdio-summary.jsonl");
 
 if (!process.env.CI && !isDocker) {
 	throw new Error(
@@ -157,7 +159,7 @@ export const config: Options.Testrunner = {
 	connectionRetryCount: 2,
 	services: [],
 	framework: "mocha",
-	reporters: ["spec" as any],
+	reporters: [E2eSummaryReporter as any],
 	mochaOpts: {
 		ui: "bdd",
 		timeout: 300000,
@@ -167,10 +169,52 @@ export const config: Options.Testrunner = {
 	path: driverPath,
 	protocol: "http" as any,
 	onPrepare: async () => {
+		try {
+			fs.unlinkSync(summaryPath);
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+				throw error;
+			}
+		}
 		startDriver();
 		await waitForDriverReady();
 	},
 	onComplete: () => {
+		if (fs.existsSync(summaryPath)) {
+			const lines = fs
+				.readFileSync(summaryPath, "utf8")
+				.split("\n")
+				.map((line) => line.trim())
+				.filter(Boolean);
+			const totals = lines.reduce(
+				(acc, line) => {
+					try {
+						const parsed = JSON.parse(line) as {
+							total: number;
+							passed: number;
+							failed: number;
+							skipped: number;
+						};
+						acc.total += parsed.total;
+						acc.passed += parsed.passed;
+						acc.failed += parsed.failed;
+						acc.skipped += parsed.skipped;
+					} catch {
+						// ignore malformed lines
+					}
+					return acc;
+				},
+				{ total: 0, passed: 0, failed: 0, skipped: 0 },
+			);
+			const summaryLine = `[e2e] Summary: total=${totals.total} passed=${totals.passed} failed=${totals.failed} skipped=${totals.skipped}`;
+			process.once("exit", () => {
+				try {
+					fs.writeSync(1, `${summaryLine}\n`);
+				} catch {
+					// ignore write failures during shutdown
+				}
+			});
+		}
 		stopDriver();
 	},
 };

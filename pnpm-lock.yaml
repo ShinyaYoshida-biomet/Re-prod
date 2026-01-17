@@ -126,6 +126,9 @@ importers:
       '@wdio/mocha-framework':
         specifier: ^8.0.0
         version: 8.46.0
+      '@wdio/reporter':
+        specifier: ^8.0.0
+        version: 8.43.0
       '@wdio/spec-reporter':
         specifier: ^8.0.0
         version: 8.43.0
