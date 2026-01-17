@@ -17,6 +17,8 @@ type DevWindow = Window & {
 		) => Promise<ExtractServerMessage<"project_opened">>;
 		setActiveMode: (mode: "api" | "external_agent") => void;
 		getActiveMode: () => "api" | "external_agent";
+		setActiveAgent: (agent: string | null) => void;
+		getActiveAgent: () => string | null;
 		appendTerminalOutput: (chunk: string) => void;
 		clearTerminalOutput: () => void;
 		getTerminalOutput: () => string;
@@ -82,6 +84,10 @@ export const setupDevGlobals = (): void => {
 			useStore.getState().setActiveMode(mode);
 		},
 		getActiveMode: () => useStore.getState().activeMode,
+		setActiveAgent: (agent) => {
+			useStore.getState().setActiveAgent(agent);
+		},
+		getActiveAgent: () => useStore.getState().activeAgent,
 		appendTerminalOutput: (chunk) => {
 			terminalOutputChunks.push(chunk);
 		},

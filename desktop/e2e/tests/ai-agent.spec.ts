@@ -10,9 +10,14 @@ const waitForAiPanel = async (page: any) => {
 
 const setExternalAgentMode = async (page: any) => {
 	await page.evaluate(() => {
+		window.reprodTest?.setActiveAgent?.(null);
 		window.reprodTest?.setActiveMode("external_agent");
 	});
-	await page.waitForFunction(() => window.reprodTest?.getActiveMode?.() === "external_agent");
+	await page.waitForFunction(
+		() =>
+			window.reprodTest?.getActiveMode?.() === "external_agent" &&
+			window.reprodTest?.getActiveAgent?.() === null,
+	);
 };
 
 test.describe("AI agent", () => {

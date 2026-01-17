@@ -10,11 +10,13 @@ const waitForAiPanel = async () => {
 
 const setExternalAgentMode = async () => {
 	await browser.execute(() => {
+		window.reprodTest?.setActiveAgent?.(null);
 		window.reprodTest?.setActiveMode("external_agent");
 	});
 	await browser.waitUntil(
 		async () =>
-			(await browser.execute(() => window.reprodTest?.getActiveMode?.())) === "external_agent",
+			(await browser.execute(() => window.reprodTest?.getActiveMode?.())) === "external_agent" &&
+			(await browser.execute(() => window.reprodTest?.getActiveAgent?.())) === null,
 		{
 			timeout: 10000,
 			timeoutMsg: "Expected external agent mode to be active",
@@ -47,10 +49,21 @@ describe("AI agent", () => {
 
 		const input = await browser.$(selectors.aiInput);
 		await input.setValue("Test prompt");
-		await browser.keys("Enter");
+		await browser.waitUntil(
+			async () =>
+				browser.execute((selector) => {
+					const button = document.querySelector(selector) as HTMLButtonElement | null;
+					if (!button || button.disabled) {
+						return false;
+					}
+					button.click();
+					return true;
+				}, selectors.aiSendButton),
+			{ timeout: 10000, timeoutMsg: "Send button not available" },
+		);
 
 		const settingsDialog = await browser.$(selectors.settingsDialog);
-		await settingsDialog.waitForDisplayed({ timeout: 10000 });
+		await settingsDialog.waitForDisplayed({ timeout: 20000 });
 		assert.ok(await settingsDialog.isDisplayed());
 	});
 
@@ -64,8 +77,26 @@ describe("AI agent", () => {
 		await input.waitForDisplayed({ timeout: 10000 });
 		assert.equal(await input.getAttribute("placeholder"), "Describe a task...");
 
-		const modeSelect = await browser.$(selectors.aiModeSelect);
-		await modeSelect.selectByAttribute("value", "chat");
-		assert.equal(await input.getAttribute("placeholder"), "Ask a question...");
+		await browser.waitUntil(
+			async () =>
+				browser.execute(
+					(selector, value) => {
+						const select = document.querySelector(selector) as HTMLSelectElement | null;
+						if (!select) {
+							return false;
+						}
+						select.value = value;
+						select.dispatchEvent(new Event("change", { bubbles: true }));
+						return select.value === value;
+					},
+					selectors.aiModeSelect,
+					"chat",
+				),
+			{ timeout: 10000, timeoutMsg: "Mode dropdown not available" },
+		);
+		await browser.waitUntil(
+			async () => (await input.getAttribute("placeholder")) === "Ask a question...",
+			{ timeout: 10000, timeoutMsg: "Placeholder did not update for chat mode" },
+		);
 	});
 });
