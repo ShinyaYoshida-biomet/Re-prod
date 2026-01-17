@@ -46,6 +46,10 @@ export const TEST_CASES = {
 		"opens settings when sending without a configured agent",
 		"switches between agent and chat modes",
 	],
+	plot: [
+		"renders a plot in the plots panel",
+		"navigates between plots with previous and next buttons",
+	],
 	terminal: [
 		"opens terminal pane and becomes visible",
 		"executes shell command and displays output",

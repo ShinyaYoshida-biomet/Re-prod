@@ -63,12 +63,14 @@ export const selectors = {
 	aiModeSelect: ".mode-dropdown",
 
 	// Plot
-	plotPane: ".plot-pane",
+	plotPane: ".plot-viewer",
 	plotImage: ".plot-image",
-	plotPrevButton: 'button[title="Previous Plot"]',
-	plotNextButton: 'button[title="Next Plot"]',
+	plotPrevButton: 'button[aria-label="Previous plot"]',
+	plotNextButton: 'button[aria-label="Next plot"]',
 	plotClearButton: 'button[title="Clear Plots"]',
 	plotExportButton: 'button[title="Export Plot"]',
+	plotCounter: ".plot-counter",
+	plotsTab: 'button.tab:has-text("Plots")',
 
 	// Menu
 	menuBar: ".menu-bar",

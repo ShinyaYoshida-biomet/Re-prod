@@ -47,7 +47,7 @@ describe("AI agent", () => {
 
 		const input = await browser.$(selectors.aiInput);
 		await input.setValue("Test prompt");
-		await input.keys("Enter");
+		await browser.keys("Enter");
 
 		const settingsDialog = await browser.$(selectors.settingsDialog);
 		await settingsDialog.waitForDisplayed({ timeout: 10000 });
