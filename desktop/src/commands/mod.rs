@@ -4,10 +4,13 @@ use std::sync::Arc;
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::{mpsc, Mutex};
 
+pub mod fs;
+
 use crate::{
     server_launcher::SharedServerHandle,
     terminal::{TerminalEvent, TerminalManager},
 };
+
 
 #[derive(Serialize, Clone)]
 struct TerminalOutputPayload {

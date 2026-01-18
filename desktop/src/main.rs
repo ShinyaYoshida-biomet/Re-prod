@@ -57,6 +57,8 @@ async fn main() {
             commands::resize_terminal,
             commands::close_terminal_session,
             commands::get_server_port,
+            commands::fs::read_file,
+            commands::fs::write_file,
             acp::commands::acp_initialize,
             acp::commands::acp_create_session,
             acp::commands::acp_send_prompt,

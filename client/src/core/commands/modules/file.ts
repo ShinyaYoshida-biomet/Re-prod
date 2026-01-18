@@ -1,4 +1,6 @@
 import { IS_TAURI, isTauri } from "@/constants/features";
+import { invoke } from "@tauri-apps/api/core";
+import { save } from "@tauri-apps/plugin-dialog";
 import { DEFAULT_FILENAMES } from "@/constants/ui";
 import { DEFAULT_R_SCRIPT, type Buffer } from "@/core/state/slices/editorSlice";
 import { createBufferId } from "@/core/state/utils/createBufferId";
@@ -119,7 +121,7 @@ export function setupFileCommands() {
 		.category("File")
 		.keybinding("Mod+S")
 		.enabledWhen(When.EditorIsDirty)
-		.handler(() => {
+		.handler(async () => {
 			const store = useStore.getState();
 			const activeBuffer = store.getActiveBuffer();
 
@@ -131,7 +133,20 @@ export function setupFileCommands() {
 				return commandRegistry.execute("file.saveAs");
 			}
 
-			if (!activeBuffer.content) {
+			if (activeBuffer.content === undefined) {
+				return;
+			}
+
+			if (isTauri()) {
+				try {
+					await invoke("write_file", {
+						path: activeBuffer.filepath,
+						content: activeBuffer.content,
+					});
+					store.updateBuffer(activeBuffer.id, { isDirty: false });
+				} catch (error) {
+					showError(getErrorMessage(error, "Failed to save file"));
+				}
 				return;
 			}
 
@@ -142,11 +157,49 @@ export function setupFileCommands() {
 		.command("file.saveAs", "Save As...")
 		.category("File")
 		.keybinding("Mod+Shift+S")
-		.handler(() => {
+		.handler(async () => {
 			const store = useStore.getState();
 			const activeBuffer = store.getActiveBuffer();
 
-			if (!activeBuffer?.content) {
+			if (activeBuffer?.content === undefined) {
+				return;
+			}
+
+			if (isTauri()) {
+				try {
+					const filepath = await save({
+						defaultPath: activeBuffer.filepath || activeBuffer.displayName || undefined,
+						filters: [
+							{
+								name: "R Script",
+								extensions: ["R"],
+							},
+							{
+								name: "R Markdown",
+								extensions: ["Rmd"],
+							},
+							{
+								name: "All Files",
+								extensions: ["*"],
+							},
+						],
+					});
+
+					if (!filepath) return;
+
+					await invoke("write_file", {
+						path: filepath,
+						content: activeBuffer.content,
+					});
+
+					store.updateBuffer(activeBuffer.id, {
+						isDirty: false,
+						filepath: filepath,
+						displayName: filepath.split(/[\\/]/).pop(),
+					});
+				} catch (error) {
+					showError(getErrorMessage(error, "Failed to save file"));
+				}
 				return;
 			}
 
