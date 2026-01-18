@@ -145,7 +145,7 @@ export interface CodeBlock {
 }
 
 export type PlanStepStatus = "pending" | "running" | "done" | "error";
-export type PlanStepKind = "todo" | "peek" | "exec" | "plan";
+export type PlanStepKind = "plan";
 
 export interface PlanStep {
 	id: string;

@@ -719,9 +719,6 @@ pub(super) enum PlanStepStatus {
 #[derive(serde::Serialize, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
 pub(super) enum PlanStepKind {
-    Todo,
-    Peek,
-    Exec,
     Plan,
 }
 
