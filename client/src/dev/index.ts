@@ -1,5 +1,6 @@
 import { WEBSOCKET_REQUEST_TIMEOUT } from "@/constants/timeouts";
 import { useStore } from "@/core";
+import { commandRegistry } from "@/core/commands/registry";
 import { useFileSystemStore } from "@/core/fileSystemStore";
 import type { Buffer } from "@/core/state/slices/editorSlice";
 import { createBufferId } from "@/core/state/utils/createBufferId";
@@ -28,6 +29,9 @@ type DevWindow = Window & {
 		openSettingsDialog: () => void;
 		openTimelineDialog: () => void;
 		reloadFileTree: () => Promise<void>;
+		executeCommand: (id: string, ...args: any[]) => Promise<any>;
+		setMockDialogResult: (result: string | null) => void;
+		mockDialogResult?: string | null;
 	};
 };
 
@@ -128,5 +132,14 @@ export const setupDevGlobals = (): void => {
 			}
 		},
 		reloadFileTree: () => useFileSystemStore.getState().resetAndLoadRoot(),
+		executeCommand: async (id, ...args) => {
+			await commandRegistry.execute(id, ...args);
+		},
+		setMockDialogResult: (result) => {
+			if (target.reprodTest) {
+				target.reprodTest.mockDialogResult = result;
+			}
+		},
+		mockDialogResult: null,
 	};
 };

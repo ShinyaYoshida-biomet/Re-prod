@@ -5,8 +5,18 @@ import { TEST_CASES } from "../shared/test-registry";
 
 const CONNECTED_TIMEOUT_MS = 240000;
 
+// Helper to simulate Desktop environment
+const injectTauriMock = async (page: any) => {
+	await page.addInitScript(() => {
+		(window as any).__TAURI__ = {};
+		(window as any).__TAURI_INTERNALS__ = {};
+	});
+};
+
 test.describe("Open Folder", () => {
 	test(TEST_CASES["open-folder"][0], async ({ page }) => {
+		await injectTauriMock(page);
+
 		const repoRoot = path.resolve(process.cwd(), "../..");
 		const fixtureFolder = path.join(repoRoot, "desktop/e2e/shared/fixtures/open-folder");
 		const fixtureFileName = "sample.R";
@@ -38,15 +48,32 @@ test.describe("Open Folder", () => {
 			return helper.waitForProjectOpened("open-folder", 30000);
 		});
 
-		const didSend = await page.evaluate((folderPath) => {
-			const helper = (window as { reprodTest?: { sendMessage: (payload: any) => boolean } })
-				.reprodTest;
-			if (!helper?.sendMessage) {
+		// 1. Mock the dialog result
+		await page.evaluate((folderPath) => {
+			const helper = (
+				window as {
+					reprodTest?: { setMockDialogResult: (path: string) => void };
+				}
+			).reprodTest;
+			if (!helper?.setMockDialogResult) {
 				throw new Error("reprodTest helper not available");
 			}
-			return helper.sendMessage({ type: "project_switch_folder", path: folderPath });
+			helper.setMockDialogResult(folderPath);
 		}, fixtureFolder);
-		expect(didSend).toBeTruthy();
+
+		// 2. Execute the command (which calls openFolder -> mock -> socket)
+		await page.evaluate(async () => {
+			const helper = (
+				window as {
+					reprodTest?: { executeCommand: (id: string) => Promise<void> };
+				}
+			).reprodTest;
+			if (!helper?.executeCommand) {
+				throw new Error("reprodTest helper not available");
+			}
+			await helper.executeCommand("file.openFolder");
+		});
+
 		await waitForProjectOpened;
 
 		await expect(page.getByText("Project: open-folder")).toBeVisible({ timeout: 30000 });
@@ -59,6 +86,8 @@ test.describe("Open Folder", () => {
 	});
 
 	test(TEST_CASES["open-folder"][1], async ({ page }) => {
+		await injectTauriMock(page);
+
 		const repoRoot = path.resolve(process.cwd(), "../..");
 		const fixtureFolder = path.join(repoRoot, "desktop/e2e/shared/fixtures/open-folder");
 		const fixtureFileName = "sample.R";
@@ -91,15 +120,18 @@ test.describe("Open Folder", () => {
 			return helper.waitForProjectOpened("open-folder", 30000);
 		});
 
-		const didSend = await page.evaluate((folderPath) => {
-			const helper = (window as { reprodTest?: { sendMessage: (payload: any) => boolean } })
-				.reprodTest;
-			if (!helper?.sendMessage) {
-				throw new Error("reprodTest helper not available");
-			}
-			return helper.sendMessage({ type: "project_switch_folder", path: folderPath });
+		// 1. Mock
+		await page.evaluate((folderPath) => {
+			const helper = (window as any).reprodTest;
+			helper.setMockDialogResult(folderPath);
 		}, fixtureFolder);
-		expect(didSend).toBeTruthy();
+
+		// 2. Execute
+		await page.evaluate(async () => {
+			const helper = (window as any).reprodTest;
+			await helper.executeCommand("file.openFolder");
+		});
+
 		await waitForProjectOpened;
 
 		await page.waitForFunction(
@@ -137,6 +169,8 @@ test.describe("Open Folder", () => {
 	});
 
 	test(TEST_CASES["open-folder"][2], async ({ page }) => {
+		await injectTauriMock(page);
+
 		const repoRoot = path.resolve(process.cwd(), "../..");
 		const invalidFolder = path.join(repoRoot, "path-does-not-exist");
 
@@ -158,15 +192,17 @@ test.describe("Open Folder", () => {
 		const rootLabel = page.locator(selectors.fileTreeLabel).filter({ hasText: "alpha" }).first();
 		await expect(rootLabel).toBeVisible({ timeout: CONNECTED_TIMEOUT_MS });
 
-		const didSend = await page.evaluate((folderPath) => {
-			const helper = (window as { reprodTest?: { sendMessage: (payload: any) => boolean } })
-				.reprodTest;
-			if (!helper?.sendMessage) {
-				throw new Error("reprodTest helper not available");
-			}
-			return helper.sendMessage({ type: "project_switch_folder", path: folderPath });
+		// 1. Mock
+		await page.evaluate((folderPath) => {
+			const helper = (window as any).reprodTest;
+			helper.setMockDialogResult(folderPath);
 		}, invalidFolder);
-		expect(didSend).toBeTruthy();
+
+		// 2. Execute
+		await page.evaluate(async () => {
+			const helper = (window as any).reprodTest;
+			await helper.executeCommand("file.openFolder");
+		});
 
 		await page.waitForTimeout(500);
 		await expect(rootLabel).toBeVisible();

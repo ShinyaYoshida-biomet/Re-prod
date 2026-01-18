@@ -23,6 +23,17 @@ const extractFolderPath = (selected: OpenFolderResult): string | null => {
 };
 
 export const openFolder = async (): Promise<string | null> => {
+	// Test hook for E2E tests to bypass native dialog
+	const testMock = (
+		window as Window & {
+			reprodTest?: { mockDialogResult?: string | null };
+		}
+	).reprodTest?.mockDialogResult;
+
+	if (testMock !== undefined) {
+		return testMock;
+	}
+
 	if (!isTauri()) {
 		return null;
 	}
