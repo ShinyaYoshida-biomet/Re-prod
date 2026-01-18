@@ -626,7 +626,6 @@ impl CancelManager {
         tokens.remove(request_id);
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;

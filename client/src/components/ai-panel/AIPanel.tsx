@@ -6,6 +6,7 @@ import { useSettingsStore } from "@/core/state/slices/settingsStore";
 import { resolveProviderMetadata } from "@/domain/provider/ProviderMetadata";
 import { useAIConversation } from "@/hooks/useAIConversation";
 import type { AIMode } from "@/types";
+import { CopyButton } from "./CopyButton";
 import { ProviderIcon } from "./ProviderIcon";
 import { ProviderSwitcher } from "./ProviderSwitcher";
 import { StreamingMessage } from "./StreamingMessage";
@@ -172,6 +173,7 @@ export const AIPanel = forwardRef<AIPanelRef, AIPanelProps>(({ hasConfiguredProv
 								) : (
 									<div key={message.id} className="message message-user">
 										<div className="message-content">{message.content}</div>
+										<CopyButton text={message.content} className="message-copy-btn" />
 									</div>
 								),
 							)}

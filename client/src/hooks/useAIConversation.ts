@@ -128,7 +128,6 @@ export function useAIConversation() {
 	const clearLastRequestId = useCallback(() => {
 		lastRequestIdRef.current = null;
 	}, []);
-
 	const ensureAgentSessionId = useCallback((): string => {
 		if (agentSessionId) {
 			return agentSessionId;

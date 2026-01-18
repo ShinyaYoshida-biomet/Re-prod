@@ -1,6 +1,6 @@
 import { IS_TAURI, isTauri } from "@/constants/features";
 import { invoke } from "@tauri-apps/api/core";
-import { save } from "@tauri-apps/plugin-dialog";
+import type { save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { DEFAULT_FILENAMES } from "@/constants/ui";
 import { DEFAULT_R_SCRIPT, type Buffer } from "@/core/state/slices/editorSlice";
 import { createBufferId } from "@/core/state/utils/createBufferId";
@@ -17,6 +17,8 @@ import { CommandResolver } from "../resolvers";
 import { commandRegistry } from "../registry";
 import { When } from "../specifications";
 import type { CommandStateSnapshot } from "../specifications";
+
+type SaveDialogResult = Awaited<ReturnType<typeof saveDialog>>;
 
 /**
  * Get current command state snapshot for file commands.
@@ -167,7 +169,8 @@ export function setupFileCommands() {
 
 			if (isTauri()) {
 				try {
-					const filepath = await save({
+					const { save } = await import("@tauri-apps/plugin-dialog");
+					const filepath: SaveDialogResult = await save({
 						defaultPath: activeBuffer.filepath || activeBuffer.displayName || undefined,
 						filters: [
 							{
