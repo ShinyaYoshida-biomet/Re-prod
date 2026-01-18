@@ -53,14 +53,19 @@ pub struct AcpPlanStep {
     pub id: String,
     pub title: String,
     pub status: AcpPlanStepStatus,
+    #[ts(optional = nullable)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub kind: Option<String>,
+    #[ts(optional = nullable)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
+    #[ts(optional = nullable)]
     #[serde(skip_serializing_if = "Option::is_none", rename = "startedAt")]
     pub started_at: Option<i64>,
+    #[ts(optional = nullable)]
     #[serde(skip_serializing_if = "Option::is_none", rename = "finishedAt")]
     pub finished_at: Option<i64>,
+    #[ts(optional = nullable)]
     #[serde(skip_serializing_if = "Option::is_none", rename = "waitingReason")]
     pub waiting_reason: Option<String>,
 }
@@ -86,12 +91,13 @@ pub enum AcpSessionUpdate {
         kind: String,
         status: String,
         locations: Vec<String>,
-        #[ts(type = "unknown")]
+        #[ts(optional = nullable, type = "unknown")]
         #[serde(skip_serializing_if = "Option::is_none")]
         input: Option<serde_json::Value>,
-        #[ts(type = "unknown")]
+        #[ts(optional = nullable, type = "unknown")]
         #[serde(skip_serializing_if = "Option::is_none")]
         output: Option<serde_json::Value>,
+        #[ts(optional = nullable)]
         #[serde(skip_serializing_if = "Option::is_none")]
         error: Option<String>,
     },
@@ -99,12 +105,13 @@ pub enum AcpSessionUpdate {
         id: String,
         status: Option<String>,
         content: Option<String>,
-        #[ts(type = "unknown")]
+        #[ts(optional = nullable, type = "unknown")]
         #[serde(skip_serializing_if = "Option::is_none")]
         input: Option<serde_json::Value>,
-        #[ts(type = "unknown")]
+        #[ts(optional = nullable, type = "unknown")]
         #[serde(skip_serializing_if = "Option::is_none")]
         output: Option<serde_json::Value>,
+        #[ts(optional = nullable)]
         #[serde(skip_serializing_if = "Option::is_none")]
         error: Option<String>,
     },
@@ -158,6 +165,7 @@ pub struct AcpPermissionDecision {
     pub request_id: String,
     pub outcome: AcpPermissionDecisionOutcome,
     pub option_id: Option<String>,
+    #[ts(optional = nullable)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub remember_scope: Option<AcpPermissionDecisionScope>,
 }
