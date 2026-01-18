@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use crate::projects::ProjectRuntime;
+use crate::{projects::ProjectRuntime, repo_tools};
 use reprod_core::{
     ai::tools::*,
     edit::{EditOperation, EditTextFileRequest},
@@ -227,6 +227,44 @@ pub(super) async fn execute_ai_tool_call(
                 "results": results,
                 "count": results.len(),
             });
+            Ok(ToolCallOutcome {
+                summary: output.to_string(),
+                output,
+            })
+        }
+        "search_repo" => {
+            let request: repo_tools::SearchRepoRequest =
+                serde_json::from_value(tool_call.input.clone())
+                    .map_err(|e| format!("Invalid request: {}", e))?;
+            let output = repo_tools::search_repo(&runtime.descriptor.root_path, request).await?;
+            Ok(ToolCallOutcome {
+                summary: output.to_string(),
+                output,
+            })
+        }
+        "git_status" => {
+            let request: repo_tools::GitStatusRequest =
+                serde_json::from_value(tool_call.input.clone())
+                    .map_err(|e| format!("Invalid request: {}", e))?;
+            let output = repo_tools::git_status(&runtime.descriptor.root_path, request).await?;
+            Ok(ToolCallOutcome {
+                summary: output.to_string(),
+                output,
+            })
+        }
+        "git_diff" => {
+            let request: repo_tools::GitDiffRequest = serde_json::from_value(tool_call.input.clone())
+                .map_err(|e| format!("Invalid request: {}", e))?;
+            let output = repo_tools::git_diff(&runtime.descriptor.root_path, request).await?;
+            Ok(ToolCallOutcome {
+                summary: output.to_string(),
+                output,
+            })
+        }
+        "git_log" => {
+            let request: repo_tools::GitLogRequest = serde_json::from_value(tool_call.input.clone())
+                .map_err(|e| format!("Invalid request: {}", e))?;
+            let output = repo_tools::git_log(&runtime.descriptor.root_path, request).await?;
             Ok(ToolCallOutcome {
                 summary: output.to_string(),
                 output,
