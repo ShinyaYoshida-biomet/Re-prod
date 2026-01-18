@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import type * as Monaco from "monaco-editor";
 import type { StateCreator } from "zustand";
 import type { EditorRef } from "@/components/editor/editorRef";
 import { createBufferId } from "@/core/state/utils/createBufferId";
@@ -37,7 +38,7 @@ export interface EditorState {
 		buffers: Buffer[];
 		activeBufferId: string | null;
 	};
-	monacoEditor: any | null;
+	monacoEditor: Monaco.editor.IStandaloneCodeEditor | null;
 	applyCodeChange: ((codeBlock: CodeBlock) => Promise<AppliedCodeChange | null>) | null;
 	runCurrentCell: (() => void) | null;
 	runAll: (() => void) | null;
@@ -49,7 +50,7 @@ export interface EditorState {
 	getActiveBuffer: () => Buffer | null;
 	getBufferById: (id: string) => Buffer | null;
 	getBufferByFilepath: (filepath: string) => Buffer | null;
-	setMonacoEditor: (editor: any) => void;
+	setMonacoEditor: (editor: Monaco.editor.IStandaloneCodeEditor) => void;
 	setApplyCodeChange: (
 		handler: (codeBlock: CodeBlock) => Promise<AppliedCodeChange | null>,
 	) => void;
