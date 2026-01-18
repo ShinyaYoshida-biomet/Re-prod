@@ -179,6 +179,7 @@ export type AgentEventType =
 	| "tool_request"
 	| "tool_result"
 	| "task"
+	| "plan_update"
 	| "artifact"
 	| "error";
 
@@ -235,6 +236,11 @@ export interface TaskEvent extends AgentEvent {
 	type: "task";
 	label: string;
 	deps: string[];
+}
+
+export interface PlanUpdateEvent extends AgentEvent {
+	type: "plan_update";
+	steps: PlanStep[];
 }
 
 export interface ArtifactEvent extends AgentEvent {

@@ -709,6 +709,41 @@ pub(super) enum AgentEventStatus {
 
 #[derive(serde::Serialize, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
+pub(super) enum PlanStepStatus {
+    Pending,
+    Running,
+    Done,
+    Error,
+}
+
+#[derive(serde::Serialize, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
+pub(super) enum PlanStepKind {
+    Todo,
+    Peek,
+    Exec,
+    Plan,
+}
+
+#[derive(serde::Serialize, Clone)]
+pub(super) struct PlanStepPayload {
+    pub id: String,
+    pub title: String,
+    pub status: PlanStepStatus,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kind: Option<PlanStepKind>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "startedAt")]
+    pub started_at: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "finishedAt")]
+    pub finished_at: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "waitingReason")]
+    pub waiting_reason: Option<String>,
+}
+
+#[derive(serde::Serialize, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
 pub(super) enum ArtifactKind {
     FileRead,
     FileWrite,
@@ -803,6 +838,10 @@ pub(super) enum AgentEventPayload {
         deps: Vec<String>,
         #[serde(skip_serializing_if = "Option::is_none", rename = "parentId")]
         parent_id: Option<String>,
+    },
+    #[serde(rename = "plan_update")]
+    PlanUpdate {
+        steps: Vec<PlanStepPayload>,
     },
     #[serde(rename = "artifact")]
     Artifact {

@@ -68,6 +68,14 @@ export const useAssistantEventAdapter = () => {
 		(streamingId: string, event: AgentEvent) => {
 			appendAgentEvent(streamingId, event);
 
+			if (event.type === "plan_update") {
+				const steps = (event as { steps?: PlanStep[] }).steps ?? [];
+				if (steps.length > 0) {
+					updatePlan(streamingId, steps);
+				}
+				return;
+			}
+
 			if (event.type !== "tool_result") {
 				return;
 			}
@@ -122,6 +130,7 @@ export const useAssistantEventAdapter = () => {
 			activeBufferId,
 			appendAgentEvent,
 			editorFilepath,
+			updatePlan,
 			registerPendingEdit,
 			updateBuffer,
 			workspaceRoot,

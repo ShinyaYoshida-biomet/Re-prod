@@ -22,7 +22,8 @@ use super::{
         build_streaming_payload, error_response, now_millis, tool_log_from_call, with_system_prompts,
         AgentEventPayload, AgentEventStatus, AIMode, AppState, ApprovalDecisionPayload,
         ApprovalOption, ApprovalRequestPayload, ApprovalRule, ArtifactDetailsPayload, ArtifactKind,
-        ToolLogStatus, ToolPreviewPayload, WSResponse,
+        PlanStepKind, PlanStepPayload, PlanStepStatus, ToolLogStatus, ToolPreviewPayload,
+        WSResponse,
     },
     tool_handler::execute_ai_tool_call,
 };
@@ -132,6 +133,110 @@ fn extract_pending_edit_fields(
 
 fn extract_pending_edit_path(output: &serde_json::Value) -> Option<String> {
     extract_pending_edit_fields(output).map(|(path, _, _, _)| path)
+}
+
+#[derive(serde::Deserialize)]
+struct PlanSeed {
+    steps: Vec<PlanSeedStep>,
+}
+
+#[derive(serde::Deserialize)]
+struct PlanSeedStep {
+    title: String,
+}
+
+async fn build_plan(
+    provider: &dyn ai::AIProvider,
+    messages: &[ChatMessage],
+) -> Option<Vec<PlanStepPayload>> {
+    let user_message = messages.iter().rev().find(|m| m.role == "user")?;
+    let plan_prompt = ChatMessage {
+        role: "system".to_string(),
+        content: "You are a planning assistant. Return JSON only: {\"steps\":[{\"title\":\"...\"},...]}. Limit to 3 concise steps. No extra text.".to_string(),
+    };
+    let user = ChatMessage {
+        role: "user".to_string(),
+        content: user_message.content.clone(),
+    };
+
+    let response = match timeout(Duration::from_secs(8), provider.send_message(vec![plan_prompt, user])).await {
+        Ok(Ok(text)) => text,
+        _ => return None,
+    };
+
+    let json_text = extract_json(&response)?;
+    let seed: PlanSeed = serde_json::from_str(&json_text).ok()?;
+    if seed.steps.is_empty() {
+        return None;
+    }
+
+    let steps = seed
+        .steps
+        .into_iter()
+        .take(3)
+        .enumerate()
+        .map(|(index, step)| PlanStepPayload {
+            id: format!("{}", index + 1),
+            title: step.title,
+            status: PlanStepStatus::Pending,
+            kind: Some(PlanStepKind::Plan),
+            error: None,
+            started_at: None,
+            finished_at: None,
+            waiting_reason: None,
+        })
+        .collect::<Vec<_>>();
+    Some(steps)
+}
+
+fn extract_json(text: &str) -> Option<String> {
+    let start = text.find('{')?;
+    let end = text.rfind('}')?;
+    if end <= start {
+        return None;
+    }
+    Some(text[start..=end].to_string())
+}
+
+fn emit_plan_update(
+    responses: &mut Vec<WSResponse>,
+    event_stream: &EventStream,
+    steps: &[PlanStepPayload],
+) {
+    event_stream.emit(
+        responses,
+        AgentEventPayload::PlanUpdate {
+            steps: steps.to_vec(),
+        },
+    );
+}
+
+fn mark_plan_running(steps: &mut [PlanStepPayload], index: usize) -> bool {
+    if let Some(step) = steps.get_mut(index) {
+        if matches!(step.status, PlanStepStatus::Pending) {
+            step.status = PlanStepStatus::Running;
+            step.started_at = Some(now_millis());
+            step.waiting_reason = None;
+            return true;
+        }
+    }
+    false
+}
+
+fn mark_plan_finished(
+    steps: &mut [PlanStepPayload],
+    index: usize,
+    status: PlanStepStatus,
+    error: Option<String>,
+) -> bool {
+    if let Some(step) = steps.get_mut(index) {
+        step.status = status;
+        step.finished_at = Some(now_millis());
+        step.error = error;
+        step.waiting_reason = None;
+        return true;
+    }
+    false
 }
 
 fn normalize_relative_path(path: &str) -> Option<String> {
@@ -421,6 +526,17 @@ pub(super) async fn handle_ai_message(
         },
     );
 
+    let mut plan_steps = if enable_tools {
+        build_plan(provider.as_ref(), &messages_with_prompts).await
+    } else {
+        None
+    };
+    if let Some(steps) = plan_steps.as_ref() {
+        if !steps.is_empty() {
+            emit_plan_update(&mut outbound, &event_stream, steps);
+        }
+    }
+
     let responses = if enable_tools {
         let mut tools = get_filesystem_tools();
         tools.extend(get_r_context_tools());
@@ -431,6 +547,7 @@ pub(super) async fn handle_ai_message(
         let mut responses = Vec::new();
         let mut conversation = messages.clone();
         let mut loop_count = 0;
+        let mut plan_index = 0usize;
         const MAX_TOOL_LOOPS: usize = 5;
 
         'tool_loop: loop {
@@ -471,6 +588,11 @@ pub(super) async fn handle_ai_message(
 
                 for tool_call in tool_calls {
                     let mut tool_call = tool_call.clone();
+                    if let Some(steps) = plan_steps.as_mut() {
+                        if mark_plan_running(steps, plan_index) {
+                            emit_plan_update(&mut responses, &event_stream, steps);
+                        }
+                    }
                     let normalized_path = extract_path_from_input(&tool_call.input)
                         .and_then(|path| normalize_relative_path(&path));
                     let approval_rule =
@@ -657,6 +779,19 @@ pub(super) async fn handle_ai_message(
                                     tool_call.id.clone(),
                                     format!("Denied: {}", denied_message),
                                 ));
+                                if let Some(steps) = plan_steps.as_mut() {
+                                    if plan_index < steps.len() {
+                                        if mark_plan_finished(
+                                            steps,
+                                            plan_index,
+                                            PlanStepStatus::Error,
+                                            Some(denied_message.clone()),
+                                        ) {
+                                            emit_plan_update(&mut responses, &event_stream, steps);
+                                        }
+                                        plan_index += 1;
+                                    }
+                                }
                                 saw_error = true;
                                 continue;
                             }
@@ -749,6 +884,19 @@ pub(super) async fn handle_ai_message(
                                     parent_id: None,
                                 },
                             );
+                            if let Some(steps) = plan_steps.as_mut() {
+                                if plan_index < steps.len() {
+                                    if mark_plan_finished(
+                                        steps,
+                                        plan_index,
+                                        PlanStepStatus::Done,
+                                        None,
+                                    ) {
+                                        emit_plan_update(&mut responses, &event_stream, steps);
+                                    }
+                                    plan_index += 1;
+                                }
+                            }
                         }
                         Err(err) => {
                             log.status = ToolLogStatus::Error;
@@ -826,6 +974,19 @@ pub(super) async fn handle_ai_message(
                                     parent_id: None,
                                 },
                             );
+                            if let Some(steps) = plan_steps.as_mut() {
+                                if plan_index < steps.len() {
+                                    if mark_plan_finished(
+                                        steps,
+                                        plan_index,
+                                        PlanStepStatus::Error,
+                                        Some(err.clone()),
+                                    ) {
+                                        emit_plan_update(&mut responses, &event_stream, steps);
+                                    }
+                                    plan_index += 1;
+                                }
+                            }
                         }
                     }
                     if cancel_token.is_cancelled() {
