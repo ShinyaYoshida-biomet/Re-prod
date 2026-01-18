@@ -9,4 +9,4 @@ const detectTauri = (): boolean => {
 };
 
 export const IS_TAURI = detectTauri();
-export const isTauri = (): boolean => detectTauri();
+export const isTauri = (): boolean => IS_TAURI;
