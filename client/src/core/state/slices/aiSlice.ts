@@ -118,6 +118,7 @@ export interface AIState {
 		suggestions: string[];
 		patchMatchFailures: number;
 		patchMatchStatus: PatchMatchStatus;
+		agentSessionId: string | null;
 	};
 	aiPanelRef: { focusInput: () => void } | null;
 	setAIPanelRef: (ref: { focusInput: () => void } | null) => void;
@@ -126,6 +127,7 @@ export interface AIState {
 	clearAIMessages: () => void;
 	setAIMessages: (messages: AIMessage[]) => void;
 	setAISuggestions: (suggestions: string[]) => void;
+	setAgentSessionId: (agentSessionId: string | null) => void;
 	recordPatchMatchFailure: (reason: string, id: string) => void;
 	recordPatchMatchSuccess: () => void;
 	startStreamingMessage: (streamingId: string, mode?: AIMode) => void;
@@ -149,6 +151,7 @@ export const createAISlice: StateCreator<AIState> = (set) => ({
 		suggestions: [],
 		patchMatchFailures: 0,
 		patchMatchStatus: { lastFailureId: null, lastFailureReason: null },
+		agentSessionId: null,
 	},
 	aiPanelRef: null,
 	setAIPanelRef: (ref) => set({ aiPanelRef: ref }),
@@ -166,7 +169,7 @@ export const createAISlice: StateCreator<AIState> = (set) => ({
 		})),
 	clearAIMessages: () =>
 		set((state) => ({
-			ai: { ...state.ai, messages: [] },
+			ai: { ...state.ai, messages: [], agentSessionId: null },
 		})),
 	setAISuggestions: (suggestions) =>
 		set((state) => ({
@@ -188,6 +191,13 @@ export const createAISlice: StateCreator<AIState> = (set) => ({
 			ai: {
 				...state.ai,
 				patchMatchStatus: { lastFailureId: null, lastFailureReason: null },
+			},
+		})),
+	setAgentSessionId: (agentSessionId) =>
+		set((state) => ({
+			ai: {
+				...state.ai,
+				agentSessionId,
 			},
 		})),
 	startStreamingMessage: (streamingId, mode) =>

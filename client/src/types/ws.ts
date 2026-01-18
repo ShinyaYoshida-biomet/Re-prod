@@ -100,6 +100,7 @@ export type ClientMessage =
 	| {
 			type: "ai_message";
 			messages: ChatMessagePayload[];
+			agent_session_id: string;
 			enable_tools?: boolean;
 			request_id?: string;
 			stream?: boolean;

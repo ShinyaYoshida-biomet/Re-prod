@@ -20,8 +20,8 @@ use super::{
     common::{
         build_streaming_payload, error_response, now_millis, tool_log_from_call, with_system_prompts,
         AgentEventPayload, AgentEventStatus, AIMode, AppState, ApprovalDecisionPayload,
-        ApprovalOption, ApprovalRequestPayload, ArtifactDetailsPayload, ArtifactKind, ToolLogStatus,
-        ToolPreviewPayload, WSResponse,
+        ApprovalOption, ApprovalRequestPayload, ApprovalRule, ArtifactDetailsPayload, ArtifactKind,
+        ToolLogStatus, ToolPreviewPayload, WSResponse,
     },
     tool_handler::execute_ai_tool_call,
 };
@@ -83,6 +83,41 @@ fn extract_path_from_input(input: &serde_json::Value) -> Option<String> {
         .get("path")
         .and_then(|value| value.as_str())
         .map(|value| value.to_string())
+}
+
+fn normalize_relative_path(path: &str) -> Option<String> {
+    use std::path::Component;
+    let mut parts = Vec::new();
+    let path = std::path::Path::new(path);
+    for component in path.components() {
+        match component {
+            Component::Normal(part) => parts.push(part.to_string_lossy().to_string()),
+            Component::CurDir => {}
+            _ => return None,
+        }
+    }
+    if parts.is_empty() {
+        return None;
+    }
+    Some(parts.join("/"))
+}
+
+fn approval_prefix_from_path(path: &str) -> Option<String> {
+    let normalized = normalize_relative_path(path)?;
+    if let Some((parent, _)) = normalized.rsplit_once('/') {
+        if !parent.is_empty() {
+            return Some(parent.to_string());
+        }
+    }
+    Some(normalized)
+}
+
+fn build_approval_rule(tool: &str, path: Option<&str>) -> Option<ApprovalRule> {
+    let path_prefix = path.and_then(approval_prefix_from_path);
+    Some(ApprovalRule {
+        tool: tool.to_string(),
+        path_prefix,
+    })
 }
 
 fn build_diff(path: &str, old_text: &str, new_text: &str) -> String {
@@ -280,6 +315,7 @@ pub(super) async fn handle_ai_message(
     state: &AppState,
     runtime: &Arc<ProjectRuntime>,
     messages: Vec<ChatMessage>,
+    agent_session_id: String,
     enable_tools: bool,
     request_id: Option<String>,
     stream: bool,
@@ -338,10 +374,19 @@ pub(super) async fn handle_ai_message(
 
                 for tool_call in tool_calls {
                     let mut tool_call = tool_call.clone();
+                    let normalized_path = extract_path_from_input(&tool_call.input)
+                        .and_then(|path| normalize_relative_path(&path));
+                    let approval_rule =
+                        build_approval_rule(&tool_call.name, normalized_path.as_deref());
                     let requires_approval = tool_requires_approval(&tool_call.name)
                         && !state
                             .approvals
-                            .is_allowed(&stream_id, &tool_call.name)
+                            .is_allowed(
+                                &agent_session_id,
+                                &tool_call.name,
+                                normalized_path.as_deref(),
+                                &runtime.descriptor.root_path,
+                            )
                             .await;
                     let request_event_id = event_stream.next_event_id();
                     let task_event_id = event_stream.next_event_id();
@@ -420,10 +465,19 @@ pub(super) async fn handle_ai_message(
                                 );
                             }
                             ApprovalOption::ApproveSession => {
-                                state
-                                    .approvals
-                                    .allow_for_session(&stream_id, &tool_call.name)
-                                    .await;
+                                if let Some(rule) = approval_rule.clone() {
+                                    state
+                                        .approvals
+                                        .allow_for_session(&agent_session_id, rule.clone())
+                                        .await;
+                                    if let Err(err) = state
+                                        .approvals
+                                        .allow_persistent(&runtime.descriptor.root_path, rule)
+                                        .await
+                                    {
+                                        tracing::warn!("Failed to persist approval: {}", err);
+                                    }
+                                }
                                 event_stream.emit(
                                     &mut responses,
                                     AgentEventPayload::ToolRequest {

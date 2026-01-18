@@ -217,6 +217,7 @@ async fn handle_ws_text(
                 match request {
                     WSRequest::AIMessage {
                         messages,
+                        agent_session_id,
                         enable_tools,
                         request_id,
                         stream,
@@ -230,6 +231,7 @@ async fn handle_ws_text(
                                 &state,
                                 &runtime,
                                 messages,
+                                agent_session_id,
                                 enable_tools,
                                 request_id,
                                 stream,
@@ -271,6 +273,7 @@ async fn handle_ws_request(
     match request {
         WSRequest::AIMessage {
             messages,
+            agent_session_id,
             enable_tools,
             request_id,
             stream,
@@ -280,6 +283,7 @@ async fn handle_ws_request(
                 state,
                 runtime,
                 messages,
+                agent_session_id,
                 enable_tools,
                 request_id,
                 stream,

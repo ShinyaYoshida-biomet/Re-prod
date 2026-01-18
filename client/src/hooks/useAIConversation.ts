@@ -55,11 +55,13 @@ export function useAIConversation() {
 	const isLoading = useStore((state) => state.ai.isLoading);
 	const activeMode = useStore((state) => state.activeMode);
 	const activeAgent = useStore((state) => state.activeAgent);
+	const agentSessionId = useStore((state) => state.ai.agentSessionId);
 
 	const addAIMessage = useStore((state) => state.addAIMessage);
 	const startStreamingMessage = useStore((state) => state.startStreamingMessage);
 	const setAILoading = useStore((state) => state.setAILoading);
 	const completeStreamingMessage = useStore((state) => state.completeStreamingMessage);
+	const setAgentSessionId = useStore((state) => state.setAgentSessionId);
 	const activeBuffer = useStore((state) => state.getActiveBuffer());
 	const updateBuffer = useStore((state) => state.updateBuffer);
 	const editorContent = activeBuffer?.content ?? "";
@@ -121,6 +123,15 @@ export function useAIConversation() {
 		}
 		activeRequestRef.current = null;
 	}, []);
+
+	const ensureAgentSessionId = useCallback((): string => {
+		if (agentSessionId) {
+			return agentSessionId;
+		}
+		const nextId = createRequestId();
+		setAgentSessionId(nextId);
+		return nextId;
+	}, [agentSessionId, setAgentSessionId]);
 
 	useEffect(() => {
 		return () => {
@@ -467,6 +478,7 @@ export function useAIConversation() {
 
 			const sent = socketService.send(
 				aiMessages.send(requestMessages, {
+					agentSessionId: ensureAgentSessionId(),
 					requestId,
 					stream: true,
 					enableTools,
@@ -499,6 +511,7 @@ export function useAIConversation() {
 			editorContent,
 			editorFilepath,
 			ensureAcpSession,
+			ensureAgentSessionId,
 			externalAgentClient,
 			input,
 			messages,
