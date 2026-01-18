@@ -12,6 +12,7 @@ import { classNames } from "@/utils/classNames";
 import { AIPlanCard } from "./AIPlanCard";
 import { AgentEventStream } from "./AgentEventStream";
 import { CodeBlockWithApply } from "./CodeBlockWithApply";
+import { CopyButton } from "./CopyButton";
 import { FileAccessIndicator } from "./FileAccessIndicator";
 import { ToolCallLog } from "./ToolCallLog";
 import "github-markdown-css/github-markdown.css";
@@ -194,6 +195,7 @@ export function StreamingMessage({ message, onApplyCode }: Props): JSX.Element {
 					</div>
 				)}
 			</div>
+			{displayContent && <CopyButton text={displayContent} className="message-copy-btn" />}
 
 			{isAssistant && (
 				<>

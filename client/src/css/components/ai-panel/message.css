@@ -95,6 +95,7 @@
 	flex-direction: column;
 	gap: 8px;
 	max-width: 100%;
+	position: relative;
 }
 
 .message-user {
@@ -106,6 +107,27 @@
 	margin-bottom: 16px;
 	color: var(--text-primary);
 	box-shadow: none;
+}
+
+/* Copy button - hidden by default, shown on hover */
+.message-copy-btn {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	opacity: 0;
+	transition: opacity 0.15s ease;
+	background-color: var(--bg-primary);
+	border: 1px solid var(--border-medium);
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.message:hover .message-copy-btn {
+	opacity: 1;
+}
+
+.message-copy-btn:hover {
+	background-color: var(--border-faint);
+	border-color: var(--border-strong);
 }
 
 .message-assistant {
