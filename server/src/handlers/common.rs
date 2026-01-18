@@ -676,6 +676,23 @@ mod tests {
         manager.unregister("req-1").await;
         assert!(!manager.cancel("req-1").await);
     }
+
+    #[test]
+    fn with_system_prompts_preserves_existing_conversation() {
+        let messages = vec![ChatMessage {
+            role: "user".to_string(),
+            content: "request".to_string(),
+        }];
+
+        let prefixed = with_system_prompts(&messages, AIMode::Agent);
+        let prompts = load_system_prompts();
+
+        assert_eq!(prefixed.len(), messages.len() + 2);
+        assert_eq!(prefixed[0].role, "system");
+        assert_eq!(prefixed[0].content, prompts.patch);
+        assert_eq!(prefixed[1].content, prompts.range);
+        assert_eq!(&prefixed[2..], messages.as_slice());
+    }
 }
 
 #[derive(serde::Serialize, Clone, Copy)]
@@ -864,6 +881,7 @@ fn tool_kind_from_name(name: &str) -> Option<String> {
         "web_search" => Some("Fetch".to_string()),
         "search_repo" => Some("Search".to_string()),
         "git_status" | "git_diff" | "git_log" => Some("Git".to_string()),
+        "propose_text_edit" | "apply_pending_edit" => Some("Edit".to_string()),
         _ => None,
     }
 }
@@ -905,26 +923,4 @@ pub(super) fn error_response(message: impl Into<String>) -> Vec<WSResponse> {
 
 pub(super) fn single_response(response: WSResponse) -> Vec<WSResponse> {
     vec![response]
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn with_system_prompts_preserves_existing_conversation() {
-        let messages = vec![ChatMessage {
-            role: "user".to_string(),
-            content: "request".to_string(),
-        }];
-
-        let prefixed = with_system_prompts(&messages, AIMode::Agent);
-        let prompts = load_system_prompts();
-
-        assert_eq!(prefixed.len(), messages.len() + 2);
-        assert_eq!(prefixed[0].role, "system");
-        assert_eq!(prefixed[0].content, prompts.patch);
-        assert_eq!(prefixed[1].content, prompts.range);
-        assert_eq!(&prefixed[2..], messages.as_slice());
-    }
 }

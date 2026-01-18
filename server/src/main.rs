@@ -5,6 +5,7 @@ mod acp;
 mod conversions;
 mod handlers;
 mod http;
+mod pending_edits;
 mod projects;
 mod repo_tools;
 mod routes;

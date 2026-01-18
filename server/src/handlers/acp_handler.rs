@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use super::common::{error_response, single_response, with_system_prompts, AIMode, WSResponse};
+use crate::pending_edits;
 use crate::projects::ProjectRuntime;
 use reprod_core::acp::types::{AcpPermissionDecision, AcpPromptMessage};
 use reprod_core::ChatMessage;
@@ -73,7 +74,18 @@ pub async fn handle_acp_pending_edit_accept(
     runtime: &Arc<ProjectRuntime>,
     edit_id: &str,
 ) -> Vec<WSResponse> {
-    match runtime.acp.accept_pending_edit(edit_id).await {
+    let handled = pending_edits::has_pending_edit(&runtime.pending_edits, edit_id).await;
+    let result = if handled {
+        pending_edits::accept_pending_edit(
+            &runtime.edit_service,
+            &runtime.pending_edits,
+            edit_id,
+        )
+        .await
+    } else {
+        runtime.acp.accept_pending_edit(edit_id).await.map_err(|e| e.to_string())
+    };
+    match result {
         Ok(()) => single_response(WSResponse::AcpPendingEditResolved {
             edit_id: edit_id.to_string(),
             success: true,
@@ -82,7 +94,7 @@ pub async fn handle_acp_pending_edit_accept(
         Err(error) => single_response(WSResponse::AcpPendingEditResolved {
             edit_id: edit_id.to_string(),
             success: false,
-            error: Some(error.to_string()),
+            error: Some(error),
         }),
     }
 }
@@ -91,7 +103,13 @@ pub async fn handle_acp_pending_edit_reject(
     runtime: &Arc<ProjectRuntime>,
     edit_id: &str,
 ) -> Vec<WSResponse> {
-    match runtime.acp.reject_pending_edit(edit_id).await {
+    let handled = pending_edits::has_pending_edit(&runtime.pending_edits, edit_id).await;
+    let result = if handled {
+        pending_edits::reject_pending_edit(&runtime.pending_edits, edit_id).await
+    } else {
+        runtime.acp.reject_pending_edit(edit_id).await.map_err(|e| e.to_string())
+    };
+    match result {
         Ok(()) => single_response(WSResponse::AcpPendingEditResolved {
             edit_id: edit_id.to_string(),
             success: true,
@@ -100,7 +118,7 @@ pub async fn handle_acp_pending_edit_reject(
         Err(error) => single_response(WSResponse::AcpPendingEditResolved {
             edit_id: edit_id.to_string(),
             success: false,
-            error: Some(error.to_string()),
+            error: Some(error),
         }),
     }
 }
@@ -110,7 +128,13 @@ pub async fn handle_acp_pending_edit_update(
     edit_id: &str,
     new_text: &str,
 ) -> Vec<WSResponse> {
-    match runtime.acp.update_pending_edit(edit_id, new_text).await {
+    let handled = pending_edits::has_pending_edit(&runtime.pending_edits, edit_id).await;
+    let result = if handled {
+        pending_edits::update_pending_edit(&runtime.pending_edits, edit_id, new_text).await
+    } else {
+        runtime.acp.update_pending_edit(edit_id, new_text).await.map_err(|e| e.to_string())
+    };
+    match result {
         Ok(()) => single_response(WSResponse::AcpPendingEditUpdated {
             edit_id: edit_id.to_string(),
             success: true,
@@ -119,8 +143,7 @@ pub async fn handle_acp_pending_edit_update(
         Err(error) => single_response(WSResponse::AcpPendingEditUpdated {
             edit_id: edit_id.to_string(),
             success: false,
-            error: Some(error.to_string()),
+            error: Some(error),
         }),
     }
 }
-

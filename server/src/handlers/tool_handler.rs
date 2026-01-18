@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use crate::{projects::ProjectRuntime, repo_tools};
+use crate::{pending_edits, projects::ProjectRuntime, repo_tools};
 use reprod_core::{
     ai::tools::*,
     edit::{EditOperation, EditTextFileRequest},
@@ -49,6 +49,7 @@ pub(super) struct ToolCallOutcome {
 pub(super) async fn execute_ai_tool_call(
     tool_call: &ToolCall,
     runtime: &Arc<ProjectRuntime>,
+    agent_session_id: &str,
 ) -> Result<ToolCallOutcome, String> {
     match tool_call.name.as_str() {
         "read_text_file" => {
@@ -79,37 +80,75 @@ pub(super) async fn execute_ai_tool_call(
                 new_text: Some(request.content),
                 edits: None,
             };
-            let result = runtime
-                .edit_service
-                .edit_text_file(edit_request)
-                .await
-                .map_err(|e| e.to_string())?;
-            let summary = if result.unified_diff.is_empty() {
-                serde_json::to_string(&result).unwrap_or_default()
-            } else {
-                result.unified_diff.clone()
-            };
-            let output = serde_json::to_value(result)
-                .map_err(|e| format!("Failed to serialize edit result: {}", e))?;
+            let edit = pending_edits::propose_pending_edit(
+                &runtime.edit_service,
+                &runtime.pending_edits,
+                agent_session_id,
+                &tool_call.id,
+                edit_request,
+            )
+            .await?;
+            let output = serde_json::json!({
+                "type": "pending_edit",
+                "edit": edit,
+            });
+            let summary = output.to_string();
             Ok(ToolCallOutcome { output, summary })
         }
         "edit_text_file" => {
             let request: EditTextFileRequest = serde_json::from_value(tool_call.input.clone())
                 .map_err(|e| format!("Invalid request: {}", e))?;
-
-            let result = runtime
-                .edit_service
-                .edit_text_file(request)
-                .await
-                .map_err(|e| e.to_string())?;
-            let summary = if result.unified_diff.is_empty() {
-                serde_json::to_string(&result).unwrap_or_default()
-            } else {
-                result.unified_diff.clone()
-            };
-            let output = serde_json::to_value(result)
-                .map_err(|e| format!("Failed to serialize edit result: {}", e))?;
+            let edit = pending_edits::propose_pending_edit(
+                &runtime.edit_service,
+                &runtime.pending_edits,
+                agent_session_id,
+                &tool_call.id,
+                request,
+            )
+            .await?;
+            let output = serde_json::json!({
+                "type": "pending_edit",
+                "edit": edit,
+            });
+            let summary = output.to_string();
             Ok(ToolCallOutcome { output, summary })
+        }
+        "propose_text_edit" => {
+            let request: EditTextFileRequest = serde_json::from_value(tool_call.input.clone())
+                .map_err(|e| format!("Invalid request: {}", e))?;
+            let edit = pending_edits::propose_pending_edit(
+                &runtime.edit_service,
+                &runtime.pending_edits,
+                agent_session_id,
+                &tool_call.id,
+                request,
+            )
+            .await?;
+            let output = serde_json::json!({
+                "type": "pending_edit",
+                "edit": edit,
+            });
+            let summary = output.to_string();
+            Ok(ToolCallOutcome { output, summary })
+        }
+        "apply_pending_edit" => {
+            let request: pending_edits::ApplyPendingEditRequest =
+                serde_json::from_value(tool_call.input.clone())
+                    .map_err(|e| format!("Invalid request: {}", e))?;
+            pending_edits::accept_pending_edit(
+                &runtime.edit_service,
+                &runtime.pending_edits,
+                &request.edit_id,
+            )
+            .await?;
+            let output = serde_json::to_value(pending_edits::ApplyPendingEditResult {
+                success: true,
+            })
+            .map_err(|e| format!("Failed to serialize apply result: {}", e))?;
+            Ok(ToolCallOutcome {
+                summary: output.to_string(),
+                output,
+            })
         }
         "list_files" => {
             let request: ListFilesRequest = serde_json::from_value(tool_call.input.clone())

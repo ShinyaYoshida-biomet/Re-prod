@@ -3,11 +3,7 @@ import { socketService } from "@/services/socket";
 import type { PendingEdit } from "@/types/pendingEdit";
 
 export async function acceptPendingEdit(edit: PendingEdit): Promise<void> {
-	if (edit.source.type !== "acp") {
-		return;
-	}
-
-	if (IS_TAURI) {
+	if (IS_TAURI && edit.source.type === "acp") {
 		const { invoke } = await import("@tauri-apps/api/core");
 		await invoke("acp_accept_pending_edit", { editId: edit.id });
 		return;
@@ -25,11 +21,7 @@ export async function acceptPendingEdit(edit: PendingEdit): Promise<void> {
 }
 
 export async function rejectPendingEdit(edit: PendingEdit): Promise<void> {
-	if (edit.source.type !== "acp") {
-		return;
-	}
-
-	if (IS_TAURI) {
+	if (IS_TAURI && edit.source.type === "acp") {
 		const { invoke } = await import("@tauri-apps/api/core");
 		await invoke("acp_reject_pending_edit", { editId: edit.id });
 		return;
@@ -47,11 +39,7 @@ export async function rejectPendingEdit(edit: PendingEdit): Promise<void> {
 }
 
 export async function updatePendingEdit(edit: PendingEdit, newContent: string): Promise<void> {
-	if (edit.source.type !== "acp") {
-		return;
-	}
-
-	if (IS_TAURI) {
+	if (IS_TAURI && edit.source.type === "acp") {
 		const { invoke } = await import("@tauri-apps/api/core");
 		await invoke("acp_update_pending_edit", { editId: edit.id, newText: newContent });
 		return;

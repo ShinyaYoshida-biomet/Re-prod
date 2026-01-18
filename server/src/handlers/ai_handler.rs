@@ -5,7 +5,8 @@ use reprod_core::{
     ai::{
         self,
         tools::{
-            get_console_tools, get_filesystem_tools, get_r_context_tools, get_repo_tools,
+            get_console_tools, get_filesystem_tools, get_pending_edit_tools, get_r_context_tools,
+            get_repo_tools,
             get_web_search_tools, WriteTextFileRequest,
         },
     },
@@ -75,7 +76,7 @@ impl EventStream {
 }
 
 fn tool_requires_approval(name: &str) -> bool {
-    matches!(name, "write_text_file" | "edit_text_file")
+    matches!(name, "apply_pending_edit")
 }
 
 fn push_cancel_response(
@@ -113,6 +114,24 @@ fn extract_path_from_input(input: &serde_json::Value) -> Option<String> {
         .get("path")
         .and_then(|value| value.as_str())
         .map(|value| value.to_string())
+}
+
+fn extract_pending_edit_fields(
+    output: &serde_json::Value,
+) -> Option<(String, String, String, String)> {
+    let edit = output.get("edit")?;
+    if output.get("type")?.as_str()? != "pending_edit" {
+        return None;
+    }
+    let file_path = edit.get("file_path")?.as_str()?.to_string();
+    let old_text = edit.get("old_text")?.as_str()?.to_string();
+    let new_text = edit.get("new_text")?.as_str()?.to_string();
+    let unified_diff = edit.get("unified_diff")?.as_str()?.to_string();
+    Some((file_path, old_text, new_text, unified_diff))
+}
+
+fn extract_pending_edit_path(output: &serde_json::Value) -> Option<String> {
+    extract_pending_edit_fields(output).map(|(path, _, _, _)| path)
 }
 
 fn normalize_relative_path(path: &str) -> Option<String> {
@@ -236,7 +255,7 @@ async fn build_tool_preview(
                 affected_lines: None,
             })
         }
-        "edit_text_file" => {
+        "edit_text_file" | "propose_text_edit" => {
             let request: EditTextFileRequest =
                 serde_json::from_value(tool_call.input.clone()).ok()?;
             let read_result = runtime.edit_service.read_text_file(&request.path).await;
@@ -260,6 +279,24 @@ async fn build_tool_preview(
                 affected_lines: None,
             })
         }
+        "apply_pending_edit" => {
+            let edit_id = tool_call
+                .input
+                .get("edit_id")
+                .and_then(|value| value.as_str())?;
+            let edit = crate::pending_edits::get_pending_edit(
+                &runtime.pending_edits,
+                edit_id,
+            )
+            .await?;
+            Some(ToolPreviewPayload {
+                kind: "diff".to_string(),
+                filepath: Some(edit.file_path),
+                diff: Some(edit.unified_diff),
+                command: None,
+                affected_lines: None,
+            })
+        }
         _ => None,
     }
 }
@@ -269,9 +306,12 @@ fn summarize_tool_result(tool_call: &reprod_core::ToolCall, outcome: &serde_json
         "read_text_file" => extract_path_from_input(&tool_call.input)
             .map(|path| format!("Read file {}", path))
             .unwrap_or_else(|| "Read file".to_string()),
-        "write_text_file" | "edit_text_file" => extract_path_from_input(&tool_call.input)
-            .map(|path| format!("Updated file {}", path))
-            .unwrap_or_else(|| "Updated file".to_string()),
+        "write_text_file" | "edit_text_file" | "propose_text_edit" => {
+            extract_pending_edit_path(outcome)
+                .map(|path| format!("Proposed edit for {}", path))
+                .unwrap_or_else(|| "Proposed edit".to_string())
+        }
+        "apply_pending_edit" => "Applied pending edit".to_string(),
         _ => outcome.to_string(),
     }
 }
@@ -282,14 +322,19 @@ fn artifact_for_tool_result(
     diff_summary: &str,
     display_summary: &str,
 ) -> Option<(ArtifactKind, Option<String>, String, Option<ArtifactDetailsPayload>)> {
-    let old_text = output
-        .get("old_text")
-        .and_then(|value| value.as_str())
-        .map(|value| value.to_string());
-    let new_text = output
-        .get("new_text")
-        .and_then(|value| value.as_str())
-        .map(|value| value.to_string());
+    let (old_text, new_text, diff, pending_path) = extract_pending_edit_fields(output)
+        .map(|(path, old_text, new_text, diff)| (Some(old_text), Some(new_text), Some(diff), Some(path)))
+        .unwrap_or_else(|| {
+            let old_text = output
+                .get("old_text")
+                .and_then(|value| value.as_str())
+                .map(|value| value.to_string());
+            let new_text = output
+                .get("new_text")
+                .and_then(|value| value.as_str())
+                .map(|value| value.to_string());
+            (old_text, new_text, None, None)
+        });
 
     match tool_call.name.as_str() {
         "read_text_file" => Some((
@@ -298,12 +343,12 @@ fn artifact_for_tool_result(
             display_summary.to_string(),
             None,
         )),
-        "write_text_file" | "edit_text_file" => Some((
+        "write_text_file" | "edit_text_file" | "propose_text_edit" => Some((
             ArtifactKind::FileWrite,
-            extract_path_from_input(&tool_call.input),
+            pending_path.or_else(|| extract_path_from_input(&tool_call.input)),
             display_summary.to_string(),
             Some(ArtifactDetailsPayload {
-                diff: Some(diff_summary.to_string()),
+                diff: diff.or_else(|| Some(diff_summary.to_string())),
                 exit_code: None,
                 stdout: None,
                 stderr: None,
@@ -382,6 +427,7 @@ pub(super) async fn handle_ai_message(
         tools.extend(get_console_tools());
         tools.extend(get_web_search_tools());
         tools.extend(get_repo_tools());
+        tools.extend(get_pending_edit_tools());
         let mut responses = Vec::new();
         let mut conversation = messages.clone();
         let mut loop_count = 0;
@@ -643,7 +689,8 @@ pub(super) async fn handle_ai_message(
                         },
                     );
 
-                    let tool_result = execute_ai_tool_call(&tool_call, runtime).await;
+                    let tool_result =
+                        execute_ai_tool_call(&tool_call, runtime, &agent_session_id).await;
                     match tool_result {
                         Ok(result) => {
                             log.status = ToolLogStatus::Done;

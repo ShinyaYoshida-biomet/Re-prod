@@ -2,8 +2,11 @@ import { useCallback } from "react";
 import { useStore } from "@/core";
 import { extractCodeBlocks } from "@/core/ai/codeBlockUtils";
 import type { AgentEvent, ApprovalRequest, PlanStep, ToolCallLog } from "@/types";
+import type { PendingEdit } from "@/types";
 import type { AcpPlanStep } from "@/types/generated/AcpPlanStep";
 import type { AcpSessionUpdate } from "@/types/generated/AcpSessionUpdate";
+import { normalizeWorkspaceRelativePath } from "@/core/pathUtils";
+import { useFileSystemStore } from "@/core/fileSystemStore";
 
 type AcpToolCall = Extract<AcpSessionUpdate, { ToolCall: unknown }>["ToolCall"];
 type AcpToolCallUpdate = Extract<AcpSessionUpdate, { ToolCallUpdate: unknown }>["ToolCallUpdate"];
@@ -33,6 +36,12 @@ export const useAssistantEventAdapter = () => {
 	const recordToolEvent = useStore((state) => state.recordToolEvent);
 	const completeStreamingMessage = useStore((state) => state.completeStreamingMessage);
 	const setAILoading = useStore((state) => state.setAILoading);
+	const registerPendingEdit = useStore((state) => state.registerPendingEdit);
+	const activeBuffer = useStore((state) => state.getActiveBuffer());
+	const updateBuffer = useStore((state) => state.updateBuffer);
+	const workspaceRoot = useFileSystemStore((state) => state.workspaceRoot);
+	const activeBufferId = activeBuffer?.id ?? null;
+	const editorFilepath = activeBuffer?.filepath ?? "";
 
 	const appendChunk = useCallback(
 		(streamingId: string, chunk: string) => {
@@ -58,8 +67,65 @@ export const useAssistantEventAdapter = () => {
 	const recordAgentEvent = useCallback(
 		(streamingId: string, event: AgentEvent) => {
 			appendAgentEvent(streamingId, event);
+
+			if (event.type !== "tool_result") {
+				return;
+			}
+
+			const output = (event as { output?: unknown }).output;
+			if (!output || typeof output !== "object") {
+				return;
+			}
+
+			const pendingType = (output as { type?: unknown }).type;
+			if (pendingType !== "pending_edit") {
+				return;
+			}
+
+			const editPayload = (output as { edit?: any }).edit;
+			if (!editPayload || typeof editPayload !== "object") {
+				return;
+			}
+
+			const normalizedFilePath = normalizeWorkspaceRelativePath(
+				String(editPayload.file_path ?? ""),
+				workspaceRoot,
+				{ keepRootEmpty: true },
+			);
+			const normalizedEditorPath = normalizeWorkspaceRelativePath(editorFilepath, workspaceRoot, {
+				keepRootEmpty: true,
+			});
+
+			const pendingEdit: PendingEdit = {
+				id: String(editPayload.id ?? ""),
+				source: { type: "api-key", codeBlockId: (event as any).requestId ?? event.id },
+				filePath: normalizedFilePath,
+				oldContent: String(editPayload.old_text ?? ""),
+				newContent: String(editPayload.new_text ?? ""),
+				unifiedDiff: String(editPayload.unified_diff ?? ""),
+				baseHash: String(editPayload.base_sha256 ?? ""),
+				expectedSha: editPayload.expected_sha256 ?? null,
+				createdAt: Date.now(),
+			};
+
+			const registered = registerPendingEdit(pendingEdit);
+			if (registered && pendingEdit.filePath === normalizedEditorPath) {
+				if (activeBufferId) {
+					updateBuffer(activeBufferId, {
+						content: pendingEdit.newContent,
+						isDirty: true,
+					});
+				}
+			}
 		},
-		[appendAgentEvent],
+		[
+			activeBufferId,
+			appendAgentEvent,
+			editorFilepath,
+			registerPendingEdit,
+			updateBuffer,
+			workspaceRoot,
+		],
 	);
 
 	const enqueueApproval = useCallback(
