@@ -11,6 +11,9 @@ const extractFolderPath = (selected: OpenFolderResult): string | null => {
 	if (Array.isArray(selected)) {
 		return selected[0] ?? null;
 	}
+	if (selected && typeof selected === "object" && "path" in selected && typeof selected.path === "string") {
+		return selected.path;
+	}
 	return null;
 };
 
