@@ -1,5 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { openFolder } from "../folderOperations";
+import { isTauri } from "@/constants/features";
+
+vi.mock("@/constants/features", () => ({
+	isTauri: vi.fn(),
+}));
 
 vi.mock("@/services/toastService", () => ({
 	showError: vi.fn(),
@@ -10,18 +15,12 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
 }));
 
 describe("openFolder", () => {
-	const originalTauri = (window as unknown as { __TAURI__?: object }).__TAURI__;
-
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
 
-	afterEach(() => {
-		(window as unknown as { __TAURI__?: object }).__TAURI__ = originalTauri;
-	});
-
 	it("returns null when not running in Tauri", async () => {
-		(window as unknown as { __TAURI__?: object }).__TAURI__ = undefined;
+		vi.mocked(isTauri).mockReturnValue(false);
 		const result = await openFolder();
 
 		expect(result).toBeNull();
@@ -30,7 +29,7 @@ describe("openFolder", () => {
 	});
 
 	it("returns the selected folder path", async () => {
-		(window as unknown as { __TAURI__?: object }).__TAURI__ = {};
+		vi.mocked(isTauri).mockReturnValue(true);
 		const dialog = await import("@tauri-apps/plugin-dialog");
 		const toast = await import("@/services/toastService");
 		const openMock = dialog.open as unknown as ReturnType<typeof vi.fn>;
@@ -47,7 +46,7 @@ describe("openFolder", () => {
 	});
 
 	it("returns null when the picker is cancelled", async () => {
-		(window as unknown as { __TAURI__?: object }).__TAURI__ = {};
+		vi.mocked(isTauri).mockReturnValue(true);
 		const dialog = await import("@tauri-apps/plugin-dialog");
 		const toast = await import("@/services/toastService");
 		const openMock = dialog.open as unknown as ReturnType<typeof vi.fn>;
@@ -60,7 +59,7 @@ describe("openFolder", () => {
 	});
 
 	it("returns the first path when the dialog returns an array", async () => {
-		(window as unknown as { __TAURI__?: object }).__TAURI__ = {};
+		vi.mocked(isTauri).mockReturnValue(true);
 		const dialog = await import("@tauri-apps/plugin-dialog");
 		const toast = await import("@/services/toastService");
 		const openMock = dialog.open as unknown as ReturnType<typeof vi.fn>;
