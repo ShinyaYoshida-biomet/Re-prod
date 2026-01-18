@@ -66,6 +66,7 @@ describe("useAIConversation", () => {
 	const mockCompleteStreamingMessage = vi.fn();
 	const mockUpdateBuffer = vi.fn();
 	const mockRegisterPendingEdit = vi.fn();
+	const mockSetAgentSessionId = vi.fn();
 
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -76,6 +77,7 @@ describe("useAIConversation", () => {
 				ai: {
 					messages: [],
 					isLoading: false,
+					agentSessionId: null,
 				},
 				activeMode: "agent",
 				activeAgent: null,
@@ -83,6 +85,7 @@ describe("useAIConversation", () => {
 				startStreamingMessage: mockStartStreamingMessage,
 				setAILoading: mockSetAILoading,
 				completeStreamingMessage: mockCompleteStreamingMessage,
+				setAgentSessionId: mockSetAgentSessionId,
 				getActiveBuffer: () => ({ id: "buf1", content: "x <- 1", filepath: "test.R" }),
 				updateBuffer: mockUpdateBuffer,
 				execution: { results: [] },
