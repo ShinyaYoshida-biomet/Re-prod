@@ -6,6 +6,7 @@ import { useStore } from "@/core/state/store";
 import { useFileSystemStore } from "@/core/fileSystemStore";
 import { socketService } from "@/services/socket";
 import { showError } from "@/services/toastService";
+import { getErrorMessage } from "@/utils/error";
 import { downloadFile, openFile } from "@/utils/fileOperations";
 import { openFolder } from "@/utils/folderOperations";
 import type { ExtractServerMessage } from "@/types";
@@ -103,16 +104,14 @@ export function setupFileCommands() {
 					useFileSystemStore
 						.getState()
 						.resetAndLoadRoot()
-						.catch(() => {
-							// Ignore errors when resetting and loading root; file system may be unavailable or user cancelled.
-							// User experience: File tree may not refresh, but app remains usable.
+						.catch((error) => {
+							showError(getErrorMessage(error, "Failed to refresh file tree"));
 						});
 					return;
 				}
 				useStore.getState().setModalOpen("projectSwitch", true);
 			} catch (error) {
-				// Ignore errors during folder open; user may cancel dialog or folder may be inaccessible.
-				// User experience: No folder is opened, app continues normally.
+				showError(getErrorMessage(error, "Failed to open folder"));
 			}
 		})
 

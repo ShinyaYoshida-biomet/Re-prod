@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { useFileSystemStore } from "@/core/fileSystemStore";
 import { socketService } from "@/services/socket";
+import { showError } from "@/services/toastService";
+import { getErrorMessage } from "@/utils/error";
 import type { ExtractServerMessage } from "@/types";
 
 export function useFileSystemData(): void {
@@ -9,7 +11,9 @@ export function useFileSystemData(): void {
 
 	useEffect(() => {
 		const triggerLoad = (): void => {
-			loadRoot().catch(() => {});
+			loadRoot().catch((error) => {
+				showError(getErrorMessage(error, "Failed to load file tree"));
+			});
 		};
 
 		if (socketService.isConnected()) {
