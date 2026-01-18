@@ -666,6 +666,17 @@ mod tests {
             .await;
         assert!(allowed);
     }
+
+    #[tokio::test]
+    async fn cancel_manager_triggers_token() {
+        let manager = CancelManager::new();
+        let token = manager.register("req-1").await;
+        assert!(!token.is_cancelled());
+        assert!(manager.cancel("req-1").await);
+        assert!(token.is_cancelled());
+        manager.unregister("req-1").await;
+        assert!(!manager.cancel("req-1").await);
+    }
 }
 
 #[derive(serde::Serialize, Clone, Copy)]
