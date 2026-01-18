@@ -132,7 +132,9 @@ export const setupDevGlobals = (): void => {
 			}
 		},
 		reloadFileTree: () => useFileSystemStore.getState().resetAndLoadRoot(),
-		executeCommand: (id, ...args) => commandRegistry.execute(id, ...args),
+		executeCommand: async (id, ...args) => {
+			await commandRegistry.execute(id, ...args);
+		},
 		setMockDialogResult: (result) => {
 			if (target.reprodTest) {
 				target.reprodTest.mockDialogResult = result;
