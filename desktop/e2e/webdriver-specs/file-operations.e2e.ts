@@ -2,7 +2,6 @@ import { expect } from "@wdio/globals";
 
 describe("File Operations", () => {
 	beforeEach(async () => {
-		// Ensure app is loaded
 		const fileBrowser = await $("div.file-browser");
 		await fileBrowser.waitForDisplayed();
 	});
@@ -21,7 +20,6 @@ describe("File Operations", () => {
 		const okBtn = await dialog.$("button=OK");
 		await okBtn.click();
 
-		// Wait for file in tree
 		const fileLabel = await $(`.file-tree-label=${filename}`);
 		await fileLabel.waitForDisplayed();
 		await expect(fileLabel).toBeDisplayed();
@@ -41,9 +39,45 @@ describe("File Operations", () => {
 		const okBtn = await dialog.$("button=OK");
 		await okBtn.click();
 
-		// Wait for folder in tree
 		const folderLabel = await $(`.file-tree-label=${folderName}`);
 		await folderLabel.waitForDisplayed();
 		await expect(folderLabel).toBeDisplayed();
+	});
+
+	it("renames a file via context menu", async () => {
+		// Create file first
+		const plusBtn = await $('button[title="New File"]');
+		await plusBtn.click();
+		const dialog = await $('[role="dialog"][aria-labelledby="prompt-dialog-title"]');
+		await dialog.waitForDisplayed();
+		const input = await dialog.$("input.form-input");
+		const filename = `desktop-rename-${Date.now()}.R`;
+		await input.setValue(filename);
+		await dialog.$("button=OK").click();
+
+		const fileLabel = await $(`.file-tree-label=${filename}`);
+		await fileLabel.waitForDisplayed();
+
+		// Right click
+		await fileLabel.click({ button: 2 }); // 2 = right click
+
+		// Wait for context menu
+		const menu = await $(".file-context-menu");
+		await menu.waitForDisplayed();
+
+		// Click Rename
+		const renameBtn = await menu.$("button=Rename");
+		await renameBtn.click();
+
+		// Dialog
+		await dialog.waitForDisplayed();
+		const newName = `desktop-renamed-${Date.now()}.R`;
+		await dialog.$("input.form-input").setValue(newName);
+		await dialog.$("button=OK").click();
+
+		// Verify
+		const newLabel = await $(`.file-tree-label=${newName}`);
+		await newLabel.waitForDisplayed();
+		await expect(newLabel).toBeDisplayed();
 	});
 });
