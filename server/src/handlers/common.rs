@@ -860,10 +860,12 @@ pub(super) fn tool_log_from_call(tool_call: &reprod_core::ToolCall) -> ToolLogPa
 }
 
 fn tool_kind_from_name(name: &str) -> Option<String> {
-    if name == "web_search" {
-        return Some("Fetch".to_string());
+    match name {
+        "web_search" => Some("Fetch".to_string()),
+        "search_repo" => Some("Search".to_string()),
+        "git_status" | "git_diff" | "git_log" => Some("Git".to_string()),
+        _ => None,
     }
-    None
 }
 
 pub(super) fn now_millis() -> i64 {

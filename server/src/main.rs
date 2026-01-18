@@ -6,6 +6,7 @@ mod conversions;
 mod handlers;
 mod http;
 mod projects;
+mod repo_tools;
 mod routes;
 
 use axum::{routing::get, Router};

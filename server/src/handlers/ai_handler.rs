@@ -5,8 +5,8 @@ use reprod_core::{
     ai::{
         self,
         tools::{
-            get_console_tools, get_filesystem_tools, get_r_context_tools, get_web_search_tools,
-            WriteTextFileRequest,
+            get_console_tools, get_filesystem_tools, get_r_context_tools, get_repo_tools,
+            get_web_search_tools, WriteTextFileRequest,
         },
     },
     edit::{EditOperation, EditTextFileRequest, TextEdit},
@@ -381,6 +381,7 @@ pub(super) async fn handle_ai_message(
         tools.extend(get_r_context_tools());
         tools.extend(get_console_tools());
         tools.extend(get_web_search_tools());
+        tools.extend(get_repo_tools());
         let mut responses = Vec::new();
         let mut conversation = messages.clone();
         let mut loop_count = 0;
