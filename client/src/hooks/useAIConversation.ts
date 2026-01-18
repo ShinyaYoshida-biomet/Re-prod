@@ -372,8 +372,13 @@ export function useAIConversation() {
 
 	const handleStop = useCallback(() => {
 		clearTimeoutRef();
-		setAILoading(false);
 		const streamingId = activeRequestRef.current?.id;
+		if (streamingId && !acpConfigured) {
+			const sessionId = agentSessionId ?? ensureAgentSessionId();
+			socketService.send(aiMessages.cancel(streamingId, sessionId));
+			return;
+		}
+		setAILoading(false);
 		if (streamingId) {
 			completeStreamingMessage(streamingId);
 			acpLastChunkKindRef.current.delete(streamingId);
@@ -385,10 +390,12 @@ export function useAIConversation() {
 		}
 	}, [
 		acpConfigured,
+		agentSessionId,
 		cancelAcpSession,
 		clearActiveRequest,
 		clearTimeoutRef,
 		completeStreamingMessage,
+		ensureAgentSessionId,
 		postAssistantMessage,
 		setAILoading,
 	]);

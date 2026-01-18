@@ -103,6 +103,7 @@ async fn main() {
             request_counter: Arc::new(AtomicU64::new(0)),
             projects: projects.clone(),
             approvals: Arc::new(handlers::ApprovalManager::new()),
+            cancels: Arc::new(handlers::CancelManager::new()),
         });
 
     let port = reprod_core::config::server_port_override().unwrap_or(3001);

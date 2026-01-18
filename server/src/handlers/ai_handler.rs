@@ -78,6 +78,36 @@ fn tool_requires_approval(name: &str) -> bool {
     matches!(name, "write_text_file" | "edit_text_file")
 }
 
+fn push_cancel_response(
+    responses: &mut Vec<WSResponse>,
+    sender: &ResponseSender,
+    event_stream: &EventStream,
+    stream_id: &str,
+) {
+    let cancel_event_id = event_stream.next_event_id();
+    event_stream.emit(
+        responses,
+        AgentEventPayload::Error {
+            id: cancel_event_id,
+            status: AgentEventStatus::Error,
+            timestamp: now_millis(),
+            message: "Request cancelled by user.".to_string(),
+            recoverable: false,
+            suggested_action: None,
+            parent_id: None,
+        },
+    );
+    push_response(
+        responses,
+        sender,
+        WSResponse::AIResponseComplete {
+            id: stream_id.to_string(),
+            final_text: "Request cancelled by user.".to_string(),
+            code_blocks: None,
+        },
+    );
+}
+
 fn extract_path_from_input(input: &serde_json::Value) -> Option<String> {
     input
         .get("path")
@@ -328,6 +358,7 @@ pub(super) async fn handle_ai_message(
         let count = state.request_counter.fetch_add(1, Ordering::Relaxed);
         format!("req-{}", count)
     });
+    let cancel_token = state.cancels.register(&stream_id).await;
     let messages_with_prompts = with_system_prompts(&messages, mode);
 
     let mut outbound = Vec::new();
@@ -355,16 +386,35 @@ pub(super) async fn handle_ai_message(
         let mut loop_count = 0;
         const MAX_TOOL_LOOPS: usize = 5;
 
-        loop {
+        'tool_loop: loop {
+            if cancel_token.is_cancelled() {
+                push_cancel_response(&mut responses, &sender, &event_stream, &stream_id);
+                break 'tool_loop;
+            }
             let messages_with_prompts = with_system_prompts(&conversation, mode);
-            let response = match provider
-                .send_message_with_tools(messages_with_prompts.clone(), tools.clone())
-                .await
-            {
-                Ok(response) => response,
-                Err(e) => {
+            let mut cancelled = false;
+            let response = tokio::select! {
+                _ = cancel_token.wait() => {
+                    cancelled = true;
+                    None
+                }
+                response = provider.send_message_with_tools(messages_with_prompts.clone(), tools.clone()) => {
+                    Some(response)
+                }
+            };
+            if cancelled {
+                push_cancel_response(&mut responses, &sender, &event_stream, &stream_id);
+                break 'tool_loop;
+            }
+            let response = match response {
+                Some(Ok(response)) => response,
+                Some(Err(e)) => {
                     push_responses(&mut responses, &sender, error_response(e.to_string()));
-                    break;
+                    break 'tool_loop;
+                }
+                None => {
+                    push_responses(&mut responses, &sender, error_response("Missing response".to_string()));
+                    break 'tool_loop;
                 }
             };
 
@@ -439,14 +489,31 @@ pub(super) async fn handle_ai_message(
                         );
 
                         let receiver = state.approvals.register(request_event_id.clone()).await;
-                        let decision = match timeout(Duration::from_secs(300), receiver).await {
-                            Ok(Ok(decision)) => decision,
-                            _ => ApprovalDecisionPayload {
-                                event_id: request_event_id.clone(),
-                                decision: ApprovalOption::Deny,
-                                edited_input: None,
-                            },
+                        let mut approval_cancelled = false;
+                        let decision = tokio::select! {
+                            _ = cancel_token.wait() => {
+                                approval_cancelled = true;
+                                ApprovalDecisionPayload {
+                                    event_id: request_event_id.clone(),
+                                    decision: ApprovalOption::Deny,
+                                    edited_input: None,
+                                }
+                            }
+                            result = timeout(Duration::from_secs(300), receiver) => {
+                                match result {
+                                    Ok(Ok(decision)) => decision,
+                                    _ => ApprovalDecisionPayload {
+                                        event_id: request_event_id.clone(),
+                                        decision: ApprovalOption::Deny,
+                                        edited_input: None,
+                                    },
+                                }
+                            }
                         };
+                        if approval_cancelled {
+                            push_cancel_response(&mut responses, &sender, &event_stream, &stream_id);
+                            break 'tool_loop;
+                        }
 
                         match decision.decision {
                             ApprovalOption::ApproveOnce => {
@@ -547,6 +614,10 @@ pub(super) async fn handle_ai_message(
                                 continue;
                             }
                         }
+                    }
+                    if cancel_token.is_cancelled() {
+                        push_cancel_response(&mut responses, &sender, &event_stream, &stream_id);
+                        break 'tool_loop;
                     }
                     event_stream.emit(
                         &mut responses,
@@ -709,6 +780,10 @@ pub(super) async fn handle_ai_message(
                             );
                         }
                     }
+                    if cancel_token.is_cancelled() {
+                        push_cancel_response(&mut responses, &sender, &event_stream, &stream_id);
+                        break 'tool_loop;
+                    }
                     log.finished_at = Some(now_millis());
                     push_response(
                         &mut responses,
@@ -775,26 +850,38 @@ pub(super) async fn handle_ai_message(
                 &sender,
                 WSResponse::AIResponseWithTools { response },
             );
-            break;
+            break 'tool_loop;
         }
 
         responses
     } else {
-        match provider.send_message(messages_with_prompts).await {
+        let mut responses = Vec::new();
+        let response = tokio::select! {
+            _ = cancel_token.wait() => {
+                push_cancel_response(&mut responses, &sender, &event_stream, &stream_id);
+                state.cancels.unregister(&stream_id).await;
+                return responses;
+            }
+            response = provider.send_message(messages_with_prompts) => response,
+        };
+
+        match response {
             Ok(response) => {
-                let mut responses = Vec::new();
-                push_responses(&mut responses, &sender, build_streaming_payload(stream, &stream_id, response));
-                responses
+                push_responses(
+                    &mut responses,
+                    &sender,
+                    build_streaming_payload(stream, &stream_id, response),
+                );
             }
             Err(e) => {
-                let mut responses = Vec::new();
                 push_responses(&mut responses, &sender, error_response(e.to_string()));
-                responses
             }
         }
+        responses
     };
 
     outbound.extend(responses);
+    state.cancels.unregister(&stream_id).await;
     outbound
 }
 

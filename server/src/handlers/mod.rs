@@ -295,6 +295,13 @@ async fn handle_ws_request(
         WSRequest::AgentApprovalDecision { decision } => {
             handle_agent_approval_decision(state, decision).await
         }
+        WSRequest::AICancel {
+            request_id,
+            agent_session_id: _,
+        } => {
+            state.cancels.cancel(&request_id).await;
+            Vec::new()
+        }
         WSRequest::ListTools => handle_list_tools(state),
         WSRequest::ExecuteTool {
             tool_id,
