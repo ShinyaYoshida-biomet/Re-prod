@@ -2,10 +2,15 @@ import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { useAssistantEventAdapter } from "../useAssistantEventAdapter";
 import { useStore } from "@/core";
+import { useFileSystemStore } from "@/core/fileSystemStore";
 
 // Mock dependencies
 vi.mock("@/core", () => ({
 	useStore: vi.fn(),
+}));
+
+vi.mock("@/core/fileSystemStore", () => ({
+	useFileSystemStore: vi.fn(),
 }));
 
 describe("useAssistantEventAdapter", () => {
@@ -16,6 +21,8 @@ describe("useAssistantEventAdapter", () => {
 	const mockRecordToolEvent = vi.fn();
 	const mockCompleteStreamingMessage = vi.fn();
 	const mockSetAILoading = vi.fn();
+	const mockRegisterPendingEdit = vi.fn();
+	const mockUpdateBuffer = vi.fn();
 
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -29,7 +36,15 @@ describe("useAssistantEventAdapter", () => {
 				recordToolEvent: mockRecordToolEvent,
 				completeStreamingMessage: mockCompleteStreamingMessage,
 				setAILoading: mockSetAILoading,
+				registerPendingEdit: mockRegisterPendingEdit,
+				getActiveBuffer: () => null,
+				updateBuffer: mockUpdateBuffer,
 			};
+			return selector(state);
+		});
+
+		(useFileSystemStore as any).mockImplementation((selector: any) => {
+			const state = { workspaceRoot: "" };
 			return selector(state);
 		});
 	});
