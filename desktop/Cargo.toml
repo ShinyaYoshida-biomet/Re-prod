@@ -23,6 +23,8 @@ tauri-plugin-dialog = "2.2.2"
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 
+[dev-dependencies]
+tempfile = { workspace = true }
 
 [features]
 default = ["custom-protocol"]
