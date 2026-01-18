@@ -15,6 +15,40 @@ use tokio::sync::mpsc as tokio_mpsc;
 
 use super::runtime_fs::FsWatcherHandle;
 
+/// Normalizes incoming path strings to handle various formats.
+///
+/// Supports:
+/// - file:// URLs (e.g., "file:///Users/me/workspace")
+/// - Tilde expansion (e.g., "~/workspace")
+/// - Regular file paths
+fn normalize_incoming_path(path: &str) -> PathBuf {
+    // Handle file:// URLs
+    if path.starts_with("file://") {
+        // Remove the file:// prefix and decode percent-encoded characters
+        if let Ok(url) = url::Url::parse(path) {
+            if let Ok(path) = url.to_file_path() {
+                return path;
+            }
+        }
+        // Fallback: simple string manipulation if URL parsing fails
+        return PathBuf::from(path.trim_start_matches("file://"));
+    }
+
+    // Handle tilde expansion
+    if path.starts_with("~/") {
+        if let Some(home) = dirs::home_dir() {
+            return home.join(&path[2..]);
+        }
+    } else if path == "~" {
+        if let Some(home) = dirs::home_dir() {
+            return home;
+        }
+    }
+
+    // Fallback to treating as regular path
+    PathBuf::from(path)
+}
+
 pub async fn handle_project_request(
     request: &WSRequest,
     state: &AppState,
@@ -29,7 +63,7 @@ pub async fn handle_project_request(
 ) -> Option<bool> {
     match request {
         WSRequest::ProjectSwitchFolder { path } => {
-            let folder_path = Path::new(path);
+            let folder_path = normalize_incoming_path(path);
             if !folder_path.exists() {
                 return Some(
                     send_responses(socket, error_response("Folder does not exist")).await,
@@ -52,7 +86,7 @@ pub async fn handle_project_request(
                     fs_event_tx,
                     fs_events_closed,
                     socket,
-                    folder_path,
+                    &folder_path,
                 )
                 .await,
             )

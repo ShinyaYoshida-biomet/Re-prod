@@ -32,6 +32,10 @@ tracing-subscriber = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 
+# Path normalization
+url = { workspace = true }
+dirs = { workspace = true }
+
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }
 tempfile = "3"

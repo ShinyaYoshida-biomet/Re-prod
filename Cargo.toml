@@ -53,6 +53,9 @@ base64 = "0.22"
 # Directory utilities
 dirs = "5"
 
+# URL parsing
+url = "2.5"
+
 # Config parsing
 toml = "0.8"
 
