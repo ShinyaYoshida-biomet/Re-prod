@@ -71,30 +71,4 @@ describe("openFolder", () => {
 		expect(result).toBe("/tmp/workspace");
 		expect(toast.showError).not.toHaveBeenCalled();
 	});
-
-	it("returns a path when the dialog returns an object with path", async () => {
-		(window as unknown as { __TAURI__?: object }).__TAURI__ = {};
-		const dialog = await import("@tauri-apps/plugin-dialog");
-		const toast = await import("@/services/toastService");
-		const openMock = dialog.open as unknown as ReturnType<typeof vi.fn>;
-		openMock.mockResolvedValue({ path: "/tmp/workspace" });
-
-		const result = await openFolder();
-
-		expect(result).toBe("/tmp/workspace");
-		expect(toast.showError).not.toHaveBeenCalled();
-	});
-
-	it("returns null and shows an error for an unsupported selection type", async () => {
-		(window as unknown as { __TAURI__?: object }).__TAURI__ = {};
-		const dialog = await import("@tauri-apps/plugin-dialog");
-		const toast = await import("@/services/toastService");
-		const openMock = dialog.open as unknown as ReturnType<typeof vi.fn>;
-		openMock.mockResolvedValue({ unexpected: true });
-
-		const result = await openFolder();
-
-		expect(result).toBeNull();
-		expect(toast.showError).toHaveBeenCalledWith("Failed to read selected folder.");
-	});
 });

@@ -1,22 +1,15 @@
 import { isTauri } from "@/constants/features";
 import { showError } from "@/services/toastService";
+import type { open as openDialog } from "@tauri-apps/plugin-dialog";
 
-const extractFolderPath = (selected: unknown): string | null => {
+type OpenFolderResult = Awaited<ReturnType<typeof openDialog>>;
+
+const extractFolderPath = (selected: OpenFolderResult): string | null => {
 	if (typeof selected === "string") {
 		return selected;
 	}
 	if (Array.isArray(selected)) {
-		return typeof selected[0] === "string" ? selected[0] : null;
-	}
-	if (selected && typeof selected === "object") {
-		const candidate = (selected as { path?: unknown }).path;
-		if (typeof candidate === "string") {
-			return candidate;
-		}
-		const candidates = (selected as { paths?: unknown }).paths;
-		if (Array.isArray(candidates) && typeof candidates[0] === "string") {
-			return candidates[0];
-		}
+		return selected[0] ?? null;
 	}
 	return null;
 };
@@ -32,14 +25,7 @@ export const openFolder = async (): Promise<string | null> => {
 			directory: true,
 			multiple: false,
 		});
-		if (selected === null) {
-			return null;
-		}
-		const folderPath = extractFolderPath(selected);
-		if (!folderPath) {
-			showError("Failed to read selected folder.");
-		}
-		return folderPath;
+		return extractFolderPath(selected);
 	} catch (error) {
 		showError("Failed to open folder picker.");
 		return null;
