@@ -100,12 +100,14 @@ export type ClientMessage =
 	| {
 			type: "ai_message";
 			messages: ChatMessagePayload[];
+			agent_session_id: string;
 			enable_tools?: boolean;
 			request_id?: string;
 			stream?: boolean;
 			mode?: AIMode;
 	  }
 	| { type: "agent_approval_decision"; decision: ApprovalResponse }
+	| { type: "ai_cancel"; request_id: string; agent_session_id: string }
 	| { type: "list_tools" }
 	| ({ type: "execute_tool" } & ToolExecutionRequestPayload)
 	| { type: "timeline_query"; query: TimelineQuery }

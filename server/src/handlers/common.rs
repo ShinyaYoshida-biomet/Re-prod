@@ -1,5 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
+    path::{Path, PathBuf},
     sync::{atomic::AtomicU64, Arc, OnceLock},
 };
 
@@ -21,6 +22,8 @@ use reprod_core::{
 use serde::Deserialize;
 use serde_json::Value;
 use tokio::sync::{oneshot, Mutex};
+use tokio::sync::{Notify, RwLock};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 #[derive(Debug, Deserialize)]
 struct SystemPrompts {
@@ -61,6 +64,7 @@ pub struct AppState {
     pub request_counter: Arc<AtomicU64>,
     pub projects: Arc<ProjectController>,
     pub approvals: Arc<ApprovalManager>,
+    pub cancels: Arc<CancelManager>,
 }
 
 pub(super) fn with_system_prompts(messages: &[ChatMessage], mode: AIMode) -> Vec<ChatMessage> {
@@ -96,6 +100,7 @@ pub(super) enum WSRequest {
     #[serde(rename = "ai_message")]
     AIMessage {
         messages: Vec<ChatMessage>,
+        agent_session_id: String,
         #[serde(default)]
         enable_tools: bool,
         #[serde(default)]
@@ -107,6 +112,11 @@ pub(super) enum WSRequest {
     },
     #[serde(rename = "agent_approval_decision")]
     AgentApprovalDecision { decision: ApprovalDecisionPayload },
+    #[serde(rename = "ai_cancel")]
+    AICancel {
+        request_id: String,
+        agent_session_id: String,
+    },
     #[serde(rename = "list_tools")]
     ListTools,
     #[serde(rename = "execute_tool")]
@@ -381,9 +391,38 @@ pub(super) struct ApprovalDecisionPayload {
     pub edited_input: Option<Value>,
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Hash, PartialEq, Eq)]
+pub(super) struct ApprovalRule {
+    pub tool: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path_prefix: Option<String>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct PersistentApprovalFile {
+    version: u32,
+    approvals: Vec<ApprovalRule>,
+}
+
+const APPROVALS_SCHEMA_VERSION: u32 = 1;
+
+fn rule_matches(rule: &ApprovalRule, tool: &str, path: Option<&str>) -> bool {
+    if rule.tool != tool {
+        return false;
+    }
+    match (&rule.path_prefix, path) {
+        (Some(prefix), Some(path)) => {
+            path == prefix || path.starts_with(&format!("{}/", prefix))
+        }
+        (None, None) => true,
+        _ => false,
+    }
+}
+
 pub struct ApprovalManager {
     pending: Mutex<HashMap<String, oneshot::Sender<ApprovalDecisionPayload>>>,
-    session_allowlist: Mutex<HashMap<String, HashSet<String>>>,
+    session_allowlist: Mutex<HashMap<String, HashSet<ApprovalRule>>>,
+    persistent_allowlist: Mutex<HashMap<String, HashSet<ApprovalRule>>>,
 }
 
 impl ApprovalManager {
@@ -391,6 +430,7 @@ impl ApprovalManager {
         Self {
             pending: Mutex::new(HashMap::new()),
             session_allowlist: Mutex::new(HashMap::new()),
+            persistent_allowlist: Mutex::new(HashMap::new()),
         }
     }
 
@@ -415,20 +455,226 @@ impl ApprovalManager {
         }
     }
 
-    pub(super) async fn is_allowed(&self, stream_id: &str, tool: &str) -> bool {
-        let allowlist = self.session_allowlist.lock().await;
-        allowlist
-            .get(stream_id)
-            .map(|tools| tools.contains(tool))
-            .unwrap_or(false)
+    pub(super) async fn is_allowed(
+        &self,
+        agent_session_id: &str,
+        tool: &str,
+        path: Option<&str>,
+        project_root: &Path,
+    ) -> bool {
+        let session_allowed = {
+            let allowlist = self.session_allowlist.lock().await;
+            allowlist
+                .get(agent_session_id)
+                .map(|rules| rules.iter().any(|rule| rule_matches(rule, tool, path)))
+                .unwrap_or(false)
+        };
+        if session_allowed {
+            return true;
+        }
+
+        let persistent = self.load_persistent_allowlist(project_root).await;
+        persistent
+            .iter()
+            .any(|rule| rule_matches(rule, tool, path))
     }
 
-    pub(super) async fn allow_for_session(&self, stream_id: &str, tool: &str) {
+    pub(super) async fn allow_for_session(&self, agent_session_id: &str, rule: ApprovalRule) {
         let mut allowlist = self.session_allowlist.lock().await;
         allowlist
-            .entry(stream_id.to_string())
+            .entry(agent_session_id.to_string())
             .or_default()
-            .insert(tool.to_string());
+            .insert(rule);
+    }
+
+    pub(super) async fn allow_persistent(
+        &self,
+        project_root: &Path,
+        rule: ApprovalRule,
+    ) -> Result<(), String> {
+        let key = project_root.to_string_lossy().to_string();
+        let _ = self.load_persistent_allowlist(project_root).await;
+        let mut allowlist = self.persistent_allowlist.lock().await;
+        let entry = allowlist.entry(key).or_insert_with(HashSet::new);
+        if entry.insert(rule) {
+            Self::save_persistent_allowlist(project_root, entry).map_err(|err| err.to_string())?;
+        }
+        Ok(())
+    }
+
+    async fn load_persistent_allowlist(
+        &self,
+        project_root: &Path,
+    ) -> HashSet<ApprovalRule> {
+        let key = project_root.to_string_lossy().to_string();
+        {
+            let allowlist = self.persistent_allowlist.lock().await;
+            if let Some(rules) = allowlist.get(&key) {
+                return rules.clone();
+            }
+        }
+
+        let loaded = Self::read_persistent_allowlist(project_root).unwrap_or_default();
+        let mut allowlist = self.persistent_allowlist.lock().await;
+        allowlist.insert(key, loaded.clone());
+        loaded
+    }
+
+    fn read_persistent_allowlist(project_root: &Path) -> Result<HashSet<ApprovalRule>, String> {
+        let path = Self::persistent_allowlist_path(project_root)?;
+        if !path.exists() {
+            return Ok(HashSet::new());
+        }
+        let content = std::fs::read_to_string(&path)
+            .map_err(|err| format!("Failed to read approvals: {}", err))?;
+        let parsed: PersistentApprovalFile = serde_json::from_str(&content)
+            .map_err(|err| format!("Failed to parse approvals: {}", err))?;
+        if parsed.version != APPROVALS_SCHEMA_VERSION {
+            return Err("Unsupported approvals schema version".to_string());
+        }
+        Ok(parsed.approvals.into_iter().collect())
+    }
+
+    fn save_persistent_allowlist(
+        project_root: &Path,
+        approvals: &HashSet<ApprovalRule>,
+    ) -> Result<(), String> {
+        let path = Self::persistent_allowlist_path(project_root)?;
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|err| format!("Failed to create approvals dir: {}", err))?;
+        }
+        let payload = PersistentApprovalFile {
+            version: APPROVALS_SCHEMA_VERSION,
+            approvals: approvals.iter().cloned().collect(),
+        };
+        let content = serde_json::to_string_pretty(&payload)
+            .map_err(|err| format!("Failed to serialize approvals: {}", err))?;
+        std::fs::write(&path, content)
+            .map_err(|err| format!("Failed to write approvals: {}", err))?;
+        Ok(())
+    }
+
+    fn persistent_allowlist_path(project_root: &Path) -> Result<PathBuf, String> {
+        Ok(project_root.join(".reprod").join("approvals.json"))
+    }
+}
+
+pub struct CancelToken {
+    cancelled: AtomicBool,
+    notify: Notify,
+}
+
+impl CancelToken {
+    pub fn new() -> Self {
+        Self {
+            cancelled: AtomicBool::new(false),
+            notify: Notify::new(),
+        }
+    }
+
+    pub fn cancel(&self) {
+        if !self.cancelled.swap(true, Ordering::SeqCst) {
+            self.notify.notify_waiters();
+        }
+    }
+
+    pub fn is_cancelled(&self) -> bool {
+        self.cancelled.load(Ordering::SeqCst)
+    }
+
+    pub async fn wait(&self) {
+        if self.is_cancelled() {
+            return;
+        }
+        self.notify.notified().await;
+    }
+}
+
+pub struct CancelManager {
+    tokens: RwLock<HashMap<String, Arc<CancelToken>>>,
+}
+
+impl CancelManager {
+    pub fn new() -> Self {
+        Self {
+            tokens: RwLock::new(HashMap::new()),
+        }
+    }
+
+    pub async fn register(&self, request_id: &str) -> Arc<CancelToken> {
+        let token = Arc::new(CancelToken::new());
+        let mut tokens = self.tokens.write().await;
+        tokens.insert(request_id.to_string(), token.clone());
+        token
+    }
+
+    pub async fn cancel(&self, request_id: &str) -> bool {
+        let token = {
+            let tokens = self.tokens.read().await;
+            tokens.get(request_id).cloned()
+        };
+        if let Some(token) = token {
+            token.cancel();
+            return true;
+        }
+        false
+    }
+
+    pub async fn unregister(&self, request_id: &str) {
+        let mut tokens = self.tokens.write().await;
+        tokens.remove(request_id);
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn matches_prefix_rules() {
+        let rule = ApprovalRule {
+            tool: "write_text_file".to_string(),
+            path_prefix: Some("src".to_string()),
+        };
+        assert!(rule_matches(&rule, "write_text_file", Some("src/app.ts")));
+        assert!(rule_matches(&rule, "write_text_file", Some("src")));
+        assert!(!rule_matches(&rule, "write_text_file", Some("src2/app.ts")));
+        assert!(!rule_matches(&rule, "write_text_file", None));
+        assert!(!rule_matches(&rule, "edit_text_file", Some("src/app.ts")));
+    }
+
+    #[tokio::test]
+    async fn persists_and_loads_approvals() {
+        let temp = tempdir().unwrap();
+        let root = temp.path();
+        let manager = ApprovalManager::new();
+        let rule = ApprovalRule {
+            tool: "write_text_file".to_string(),
+            path_prefix: Some("src".to_string()),
+        };
+
+        manager
+            .allow_persistent(root, rule.clone())
+            .await
+            .expect("persist rule");
+
+        let manager = ApprovalManager::new();
+        let allowed = manager
+            .is_allowed("session-1", "write_text_file", Some("src/app.ts"), root)
+            .await;
+        assert!(allowed);
+    }
+
+    #[tokio::test]
+    async fn cancel_manager_triggers_token() {
+        let manager = CancelManager::new();
+        let token = manager.register("req-1").await;
+        assert!(!token.is_cancelled());
+        assert!(manager.cancel("req-1").await);
+        assert!(token.is_cancelled());
+        manager.unregister("req-1").await;
+        assert!(!manager.cancel("req-1").await);
     }
 }
 

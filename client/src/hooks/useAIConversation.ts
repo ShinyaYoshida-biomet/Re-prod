@@ -55,11 +55,13 @@ export function useAIConversation() {
 	const isLoading = useStore((state) => state.ai.isLoading);
 	const activeMode = useStore((state) => state.activeMode);
 	const activeAgent = useStore((state) => state.activeAgent);
+	const agentSessionId = useStore((state) => state.ai.agentSessionId);
 
 	const addAIMessage = useStore((state) => state.addAIMessage);
 	const startStreamingMessage = useStore((state) => state.startStreamingMessage);
 	const setAILoading = useStore((state) => state.setAILoading);
 	const completeStreamingMessage = useStore((state) => state.completeStreamingMessage);
+	const setAgentSessionId = useStore((state) => state.setAgentSessionId);
 	const activeBuffer = useStore((state) => state.getActiveBuffer());
 	const updateBuffer = useStore((state) => state.updateBuffer);
 	const editorContent = activeBuffer?.content ?? "";
@@ -82,6 +84,7 @@ export function useAIConversation() {
 
 	const [input, setInput] = useState("");
 	const activeRequestRef = useRef<{ id: string; dispose: () => void } | null>(null);
+	const lastRequestIdRef = useRef<string | null>(null);
 
 	const promptHistory = usePromptHistory({
 		messages,
@@ -121,6 +124,18 @@ export function useAIConversation() {
 		}
 		activeRequestRef.current = null;
 	}, []);
+
+	const clearLastRequestId = useCallback(() => {
+		lastRequestIdRef.current = null;
+	}, []);
+	const ensureAgentSessionId = useCallback((): string => {
+		if (agentSessionId) {
+			return agentSessionId;
+		}
+		const nextId = createRequestId();
+		setAgentSessionId(nextId);
+		return nextId;
+	}, [agentSessionId, setAgentSessionId]);
 
 	useEffect(() => {
 		return () => {
@@ -361,8 +376,13 @@ export function useAIConversation() {
 
 	const handleStop = useCallback(() => {
 		clearTimeoutRef();
+		const streamingId = activeRequestRef.current?.id ?? lastRequestIdRef.current;
+		if (streamingId && !acpConfigured) {
+			const sessionId = agentSessionId ?? ensureAgentSessionId();
+			socketService.send(aiMessages.cancel(streamingId, sessionId));
+			return;
+		}
 		setAILoading(false);
-		const streamingId = activeRequestRef.current?.id;
 		if (streamingId) {
 			completeStreamingMessage(streamingId);
 			acpLastChunkKindRef.current.delete(streamingId);
@@ -374,10 +394,12 @@ export function useAIConversation() {
 		}
 	}, [
 		acpConfigured,
+		agentSessionId,
 		cancelAcpSession,
 		clearActiveRequest,
 		clearTimeoutRef,
 		completeStreamingMessage,
+		ensureAgentSessionId,
 		postAssistantMessage,
 		setAILoading,
 	]);
@@ -439,6 +461,7 @@ export function useAIConversation() {
 			}
 
 			const requestId = createRequestId();
+			lastRequestIdRef.current = requestId;
 
 			addAIMessage(userMessage);
 			startStreamingMessage(requestId, mode);
@@ -451,6 +474,7 @@ export function useAIConversation() {
 					"Request timed out. The AI service took too long to respond. Please try again.",
 				);
 				setAILoading(false);
+				clearLastRequestId();
 				clearActiveRequest();
 			}, STREAM_TIMEOUT_MS);
 
@@ -459,6 +483,7 @@ export function useAIConversation() {
 				onComplete: () => {
 					clearTimeoutRef();
 					clearActiveRequest({ dispose: false });
+					clearLastRequestId();
 				},
 				onStreamingProgress: clearTimeoutRef,
 			});
@@ -467,6 +492,7 @@ export function useAIConversation() {
 
 			const sent = socketService.send(
 				aiMessages.send(requestMessages, {
+					agentSessionId: ensureAgentSessionId(),
 					requestId,
 					stream: true,
 					enableTools,
@@ -479,6 +505,7 @@ export function useAIConversation() {
 				clearTimeoutRef();
 				completeStreamingMessage(requestId, "AI request failed: not connected to backend service.");
 				setAILoading(false);
+				clearLastRequestId();
 				return;
 			}
 
@@ -493,12 +520,14 @@ export function useAIConversation() {
 			acpConfigured,
 			addAIMessage,
 			clearActiveRequest,
+			clearLastRequestId,
 			clearTimeoutRef,
 			completeStreamingMessage,
 			consoleHistory,
 			editorContent,
 			editorFilepath,
 			ensureAcpSession,
+			ensureAgentSessionId,
 			externalAgentClient,
 			input,
 			messages,

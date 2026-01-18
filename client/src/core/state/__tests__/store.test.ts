@@ -44,6 +44,9 @@ describe("Zustand Store", () => {
 				messages: [],
 				isLoading: false,
 				suggestions: [],
+				patchMatchFailures: 0,
+				patchMatchStatus: { lastFailureId: null, lastFailureReason: null },
+				agentSessionId: null,
 			},
 			settings: {
 				autoRun: false,

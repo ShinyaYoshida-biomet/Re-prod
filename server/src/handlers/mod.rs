@@ -33,7 +33,7 @@ pub mod stream_buffer;
 mod timeline_handler;
 mod tool_handler;
 
-pub use common::{AppState, ApprovalManager};
+pub use common::{AppState, ApprovalManager, CancelManager};
 
 use crate::projects::RuntimeBroadcastEvent;
 use acp_handler::{
@@ -217,6 +217,7 @@ async fn handle_ws_text(
                 match request {
                     WSRequest::AIMessage {
                         messages,
+                        agent_session_id,
                         enable_tools,
                         request_id,
                         stream,
@@ -230,6 +231,7 @@ async fn handle_ws_text(
                                 &state,
                                 &runtime,
                                 messages,
+                                agent_session_id,
                                 enable_tools,
                                 request_id,
                                 stream,
@@ -271,6 +273,7 @@ async fn handle_ws_request(
     match request {
         WSRequest::AIMessage {
             messages,
+            agent_session_id,
             enable_tools,
             request_id,
             stream,
@@ -280,6 +283,7 @@ async fn handle_ws_request(
                 state,
                 runtime,
                 messages,
+                agent_session_id,
                 enable_tools,
                 request_id,
                 stream,
@@ -290,6 +294,13 @@ async fn handle_ws_request(
         }
         WSRequest::AgentApprovalDecision { decision } => {
             handle_agent_approval_decision(state, decision).await
+        }
+        WSRequest::AICancel {
+            request_id,
+            agent_session_id: _,
+        } => {
+            state.cancels.cancel(&request_id).await;
+            Vec::new()
         }
         WSRequest::ListTools => handle_list_tools(state),
         WSRequest::ExecuteTool {

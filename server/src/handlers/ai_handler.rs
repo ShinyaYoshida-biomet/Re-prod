@@ -20,8 +20,8 @@ use super::{
     common::{
         build_streaming_payload, error_response, now_millis, tool_log_from_call, with_system_prompts,
         AgentEventPayload, AgentEventStatus, AIMode, AppState, ApprovalDecisionPayload,
-        ApprovalOption, ApprovalRequestPayload, ArtifactDetailsPayload, ArtifactKind, ToolLogStatus,
-        ToolPreviewPayload, WSResponse,
+        ApprovalOption, ApprovalRequestPayload, ApprovalRule, ArtifactDetailsPayload, ArtifactKind,
+        ToolLogStatus, ToolPreviewPayload, WSResponse,
     },
     tool_handler::execute_ai_tool_call,
 };
@@ -78,11 +78,76 @@ fn tool_requires_approval(name: &str) -> bool {
     matches!(name, "write_text_file" | "edit_text_file")
 }
 
+fn push_cancel_response(
+    responses: &mut Vec<WSResponse>,
+    sender: &ResponseSender,
+    event_stream: &mut EventStream,
+    stream_id: &str,
+) {
+    let cancel_event_id = event_stream.next_event_id();
+    event_stream.emit(
+        responses,
+        AgentEventPayload::Error {
+            id: cancel_event_id,
+            status: AgentEventStatus::Error,
+            timestamp: now_millis(),
+            message: "Request cancelled by user.".to_string(),
+            recoverable: false,
+            suggested_action: None,
+            parent_id: None,
+        },
+    );
+    push_response(
+        responses,
+        sender,
+        WSResponse::AIResponseComplete {
+            id: stream_id.to_string(),
+            final_text: "Request cancelled by user.".to_string(),
+            code_blocks: None,
+        },
+    );
+}
+
 fn extract_path_from_input(input: &serde_json::Value) -> Option<String> {
     input
         .get("path")
         .and_then(|value| value.as_str())
         .map(|value| value.to_string())
+}
+
+fn normalize_relative_path(path: &str) -> Option<String> {
+    use std::path::Component;
+    let mut parts = Vec::new();
+    let path = std::path::Path::new(path);
+    for component in path.components() {
+        match component {
+            Component::Normal(part) => parts.push(part.to_string_lossy().to_string()),
+            Component::CurDir => {}
+            _ => return None,
+        }
+    }
+    if parts.is_empty() {
+        return None;
+    }
+    Some(parts.join("/"))
+}
+
+fn approval_prefix_from_path(path: &str) -> Option<String> {
+    let normalized = normalize_relative_path(path)?;
+    if let Some((parent, _)) = normalized.rsplit_once('/') {
+        if !parent.is_empty() {
+            return Some(parent.to_string());
+        }
+    }
+    Some(normalized)
+}
+
+fn build_approval_rule(tool: &str, path: Option<&str>) -> Option<ApprovalRule> {
+    let path_prefix = path.and_then(approval_prefix_from_path);
+    Some(ApprovalRule {
+        tool: tool.to_string(),
+        path_prefix,
+    })
 }
 
 fn build_diff(path: &str, old_text: &str, new_text: &str) -> String {
@@ -280,6 +345,7 @@ pub(super) async fn handle_ai_message(
     state: &AppState,
     runtime: &Arc<ProjectRuntime>,
     messages: Vec<ChatMessage>,
+    agent_session_id: String,
     enable_tools: bool,
     request_id: Option<String>,
     stream: bool,
@@ -292,6 +358,7 @@ pub(super) async fn handle_ai_message(
         let count = state.request_counter.fetch_add(1, Ordering::Relaxed);
         format!("req-{}", count)
     });
+    let cancel_token = state.cancels.register(&stream_id).await;
     let messages_with_prompts = with_system_prompts(&messages, mode);
 
     let mut outbound = Vec::new();
@@ -320,16 +387,35 @@ pub(super) async fn handle_ai_message(
         let mut loop_count = 0;
         const MAX_TOOL_LOOPS: usize = 5;
 
-        loop {
+        'tool_loop: loop {
+            if cancel_token.is_cancelled() {
+                push_cancel_response(&mut responses, &sender, &mut event_stream, &stream_id);
+                break 'tool_loop;
+            }
             let messages_with_prompts = with_system_prompts(&conversation, mode);
-            let response = match provider
-                .send_message_with_tools(messages_with_prompts.clone(), tools.clone())
-                .await
-            {
-                Ok(response) => response,
-                Err(e) => {
+            let mut cancelled = false;
+            let response = tokio::select! {
+                _ = cancel_token.wait() => {
+                    cancelled = true;
+                    None
+                }
+                response = provider.send_message_with_tools(messages_with_prompts.clone(), tools.clone()) => {
+                    Some(response)
+                }
+            };
+            if cancelled {
+                push_cancel_response(&mut responses, &sender, &mut event_stream, &stream_id);
+                break 'tool_loop;
+            }
+            let response = match response {
+                Some(Ok(response)) => response,
+                Some(Err(e)) => {
                     push_responses(&mut responses, &sender, error_response(e.to_string()));
-                    break;
+                    break 'tool_loop;
+                }
+                None => {
+                    push_responses(&mut responses, &sender, error_response("Missing response".to_string()));
+                    break 'tool_loop;
                 }
             };
 
@@ -339,10 +425,19 @@ pub(super) async fn handle_ai_message(
 
                 for tool_call in tool_calls {
                     let mut tool_call = tool_call.clone();
+                    let normalized_path = extract_path_from_input(&tool_call.input)
+                        .and_then(|path| normalize_relative_path(&path));
+                    let approval_rule =
+                        build_approval_rule(&tool_call.name, normalized_path.as_deref());
                     let requires_approval = tool_requires_approval(&tool_call.name)
                         && !state
                             .approvals
-                            .is_allowed(&stream_id, &tool_call.name)
+                            .is_allowed(
+                                &agent_session_id,
+                                &tool_call.name,
+                                normalized_path.as_deref(),
+                                &runtime.descriptor.root_path,
+                            )
                             .await;
                     let request_event_id = event_stream.next_event_id();
                     let task_event_id = event_stream.next_event_id();
@@ -395,14 +490,31 @@ pub(super) async fn handle_ai_message(
                         );
 
                         let receiver = state.approvals.register(request_event_id.clone()).await;
-                        let decision = match timeout(Duration::from_secs(300), receiver).await {
-                            Ok(Ok(decision)) => decision,
-                            _ => ApprovalDecisionPayload {
-                                event_id: request_event_id.clone(),
-                                decision: ApprovalOption::Deny,
-                                edited_input: None,
-                            },
+                        let mut approval_cancelled = false;
+                        let decision = tokio::select! {
+                            _ = cancel_token.wait() => {
+                                approval_cancelled = true;
+                                ApprovalDecisionPayload {
+                                    event_id: request_event_id.clone(),
+                                    decision: ApprovalOption::Deny,
+                                    edited_input: None,
+                                }
+                            }
+                            result = timeout(Duration::from_secs(300), receiver) => {
+                                match result {
+                                    Ok(Ok(decision)) => decision,
+                                    _ => ApprovalDecisionPayload {
+                                        event_id: request_event_id.clone(),
+                                        decision: ApprovalOption::Deny,
+                                        edited_input: None,
+                                    },
+                                }
+                            }
                         };
+                        if approval_cancelled {
+                            push_cancel_response(&mut responses, &sender, &mut event_stream, &stream_id);
+                            break 'tool_loop;
+                        }
 
                         match decision.decision {
                             ApprovalOption::ApproveOnce => {
@@ -421,10 +533,19 @@ pub(super) async fn handle_ai_message(
                                 );
                             }
                             ApprovalOption::ApproveSession => {
-                                state
-                                    .approvals
-                                    .allow_for_session(&stream_id, &tool_call.name)
-                                    .await;
+                                if let Some(rule) = approval_rule.clone() {
+                                    state
+                                        .approvals
+                                        .allow_for_session(&agent_session_id, rule.clone())
+                                        .await;
+                                    if let Err(err) = state
+                                        .approvals
+                                        .allow_persistent(&runtime.descriptor.root_path, rule)
+                                        .await
+                                    {
+                                        tracing::warn!("Failed to persist approval: {}", err);
+                                    }
+                                }
                                 event_stream.emit(
                                     &mut responses,
                                     AgentEventPayload::ToolRequest {
@@ -494,6 +615,10 @@ pub(super) async fn handle_ai_message(
                                 continue;
                             }
                         }
+                    }
+                    if cancel_token.is_cancelled() {
+                        push_cancel_response(&mut responses, &sender, &mut event_stream, &stream_id);
+                        break 'tool_loop;
                     }
                     event_stream.emit(
                         &mut responses,
@@ -656,6 +781,10 @@ pub(super) async fn handle_ai_message(
                             );
                         }
                     }
+                    if cancel_token.is_cancelled() {
+                        push_cancel_response(&mut responses, &sender, &mut event_stream, &stream_id);
+                        break 'tool_loop;
+                    }
                     log.finished_at = Some(now_millis());
                     push_response(
                         &mut responses,
@@ -722,26 +851,38 @@ pub(super) async fn handle_ai_message(
                 &sender,
                 WSResponse::AIResponseWithTools { response },
             );
-            break;
+            break 'tool_loop;
         }
 
         responses
     } else {
-        match provider.send_message(messages_with_prompts).await {
+        let mut responses = Vec::new();
+        let response = tokio::select! {
+            _ = cancel_token.wait() => {
+                push_cancel_response(&mut responses, &sender, &mut event_stream, &stream_id);
+                state.cancels.unregister(&stream_id).await;
+                return responses;
+            }
+            response = provider.send_message(messages_with_prompts) => response,
+        };
+
+        match response {
             Ok(response) => {
-                let mut responses = Vec::new();
-                push_responses(&mut responses, &sender, build_streaming_payload(stream, &stream_id, response));
-                responses
+                push_responses(
+                    &mut responses,
+                    &sender,
+                    build_streaming_payload(stream, &stream_id, response),
+                );
             }
             Err(e) => {
-                let mut responses = Vec::new();
                 push_responses(&mut responses, &sender, error_response(e.to_string()));
-                responses
             }
         }
+        responses
     };
 
     outbound.extend(responses);
+    state.cancels.unregister(&stream_id).await;
     outbound
 }
 
