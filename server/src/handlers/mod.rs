@@ -33,7 +33,7 @@ pub mod stream_buffer;
 mod timeline_handler;
 mod tool_handler;
 
-pub use common::{AppState, ApprovalManager};
+pub use common::{AppState, ApprovalManager, CancelManager};
 
 use crate::projects::RuntimeBroadcastEvent;
 use acp_handler::{

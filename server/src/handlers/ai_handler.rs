@@ -81,7 +81,7 @@ fn tool_requires_approval(name: &str) -> bool {
 fn push_cancel_response(
     responses: &mut Vec<WSResponse>,
     sender: &ResponseSender,
-    event_stream: &EventStream,
+    event_stream: &mut EventStream,
     stream_id: &str,
 ) {
     let cancel_event_id = event_stream.next_event_id();
@@ -388,7 +388,7 @@ pub(super) async fn handle_ai_message(
 
         'tool_loop: loop {
             if cancel_token.is_cancelled() {
-                push_cancel_response(&mut responses, &sender, &event_stream, &stream_id);
+                push_cancel_response(&mut responses, &sender, &mut event_stream, &stream_id);
                 break 'tool_loop;
             }
             let messages_with_prompts = with_system_prompts(&conversation, mode);
@@ -403,7 +403,7 @@ pub(super) async fn handle_ai_message(
                 }
             };
             if cancelled {
-                push_cancel_response(&mut responses, &sender, &event_stream, &stream_id);
+                push_cancel_response(&mut responses, &sender, &mut event_stream, &stream_id);
                 break 'tool_loop;
             }
             let response = match response {
@@ -511,7 +511,7 @@ pub(super) async fn handle_ai_message(
                             }
                         };
                         if approval_cancelled {
-                            push_cancel_response(&mut responses, &sender, &event_stream, &stream_id);
+                            push_cancel_response(&mut responses, &sender, &mut event_stream, &stream_id);
                             break 'tool_loop;
                         }
 
@@ -616,7 +616,7 @@ pub(super) async fn handle_ai_message(
                         }
                     }
                     if cancel_token.is_cancelled() {
-                        push_cancel_response(&mut responses, &sender, &event_stream, &stream_id);
+                        push_cancel_response(&mut responses, &sender, &mut event_stream, &stream_id);
                         break 'tool_loop;
                     }
                     event_stream.emit(
@@ -781,7 +781,7 @@ pub(super) async fn handle_ai_message(
                         }
                     }
                     if cancel_token.is_cancelled() {
-                        push_cancel_response(&mut responses, &sender, &event_stream, &stream_id);
+                        push_cancel_response(&mut responses, &sender, &mut event_stream, &stream_id);
                         break 'tool_loop;
                     }
                     log.finished_at = Some(now_millis());
@@ -858,7 +858,7 @@ pub(super) async fn handle_ai_message(
         let mut responses = Vec::new();
         let response = tokio::select! {
             _ = cancel_token.wait() => {
-                push_cancel_response(&mut responses, &sender, &event_stream, &stream_id);
+                push_cancel_response(&mut responses, &sender, &mut event_stream, &stream_id);
                 state.cancels.unregister(&stream_id).await;
                 return responses;
             }

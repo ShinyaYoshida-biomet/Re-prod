@@ -79,7 +79,7 @@ describe("useAIConversation", () => {
 					isLoading: false,
 					agentSessionId: null,
 				},
-				activeMode: "agent",
+				activeMode: "api",
 				activeAgent: null,
 				addAIMessage: mockAddAIMessage,
 				startStreamingMessage: mockStartStreamingMessage,
@@ -160,13 +160,12 @@ describe("useAIConversation", () => {
 			await result.current.aiActions.ask();
 		});
 
-		vi.clearAllMocks();
-
 		act(() => {
 			result.current.aiActions.stop();
 		});
 
-		expect(socketService.send).toHaveBeenCalled();
-		expect(mockSetAILoading).not.toHaveBeenCalled();
+		expect(socketService.send).toHaveBeenCalledWith(expect.objectContaining({ type: "ai_cancel" }));
+		expect(mockSetAILoading).toHaveBeenCalledWith(true);
+		expect(mockSetAILoading).not.toHaveBeenCalledWith(false);
 	});
 });
