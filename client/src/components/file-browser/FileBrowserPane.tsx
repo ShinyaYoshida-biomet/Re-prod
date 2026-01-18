@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { IconFile } from "@/components/icons/IconFile";
 import {
 	ConfirmDialog,
@@ -6,6 +6,7 @@ import {
 	IconChevronRight,
 	IconFolder,
 	IconPlus,
+	PromptDialog,
 	useToast,
 } from "@/components/shared";
 import { useFileSystemStore, useStore } from "@/core";
@@ -178,6 +179,18 @@ export function FileBrowserPane(): JSX.Element {
 	const { anchorPath, focusedPath } = selection;
 
 	const { dialogState, showConfirm, handleConfirm, handleCancel } = useConfirmDialog();
+
+	const [promptState, setPromptState] = useState<{
+		open: boolean;
+		title: string;
+		defaultValue: string;
+		onConfirm: (value: string) => void;
+	}>({
+		open: false,
+		title: "",
+		defaultValue: "",
+		onConfirm: () => {},
+	});
 
 	const nodes = useMemo(
 		() => buildTree(files, expandedFolders, pendingFolders),
@@ -362,48 +375,64 @@ export function FileBrowserPane(): JSX.Element {
 	);
 
 	const handleCreateEntry = useCallback(
-		async (targetPath: string, isDir: boolean, targetIsFolder = true) => {
+		(targetPath: string, isDir: boolean, targetIsFolder = true) => {
 			hideContextMenu();
 			const defaultName = isDir ? "New Folder" : "New File.R";
-			const name = window.prompt(`Enter ${isDir ? "folder" : "file"} name`, defaultName);
-			if (!name) return;
-			const parentCandidate = targetIsFolder ? targetPath : getParentPath(targetPath);
-			const parent = parentCandidate === ROOT_PATH ? "" : parentCandidate;
-			const newPath = joinPath(parent, name);
-			try {
-				if (isDir) {
-					await fileSystem.createDir(newPath);
-				} else {
-					await fileSystem.writeFile(newPath, "");
-				}
-				await refreshPath(parent || ROOT_PATH);
-			} catch (error) {
-				alertFileOperationError(
-					toast,
-					`Failed to create ${isDir ? "folder" : "file"}: ${getErrorMessage(error, "Unknown error")}`,
-				);
-			}
+
+			setPromptState({
+				open: true,
+				title: `Enter ${isDir ? "folder" : "file"} name`,
+				defaultValue: defaultName,
+				onConfirm: async (name) => {
+					setPromptState((prev) => ({ ...prev, open: false }));
+					if (!name) return;
+					const parentCandidate = targetIsFolder ? targetPath : getParentPath(targetPath);
+					const parent = parentCandidate === ROOT_PATH ? "" : parentCandidate;
+					const newPath = joinPath(parent, name);
+					try {
+						if (isDir) {
+							await fileSystem.createDir(newPath);
+						} else {
+							await fileSystem.writeFile(newPath, "");
+						}
+						await refreshPath(parent || ROOT_PATH);
+					} catch (error) {
+						alertFileOperationError(
+							toast,
+							`Failed to create ${isDir ? "folder" : "file"}: ${getErrorMessage(error, "Unknown error")}`,
+						);
+					}
+				},
+			});
 		},
 		[hideContextMenu, refreshPath, toast],
 	);
 
 	const handleRename = useCallback(
-		async (path: string) => {
+		(path: string) => {
 			hideContextMenu();
 			const currentName = getNameFromPath(path);
-			const parent = getParentPath(path);
-			const newName = window.prompt("Enter new name", currentName);
-			if (!newName || newName === currentName) return;
-			const destination = joinPath(parent, newName);
-			try {
-				await fileSystem.renamePath(path, destination);
-				await refreshPath(parent);
-			} catch (error) {
-				alertFileOperationError(
-					toast,
-					`Failed to rename: ${getErrorMessage(error, "Unknown error")}`,
-				);
-			}
+
+			setPromptState({
+				open: true,
+				title: "Enter new name",
+				defaultValue: currentName,
+				onConfirm: async (newName) => {
+					setPromptState((prev) => ({ ...prev, open: false }));
+					if (!newName || newName === currentName) return;
+					const parent = getParentPath(path);
+					const destination = joinPath(parent, newName);
+					try {
+						await fileSystem.renamePath(path, destination);
+						await refreshPath(parent);
+					} catch (error) {
+						alertFileOperationError(
+							toast,
+							`Failed to rename: ${getErrorMessage(error, "Unknown error")}`,
+						);
+					}
+				},
+			});
 		},
 		[hideContextMenu, refreshPath, toast],
 	);
@@ -904,6 +933,13 @@ export function FileBrowserPane(): JSX.Element {
 				cancelLabel="Cancel"
 				onConfirm={handleConfirm}
 				onCancel={handleCancel}
+			/>
+			<PromptDialog
+				open={promptState.open}
+				title={promptState.title}
+				defaultValue={promptState.defaultValue}
+				onConfirm={promptState.onConfirm}
+				onCancel={() => setPromptState((prev) => ({ ...prev, open: false }))}
 			/>
 		</div>
 	);
