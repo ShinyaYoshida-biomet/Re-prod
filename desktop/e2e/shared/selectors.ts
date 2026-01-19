@@ -62,6 +62,18 @@ export const selectors = {
 	aiProviderSelect: ".ai-provider-select",
 	aiModeSelect: ".mode-dropdown",
 
+	// AI Plan
+	aiPlanCard: ".ai-plan-card",
+	aiPlanStep: ".ai-plan-card__table tr",
+
+	// AI Agent Events
+	agentEventStream: ".agent-event-stream",
+	approvalCard: ".agent-event-stream__approval",
+	approveOnceButton: 'button:has-text("Approve Once")',
+	approveSessionButton: 'button:has-text("Approve Session")',
+	denyButton: 'button:has-text("Deny")',
+	stopButton: 'button[aria-label="Stop generation"]',
+
 	// Plot
 	plotPane: ".plot-viewer",
 	plotImage: ".plot-image",
