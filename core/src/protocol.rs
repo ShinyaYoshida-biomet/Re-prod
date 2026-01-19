@@ -82,6 +82,17 @@ pub struct FileChangeEvent {
     pub path: String,
 }
 
+/// Environment variable information
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
+pub struct EnvironmentVariable {
+    pub name: String,
+    #[serde(rename = "type")]
+    pub var_type: String,
+    pub size: String,
+    pub value: String,
+}
+
 /// Source of an R execution request.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, TS)]
 #[serde(rename_all = "snake_case")]

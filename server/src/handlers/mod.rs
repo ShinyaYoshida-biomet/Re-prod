@@ -353,6 +353,7 @@ async fn handle_ws_request(
         WSRequest::AcpPendingEditUpdate { edit_id, new_text } => {
             handle_acp_pending_edit_update(runtime, &edit_id, &new_text).await
         }
+        WSRequest::EnvironmentQuery => handle_environment_query(runtime).await,
         _ => Vec::new(),
     }
 }
