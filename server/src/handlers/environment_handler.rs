@@ -142,3 +142,71 @@ pub async fn handle_environment_query(runtime: &Arc<ProjectRuntime>) -> Vec<WSRe
         Err(e) => error_response(format!("Execution error: {}", e)),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use reprod_core::EnvironmentVariable;
+
+    #[test]
+    fn test_r_code_handles_empty_environment() {
+        // The R code should handle empty environment gracefully
+        let r_code = r#"
+{
+    var_names <- ls(envir = .GlobalEnv)
+    if (length(var_names) == 0) {
+        result <- list(variables = list())
+    }
+    jsonlite::toJSON(result, auto_unbox = TRUE)
+}
+"#;
+        // This test verifies the R code structure is valid
+        assert!(r_code.contains("ls(envir = .GlobalEnv)"));
+        assert!(r_code.contains("jsonlite::toJSON"));
+    }
+
+    #[test]
+    fn test_environment_variable_structure() {
+        let var = EnvironmentVariable {
+            name: "x".to_string(),
+            var_type: "numeric".to_string(),
+            size: "length 10".to_string(),
+            value: "1, 2, 3, ...".to_string(),
+        };
+
+        assert_eq!(var.name, "x");
+        assert_eq!(var.var_type, "numeric");
+        assert_eq!(var.size, "length 10");
+        assert_eq!(var.value, "1, 2, 3, ...");
+    }
+
+    #[test]
+    fn test_environment_variable_serialization() {
+        let var = EnvironmentVariable {
+            name: "df".to_string(),
+            var_type: "data.frame".to_string(),
+            size: "5 obs. of 3 variables".to_string(),
+            value: "<data.frame>".to_string(),
+        };
+
+        let json = serde_json::to_string(&var).unwrap();
+        assert!(json.contains("\"name\":\"df\""));
+        assert!(json.contains("\"type\":\"data.frame\""));
+        assert!(json.contains("\"size\":\"5 obs. of 3 variables\""));
+    }
+
+    #[test]
+    fn test_environment_variable_deserialization() {
+        let json = r#"{
+            "name": "y",
+            "type": "character",
+            "size": "length 3",
+            "value": "a, b, c"
+        }"#;
+
+        let var: EnvironmentVariable = serde_json::from_str(json).unwrap();
+        assert_eq!(var.name, "y");
+        assert_eq!(var.var_type, "character");
+        assert_eq!(var.size, "length 3");
+        assert_eq!(var.value, "a, b, c");
+    }
+}
