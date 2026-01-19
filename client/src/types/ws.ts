@@ -3,6 +3,7 @@ import type {
 	AcpPermissionRequestPayload,
 	AcpPromptMessage,
 	AcpSessionUpdateEnvelope,
+	EnvironmentVariable,
 } from "./generated";
 import type { TimelineMessage, TimelineQuery, TimelineResponse, TimelineStats } from "./timeline";
 import type { ToolManifest } from "./tools";
@@ -141,7 +142,8 @@ export type ClientMessage =
 	| { type: "acp_permission_decision"; decision: AcpPermissionDecision }
 	| { type: "acp_pending_edit_accept"; edit_id: string }
 	| { type: "acp_pending_edit_reject"; edit_id: string }
-	| { type: "acp_pending_edit_update"; edit_id: string; new_text: string };
+	| { type: "acp_pending_edit_update"; edit_id: string; new_text: string }
+	| { type: "environment_query" };
 
 type TimelineEventPush = Extract<TimelineMessage, { type: "timeline_event_added" }>;
 
@@ -223,6 +225,7 @@ export type ServerMessage =
 	| { type: "acp_session_created"; session_id: string }
 	| ({ type: "acp://session-update" } & AcpSessionUpdateEnvelope)
 	| { type: "acp://permission-request"; request: AcpPermissionRequestPayload }
+	| { type: "environment_data"; variables: EnvironmentVariable[] }
 	| TimelineEventPush;
 
 export type ServerMessageType = ServerMessage["type"];

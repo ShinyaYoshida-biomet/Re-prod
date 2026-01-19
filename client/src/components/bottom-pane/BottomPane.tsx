@@ -1,4 +1,5 @@
 import { ConsolePanel } from "@/components/console";
+import { EnvironmentPanel } from "@/components/environment";
 import { PlotHistoryPanel } from "@/components/plot-history";
 import { IconChevronLeft, IconChevronRight, IconTrash, PanelTabs } from "@/components/shared";
 import { TerminalPane } from "@/components/Terminal";
@@ -66,6 +67,7 @@ export function BottomPane(): JSX.Element {
 				{activeTab === "console" && <ConsolePanel view="console" />}
 				{activeTab === "history" && <ConsolePanel view="history" />}
 				{activeTab === "terminal" && <TerminalPane />}
+				{activeTab === "environment" && <EnvironmentPanel />}
 
 				{activeTab === "plots" && <PlotHistoryPanel />}
 				{activeTab === "help" && (

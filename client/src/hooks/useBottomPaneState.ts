@@ -64,6 +64,7 @@ export function useBottomPaneState(): UseBottomPaneStateResult {
 			{ id: "console", label: "Console" },
 			{ id: "history", label: "History" },
 			{ id: "terminal", label: "Terminal" },
+			{ id: "environment", label: "Environment" },
 			{ id: "plots", label: "Plots" },
 		];
 		list.push({ id: "help", label: "Help" });

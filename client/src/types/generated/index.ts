@@ -21,6 +21,7 @@ export * from "./ChatMessage";
 export * from "./CodeBlockKind";
 export * from "./CodeBlockMetadata";
 export * from "./EnvironmentSnapshot";
+export * from "./EnvironmentVariable";
 export * from "./ExecutionActor";
 export * from "./ExecutionContext";
 export * from "./ExecutionEvent";
