@@ -83,6 +83,7 @@ export function StreamingMessage({ message, onApplyCode }: Props): JSX.Element {
 	const hasCodeBlocks = Boolean(message.codeBlocks && message.codeBlocks.length > 0);
 	const hasEvents = Boolean(message.events && message.events.length > 0);
 	const shouldShowLegacyCode = Boolean(message.code && !hasCodeBlocks);
+	console.log("----------- message: ", message);
 
 	// Strip patch blocks from content to avoid duplicate display
 	const displayContent = message.content ? stripPatchBlocks(message.content) : "";
