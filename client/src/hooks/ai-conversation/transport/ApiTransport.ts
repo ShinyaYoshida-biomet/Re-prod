@@ -28,15 +28,20 @@ export class ApiTransport implements AITransport {
 
 		const cleanup = this.registerSocketHandlers(requestId);
 
-		const requestMessages = [...request.messages];
+		// The orchestrator currently builds the prompt and puts it in the last message.
+		// We extract that content to send as 'content' in the new protocol.
+		const latestMessage = request.messages[request.messages.length - 1];
+		const content = latestMessage?.content ?? "";
 
 		const sent = socketService.send(
-			aiMessages.send(requestMessages, {
+			aiMessages.send([], {
 				agentSessionId: request.agentSessionId,
 				requestId,
 				stream: true,
 				enableTools: request.mode === "agent",
 				mode: request.mode,
+				content,
+				session_id: request.agentSessionId,
 			}),
 		);
 

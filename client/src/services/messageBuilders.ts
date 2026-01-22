@@ -59,23 +59,23 @@ export const plotHistoryMessages = {
 
 // AI messages
 export const aiMessages = {
-	send: (
-		messages: ChatMessagePayload[],
-		options: {
-			agentSessionId: string;
-			enableTools?: boolean;
-			requestId?: string;
-			stream?: boolean;
-			mode?: AIMode;
-		},
-	): Extract<ClientMessage, { type: "ai_message" }> => ({
+	send: (options: {
+		agentSessionId: string;
+		enableTools?: boolean;
+		requestId?: string;
+		stream?: boolean;
+		mode?: AIMode;
+		content: string;
+		session_id: string;
+	}): Extract<ClientMessage, { type: "ai_message" }> => ({
 		type: "ai_message",
-		messages,
 		agent_session_id: options.agentSessionId,
 		enable_tools: options.enableTools,
 		request_id: options.requestId,
 		stream: options.stream,
 		mode: options.mode,
+		content: options.content,
+		session_id: options.session_id,
 	}),
 	approvalDecision: (
 		decision: ApprovalResponse,

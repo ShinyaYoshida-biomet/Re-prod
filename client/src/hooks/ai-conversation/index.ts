@@ -180,7 +180,6 @@ export function useAIConversation() {
 			}
 
 			const requestMessages = [
-				...messages.map((m) => ({ role: m.role, content: m.content })),
 				{
 					role: "user" as const,
 					content: buildPromptWithContext(
