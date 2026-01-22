@@ -218,8 +218,8 @@ async fn handle_ws_text(
 
                 match request {
                     WSRequest::AIMessage {
-                        messages,
-                        agent_session_id,
+                        session_id,
+                        content,
                         enable_tools,
                         request_id,
                         stream,
@@ -232,8 +232,8 @@ async fn handle_ws_text(
                             let _ = handle_ai_message(
                                 &state,
                                 &runtime,
-                                messages,
-                                agent_session_id,
+                                session_id,
+                                content,
                                 enable_tools,
                                 request_id,
                                 stream,
@@ -274,8 +274,8 @@ async fn handle_ws_request(
 ) -> Vec<WSResponse> {
     match request {
         WSRequest::AIMessage {
-            messages,
-            agent_session_id,
+            session_id,
+            content,
             enable_tools,
             request_id,
             stream,
@@ -284,8 +284,8 @@ async fn handle_ws_request(
             handle_ai_message(
                 state,
                 runtime,
-                messages,
-                agent_session_id,
+                session_id,
+                content,
                 enable_tools,
                 request_id,
                 stream,

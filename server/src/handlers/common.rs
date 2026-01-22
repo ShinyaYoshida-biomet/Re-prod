@@ -99,8 +99,8 @@ pub(super) enum WSRequest {
     Execute { request: ExecutionRequest },
     #[serde(rename = "ai_message")]
     AIMessage {
-        messages: Vec<ChatMessage>,
-        agent_session_id: String,
+        session_id: String,
+        content: String,
         #[serde(default)]
         enable_tools: bool,
         #[serde(default)]

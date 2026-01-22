@@ -494,8 +494,8 @@ fn suggest_recovery(message: &str) -> Option<String> {
 pub(super) async fn handle_ai_message(
     state: &AppState,
     runtime: &Arc<ProjectRuntime>,
-    messages: Vec<ChatMessage>,
-    agent_session_id: String,
+    session_id: String,
+    content: String,
     enable_tools: bool,
     request_id: Option<String>,
     stream: bool,
@@ -509,7 +509,23 @@ pub(super) async fn handle_ai_message(
         format!("req-{}", count)
     });
     let cancel_token = state.cancels.register(&stream_id).await;
-    let messages_with_prompts = with_system_prompts(&messages, mode);
+
+    // 1. Get or create session
+    let mut sessions = runtime.local_sessions.lock().await;
+    let session = sessions
+        .entry(session_id.clone())
+        .or_insert_with(|| reprod_core::ai::session::LocalAgentSession::new(session_id.clone()));
+
+    // 2. Append new user message
+    session.add_message(ChatMessage {
+        role: "user".to_string(),
+        content,
+    });
+
+    let history = session.history().to_vec();
+    drop(sessions); // Release lock while calling provider
+
+    let messages_with_prompts = with_system_prompts(&history, mode);
 
     let mut outbound = Vec::new();
     let mut event_stream = EventStream::new(&stream_id, sender.clone());
@@ -545,7 +561,6 @@ pub(super) async fn handle_ai_message(
         tools.extend(get_repo_tools());
         tools.extend(get_pending_edit_tools());
         let mut responses = Vec::new();
-        let mut conversation = messages.clone();
         let mut loop_count = 0;
         let mut plan_index = 0usize;
         const MAX_TOOL_LOOPS: usize = 5;
@@ -555,7 +570,14 @@ pub(super) async fn handle_ai_message(
                 push_cancel_response(&mut responses, &sender, &mut event_stream, &stream_id);
                 break 'tool_loop;
             }
-            let messages_with_prompts = with_system_prompts(&conversation, mode);
+
+            // Always get latest history from session
+            let history = {
+                let sessions = runtime.local_sessions.lock().await;
+                sessions.get(&session_id).unwrap().history().to_vec()
+            };
+
+            let messages_with_prompts = with_system_prompts(&history, mode);
             let mut cancelled = false;
             let response = tokio::select! {
                 _ = cancel_token.wait() => {
@@ -825,7 +847,7 @@ pub(super) async fn handle_ai_message(
                     );
 
                     let tool_result =
-                        execute_ai_tool_call(&tool_call, runtime, &agent_session_id).await;
+                        execute_ai_tool_call(&tool_call, runtime, &session_id).await;
                     match tool_result {
                         Ok(result) => {
                             log.status = ToolLogStatus::Done;
@@ -1004,22 +1026,29 @@ pub(super) async fn handle_ai_message(
                     );
                 }
 
-                conversation.push(ChatMessage {
-                    role: "assistant".to_string(),
-                    content: response.content.clone(),
-                });
-                for (tool_id, result) in tool_results {
-                    conversation.push(ChatMessage {
-                        role: "user".to_string(),
-                        content: format!("Tool '{}' result: {}", tool_id, result),
+                // Update session history with assistant turn and tool results
+                {
+                    let mut sessions = runtime.local_sessions.lock().await;
+                    let session = sessions.get_mut(&session_id).unwrap();
+                    
+                    session.add_message(ChatMessage {
+                        role: "assistant".to_string(),
+                        content: response.content.clone(),
                     });
-                }
-                if saw_error {
-                    conversation.push(ChatMessage {
-                        role: "user".to_string(),
-                        content: "One or more tools failed. Please adapt and continue."
-                            .to_string(),
-                    });
+                    
+                    for (tool_id, result) in tool_results {
+                        session.add_message(ChatMessage {
+                            role: "user".to_string(),
+                            content: format!("Tool '{}' result: {}", tool_id, result),
+                        });
+                    }
+                    if saw_error {
+                        session.add_message(ChatMessage {
+                            role: "user".to_string(),
+                            content: "One or more tools failed. Please adapt and continue."
+                                .to_string(),
+                        });
+                    }
                 }
 
                 loop_count += 1;
@@ -1049,6 +1078,16 @@ pub(super) async fn handle_ai_message(
                 continue;
             }
 
+            // Final assistant message (no more tool calls)
+            {
+                let mut sessions = runtime.local_sessions.lock().await;
+                let session = sessions.get_mut(&session_id).unwrap();
+                session.add_message(ChatMessage {
+                    role: "assistant".to_string(),
+                    content: response.content.clone(),
+                });
+            }
+
             push_responses(
                 &mut responses,
                 &sender,
@@ -1064,7 +1103,15 @@ pub(super) async fn handle_ai_message(
 
         responses
     } else {
+        // Chat mode (no tools)
         let mut responses = Vec::new();
+        
+        let history = {
+            let sessions = runtime.local_sessions.lock().await;
+            sessions.get(&session_id).unwrap().history().to_vec()
+        };
+        let messages_with_prompts = with_system_prompts(&history, mode);
+
         let response = tokio::select! {
             _ = cancel_token.wait() => {
                 push_cancel_response(&mut responses, &sender, &mut event_stream, &stream_id);
@@ -1076,6 +1123,16 @@ pub(super) async fn handle_ai_message(
 
         match response {
             Ok(response) => {
+                // Update session history
+                {
+                    let mut sessions = runtime.local_sessions.lock().await;
+                    let session = sessions.get_mut(&session_id).unwrap();
+                    session.add_message(ChatMessage {
+                        role: "assistant".to_string(),
+                        content: response.clone(),
+                    });
+                }
+
                 push_responses(
                     &mut responses,
                     &sender,

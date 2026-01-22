@@ -3,6 +3,7 @@ use crate::handlers::stream_buffer::StreamBuffer;
 use anyhow::{anyhow, Context, Result};
 use reprod_core::{
     acp::pending_edit::PendingEditStore,
+    ai::session::LocalAgentSession,
     ai::tools::{FileSystemTool, RContextTool},
     edit::EditService,
     execution_repository::{ExecutionRepository, TimelineExecutionRepository},
@@ -59,6 +60,7 @@ pub struct ProjectRuntime {
     pub acp: Arc<AcpService>,
     pub web_search_registry: Arc<Mutex<WebSearchRegistry>>,
     pub pending_edits: Arc<Mutex<PendingEditStore>>,
+    pub local_sessions: Arc<Mutex<HashMap<String, LocalAgentSession>>>,
 }
 
 impl ProjectRuntime {
@@ -138,6 +140,7 @@ impl ProjectRuntime {
             acp,
             web_search_registry,
             pending_edits: Arc::new(Mutex::new(PendingEditStore::default())),
+            local_sessions: Arc::new(Mutex::new(HashMap::new())),
         })
     }
 }

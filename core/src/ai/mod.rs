@@ -3,6 +3,7 @@ mod constants;
 pub mod factory;
 mod openai;
 mod provider;
+pub mod session;
 pub mod tools;
 
 pub use anthropic::AnthropicProvider;

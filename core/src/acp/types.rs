@@ -18,9 +18,21 @@ pub struct AcpPromptMessage {
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "../../../client/src/types/generated/")]
+pub struct AcpContextRequest {
+    pub user_input: String,
+    #[ts(optional = nullable)]
+    pub active_buffer_path: Option<String>,
+    #[ts(optional = nullable)]
+    pub console_history_limit: Option<usize>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../../client/src/types/generated/")]
 pub struct AcpPromptRequest {
     pub session_id: String,
     pub messages: Vec<AcpPromptMessage>,
+    #[ts(optional = nullable)]
+    pub context: Option<AcpContextRequest>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -205,6 +217,7 @@ mod tests {
     fn export_typescript_bindings() {
         AcpInitializeResponse::export().unwrap();
         AcpPromptMessage::export().unwrap();
+        AcpContextRequest::export().unwrap();
         AcpPromptRequest::export().unwrap();
         AcpSessionUpdateEnvelope::export().unwrap();
         AcpAvailableCommand::export().unwrap();
