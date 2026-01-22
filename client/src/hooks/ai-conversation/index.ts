@@ -16,11 +16,17 @@ const STREAM_TIMEOUT_MS = 45000;
 export function useAIConversation() {
 	const messages = useStore((state) => state.ai.messages);
 	const isLoadingStore = useStore((state) => state.ai.isLoading);
+	const agentSessionId = useStore((state) => state.ai.agentSessionId);
+
+	const activeMode = useStore((state) => state.activeMode);
+	const activeAgent = useStore((state) => state.activeAgent);
+	const acpConfigured = activeMode === "external_agent" && Boolean(activeAgent);
 
 	const addAIMessage = useStore((state) => state.addAIMessage);
 	const startStreamingMessage = useStore((state) => state.startStreamingMessage);
 	const setAILoading = useStore((state) => state.setAILoading);
 	const completeStreamingMessage = useStore((state) => state.completeStreamingMessage);
+	const setAgentSessionId = useStore((state) => state.setAgentSessionId);
 	const activeBuffer = useStore((state) => state.getActiveBuffer());
 	const consoleHistory = useStore((state) => state.execution.results);
 	const workspaceRoot = useFileSystemStore((state) => state.workspaceRoot);
@@ -62,6 +68,13 @@ export function useAIConversation() {
 	);
 
 	const { handleApplyCode } = useAICodeApplication(postAssistantMessage);
+
+	const ensureAgentSessionId = useCallback((): string => {
+		if (agentSessionId) return agentSessionId;
+		const nextId = createRequestId();
+		setAgentSessionId(nextId);
+		return nextId;
+	}, [agentSessionId, setAgentSessionId]);
 
 	// Handle Transport Events
 	useEffect(() => {
@@ -141,6 +154,7 @@ export function useAIConversation() {
 			if (!input.trim()) return;
 
 			const requestId = createRequestId();
+			const sessionId = ensureAgentSessionId();
 			const userMessage: AIMessage = {
 				id: Date.now().toString(),
 				role: "user",
@@ -158,7 +172,7 @@ export function useAIConversation() {
 			dispatch({ type: "STREAM_START", requestId });
 
 			// API mode timeout
-			if (mode !== "external_agent") {
+			if (!acpConfigured) {
 				startTimeout(() => {
 					handleStop();
 					postAssistantMessage("Request timed out. Please try again.");
@@ -180,6 +194,7 @@ export function useAIConversation() {
 
 			const dispose = transport.send({
 				id: requestId,
+				agentSessionId: sessionId,
 				mode,
 				messages: requestMessages,
 				context: {
@@ -205,6 +220,8 @@ export function useAIConversation() {
 			startTimeout,
 			handleStop,
 			postAssistantMessage,
+			ensureAgentSessionId,
+			acpConfigured,
 		],
 	);
 

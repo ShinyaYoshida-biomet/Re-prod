@@ -1,5 +1,3 @@
-import type { PendingEdit, PlanStep, ToolCallLog } from "@/types";
-
 export interface ConversationState {
 	activeRequestId: string | null;
 	lastRequestId: string | null;

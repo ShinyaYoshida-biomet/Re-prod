@@ -15,6 +15,7 @@ export type TransportListener = (event: TransportEvent) => void;
 
 export interface AITransportRequest {
 	id: string; // The client-side tracking ID (streamingId)
+	agentSessionId: string;
 	mode: AIMode;
 	messages: { role: string; content: string }[];
 	context: {

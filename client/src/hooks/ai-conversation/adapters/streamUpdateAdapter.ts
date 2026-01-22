@@ -1,4 +1,4 @@
-import type { PlanStep, ToolCallLog, PendingEdit, AgentEvent } from "@/types";
+import type { PlanStep, ToolCallLog } from "@/types";
 import type { AcpPlanStep } from "@/types/generated/AcpPlanStep";
 import type { AcpSessionUpdate } from "@/types/generated/AcpSessionUpdate";
 
