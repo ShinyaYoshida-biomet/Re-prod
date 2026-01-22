@@ -4,7 +4,7 @@ import { useStore } from "@/core";
 import { commandRegistry } from "@/core/commands/registry";
 import { useSettingsStore } from "@/core/state/slices/settingsStore";
 import { resolveProviderMetadata } from "@/domain/provider/ProviderMetadata";
-import { useAIConversation } from "@/hooks/useAIConversation";
+import { useAIConversation } from "@/hooks/ai-conversation";
 import type { AIMode } from "@/types";
 import { CopyButton } from "./CopyButton";
 import { ProviderIcon } from "./ProviderIcon";

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useStore } from "@/core";
 import { useSettingsStore } from "@/core/state/slices/settingsStore";
 import { AIPanel } from "../AIPanel";
-import { useAIConversation } from "@/hooks/useAIConversation";
+import { useAIConversation } from "@/hooks/ai-conversation";
 
 // Mock dependencies
 const mockSetInput = vi.fn();
@@ -14,7 +14,7 @@ const mockNavigateUp = vi.fn();
 const mockNavigateDown = vi.fn();
 const mockResetNavigation = vi.fn();
 
-vi.mock("@/hooks/useAIConversation", () => ({
+vi.mock("@/hooks/ai-conversation", () => ({
 	useAIConversation: vi.fn(),
 }));
 
