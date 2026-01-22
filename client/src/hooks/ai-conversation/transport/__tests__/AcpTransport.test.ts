@@ -51,9 +51,18 @@ describe("AcpTransport", () => {
 			expect(mockClient.createSession).toHaveBeenCalled();
 		});
 
-		expect(mockClient.prompt).toHaveBeenCalledWith("session-123", expect.any(Array));
+		expect(mockClient.prompt).toHaveBeenCalledWith(
+			"req-1",
+			expect.objectContaining({
+				session_id: "session-123",
+				messages: expect.any(Array),
+				context: expect.objectContaining({
+					user_input: "hello",
+					active_buffer_path: "test.ts",
+				}),
+			}),
+		);
 	});
-
 	it("should emit DONE when session update is Done", async () => {
 		mockClient.createSession.mockResolvedValue("session-123");
 		const transport = new AcpTransport();

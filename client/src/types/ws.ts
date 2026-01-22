@@ -103,6 +103,7 @@ export type ClientMessage =
 			content: string;
 			session_id: string;
 			agent_session_id: string; // Keep for builder compatibility if needed
+			context?: AcpContextRequest;
 			enable_tools?: boolean;
 			request_id?: string;
 			stream?: boolean;

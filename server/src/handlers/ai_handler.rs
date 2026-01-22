@@ -17,16 +17,72 @@ use similar::TextDiff;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::time::{timeout, Duration};
 
-use super::{
-    common::{
-        build_streaming_payload, error_response, now_millis, tool_log_from_call, with_system_prompts,
-        AgentEventPayload, AgentEventStatus, AIMode, AppState, ApprovalDecisionPayload,
-        ApprovalOption, ApprovalRequestPayload, ApprovalRule, ArtifactDetailsPayload, ArtifactKind,
-        PlanStepKind, PlanStepPayload, PlanStepStatus, ToolLogStatus, ToolPreviewPayload,
-        WSResponse,
-    },
-    tool_handler::execute_ai_tool_call,
+use super::common::{
+    build_streaming_payload, error_response, now_millis, tool_log_from_call, with_system_prompts,
+    AgentEventPayload, AgentEventStatus, AIMode, AppState, ApprovalDecisionPayload,
+    ApprovalOption, ApprovalRequestPayload, ApprovalRule, ArtifactDetailsPayload, ArtifactKind,
+    PlanStepKind, PlanStepPayload, PlanStepStatus, ToolLogStatus, ToolPreviewPayload,
+    WSResponse,
 };
+use super::tool_handler::execute_ai_tool_call;
+
+async fn build_context_prompt(
+    runtime: &Arc<ProjectRuntime>,
+    context: reprod_core::acp::types::AcpContextRequest,
+) -> Result<String, anyhow::Error> {
+    let mut parts = Vec::new();
+
+    // 1. Console Context
+    if let Some(limit) = context.console_history_limit {
+        if limit > 0 {
+            let runs = runtime
+                .execution_repo
+                .latest_runs(limit)
+                .await
+                .unwrap_or_default();
+            
+            if !runs.is_empty() {
+                let mut console_text = String::from("Recent console output (newest first, truncated):\n");
+                for run in runs {
+                    let status = format!("{:?}", run.status).to_lowercase();
+                    let duration = run.duration_ms.unwrap_or(0);
+                    console_text.push_str(&format!("- [{}] {} in {}ms\n", run.created_at_ms, status, duration));
+                    if !run.result.output.is_empty() {
+                        let trimmed = run.result.output.lines().take(20).collect::<Vec<_>>().join("\n");
+                        let truncated = if trimmed.len() > 800 { &trimmed[..800] } else { &trimmed };
+                        console_text.push_str(&format!("stdout: {}\n", truncated));
+                    }
+                    if let Some(err) = &run.result.error {
+                        let trimmed = err.lines().take(20).collect::<Vec<_>>().join("\n");
+                        let truncated = if trimmed.len() > 800 { &trimmed[..800] } else { &trimmed };
+                        console_text.push_str(&format!("stderr: {}\n", truncated));
+                    }
+                    console_text.push('\n');
+                }
+                parts.push(console_text);
+            }
+        }
+    }
+
+    // 2. File Context
+    if let Some(path) = context.active_buffer_path {
+        if !path.is_empty() {
+            match runtime.edit_service.read_text_file(&path).await {
+                Ok(result) => {
+                    parts.push(format!("Current file ({}):\n\n```r\n{}\n```\n", path, result.text));
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to read context file {}: {}", path, e);
+                }
+            }
+        }
+    }
+
+    // 3. User Input
+    parts.push(context.user_input);
+
+    Ok(parts.join("\n"))
+}
 
 type ResponseSender = Option<UnboundedSender<WSResponse>>;
 
@@ -496,6 +552,7 @@ pub(super) async fn handle_ai_message(
     runtime: &Arc<ProjectRuntime>,
     session_id: String,
     content: String,
+    context: Option<reprod_core::acp::types::AcpContextRequest>,
     enable_tools: bool,
     request_id: Option<String>,
     stream: bool,
@@ -516,10 +573,19 @@ pub(super) async fn handle_ai_message(
         .entry(session_id.clone())
         .or_insert_with(|| reprod_core::ai::session::LocalAgentSession::new(session_id.clone()));
 
-    // 2. Append new user message
+    // 2. Append new user message (with context if provided)
+    let final_content = if let Some(ctx) = context {
+        match build_context_prompt(runtime, ctx).await {
+            Ok(c) => c,
+            Err(_) => content,
+        }
+    } else {
+        content
+    };
+
     session.add_message(ChatMessage {
         role: "user".to_string(),
-        content,
+        content: final_content,
     });
 
     let history = session.history().to_vec();

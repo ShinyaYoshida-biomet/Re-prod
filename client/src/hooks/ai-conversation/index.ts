@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { useStore } from "@/core";
 import { useFileSystemStore } from "@/core/fileSystemStore";
-import { buildPromptWithContext, createRequestId } from "@/core/ai/promptUtils";
+import { createRequestId } from "@/core/ai/promptUtils";
 import type { AIMessage, AIMode } from "@/types";
 import { useAICodeApplication } from "../useAICodeApplication";
 import { usePromptHistory } from "../usePromptHistory";
@@ -182,12 +182,7 @@ export function useAIConversation() {
 			const requestMessages = [
 				{
 					role: "user" as const,
-					content: buildPromptWithContext(
-						editorFilepath,
-						editorContent,
-						currentInput,
-						consoleHistory,
-					),
+					content: currentInput,
 				},
 			];
 

@@ -3,7 +3,7 @@ import { socketService } from "@/services/socket";
 import type {
 	AcpPermissionDecision,
 	AcpPermissionRequestPayload,
-	AcpPromptMessage,
+	AcpPromptRequest,
 	AcpSessionUpdateEnvelope,
 } from "@/types/generated";
 import { showToast } from "@/services/toastService";
@@ -15,7 +15,7 @@ export interface ExternalAgentClient {
 	onSessionUpdate(cb: (payload: AcpSessionUpdateEnvelope) => void): ExternalAgentUnsubscribe;
 	onPermissionRequest(cb: (payload: AcpPermissionRequestPayload) => void): ExternalAgentUnsubscribe;
 	createSession(): Promise<string>;
-	prompt(sessionId: string, messages: AcpPromptMessage[]): Promise<void>;
+	prompt(requestId: string, request: AcpPromptRequest): Promise<void>;
 	cancel(sessionId: string): Promise<void>;
 	decidePermission(decision: AcpPermissionDecision): Promise<void>;
 }
@@ -115,14 +115,11 @@ class DesktopAcpClient implements ExternalAgentClient {
 		return invoke<string>("acp_create_session");
 	}
 
-	async prompt(sessionId: string, messages: AcpPromptMessage[]): Promise<void> {
+	async prompt(_requestId: string, request: AcpPromptRequest): Promise<void> {
 		await this.ensureInitialized();
 		const { invoke } = await import("@tauri-apps/api/core");
 		await invoke("acp_send_prompt", {
-			request: {
-				session_id: sessionId,
-				messages,
-			},
+			request,
 		});
 	}
 
@@ -171,11 +168,12 @@ class WebAcpClient implements ExternalAgentClient {
 		return response.session_id;
 	}
 
-	async prompt(sessionId: string, messages: AcpPromptMessage[]): Promise<void> {
+	async prompt(_requestId: string, request: AcpPromptRequest): Promise<void> {
 		const sent = socketService.send({
 			type: "acp_session_prompt",
-			session_id: sessionId,
-			messages,
+			session_id: request.session_id,
+			messages: request.messages,
+			context: request.context || undefined,
 		});
 		if (!sent) {
 			throw new Error("Failed to send ACP prompt");

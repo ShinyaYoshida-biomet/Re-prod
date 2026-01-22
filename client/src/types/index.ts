@@ -8,3 +8,4 @@ export * from "./tools";
 export * from "./ui";
 export * from "./ws";
 export * from "./pendingEdit";
+export { type AcpContextRequest } from "./generated";

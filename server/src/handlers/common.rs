@@ -102,6 +102,8 @@ pub(super) enum WSRequest {
         session_id: String,
         content: String,
         #[serde(default)]
+        context: Option<AcpContextRequest>,
+        #[serde(default)]
         enable_tools: bool,
         #[serde(default)]
         request_id: Option<String>,

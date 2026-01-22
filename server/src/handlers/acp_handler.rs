@@ -17,14 +17,54 @@ pub async fn handle_acp_session_prompt(
     runtime: &Arc<ProjectRuntime>,
     session_id: &str,
     messages: &[AcpPromptMessage],
+    context: Option<reprod_core::acp::types::AcpContextRequest>,
 ) -> Vec<WSResponse> {
-    let chat_messages: Vec<ChatMessage> = messages
+    let mut chat_messages: Vec<ChatMessage> = messages
         .iter()
         .map(|message| ChatMessage {
             role: message.role.clone(),
             content: message.content.clone(),
         })
         .collect();
+
+    // If context is provided, build the latest user message and append it
+    if let Some(ctx) = context {
+        // Build user prompt from context (mirrors ai_handler logic)
+        let mut parts = Vec::new();
+        
+        // 1. Console Context
+        if let Some(limit) = ctx.console_history_limit {
+            if limit > 0 {
+                let runs = runtime.execution_repo.latest_runs(limit).await.unwrap_or_default();
+                if !runs.is_empty() {
+                    let mut console_text = String::from("Recent console output (newest first, truncated):\n");
+                    for run in runs {
+                        console_text.push_str(&format!("- [{}] in {}ms\n", run.created_at_ms, run.duration_ms.unwrap_or(0)));
+                        if !run.result.output.is_empty() { console_text.push_str(&format!("stdout: {}\n", run.result.output.lines().take(20).collect::<Vec<_>>().join("\n"))); }
+                        console_text.push('\n');
+                    }
+                    parts.push(console_text);
+                }
+            }
+        }
+
+        // 2. File Context
+        if let Some(path) = ctx.active_buffer_path {
+            if !path.is_empty() {
+                if let Ok(result) = runtime.edit_service.read_text_file(&path).await {
+                    parts.push(format!("Current file ({}):\n\n```r\n{}\n```\n", path, result.text));
+                }
+            }
+        }
+
+        // 3. User Input
+        parts.push(ctx.user_input);
+
+        chat_messages.push(ChatMessage {
+            role: "user".to_string(),
+            content: parts.join("\n"),
+        });
+    }
 
     let has_system = chat_messages.iter().any(|message| message.role == "system");
     let messages_with_prompts = if has_system {

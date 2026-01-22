@@ -6,6 +6,7 @@
  */
 
 import type {
+	AcpContextRequest,
 	AIMode,
 	ClientMessage,
 	ApprovalResponse,
@@ -66,6 +67,7 @@ export const aiMessages = {
 		mode?: AIMode;
 		content: string;
 		session_id: string;
+		context?: AcpContextRequest;
 	}): Extract<ClientMessage, { type: "ai_message" }> => ({
 		type: "ai_message",
 		agent_session_id: options.agentSessionId,
@@ -75,6 +77,7 @@ export const aiMessages = {
 		mode: options.mode,
 		content: options.content,
 		session_id: options.session_id,
+		context: options.context,
 	}),
 	approvalDecision: (
 		decision: ApprovalResponse,

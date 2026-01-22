@@ -1,7 +1,6 @@
 import { getExternalAgentClient } from "@/services/externalAgentClient";
 import { asOptionalString } from "@/utils/string";
 import { normalizeWorkspaceRelativePath } from "@/core/pathUtils";
-import { getAcpSystemPrompts } from "@/core/ai/systemPrompts";
 import type { AcpPromptMessage, AcpSessionUpdateEnvelope } from "@/types/generated";
 import type { PlanStep, ToolCallLog, PendingEdit } from "@/types";
 import type { AcpPlanStep } from "@/types/generated/AcpPlanStep";
@@ -51,13 +50,22 @@ export class AcpTransport implements AITransport {
 				this.activeSessions.set(sessionId, request.id);
 				this.sessionContext.set(sessionId, request.context);
 
-				const systemPrompts = getAcpSystemPrompts(request.mode);
 				const payload: AcpPromptMessage[] = request.messages.map((m) => ({
 					role: m.role as "user" | "assistant" | "system",
 					content: m.content,
 				}));
 
-				await client.prompt(sessionId, [...systemPrompts, ...payload]);
+				const userInput = request.messages[request.messages.length - 1]?.content ?? "";
+
+				await client.prompt(request.id, {
+					session_id: sessionId,
+					messages: payload,
+					context: {
+						user_input: userInput,
+						active_buffer_path: request.context.editorFilepath || null,
+						console_history_limit: 3,
+					},
+				});
 			} catch (error) {
 				this.emit({
 					type: "ERROR",

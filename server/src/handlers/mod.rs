@@ -220,6 +220,7 @@ async fn handle_ws_text(
                     WSRequest::AIMessage {
                         session_id,
                         content,
+                        context,
                         enable_tools,
                         request_id,
                         stream,
@@ -234,6 +235,7 @@ async fn handle_ws_text(
                                 &runtime,
                                 session_id,
                                 content,
+                                context,
                                 enable_tools,
                                 request_id,
                                 stream,
@@ -276,6 +278,7 @@ async fn handle_ws_request(
         WSRequest::AIMessage {
             session_id,
             content,
+            context,
             enable_tools,
             request_id,
             stream,
@@ -286,6 +289,7 @@ async fn handle_ws_request(
                 runtime,
                 session_id,
                 content,
+                context,
                 enable_tools,
                 request_id,
                 stream,
@@ -350,7 +354,8 @@ async fn handle_ws_request(
         WSRequest::AcpSessionPrompt {
             session_id,
             messages,
-        } => handle_acp_session_prompt(runtime, &session_id, &messages).await,
+            context,
+        } => handle_acp_session_prompt(runtime, &session_id, &messages, context).await,
         WSRequest::AcpSessionCancel { session_id } => {
             handle_acp_session_cancel(runtime, &session_id).await
         }
