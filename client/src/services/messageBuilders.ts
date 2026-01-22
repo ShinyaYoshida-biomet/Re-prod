@@ -7,7 +7,6 @@
 
 import type {
 	AIMode,
-	ChatMessagePayload,
 	ClientMessage,
 	ApprovalResponse,
 	ExecutionRequestPayload,

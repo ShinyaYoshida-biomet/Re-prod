@@ -34,7 +34,7 @@ export class ApiTransport implements AITransport {
 		const content = latestMessage?.content ?? "";
 
 		const sent = socketService.send(
-			aiMessages.send([], {
+			aiMessages.send({
 				agentSessionId: request.agentSessionId,
 				requestId,
 				stream: true,

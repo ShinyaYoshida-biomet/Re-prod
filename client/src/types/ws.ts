@@ -1,4 +1,5 @@
 import type {
+	AcpContextRequest,
 	AcpPermissionDecision,
 	AcpPermissionRequestPayload,
 	AcpPromptMessage,
@@ -9,7 +10,6 @@ import type { TimelineMessage, TimelineQuery, TimelineResponse, TimelineStats } 
 import type { ToolManifest } from "./tools";
 import type {
 	AIMode,
-	ChatMessagePayload,
 	CodeBlock,
 	ExecutionRequestPayload,
 	FileEntryPayload,
@@ -100,8 +100,9 @@ export type ClientMessage =
 	| { type: "execute"; request: ExecutionRequestPayload }
 	| {
 			type: "ai_message";
-			messages: ChatMessagePayload[];
-			agent_session_id: string;
+			content: string;
+			session_id: string;
+			agent_session_id: string; // Keep for builder compatibility if needed
 			enable_tools?: boolean;
 			request_id?: string;
 			stream?: boolean;
@@ -139,7 +140,12 @@ export type ClientMessage =
 	| { type: "plot_history_clear" }
 	| { type: "run_query"; limit?: number }
 	| { type: "acp_session_create" }
-	| { type: "acp_session_prompt"; session_id: string; messages: AcpPromptMessage[] }
+	| {
+			type: "acp_session_prompt";
+			session_id: string;
+			messages: AcpPromptMessage[];
+			context?: AcpContextRequest;
+	  }
 	| { type: "acp_session_cancel"; session_id: string }
 	| { type: "acp_permission_decision"; decision: AcpPermissionDecision }
 	| { type: "acp_pending_edit_accept"; edit_id: string }

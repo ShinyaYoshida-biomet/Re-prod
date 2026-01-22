@@ -3,6 +3,7 @@
 export * from "./AcpAgentConfig";
 export * from "./AcpAvailableCommand";
 export * from "./AcpCancelRequest";
+export * from "./AcpContextRequest";
 export * from "./AcpDetectedAgent";
 export * from "./AcpInitializeResponse";
 export * from "./AcpPermissionDecision";
