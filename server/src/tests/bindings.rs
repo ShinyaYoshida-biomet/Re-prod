@@ -1,7 +1,6 @@
 use crate::handlers::common::{
-    AgentEventPayload, AgentEventStatus, AIMode, ApprovalDecisionPayload, ApprovalOption,
-    ApprovalRequestPayload, ArtifactDetailsPayload, ArtifactKind, PlanStepKind, PlanStepPayload,
-    PlanStepStatus, ToolLogPayload, ToolLogStatus, ToolPreviewPayload, WSRequest, WSResponse,
+    AgentEventPayload, AIMode, ApprovalDecisionPayload, ApprovalOption, ApprovalRequestPayload,
+    ToolLogPayload, WSRequest, WSResponse,
 };
 use std::path::Path;
 use ts_rs::TS;
@@ -16,16 +15,8 @@ fn export_bindings() {
     ApprovalOption::export().expect("Failed to export ApprovalOption");
     ApprovalRequestPayload::export().expect("Failed to export ApprovalRequestPayload");
     ApprovalDecisionPayload::export().expect("Failed to export ApprovalDecisionPayload");
-    AgentEventStatus::export().expect("Failed to export AgentEventStatus");
     AgentEventPayload::export().expect("Failed to export AgentEventPayload");
     ToolLogPayload::export().expect("Failed to export ToolLogPayload");
-    ToolLogStatus::export().expect("Failed to export ToolLogStatus");
-    ToolPreviewPayload::export().expect("Failed to export ToolPreviewPayload");
-    ArtifactKind::export().expect("Failed to export ArtifactKind");
-    ArtifactDetailsPayload::export().expect("Failed to export ArtifactDetailsPayload");
-    PlanStepStatus::export().expect("Failed to export PlanStepStatus");
-    PlanStepKind::export().expect("Failed to export PlanStepKind");
-    PlanStepPayload::export().expect("Failed to export PlanStepPayload");
 
     rewrite_acp_imports("WSRequest.ts");
     rewrite_acp_imports("WSResponse.ts");
