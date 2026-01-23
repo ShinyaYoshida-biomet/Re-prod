@@ -23,7 +23,9 @@ const assertCaseReferences = (filePath: string, suite: SuiteName, label: string)
 	const cases = TEST_CASES[suite];
 
 	cases.forEach((_, index) => {
-		const pattern = new RegExp(`TEST_CASES\\[(?:"|')${suite}(?:"|')\\]\\[${index}\\]`);
+		const pattern = new RegExp(
+			`TEST_CASES(?:\\[(?:"|')${suite}(?:"|')\\]|\\.${suite})\\[${index}\\]`,
+		);
 		if (!pattern.test(content)) {
 			errors.push(`${label} missing ${suite} case ${index + 1}: ${TEST_CASES[suite][index]}`);
 		}
