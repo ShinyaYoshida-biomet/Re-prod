@@ -25,6 +25,7 @@ use serde_json::Value;
 use tokio::sync::{oneshot, Mutex};
 use tokio::sync::{Notify, RwLock};
 use std::sync::atomic::{AtomicBool, Ordering};
+use ts_rs::TS;
 
 #[derive(Debug, Deserialize)]
 struct SystemPrompts {
@@ -44,9 +45,10 @@ fn load_system_prompts() -> &'static SystemPrompts {
     })
 }
 
-#[derive(Clone, Copy, Debug, serde::Deserialize)]
+#[derive(Clone, Copy, Debug, serde::Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
 #[serde(rename_all = "lowercase")]
-pub(super) enum AIMode {
+pub(crate) enum AIMode {
     Agent,
     Chat,
 }
@@ -93,9 +95,10 @@ pub(super) fn with_system_prompts(messages: &[ChatMessage], mode: AIMode) -> Vec
     result
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
 #[serde(tag = "type")]
-pub(super) enum WSRequest {
+pub(crate) enum WSRequest {
     #[serde(rename = "execute")]
     Execute { request: ExecutionRequest },
     #[serde(rename = "ai_message")]
@@ -126,6 +129,7 @@ pub(super) enum WSRequest {
     ExecuteTool {
         tool_id: String,
         capability_id: String,
+        #[ts(type = "Record<string, any>")]
         parameters: std::collections::HashMap<String, serde_json::Value>,
     },
     #[serde(rename = "timeline_query")]
@@ -206,9 +210,10 @@ pub(super) enum WSRequest {
     EnvironmentQuery,
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
 #[serde(tag = "type")]
-pub(super) enum WSResponse {
+pub(crate) enum WSResponse {
     #[serde(rename = "ai_response")]
     AIResponse { response: String },
     #[serde(rename = "ai_response_with_tools")]
@@ -221,6 +226,8 @@ pub(super) enum WSResponse {
         #[serde(rename = "final")]
         final_text: String,
         #[serde(rename = "codeBlocks", skip_serializing_if = "Option::is_none")]
+        #[ts(type = "Array<any>")]
+        #[ts(rename = "codeBlocks")]
         code_blocks: Option<Vec<Value>>,
     },
     #[serde(rename = "agent_event")]
@@ -245,6 +252,7 @@ pub(super) enum WSResponse {
         success: bool,
         stdout: Option<String>,
         stderr: Option<String>,
+        #[ts(type = "number")]
         execution_time_ms: u64,
         error: Option<String>,
     },
@@ -259,7 +267,10 @@ pub(super) enum WSResponse {
     #[serde(rename = "execution_interrupted")]
     ExecutionInterrupted { success: bool },
     #[serde(rename = "session_restarted")]
-    SessionRestarted { cleared_events: u64 },
+    SessionRestarted {
+        #[ts(type = "number")]
+        cleared_events: u64,
+    },
     #[serde(rename = "fs_event")]
     FileSystemEvent { event: FileSystemEvent },
     #[serde(rename = "fs_result")]
@@ -270,6 +281,7 @@ pub(super) enum WSResponse {
         to: Option<String>,
         success: bool,
         #[serde(skip_serializing_if = "Option::is_none")]
+        #[ts(type = "any")]
         data: Option<Value>,
         #[serde(skip_serializing_if = "Option::is_none")]
         error: Option<String>,
@@ -278,6 +290,7 @@ pub(super) enum WSResponse {
     ProjectOpened {
         project: ProjectRecord,
         #[serde(skip_serializing_if = "Option::is_none")]
+        #[ts(type = "any")]
         state: Option<Value>,
     },
     #[serde(rename = "project_list_result")]
@@ -322,6 +335,7 @@ pub(super) enum WSResponse {
         #[serde(skip_serializing_if = "Option::is_none")]
         state: Option<Vec<PlotHistoryEntry>>,
         #[serde(rename = "activePlotId", skip_serializing_if = "Option::is_none")]
+        #[ts(rename = "activePlotId")]
         active_plot_id: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         error: Option<String>,
@@ -333,6 +347,7 @@ pub(super) enum WSResponse {
         #[serde(skip_serializing_if = "Option::is_none")]
         state: Option<Vec<PlotHistoryEntry>>,
         #[serde(rename = "activePlotId", skip_serializing_if = "Option::is_none")]
+        #[ts(rename = "activePlotId")]
         active_plot_id: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         error: Option<String>,
@@ -342,6 +357,7 @@ pub(super) enum WSResponse {
         #[serde(skip_serializing_if = "Option::is_none")]
         state: Option<Vec<PlotHistoryEntry>>,
         #[serde(rename = "activePlotId", skip_serializing_if = "Option::is_none")]
+        #[ts(rename = "activePlotId")]
         active_plot_id: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         error: Option<String>,
@@ -371,36 +387,43 @@ pub(super) enum WSResponse {
     EnvironmentData { variables: Vec<EnvironmentVariable> },
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Copy)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
 #[serde(rename_all = "snake_case")]
-pub(super) enum ApprovalOption {
+pub(crate) enum ApprovalOption {
     ApproveOnce,
     ApproveSession,
     Edit,
     Deny,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
-pub(super) struct ApprovalRequestPayload {
+#[derive(serde::Serialize, serde::Deserialize, Clone, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
+pub(crate) struct ApprovalRequestPayload {
     #[serde(rename = "eventId")]
     pub event_id: String,
     pub tool: String,
     pub preview: ToolPreviewPayload,
     pub options: Vec<ApprovalOption>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(type = "any")]
     pub input: Option<Value>,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
-pub(super) struct ApprovalDecisionPayload {
+#[derive(serde::Serialize, serde::Deserialize, Clone, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
+pub(crate) struct ApprovalDecisionPayload {
     #[serde(rename = "eventId")]
     pub event_id: String,
     pub decision: ApprovalOption,
     #[serde(skip_serializing_if = "Option::is_none", rename = "editedInput")]
+    #[ts(type = "any | null")]
+    #[ts(rename = "editedInput")]
     pub edited_input: Option<Value>,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Hash, PartialEq, Eq, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
 pub(super) struct ApprovalRule {
     pub tool: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -702,11 +725,13 @@ mod tests {
         assert_eq!(prefixed[1].content, prompts.range);
         assert_eq!(&prefixed[2..], messages.as_slice());
     }
+
 }
 
-#[derive(serde::Serialize, Clone, Copy)]
+#[derive(serde::Serialize, Clone, Copy, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
 #[serde(rename_all = "lowercase")]
-pub(super) enum AgentEventStatus {
+pub(crate) enum AgentEventStatus {
     Pending,
     Running,
     Done,
@@ -716,23 +741,26 @@ pub(super) enum AgentEventStatus {
     Denied,
 }
 
-#[derive(serde::Serialize, Clone, Copy)]
+#[derive(serde::Serialize, Clone, Copy, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
 #[serde(rename_all = "snake_case")]
-pub(super) enum PlanStepStatus {
+pub(crate) enum PlanStepStatus {
     Pending,
     Running,
     Done,
     Error,
 }
 
-#[derive(serde::Serialize, Clone, Copy)]
+#[derive(serde::Serialize, Clone, Copy, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
 #[serde(rename_all = "snake_case")]
-pub(super) enum PlanStepKind {
+pub(crate) enum PlanStepKind {
     Plan,
 }
 
-#[derive(serde::Serialize, Clone)]
-pub(super) struct PlanStepPayload {
+#[derive(serde::Serialize, Clone, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
+pub(crate) struct PlanStepPayload {
     pub id: String,
     pub title: String,
     pub status: PlanStepStatus,
@@ -741,16 +769,22 @@ pub(super) struct PlanStepPayload {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "startedAt")]
+    #[ts(type = "number | null")]
+    #[ts(rename = "startedAt")]
     pub started_at: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "finishedAt")]
+    #[ts(type = "number | null")]
+    #[ts(rename = "finishedAt")]
     pub finished_at: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "waitingReason")]
+    #[ts(rename = "waitingReason")]
     pub waiting_reason: Option<String>,
 }
 
-#[derive(serde::Serialize, Clone, Copy)]
+#[derive(serde::Serialize, Clone, Copy, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
 #[serde(rename_all = "snake_case")]
-pub(super) enum ArtifactKind {
+pub(crate) enum ArtifactKind {
     FileRead,
     FileWrite,
     Command,
@@ -759,8 +793,9 @@ pub(super) enum ArtifactKind {
     TestResult,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
-pub(super) struct ToolPreviewPayload {
+#[derive(serde::Serialize, serde::Deserialize, Clone, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
+pub(crate) struct ToolPreviewPayload {
     pub kind: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub filepath: Option<String>,
@@ -769,80 +804,98 @@ pub(super) struct ToolPreviewPayload {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub command: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "affectedLines")]
+    #[ts(rename = "affectedLines")]
     pub affected_lines: Option<u32>,
 }
 
-#[derive(serde::Serialize, Clone)]
-pub(super) struct ArtifactDetailsPayload {
+#[derive(serde::Serialize, Clone, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
+pub(crate) struct ArtifactDetailsPayload {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub diff: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "exitCode")]
+    #[ts(rename = "exitCode")]
     pub exit_code: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stdout: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stderr: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "testsPassed")]
+    #[ts(rename = "testsPassed")]
     pub tests_passed: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "testsFailed")]
+    #[ts(rename = "testsFailed")]
     pub tests_failed: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "oldText")]
+    #[ts(rename = "oldText")]
     pub old_text: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "newText")]
+    #[ts(rename = "newText")]
     pub new_text: Option<String>,
 }
 
-#[derive(serde::Serialize, Clone)]
+#[derive(serde::Serialize, Clone, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
 #[serde(tag = "type")]
-pub(super) enum AgentEventPayload {
+pub(crate) enum AgentEventPayload {
     #[serde(rename = "thought")]
     Thought {
         id: String,
         status: AgentEventStatus,
+        #[ts(type = "number")]
         timestamp: i64,
         text: String,
         #[serde(skip_serializing_if = "Option::is_none")]
         reasoning: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none", rename = "parentId")]
+        #[ts(rename = "parentId")]
         parent_id: Option<String>,
     },
     #[serde(rename = "tool_request")]
     ToolRequest {
         id: String,
         status: AgentEventStatus,
+        #[ts(type = "number")]
         timestamp: i64,
         tool: String,
+        #[ts(type = "any")]
         input: Value,
         #[serde(rename = "requiresApproval")]
         requires_approval: bool,
         #[serde(skip_serializing_if = "Option::is_none")]
         preview: Option<ToolPreviewPayload>,
         #[serde(skip_serializing_if = "Option::is_none", rename = "parentId")]
+        #[ts(rename = "parentId")]
         parent_id: Option<String>,
     },
     #[serde(rename = "tool_result")]
     ToolResult {
         id: String,
         status: AgentEventStatus,
+        #[ts(type = "number")]
         timestamp: i64,
         #[serde(rename = "requestId")]
         request_id: String,
         tool: String,
         #[serde(skip_serializing_if = "Option::is_none")]
+        #[ts(type = "any")]
         output: Option<Value>,
         #[serde(skip_serializing_if = "Option::is_none")]
         error: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none", rename = "parentId")]
+        #[ts(rename = "parentId")]
         parent_id: Option<String>,
     },
     #[serde(rename = "task")]
     Task {
         id: String,
         status: AgentEventStatus,
+        #[ts(type = "number")]
         timestamp: i64,
         label: String,
         deps: Vec<String>,
         #[serde(skip_serializing_if = "Option::is_none", rename = "parentId")]
+        #[ts(rename = "parentId")]
         parent_id: Option<String>,
     },
     #[serde(rename = "plan_update")]
@@ -853,6 +906,7 @@ pub(super) enum AgentEventPayload {
     Artifact {
         id: String,
         status: AgentEventStatus,
+        #[ts(type = "number")]
         timestamp: i64,
         kind: ArtifactKind,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -861,45 +915,57 @@ pub(super) enum AgentEventPayload {
         #[serde(skip_serializing_if = "Option::is_none")]
         details: Option<ArtifactDetailsPayload>,
         #[serde(skip_serializing_if = "Option::is_none", rename = "parentId")]
+        #[ts(rename = "parentId")]
         parent_id: Option<String>,
     },
     #[serde(rename = "error")]
     Error {
         id: String,
         status: AgentEventStatus,
+        #[ts(type = "number")]
         timestamp: i64,
         message: String,
         recoverable: bool,
         #[serde(skip_serializing_if = "Option::is_none", rename = "suggestedAction")]
+        #[ts(rename = "suggestedAction")]
         suggested_action: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none", rename = "parentId")]
+        #[ts(rename = "parentId")]
         parent_id: Option<String>,
     },
 }
 
 
-#[derive(serde::Serialize, Clone)]
-pub(super) struct ToolLogPayload {
+#[derive(serde::Serialize, Clone, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
+pub(crate) struct ToolLogPayload {
     pub id: String,
     pub name: String,
     pub status: ToolLogStatus,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub kind: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(type = "any")]
     pub input: Option<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(type = "any")]
     pub output: Option<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
     #[serde(rename = "startedAt", skip_serializing_if = "Option::is_none")]
+    #[ts(type = "number | null")]
+    #[ts(rename = "startedAt")]
     pub started_at: Option<i64>,
     #[serde(rename = "finishedAt", skip_serializing_if = "Option::is_none")]
+    #[ts(type = "number | null")]
+    #[ts(rename = "finishedAt")]
     pub finished_at: Option<i64>,
 }
 
-#[derive(serde::Serialize, Clone)]
+#[derive(serde::Serialize, Clone, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
 #[serde(rename_all = "lowercase")]
-pub(super) enum ToolLogStatus {
+pub(crate) enum ToolLogStatus {
     #[allow(dead_code)] // Reserved for future use
     Pending,
     Running,

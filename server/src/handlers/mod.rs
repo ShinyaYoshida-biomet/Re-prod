@@ -23,7 +23,7 @@ use uuid::Uuid;
 
 mod acp_handler;
 mod ai_handler;
-mod common;
+pub(crate) mod common;
 mod environment_handler;
 mod export_handler;
 mod plot_history_handler;
