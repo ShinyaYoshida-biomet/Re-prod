@@ -689,7 +689,7 @@ pub(super) async fn handle_ai_message(
                         && !state
                             .approvals
                             .is_allowed(
-                                &agent_session_id,
+                                &session_id,
                                 &tool_call.name,
                                 normalized_path.as_deref(),
                                 &runtime.descriptor.root_path,
