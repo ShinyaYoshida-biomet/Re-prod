@@ -37,7 +37,7 @@ const isReadTool = (name?: string): boolean => {
 	return normalized.includes("read") && normalized.includes("file");
 };
 
-const extractReadPathFromInput = (input?: Record<string, unknown>): string | null => {
+const extractReadPathFromInput = (input?: Record<string, unknown> | null): string | null => {
 	if (!input) return null;
 	const candidate = input.path ?? input.file_path ?? input.filePath;
 	if (typeof candidate === "string" && candidate.trim()) {

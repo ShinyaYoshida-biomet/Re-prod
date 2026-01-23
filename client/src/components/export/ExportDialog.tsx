@@ -249,7 +249,7 @@ export function ExportDialog({ open, onClose }: ExportDialogProps): JSX.Element 
 									<select
 										id="codeFolding"
 										className="export-input"
-										value={codeFolding}
+										value={codeFolding ?? "show"}
 										onChange={(e) => setCodeFolding(e.target.value as typeof codeFolding)}
 										disabled={exporting}
 									>

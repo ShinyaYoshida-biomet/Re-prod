@@ -173,7 +173,7 @@ class WebAcpClient implements ExternalAgentClient {
 			type: "acp_session_prompt",
 			session_id: request.session_id,
 			messages: request.messages,
-			context: request.context || undefined,
+			context: request.context ?? null,
 		});
 		if (!sent) {
 			throw new Error("Failed to send ACP prompt");

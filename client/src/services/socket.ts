@@ -1,19 +1,11 @@
 import { WEBSOCKET_RECONNECT_DELAY, WEBSOCKET_REQUEST_TIMEOUT } from "@/constants/timeouts";
-import type {
-	ClientMessage,
-	ExtractServerMessage,
-	ServerMessage,
-	ServerMessageType,
-} from "@/types";
+import type { ExtractServerMessage, ServerMessageType, WSRequest, WSResponse } from "@/types";
 
-export type WSRequest = ClientMessage;
-export type WSResponse = ServerMessage;
-
-type MessageHandler<T extends ServerMessage = ServerMessage> = (response: T) => void;
+type MessageHandler<T extends WSResponse = WSResponse> = (response: T) => void;
 type OneShotHandler = {
 	id: string;
 	handler: MessageHandler;
-	matcher?: (message: ServerMessage) => boolean;
+	matcher?: (message: WSResponse) => boolean;
 };
 
 type ConnectionStatus = "connected" | "disconnected" | "error";
@@ -87,7 +79,7 @@ class SocketService {
 	send(
 		request: WSRequest,
 		handler?: MessageHandler,
-		matcher?: (message: ServerMessage) => boolean,
+		matcher?: (message: WSResponse) => boolean,
 	): boolean {
 		if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
 			return false;
@@ -185,7 +177,7 @@ class SocketService {
 				}
 			};
 
-			const handler = (message: ServerMessage): void => {
+			const handler = (message: WSResponse): void => {
 				if (message.type !== responseType) {
 					return;
 				}
@@ -212,9 +204,9 @@ class SocketService {
 		});
 	}
 
-	sendAndWait<TMessage extends ServerMessage>(
+	sendAndWait<TMessage extends WSResponse>(
 		payload: WSRequest,
-		matcher: (message: ServerMessage) => message is TMessage,
+		matcher: (message: WSResponse) => message is TMessage,
 		timeoutMs = WEBSOCKET_REQUEST_TIMEOUT,
 	): Promise<TMessage> {
 		return new Promise((resolve, reject) => {
@@ -270,7 +262,7 @@ class SocketService {
 		return true;
 	}
 
-	private dispatch(type: string, message: ServerMessage): void {
+	private dispatch(type: string, message: WSResponse): void {
 		const handlers = this.messageHandlers.get(type);
 		handlers?.forEach((handler) => {
 			try {
@@ -282,7 +274,7 @@ class SocketService {
 		});
 	}
 
-	private consumeOneShot(message: ServerMessage): void {
+	private consumeOneShot(message: WSResponse): void {
 		if (this.oneShotHandlers.length === 0) return;
 
 		const index = this.oneShotHandlers.findIndex(({ matcher }) =>

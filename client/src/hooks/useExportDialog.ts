@@ -148,7 +148,7 @@ export function useExportDialog({ open, onClose }: UseExportDialogProps): UseExp
 		const basePayload = {
 			mode,
 			outputPath,
-			documentPath: mode === "document" ? trimmedDocumentPath : undefined,
+			documentPath: mode === "document" ? trimmedDocumentPath : null,
 			codeFolding,
 			includeTimestamps: options.includeTimestamps,
 			showActor: options.showActor,
@@ -157,10 +157,11 @@ export function useExportDialog({ open, onClose }: UseExportDialogProps): UseExp
 			includeErrors: options.includeErrors,
 			includeSummary: options.includeSummary,
 			outputTruncation: {
-				headLines: 20,
-				tailLines: 8,
-				maxLines: 200,
+				head_lines: 20,
+				tail_lines: 8,
+				max_lines: 200,
 			},
+			pdfOptions: null,
 		};
 
 		const pdfPayload = {
@@ -172,7 +173,7 @@ export function useExportDialog({ open, onClose }: UseExportDialogProps): UseExp
 				highlightTheme: pdfOptions.highlightTheme,
 				figWidth: pdfOptions.figWidth,
 				figHeight: pdfOptions.figHeight,
-				latexPreamble: pdfOptions.latexPreamble || undefined,
+				latexPreamble: pdfOptions.latexPreamble || null,
 			},
 		};
 

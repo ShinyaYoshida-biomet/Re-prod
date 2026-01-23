@@ -152,6 +152,7 @@ export function AgentEventStream({ events, approvals }: Props): JSX.Element | nu
 		let payload: ApprovalResponse = {
 			eventId: approval.eventId,
 			decision,
+			editedInput: null,
 		};
 		if (decision === "edit") {
 			try {

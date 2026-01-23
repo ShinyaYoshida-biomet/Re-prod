@@ -13,6 +13,7 @@ import type {
 	ExecutionRequestPayload,
 	ExportRMarkdownRequestPayload,
 	FileSystemAction,
+	PlotHistoryExportFormat,
 	TimelineQuery,
 	ToolExecutionRequestPayload,
 } from "@/types";
@@ -31,12 +32,12 @@ export const plotHistoryMessages = {
 	export: (
 		plotId: string,
 		path: string,
-		format?: "png" | "pdf",
+		format?: PlotHistoryExportFormat,
 	): Extract<ClientMessage, { type: "plot_history_export" }> => ({
 		type: "plot_history_export",
 		plot_id: plotId,
 		path,
-		format,
+		format: format ?? null,
 	}),
 
 	delete: (plotId: string): Extract<ClientMessage, { type: "plot_history_delete" }> => ({
@@ -60,7 +61,6 @@ export const plotHistoryMessages = {
 // AI messages
 export const aiMessages = {
 	send: (options: {
-		agentSessionId: string;
 		enableTools?: boolean;
 		requestId?: string;
 		stream?: boolean;
@@ -70,14 +70,13 @@ export const aiMessages = {
 		context?: AcpContextRequest;
 	}): Extract<ClientMessage, { type: "ai_message" }> => ({
 		type: "ai_message",
-		agent_session_id: options.agentSessionId,
-		enable_tools: options.enableTools,
-		request_id: options.requestId,
-		stream: options.stream,
-		mode: options.mode,
+		enable_tools: options.enableTools ?? false,
+		request_id: options.requestId ?? null,
+		stream: options.stream ?? false,
+		mode: options.mode ?? "agent",
 		content: options.content,
 		session_id: options.session_id,
-		context: options.context,
+		context: options.context ?? null,
 	}),
 	approvalDecision: (
 		decision: ApprovalResponse,
@@ -113,7 +112,22 @@ export const toolMessages = {
 export const timelineMessages = {
 	query: (query: TimelineQuery): Extract<ClientMessage, { type: "timeline_query" }> => ({
 		type: "timeline_query",
-		query,
+		query: {
+			filters: query.filters
+				? {
+						actor: query.filters.actor ?? null,
+						source: query.filters.source ?? null,
+						startTime: query.filters.startTime ?? null,
+						endTime: query.filters.endTime ?? null,
+						hasPlots: query.filters.hasPlots ?? null,
+						hasErrors: query.filters.hasErrors ?? null,
+						codeContains: query.filters.codeContains ?? null,
+					}
+				: null,
+			sort: query.sort ?? null,
+			limit: query.limit ?? null,
+			offset: query.offset ?? null,
+		},
 	}),
 
 	statsQuery: (): Extract<ClientMessage, { type: "timeline_stats_query" }> => ({
@@ -147,8 +161,8 @@ export const fsMessages = {
 		type: "fs_action",
 		action,
 		path,
-		content: options?.content,
-		to: options?.to,
+		content: options?.content ?? null,
+		to: options?.to ?? null,
 	}),
 } as const;
 

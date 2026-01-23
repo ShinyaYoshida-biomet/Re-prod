@@ -73,8 +73,10 @@ export function ProjectSwitchModal({ open, onClose }: ProjectSwitchModalProps): 
 		setCreating(true);
 		setError(null);
 		try {
-			const response = await socketService.sendAndWait(
-				{ type: "project_create", name },
+			const response = await socketService.sendAndWait<
+				ExtractServerMessage<"project_created"> | ExtractServerMessage<"error">
+			>(
+				{ type: "project_create", name, base_path: null },
 				(
 					message,
 				): message is ExtractServerMessage<"project_created"> | ExtractServerMessage<"error"> =>

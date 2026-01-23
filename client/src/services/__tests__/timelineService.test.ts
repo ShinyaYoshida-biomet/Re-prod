@@ -26,12 +26,22 @@ describe("timelineService", () => {
 
 		vi.mocked(transport.request).mockResolvedValueOnce({
 			type: "timeline_response",
-			data: response,
+			data: {
+				events: [],
+				total: 0,
+				hasMore: false,
+				query: {
+					filters: null,
+					sort: null,
+					limit: 10,
+					offset: 0,
+				},
+			},
 		});
 
 		await expect(service.queryTimeline(query)).resolves.toEqual(response);
 		expect(transport.request).toHaveBeenCalledWith(
-			{ type: "timeline_query", query },
+			{ type: "timeline_query", query: { filters: null, sort: null, limit: 10, offset: 0 } },
 			"timeline_response",
 		);
 	});

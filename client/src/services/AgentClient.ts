@@ -5,7 +5,8 @@ import { AcpTransport } from "./agent/transport/AcpTransport";
 import { ApiTransport } from "./agent/transport/ApiTransport";
 import type { AITransport, AITransportRequest } from "./agent/transport/AITransport";
 import { createRequestId } from "@/core/ai/promptUtils";
-import type { AIMode, PendingEdit, TransportEvent } from "@/types";
+import type { PendingEdit, TransportEvent } from "@/types";
+import type { AIMode } from "@/types/generated/AIMode";
 
 export class AgentClientService {
 	private acpTransport = new AcpTransport();

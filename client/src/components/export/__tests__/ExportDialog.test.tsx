@@ -44,13 +44,13 @@ describe("ExportDialog", () => {
 			includeErrors: false,
 			includeSummary: true,
 			outputTruncation: {
-				headLines: 20,
-				tailLines: 8,
-				maxLines: 200,
+				head_lines: 20,
+				tail_lines: 8,
+				max_lines: 200,
 			},
 		});
-		expect(sentRequest.pdfOptions).toBeUndefined();
-		expect(sentRequest.documentPath).toBeUndefined();
+		expect(sentRequest.pdfOptions).toBeNull();
+		expect(sentRequest.documentPath).toBeNull();
 	});
 
 	it("shows an error message when the backend reports a failure and keeps the dialog open", async () => {
