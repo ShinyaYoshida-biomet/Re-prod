@@ -49,7 +49,7 @@ export interface ProjectRecord {
 	git_remote?: string | null;
 }
 
-export type AIMode = "agent" | "chat";
+export type AIMode = import("./generated/AIMode").AIMode;
 
 export interface FileEntryPayload {
 	path: string;
@@ -164,13 +164,13 @@ export interface ToolCallLog {
 	id: string;
 	name: string;
 	status: ToolCallStatus;
-	input?: Record<string, unknown>;
-	output?: Record<string, unknown>;
-	error?: string;
-	startedAt?: number;
-	finishedAt?: number;
+	input?: Record<string, unknown> | null;
+	output?: Record<string, unknown> | null;
+	error?: string | null;
+	startedAt?: number | null;
+	finishedAt?: number | null;
 	// ACP-specific fields
-	kind?: string;
+	kind?: string | null;
 	locations?: string[];
 }
 
@@ -195,11 +195,11 @@ export type AgentEventStatus =
 export type ArtifactKind = "file_read" | "file_write" | "command" | "test_result";
 
 export interface ToolPreview {
-	kind: "diff" | "command" | "read";
-	filepath?: string;
-	diff?: string;
-	command?: string;
-	affectedLines?: number;
+	kind: string;
+	filepath?: string | null;
+	diff?: string | null;
+	command?: string | null;
+	affectedLines?: number | null;
 }
 
 export interface AgentEvent {
@@ -207,7 +207,7 @@ export interface AgentEvent {
 	type: AgentEventType;
 	status: AgentEventStatus;
 	timestamp: number;
-	parentId?: string;
+	parentId?: string | null;
 }
 
 export interface ThoughtEvent extends AgentEvent {
@@ -221,15 +221,15 @@ export interface ToolRequestEvent extends AgentEvent {
 	tool: string;
 	input: Record<string, unknown>;
 	requiresApproval: boolean;
-	preview?: ToolPreview;
+	preview?: ToolPreview | null;
 }
 
 export interface ToolResultEvent extends AgentEvent {
 	type: "tool_result";
 	tool: string;
 	requestId: string;
-	output?: Record<string, unknown>;
-	error?: string;
+	output?: Record<string, unknown> | null;
+	error?: string | null;
 }
 
 export interface TaskEvent extends AgentEvent {
@@ -249,15 +249,15 @@ export interface ArtifactEvent extends AgentEvent {
 	path?: string;
 	summary: string;
 	details?: {
-		diff?: string;
-		exitCode?: number;
-		stdout?: string;
-		stderr?: string;
-		testsPassed?: number;
-		testsFailed?: number;
-		oldText?: string;
-		newText?: string;
-	};
+		diff?: string | null;
+		exitCode?: number | null;
+		stdout?: string | null;
+		stderr?: string | null;
+		testsPassed?: number | null;
+		testsFailed?: number | null;
+		oldText?: string | null;
+		newText?: string | null;
+	} | null;
 }
 
 export interface ErrorEvent extends AgentEvent {
@@ -274,13 +274,13 @@ export interface ApprovalRequest {
 	tool: string;
 	preview: ToolPreview;
 	options: ApprovalOption[];
-	input?: Record<string, unknown>;
+	input?: Record<string, unknown> | null;
 }
 
 export interface ApprovalResponse {
 	eventId: string;
 	decision: ApprovalOption;
-	editedInput?: Record<string, unknown>;
+	editedInput: Record<string, unknown> | null;
 }
 
 // UI State Types
