@@ -792,7 +792,7 @@ pub(super) async fn handle_ai_message(
                                 if let Some(rule) = approval_rule.clone() {
                                     state
                                         .approvals
-                                        .allow_for_session(&agent_session_id, rule.clone())
+                                        .allow_for_session(&session_id, rule.clone())
                                         .await;
                                     if let Err(err) = state
                                         .approvals
