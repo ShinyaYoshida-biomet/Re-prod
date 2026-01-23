@@ -321,6 +321,11 @@ docker rm -f reprod-e2e-runner
 
 ### WebDriverIO (Desktop)
 
+Primary command for desktop E2E runs (Docker):
+```bash
+pnpm --filter @reprod/e2e test:docker:webdriver
+```
+
 Customize desktop test execution with these environment variables. For Docker runs, prefix them inside the `test:docker -- ...` command.
 
 | Variable | Description | Default |
@@ -337,11 +342,11 @@ Customize desktop test execution with these environment variables. For Docker ru
 
 **Example**:
 ```bash
-# Linux/Windows runner: use custom binary path
-TAURI_DRIVER_APP=/path/to/custom/binary pnpm --filter @reprod/e2e test:webdriver
+# Linux/Windows runner: use custom binary path (Docker)
+pnpm --filter @reprod/e2e test:docker -- TAURI_DRIVER_APP=/path/to/custom/binary pnpm --filter @reprod/e2e test:webdriver
 
-# Linux/Windows runner: increase timeout for slow systems
-TAURI_DRIVER_READY_TIMEOUT=30000 pnpm --filter @reprod/e2e test:webdriver
+# Linux/Windows runner: increase timeout for slow systems (Docker)
+pnpm --filter @reprod/e2e test:docker -- TAURI_DRIVER_READY_TIMEOUT=30000 pnpm --filter @reprod/e2e test:webdriver
 ```
 
 ## CI/CD Integration

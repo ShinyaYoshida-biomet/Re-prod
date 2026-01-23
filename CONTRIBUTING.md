@@ -246,7 +246,7 @@ Request review only when all checks pass and TODOs are cleared.
 - **Purpose**: Validate desktop-specific workflows
 - **Local runs**: Use Docker (local E2E is disabled outside Docker/CI)
   - Playwright (web): `pnpm --filter @reprod/e2e test:docker`
-  - WebDriverIO (desktop): `pnpm --filter @reprod/e2e test:docker:webdriver`
+  - WebDriverIO (desktop, primary): `pnpm --filter @reprod/e2e test:docker:webdriver`
   - Run all E2E suites: run both commands above (web + desktop)
   - Optional: `REPROD_E2E_DOCKER_MEMORY=8g REPROD_E2E_DOCKER_CPUS=6 pnpm --filter @reprod/e2e test:docker`
 
