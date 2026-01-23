@@ -216,21 +216,20 @@ pub async fn translate_acp_update(
 
     match update {
         AcpSessionUpdate::UserMessageChunk { .. } => Vec::new(),
-        AcpSessionUpdate::AgentMessageChunk { text } => vec![WSResponse::AIResponseChunk {
-            id: stream_id,
-            chunk: text,
-        }],
-        AcpSessionUpdate::AgentThoughtChunk { text } => vec![WSResponse::AgentEvent {
-            id: stream_id,
-            event: AgentEventPayload::Thought {
-                id: Uuid::new_v4().to_string(),
-                status: AgentEventStatus::Running,
-                timestamp: now_millis(),
-                text,
-                reasoning: None,
-                parent_id: None,
-            },
-        }],
+        AcpSessionUpdate::AgentMessageChunk { text } => {
+            let chunk = format_chunk(runtime, &stream_id, "message", text).await;
+            vec![WSResponse::AIResponseChunk {
+                id: stream_id,
+                chunk,
+            }]
+        }
+        AcpSessionUpdate::AgentThoughtChunk { text } => {
+            let chunk = format_chunk(runtime, &stream_id, "thought", text).await;
+            vec![WSResponse::AIResponseChunk {
+                id: stream_id,
+                chunk,
+            }]
+        }
         AcpSessionUpdate::Plan { steps } => vec![WSResponse::AgentEvent {
             id: stream_id,
             event: AgentEventPayload::PlanUpdate {
@@ -247,6 +246,13 @@ pub async fn translate_acp_update(
             error,
             ..
         } => {
+            {
+                let mut titles = runtime.acp_tool_titles.lock().await;
+                titles
+                    .entry(session_id.to_string())
+                    .or_default()
+                    .insert(id.clone(), title.clone());
+            }
             let log = ToolLogPayload {
                 id: id.clone(),
                 name: title.clone(),
@@ -285,9 +291,17 @@ pub async fn translate_acp_update(
         } => {
             let status_text = status.unwrap_or_else(|| "running".to_string());
             let mapped_status = map_tool_status(&status_text);
+            let name = {
+                let titles = runtime.acp_tool_titles.lock().await;
+                titles
+                    .get(session_id)
+                    .and_then(|map| map.get(&id))
+                    .cloned()
+                    .unwrap_or_default()
+            };
             let log = ToolLogPayload {
                 id: id.clone(),
-                name: String::new(),
+                name: name.clone(),
                 status: mapped_status,
                 kind: None,
                 input,
@@ -323,7 +337,7 @@ pub async fn translate_acp_update(
                     status: status_event,
                     timestamp: now_millis(),
                     request_id: id,
-                    tool: log.name.clone(),
+                    tool: name,
                     output: output_payload,
                     error,
                     parent_id: None,
@@ -337,6 +351,14 @@ pub async fn translate_acp_update(
                 let mut streams = runtime.acp_session_streams.lock().await;
                 streams.remove(session_id);
             }
+            {
+                let mut titles = runtime.acp_tool_titles.lock().await;
+                titles.remove(session_id);
+            }
+            {
+                let mut last = runtime.acp_last_chunk_kind.lock().await;
+                last.remove(&stream_id);
+            }
             vec![WSResponse::AIResponseComplete {
                 id: stream_id,
                 final_text: String::new(),
@@ -344,6 +366,30 @@ pub async fn translate_acp_update(
             }]
         }
     }
+}
+
+async fn format_chunk(
+    runtime: &Arc<ProjectRuntime>,
+    stream_id: &str,
+    kind: &str,
+    text: String,
+) -> String {
+    let mut prefix = String::new();
+    let mut last = runtime.acp_last_chunk_kind.lock().await;
+    let last_kind = last.get(stream_id).map(String::as_str);
+    if kind == "thought" {
+        if last_kind != Some("thought") {
+            prefix = format!("{}[Thought]\n", if last_kind.is_some() { "\n\n" } else { "" });
+        }
+    } else if kind == "tool" {
+        if last_kind != Some("tool") {
+            prefix = format!("{}[Tool]\n", if last_kind.is_some() { "\n\n" } else { "" });
+        }
+    } else if last_kind.is_some() && last_kind != Some("message") {
+        prefix = "\n\n".to_string();
+    }
+    last.insert(stream_id.to_string(), kind.to_string());
+    format!("{prefix}{text}")
 }
 
 pub async fn translate_acp_permission_request(
