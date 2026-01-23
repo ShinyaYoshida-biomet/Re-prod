@@ -1,6 +1,5 @@
 import { Allotment } from "allotment";
 import "allotment/dist/style.css";
-import { PermissionRequestManager } from "@/components/agent/PermissionRequestManager";
 import { AIPanel } from "@/components/ai-panel";
 import { BottomPane } from "@/components/bottom-pane";
 import { EditorPanel } from "@/components/editor";
@@ -97,7 +96,6 @@ function App(): JSX.Element {
 					open={modals.projectSwitch}
 					onClose={() => setModalOpen("projectSwitch", false)}
 				/>
-				<PermissionRequestManager />
 			</div>
 		</ToastProvider>
 	);

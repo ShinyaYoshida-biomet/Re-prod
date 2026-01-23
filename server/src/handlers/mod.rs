@@ -38,9 +38,10 @@ pub use common::{AppState, ApprovalManager, CancelManager};
 
 use crate::projects::RuntimeBroadcastEvent;
 use acp_handler::{
-    handle_acp_pending_edit_accept, handle_acp_pending_edit_reject, handle_acp_pending_edit_update,
-    handle_acp_permission_decision, handle_acp_session_cancel, handle_acp_session_create,
-    handle_acp_session_prompt,
+    handle_acp_ai_message, handle_acp_pending_edit_accept, handle_acp_pending_edit_reject,
+    handle_acp_pending_edit_update, handle_acp_permission_decision, handle_acp_session_cancel,
+    handle_acp_session_create, handle_acp_session_prompt, resolve_acp_permission_decision,
+    translate_acp_permission_request, translate_acp_update,
 };
 use ai_handler::{handle_agent_approval_decision, handle_ai_message};
 use common::{error_response, WSRequest, WSResponse};
@@ -99,8 +100,16 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
             acp_update = acp_update_rx.recv() => {
                 match acp_update {
                     Ok(payload) => {
-                        if !send_responses(&mut socket, vec![WSResponse::AcpSessionUpdate { session_id: payload.session_id, update: payload.update }]).await {
-                            break 'ws_loop;
+                        let responses = translate_acp_update(
+                            &current_runtime,
+                            &payload.session_id,
+                            payload.update,
+                        )
+                        .await;
+                        if !responses.is_empty() {
+                            if !send_responses(&mut socket, responses).await {
+                                break 'ws_loop;
+                            }
                         }
                     }
                     Err(broadcast::error::RecvError::Lagged(skipped)) => {
@@ -115,8 +124,10 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
             acp_permission = acp_permission_rx.recv() => {
                 match acp_permission {
                     Ok(request) => {
-                        if !send_responses(&mut socket, vec![WSResponse::AcpPermissionRequest { request }]).await {
-                            break 'ws_loop;
+                        if let Some(response) = translate_acp_permission_request(&state, &current_runtime, request).await {
+                            if !send_responses(&mut socket, vec![response]).await {
+                                break 'ws_loop;
+                            }
                         }
                     }
                     Err(broadcast::error::RecvError::Lagged(skipped)) => {
@@ -230,19 +241,32 @@ async fn handle_ws_text(
                         let runtime = current_runtime.clone();
                         let sender = ai_event_tx.clone();
                         tokio::spawn(async move {
-                            let _ = handle_ai_message(
-                                &state,
-                                &runtime,
-                                session_id,
-                                content,
-                                context,
-                                enable_tools,
-                                request_id,
-                                stream,
-                                mode,
-                                Some(sender),
-                            )
-                            .await;
+                            if should_use_acp().await {
+                                let _ = handle_acp_ai_message(
+                                    &runtime,
+                                    session_id,
+                                    content,
+                                    context,
+                                    request_id,
+                                    mode,
+                                    Some(sender),
+                                )
+                                .await;
+                            } else {
+                                let _ = handle_ai_message(
+                                    &state,
+                                    &runtime,
+                                    session_id,
+                                    content,
+                                    context,
+                                    enable_tools,
+                                    request_id,
+                                    stream,
+                                    mode,
+                                    Some(sender),
+                                )
+                                .await;
+                            }
                         });
                         true
                     }
@@ -299,13 +323,23 @@ async fn handle_ws_request(
             .await
         }
         WSRequest::AgentApprovalDecision { decision } => {
-            handle_agent_approval_decision(state, decision).await
+            if let Some(responses) =
+                resolve_acp_permission_decision(state, runtime, decision.clone()).await
+            {
+                responses
+            } else {
+                handle_agent_approval_decision(state, decision).await
+            }
         }
         WSRequest::AICancel {
             request_id,
             agent_session_id: _,
         } => {
-            state.cancels.cancel(&request_id).await;
+            if let Some(session_id) = find_acp_session_by_stream(runtime, &request_id).await {
+                let _ = runtime.acp.cancel(&session_id).await;
+            } else {
+                state.cancels.cancel(&request_id).await;
+            }
             Vec::new()
         }
         WSRequest::ListTools => handle_list_tools(state),
@@ -374,6 +408,30 @@ async fn handle_ws_request(
         WSRequest::EnvironmentQuery => handle_environment_query(runtime).await,
         _ => Vec::new(),
     }
+}
+
+async fn should_use_acp() -> bool {
+    let Ok(cfg) = reprod_core::acp::config::load_acp_config() else {
+        return false;
+    };
+    reprod_core::acp::config::is_external_mode(&cfg.active_mode)
+        && cfg.active_agent.is_some()
+}
+
+async fn find_acp_session_by_stream(
+    runtime: &Arc<ProjectRuntime>,
+    stream_id: &str,
+) -> Option<String> {
+    let streams = runtime.acp_session_streams.lock().await;
+    streams
+        .iter()
+        .find_map(|(session_id, mapped_stream)| {
+            if mapped_stream == stream_id {
+                Some(session_id.clone())
+            } else {
+                None
+            }
+        })
 }
 
 async fn handle_execution_request_streaming(

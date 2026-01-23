@@ -1,25 +1,21 @@
 import { useStore } from "@/core";
 import { useFileSystemStore } from "@/core/fileSystemStore";
 import { normalizeWorkspaceRelativePath } from "@/core/pathUtils";
-import { AcpTransport } from "./agent/transport/AcpTransport";
 import { ApiTransport } from "./agent/transport/ApiTransport";
-import type { AITransport, AITransportRequest } from "./agent/transport/AITransport";
+import type { AITransportRequest } from "./agent/transport/AITransport";
 import { createRequestId } from "@/core/ai/promptUtils";
 import type { PendingEdit, TransportEvent } from "@/types";
 import type { AIMode } from "@/types/generated/AIMode";
 
 export class AgentClientService {
-	private acpTransport = new AcpTransport();
 	private apiTransport = new ApiTransport();
 
 	constructor() {
 		this.setupListeners();
 	}
 
-	private get transport(): AITransport {
-		const { activeMode, activeAgent } = useStore.getState();
-		const acpConfigured = activeMode === "external_agent" && Boolean(activeAgent);
-		return acpConfigured ? this.acpTransport : this.apiTransport;
+	private get transport() {
+		return this.apiTransport;
 	}
 
 	private setupListeners() {
@@ -32,7 +28,6 @@ export class AgentClientService {
 			}
 		};
 
-		this.acpTransport.onEvent(dispatch);
 		this.apiTransport.onEvent(dispatch);
 	}
 

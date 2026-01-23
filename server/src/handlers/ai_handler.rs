@@ -26,7 +26,7 @@ use super::common::{
 };
 use super::tool_handler::execute_ai_tool_call;
 
-async fn build_context_prompt(
+pub(super) async fn build_context_prompt(
     runtime: &Arc<ProjectRuntime>,
     context: reprod_core::acp::types::AcpContextRequest,
 ) -> Result<String, anyhow::Error> {

@@ -108,6 +108,7 @@ async fn main() {
             projects: projects.clone(),
             approvals: Arc::new(handlers::ApprovalManager::new()),
             cancels: Arc::new(handlers::CancelManager::new()),
+            acp_permission_requests: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
         });
 
     let port = reprod_core::config::server_port_override().unwrap_or(3001);

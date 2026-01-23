@@ -68,6 +68,7 @@ pub struct AppState {
     pub projects: Arc<ProjectController>,
     pub approvals: Arc<ApprovalManager>,
     pub cancels: Arc<CancelManager>,
+    pub acp_permission_requests: Arc<Mutex<HashMap<String, AcpPermissionRequestPayload>>>,
 }
 
 pub(super) fn with_system_prompts(messages: &[ChatMessage], mode: AIMode) -> Vec<ChatMessage> {

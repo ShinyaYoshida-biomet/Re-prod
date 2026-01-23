@@ -1,15 +1,106 @@
 use std::sync::Arc;
 
-use super::common::{error_response, single_response, with_system_prompts, AIMode, WSResponse};
+use super::ai_handler::build_context_prompt;
+use super::common::{
+    error_response, now_millis, single_response, with_system_prompts, AgentEventPayload,
+    AgentEventStatus, AIMode, ApprovalOption, ApprovalRequestPayload, PlanStepKind, PlanStepPayload,
+    PlanStepStatus, ToolLogPayload, ToolLogStatus, WSResponse,
+};
 use crate::pending_edits;
 use crate::projects::ProjectRuntime;
-use reprod_core::acp::types::{AcpPermissionDecision, AcpPromptMessage};
+use reprod_core::acp::types::{
+    AcpPermissionDecision, AcpPermissionDecisionOutcome, AcpPermissionDecisionScope,
+    AcpPermissionOption, AcpPermissionRequestPayload, AcpPlanStep, AcpPlanStepStatus,
+    AcpPromptMessage, AcpSessionUpdate,
+};
 use reprod_core::ChatMessage;
+use serde_json::Value;
+use tokio::sync::mpsc::UnboundedSender;
+use uuid::Uuid;
 
 pub async fn handle_acp_session_create(runtime: &Arc<ProjectRuntime>) -> Vec<WSResponse> {
     match runtime.acp.create_session().await {
         Ok(session_id) => single_response(WSResponse::AcpSessionCreated { session_id }),
         Err(error) => error_response(error.to_string()),
+    }
+}
+
+pub async fn handle_acp_ai_message(
+    runtime: &Arc<ProjectRuntime>,
+    session_id: String,
+    content: String,
+    context: Option<reprod_core::acp::types::AcpContextRequest>,
+    request_id: Option<String>,
+    mode: AIMode,
+    sender: Option<UnboundedSender<WSResponse>>,
+) -> Vec<WSResponse> {
+    let stream_id = request_id.unwrap_or_else(|| Uuid::new_v4().to_string());
+
+    let acp_session_id = {
+        let mut conversations = runtime.acp_conversations.lock().await;
+        if let Some(existing) = conversations.get(&session_id) {
+            existing.clone()
+        } else {
+            match runtime.acp.create_session().await {
+                Ok(session) => {
+                    conversations.insert(session_id.clone(), session.clone());
+                    session
+                }
+                Err(error) => {
+                    return error_response(error.to_string());
+                }
+            }
+        }
+    };
+
+    {
+        let mut streams = runtime.acp_session_streams.lock().await;
+        streams.insert(acp_session_id.clone(), stream_id.clone());
+    }
+
+    let mut sessions = runtime.local_sessions.lock().await;
+    let session = sessions
+        .entry(session_id.clone())
+        .or_insert_with(|| reprod_core::ai::session::LocalAgentSession::new(session_id.clone()));
+
+    let (final_content, context_for_prompt) = if let Some(ctx) = context.clone() {
+        (
+            build_context_prompt(runtime, ctx)
+                .await
+                .unwrap_or(content.clone()),
+            None,
+        )
+    } else {
+        (content.clone(), context)
+    };
+
+    session.add_message(ChatMessage {
+        role: "user".to_string(),
+        content: final_content,
+    });
+
+    let history = session.history().to_vec();
+    drop(sessions);
+
+    let messages_with_prompts = with_system_prompts(&history, mode);
+    let acp_messages: Vec<AcpPromptMessage> = messages_with_prompts
+        .iter()
+        .map(|message| AcpPromptMessage {
+            role: message.role.clone(),
+            content: message.content.clone(),
+        })
+        .collect();
+
+    let responses =
+        handle_acp_session_prompt(runtime, &acp_session_id, &acp_messages, context_for_prompt)
+            .await;
+    if let Some(sender) = sender {
+        for response in responses {
+            let _ = sender.send(response);
+        }
+        Vec::new()
+    } else {
+        responses
     }
 }
 
@@ -108,6 +199,324 @@ pub async fn handle_acp_permission_decision(
         Ok(()) => Vec::new(),
         Err(error) => error_response(error.to_string()),
     }
+}
+
+pub async fn translate_acp_update(
+    runtime: &Arc<ProjectRuntime>,
+    session_id: &str,
+    update: AcpSessionUpdate,
+) -> Vec<WSResponse> {
+    let stream_id = {
+        let streams = runtime.acp_session_streams.lock().await;
+        streams.get(session_id).cloned()
+    };
+    let Some(stream_id) = stream_id else {
+        return Vec::new();
+    };
+
+    match update {
+        AcpSessionUpdate::UserMessageChunk { .. } => Vec::new(),
+        AcpSessionUpdate::AgentMessageChunk { text } => vec![WSResponse::AIResponseChunk {
+            id: stream_id,
+            chunk: text,
+        }],
+        AcpSessionUpdate::AgentThoughtChunk { text } => vec![WSResponse::AgentEvent {
+            id: stream_id,
+            event: AgentEventPayload::Thought {
+                id: Uuid::new_v4().to_string(),
+                status: AgentEventStatus::Running,
+                timestamp: now_millis(),
+                text,
+                reasoning: None,
+                parent_id: None,
+            },
+        }],
+        AcpSessionUpdate::Plan { steps } => vec![WSResponse::AgentEvent {
+            id: stream_id,
+            event: AgentEventPayload::PlanUpdate {
+                steps: map_plan_steps(steps),
+            },
+        }],
+        AcpSessionUpdate::ToolCall {
+            id,
+            title,
+            kind,
+            status,
+            input,
+            output,
+            error,
+            ..
+        } => {
+            let log = ToolLogPayload {
+                id: id.clone(),
+                name: title.clone(),
+                status: map_tool_status(&status),
+                kind: Some(kind.clone()),
+                input,
+                output,
+                error,
+                started_at: Some(now_millis()),
+                finished_at: None,
+            };
+            vec![
+                WSResponse::AIToolStarted { id: stream_id.clone(), tool: log.clone() },
+                WSResponse::AgentEvent {
+                    id: stream_id,
+                    event: AgentEventPayload::ToolRequest {
+                        id: Uuid::new_v4().to_string(),
+                        status: AgentEventStatus::Running,
+                        timestamp: now_millis(),
+                        tool: title,
+                        input: log.input.clone().unwrap_or(Value::Null),
+                        requires_approval: false,
+                        preview: None,
+                        parent_id: None,
+                    },
+                },
+            ]
+        }
+        AcpSessionUpdate::ToolCallUpdate {
+            id,
+            status,
+            content,
+            input,
+            output,
+            error,
+        } => {
+            let status_text = status.unwrap_or_else(|| "running".to_string());
+            let mapped_status = map_tool_status(&status_text);
+            let log = ToolLogPayload {
+                id: id.clone(),
+                name: String::new(),
+                status: mapped_status,
+                kind: None,
+                input,
+                output: output.clone(),
+                error: error.clone(),
+                started_at: None,
+                finished_at: Some(now_millis()),
+            };
+
+            let mut responses = vec![WSResponse::AIToolFinished {
+                id: stream_id.clone(),
+                tool: log.clone(),
+            }];
+
+            let status_event = match log.status {
+                ToolLogStatus::Done => AgentEventStatus::Done,
+                ToolLogStatus::Error => AgentEventStatus::Error,
+                _ => AgentEventStatus::Running,
+            };
+
+            let output_payload = if let Some(output) = output {
+                Some(output)
+            } else if let Some(text) = content {
+                Some(Value::String(text))
+            } else {
+                None
+            };
+
+            responses.push(WSResponse::AgentEvent {
+                id: stream_id,
+                event: AgentEventPayload::ToolResult {
+                    id: Uuid::new_v4().to_string(),
+                    status: status_event,
+                    timestamp: now_millis(),
+                    request_id: id,
+                    tool: log.name.clone(),
+                    output: output_payload,
+                    error,
+                    parent_id: None,
+                },
+            });
+            responses
+        }
+        AcpSessionUpdate::AvailableCommands { .. } => Vec::new(),
+        AcpSessionUpdate::Done => {
+            {
+                let mut streams = runtime.acp_session_streams.lock().await;
+                streams.remove(session_id);
+            }
+            vec![WSResponse::AIResponseComplete {
+                id: stream_id,
+                final_text: String::new(),
+                code_blocks: None,
+            }]
+        }
+    }
+}
+
+pub async fn translate_acp_permission_request(
+    state: &super::common::AppState,
+    runtime: &Arc<ProjectRuntime>,
+    request: AcpPermissionRequestPayload,
+) -> Option<WSResponse> {
+    let stream_id = {
+        let streams = runtime.acp_session_streams.lock().await;
+        streams.get(&request.session_id).cloned()
+    }?;
+
+    {
+        let mut pending = state.acp_permission_requests.lock().await;
+        pending.insert(request.request_id.clone(), request.clone());
+    }
+
+    let preview = super::common::ToolPreviewPayload {
+        kind: "command".to_string(),
+        filepath: None,
+        diff: None,
+        command: request.raw_input.clone(),
+        affected_lines: None,
+    };
+
+    let options = map_permission_options(&request.options);
+    let approval = ApprovalRequestPayload {
+        event_id: request.request_id.clone(),
+        tool: request.tool_title.clone().unwrap_or_else(|| request.tool_kind.clone().unwrap_or_else(|| "tool".to_string())),
+        preview,
+        options,
+        input: None,
+    };
+
+    Some(WSResponse::ApprovalRequest {
+        id: stream_id,
+        request: approval,
+    })
+}
+
+pub async fn resolve_acp_permission_decision(
+    state: &super::common::AppState,
+    runtime: &Arc<ProjectRuntime>,
+    decision: super::common::ApprovalDecisionPayload,
+) -> Option<Vec<WSResponse>> {
+    let request = {
+        let mut pending = state.acp_permission_requests.lock().await;
+        pending.remove(&decision.event_id)
+    }?;
+
+    let (outcome, option_id, remember_scope) =
+        map_permission_decision(&decision.decision, &request.options);
+
+    let acp_decision = AcpPermissionDecision {
+        request_id: request.request_id,
+        outcome,
+        option_id,
+        remember_scope,
+    };
+
+    match runtime.acp.respond_permission(acp_decision).await {
+        Ok(()) => Some(Vec::new()),
+        Err(error) => Some(error_response(error.to_string())),
+    }
+}
+
+fn map_plan_steps(steps: Vec<AcpPlanStep>) -> Vec<PlanStepPayload> {
+    steps
+        .into_iter()
+        .map(|step| PlanStepPayload {
+            id: step.id,
+            title: step.title,
+            status: match step.status {
+                AcpPlanStepStatus::Pending => PlanStepStatus::Pending,
+                AcpPlanStepStatus::Running => PlanStepStatus::Running,
+                AcpPlanStepStatus::Done => PlanStepStatus::Done,
+                AcpPlanStepStatus::Error => PlanStepStatus::Error,
+            },
+            kind: step.kind.as_deref().map(|_| PlanStepKind::Plan),
+            error: step.error,
+            started_at: step.started_at,
+            finished_at: step.finished_at,
+            waiting_reason: step.waiting_reason,
+        })
+        .collect()
+}
+
+fn map_tool_status(status: &str) -> ToolLogStatus {
+    let lower = status.to_lowercase();
+    if lower.contains("progress") || lower.contains("pending") || lower.contains("running") {
+        return ToolLogStatus::Running;
+    }
+    if lower.contains("completed") || lower.contains("done") {
+        return ToolLogStatus::Done;
+    }
+    if lower.contains("failed") || lower.contains("error") || lower.contains("rejected") {
+        return ToolLogStatus::Error;
+    }
+    ToolLogStatus::Pending
+}
+
+fn map_permission_options(options: &[AcpPermissionOption]) -> Vec<ApprovalOption> {
+    let mut mapped = Vec::new();
+    if options.iter().any(|opt| opt.kind == "allow_once") {
+        mapped.push(ApprovalOption::ApproveOnce);
+    }
+    if options.iter().any(|opt| opt.kind == "allow_always") {
+        mapped.push(ApprovalOption::ApproveSession);
+    }
+    if options.iter().any(|opt| opt.kind == "reject_once" || opt.kind == "reject_always") {
+        mapped.push(ApprovalOption::Deny);
+    }
+    if mapped.is_empty() {
+        mapped.push(ApprovalOption::ApproveOnce);
+        mapped.push(ApprovalOption::Deny);
+    }
+    mapped
+}
+
+fn map_permission_decision(
+    decision: &ApprovalOption,
+    options: &[AcpPermissionOption],
+) -> (
+    AcpPermissionDecisionOutcome,
+    Option<String>,
+    Option<AcpPermissionDecisionScope>,
+) {
+    match decision {
+        ApprovalOption::ApproveSession => {
+            if let Some(opt) = options.iter().find(|opt| opt.kind == "allow_always") {
+                return (
+                    AcpPermissionDecisionOutcome::AllowAlways,
+                    Some(opt.option_id.clone()),
+                    Some(AcpPermissionDecisionScope::Session),
+                );
+            }
+            if let Some(opt) = options.iter().find(|opt| opt.kind == "allow_once") {
+                return (
+                    AcpPermissionDecisionOutcome::AllowOnce,
+                    Some(opt.option_id.clone()),
+                    None,
+                );
+            }
+        }
+        ApprovalOption::ApproveOnce | ApprovalOption::Edit => {
+            if let Some(opt) = options.iter().find(|opt| opt.kind == "allow_once") {
+                return (
+                    AcpPermissionDecisionOutcome::AllowOnce,
+                    Some(opt.option_id.clone()),
+                    None,
+                );
+            }
+        }
+        ApprovalOption::Deny => {
+            if let Some(opt) = options.iter().find(|opt| opt.kind == "reject_once") {
+                return (
+                    AcpPermissionDecisionOutcome::RejectOnce,
+                    Some(opt.option_id.clone()),
+                    None,
+                );
+            }
+            if let Some(opt) = options.iter().find(|opt| opt.kind == "reject_always") {
+                return (
+                    AcpPermissionDecisionOutcome::RejectAlways,
+                    Some(opt.option_id.clone()),
+                    Some(AcpPermissionDecisionScope::Session),
+                );
+            }
+        }
+    }
+
+    let fallback = options.first().map(|opt| opt.option_id.clone());
+    (AcpPermissionDecisionOutcome::Cancelled, fallback, None)
 }
 
 pub async fn handle_acp_pending_edit_accept(
