@@ -8,7 +8,9 @@ import type {
 	CodeBlock,
 	PlanStep,
 	ToolCallLog,
+	TransportEvent,
 } from "@/types";
+import { extractCodeBlocks } from "@/core/ai/codeBlockUtils";
 
 type StreamingExtras = {
 	codeBlocks?: CodeBlock[];
@@ -115,6 +117,7 @@ export interface AIState {
 	ai: {
 		messages: AIMessage[];
 		isLoading: boolean;
+		activeRequestId: string | null;
 		suggestions: string[];
 		patchMatchFailures: number;
 		patchMatchStatus: PatchMatchStatus;
@@ -142,12 +145,14 @@ export interface AIState {
 		finalContent?: string,
 		extras?: StreamingExtras,
 	) => void;
+	handleServerEvent: (event: TransportEvent) => void;
 }
 
-export const createAISlice: StateCreator<AIState> = (set) => ({
+export const createAISlice: StateCreator<AIState> = (set, get) => ({
 	ai: {
 		messages: [],
 		isLoading: false,
+		activeRequestId: null,
 		suggestions: [],
 		patchMatchFailures: 0,
 		patchMatchStatus: { lastFailureId: null, lastFailureReason: null },
@@ -204,6 +209,8 @@ export const createAISlice: StateCreator<AIState> = (set) => ({
 		set((state) => ({
 			ai: {
 				...state.ai,
+				isLoading: true,
+				activeRequestId: streamingId,
 				messages: [
 					...state.ai.messages,
 					{
@@ -290,6 +297,8 @@ export const createAISlice: StateCreator<AIState> = (set) => ({
 		set((state) => ({
 			ai: {
 				...state.ai,
+				activeRequestId: null, // Clear active request on complete
+				isLoading: false,
 				messages: updateStreamingMessage(state.ai.messages, streamingId, (message) => ({
 					...message,
 					content: finalContent ?? message.content,
@@ -302,4 +311,45 @@ export const createAISlice: StateCreator<AIState> = (set) => ({
 				})),
 			},
 		})),
+	handleServerEvent: (event) => {
+		const {
+			appendStreamingChunk,
+			recordToolEvent,
+			updateStreamingPlan,
+			addApprovalRequest,
+			completeStreamingMessage,
+		} = get();
+
+		switch (event.type) {
+			case "CHUNK":
+				appendStreamingChunk(event.streamingId, event.content);
+				break;
+			case "TOOL_CALL":
+			case "TOOL_UPDATE":
+				recordToolEvent(event.streamingId, event.tool);
+				break;
+			case "PLAN_UPDATE":
+				updateStreamingPlan(event.streamingId, event.steps);
+				break;
+			case "APPROVAL_REQUEST":
+				addApprovalRequest(event.streamingId, event.request);
+				break;
+			case "PENDING_EDIT":
+				// Pending edits handled by effect for now
+				break;
+			case "DONE": {
+				const state = get();
+				const message = state.ai.messages.find(
+					(m) => m.streamingId === event.streamingId || m.id === event.streamingId,
+				);
+				const finalContent = message?.content ?? "";
+				const codeBlocks = extractCodeBlocks(finalContent);
+				completeStreamingMessage(event.streamingId, finalContent, { codeBlocks });
+				break;
+			}
+			case "ERROR":
+				completeStreamingMessage(event.streamingId, event.error);
+				break;
+		}
+	},
 });

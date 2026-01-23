@@ -5,9 +5,8 @@ import type {
 	AITransport,
 	AITransportRequest,
 	TransportListener,
-	TransportEvent,
 } from "./AITransport";
-import type { AgentEvent, PendingEdit } from "@/types";
+import type { AgentEvent, PendingEdit, TransportEvent } from "@/types";
 
 export class ApiTransport implements AITransport {
 	private listeners: Set<TransportListener> = new Set();

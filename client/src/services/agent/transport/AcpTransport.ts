@@ -2,13 +2,12 @@ import { getExternalAgentClient } from "@/services/externalAgentClient";
 import { asOptionalString } from "@/utils/string";
 import { normalizeWorkspaceRelativePath } from "@/core/pathUtils";
 import type { AcpPromptMessage, AcpSessionUpdateEnvelope } from "@/types/generated";
-import type { PlanStep, ToolCallLog, PendingEdit } from "@/types";
+import type { PlanStep, ToolCallLog, PendingEdit, TransportEvent } from "@/types";
 import type { AcpPlanStep } from "@/types/generated/AcpPlanStep";
 import type {
 	AITransport,
 	AITransportRequest,
 	TransportListener,
-	TransportEvent,
 } from "./AITransport";
 
 export class AcpTransport implements AITransport {
