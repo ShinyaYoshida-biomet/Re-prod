@@ -158,7 +158,7 @@ export interface PlanStep {
 	waitingReason?: string;
 }
 
-export type ToolCallStatus = "pending" | "running" | "done" | "error";
+export type ToolCallStatus = "pending" | "running" | "done" | "error" | string;
 
 export interface ToolCallLog {
 	id: string;
@@ -190,7 +190,8 @@ export type AgentEventStatus =
 	| "error"
 	| "blocked"
 	| "approved"
-	| "denied";
+	| "denied"
+	| string;
 
 export type ArtifactKind = "file_read" | "file_write" | "command" | "test_result";
 
