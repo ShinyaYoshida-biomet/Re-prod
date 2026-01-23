@@ -9,6 +9,8 @@ mod pending_edits;
 mod projects;
 mod repo_tools;
 mod routes;
+#[cfg(test)]
+mod tests;
 
 use axum::{routing::get, Router};
 use reprod_core::{Config, ToolExecutor, ToolRegistry};

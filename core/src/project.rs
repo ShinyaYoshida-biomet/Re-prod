@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
+use ts_rs::TS;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -110,12 +111,15 @@ impl ProjectDescriptor {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
 pub struct ProjectRecord {
     pub id: String,
     pub name: String,
     pub path: String,
+    #[ts(type = "number")]
     pub created_at: u64,
+    #[ts(type = "number | null")]
     pub last_opened_at: Option<u64>,
     #[serde(default)]
     pub git_remote: Option<String>,

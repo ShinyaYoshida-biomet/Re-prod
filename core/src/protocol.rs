@@ -416,5 +416,23 @@ mod tests {
         FileChangeEvent::export_all().expect("Failed to export FileChangeEvent");
         ToolExecutionRequest::export_all().expect("Failed to export ToolExecutionRequest");
         ToolExecutionResult::export_all().expect("Failed to export ToolExecutionResult");
+        crate::api::timeline::TimelineQueryPayload::export_all()
+            .expect("Failed to export TimelineQueryPayload");
+        crate::api::timeline::TimelineResponsePayload::export_all()
+            .expect("Failed to export TimelineResponsePayload");
+        crate::api::timeline::TimelineStatsPayload::export_all()
+            .expect("Failed to export TimelineStatsPayload");
+        crate::api::timeline::ExportRMarkdownRequest::export_all()
+            .expect("Failed to export ExportRMarkdownRequest");
+        crate::api::timeline::ExportRMarkdownResponse::export_all()
+            .expect("Failed to export ExportRMarkdownResponse");
+        crate::fs::FileEntry::export_all().expect("Failed to export FileEntry");
+        crate::fs::FileSystemEvent::export_all().expect("Failed to export FileSystemEvent");
+        crate::project::ProjectRecord::export_all().expect("Failed to export ProjectRecord");
+        crate::plot_history::PlotHistoryEntry::export_all()
+            .expect("Failed to export PlotHistoryEntry");
+        crate::plot_history::PlotHistorySnapshot::export_all()
+            .expect("Failed to export PlotHistorySnapshot");
+        crate::tools::manifest::ToolManifest::export_all().expect("Failed to export ToolManifest");
     }
 }
