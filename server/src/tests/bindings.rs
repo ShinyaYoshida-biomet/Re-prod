@@ -1,6 +1,6 @@
 use crate::handlers::common::{
     AgentEventPayload, AIMode, ApprovalDecisionPayload, ApprovalOption, ApprovalRequestPayload,
-    ToolLogPayload, WSRequest, WSResponse,
+    PendingEditPayload, ToolLogPayload, WSRequest, WSResponse,
 };
 use std::path::Path;
 use ts_rs::TS;
@@ -16,6 +16,7 @@ fn export_bindings() {
     ApprovalRequestPayload::export().expect("Failed to export ApprovalRequestPayload");
     ApprovalDecisionPayload::export().expect("Failed to export ApprovalDecisionPayload");
     AgentEventPayload::export().expect("Failed to export AgentEventPayload");
+    PendingEditPayload::export().expect("Failed to export PendingEditPayload");
     ToolLogPayload::export().expect("Failed to export ToolLogPayload");
 
     rewrite_acp_imports("WSRequest.ts");
