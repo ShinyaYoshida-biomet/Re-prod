@@ -238,6 +238,8 @@ pub(crate) enum WSResponse {
         id: String,
         request: ApprovalRequestPayload,
     },
+    #[serde(rename = "pending_edit_created")]
+    PendingEditCreated { edit: PendingEditPayload },
     #[serde(rename = "ai_tool_started")]
     AIToolStarted { id: String, tool: ToolLogPayload },
     #[serde(rename = "ai_tool_finished")]
@@ -410,6 +412,21 @@ pub(crate) struct ApprovalRequestPayload {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(type = "any")]
     pub input: Option<Value>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, TS)]
+#[ts(export, export_to = "../../client/src/types/generated/")]
+#[serde(rename_all = "snake_case")]
+pub(crate) struct PendingEditPayload {
+    pub id: String,
+    pub session_id: String,
+    pub tool_call_id: String,
+    pub file_path: String,
+    pub old_text: String,
+    pub new_text: String,
+    pub unified_diff: String,
+    pub base_sha256: String,
+    pub expected_sha256: Option<String>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, TS)]

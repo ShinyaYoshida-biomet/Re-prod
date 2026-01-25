@@ -8,6 +8,7 @@ import type { EnvironmentVariable } from "./EnvironmentVariable";
 import type { ExecutionEvent } from "./ExecutionEvent";
 import type { ExportRMarkdownResponse } from "./ExportRMarkdownResponse";
 import type { FileSystemEvent } from "./FileSystemEvent";
+import type { PendingEditPayload } from "./PendingEditPayload";
 import type { PlotHistoryEntry } from "./PlotHistoryEntry";
 import type { ProjectRecord } from "./ProjectRecord";
 import type { RunOutputChunk } from "./RunOutputChunk";
@@ -24,6 +25,7 @@ export type WSResponse =
 	| { type: "ai_response_complete"; id: string; final: string; codeBlocks: Array<any> }
 	| { type: "agent_event"; id: string; event: AgentEventPayload }
 	| { type: "approval_request"; id: string; request: ApprovalRequestPayload }
+	| { type: "pending_edit_created"; edit: PendingEditPayload }
 	| { type: "ai_tool_started"; id: string; tool: ToolLogPayload }
 	| { type: "ai_tool_finished"; id: string; tool: ToolLogPayload }
 	| { type: "error"; message: string }
