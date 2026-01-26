@@ -21,10 +21,9 @@ use super::common::{
     build_streaming_payload, error_response, now_millis, tool_log_from_call, with_system_prompts,
     AgentEventPayload, AgentEventStatus, AIMode, AppState, ApprovalDecisionPayload,
     ApprovalOption, ApprovalRequestPayload, ApprovalRule, ArtifactDetailsPayload, ArtifactKind,
-    PlanStepKind, PlanStepPayload, PlanStepStatus, ToolLogStatus,
+    PendingEditPayload, PlanStepKind, PlanStepPayload, PlanStepStatus, ToolLogStatus,
     ToolPreviewPayload, WSResponse,
 };
-use super::pending_edit_ui::pending_edit_payload_from_output;
 use super::tool_handler::execute_ai_tool_call;
 
 pub(super) async fn build_context_prompt(
@@ -192,6 +191,15 @@ fn extract_pending_edit_path(output: &serde_json::Value) -> Option<String> {
     extract_pending_edit_fields(output).map(|(path, _, _, _)| path)
 }
 
+fn extract_pending_edit_payload(
+    output: &serde_json::Value,
+) -> Option<PendingEditPayload> {
+    if output.get("type")?.as_str()? != "pending_edit" {
+        return None;
+    }
+    let edit = output.get("edit")?.clone();
+    serde_json::from_value(edit).ok()
+}
 
 #[derive(serde::Deserialize)]
 struct PlanSeed {
@@ -938,7 +946,7 @@ pub(super) async fn handle_ai_message(
                                     parent_id: None,
                                 },
                             );
-                            if let Some(edit) = pending_edit_payload_from_output(&result.output) {
+                            if let Some(edit) = extract_pending_edit_payload(&result.output) {
                                 push_response(
                                     &mut responses,
                                     &sender,
