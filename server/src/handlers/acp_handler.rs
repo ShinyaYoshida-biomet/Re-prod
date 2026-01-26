@@ -6,6 +6,7 @@ use super::common::{
     AgentEventStatus, AIMode, ApprovalOption, ApprovalRequestPayload, PlanStepKind, PlanStepPayload,
     PlanStepStatus, ToolLogPayload, ToolLogStatus, WSResponse,
 };
+use super::pending_edit_ui::pending_edit_payload_from_output;
 use crate::pending_edits;
 use crate::projects::ProjectRuntime;
 use reprod_core::acp::types::{
@@ -322,13 +323,9 @@ pub async fn translate_acp_update(
                 _ => AgentEventStatus::Running,
             };
 
-            let output_payload = if let Some(output) = output {
-                Some(output)
-            } else if let Some(text) = content {
-                Some(Value::String(text))
-            } else {
-                None
-            };
+            let output_payload = output
+                .clone()
+                .or_else(|| content.clone().map(Value::String));
 
             responses.push(WSResponse::AgentEvent {
                 id: stream_id,
@@ -343,6 +340,11 @@ pub async fn translate_acp_update(
                     parent_id: None,
                 },
             });
+            if let Some(output) = output.as_ref() {
+                if let Some(edit) = pending_edit_payload_from_output(output) {
+                    responses.push(WSResponse::PendingEditCreated { edit });
+                }
+            }
             responses
         }
         AcpSessionUpdate::AvailableCommands { .. } => Vec::new(),

@@ -27,6 +27,7 @@ pub(crate) mod common;
 mod environment_handler;
 mod export_handler;
 mod plot_history_handler;
+mod pending_edit_ui;
 mod project_requests;
 mod runtime_fs;
 mod session_handler;
