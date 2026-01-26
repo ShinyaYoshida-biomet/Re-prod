@@ -81,4 +81,24 @@ mod tests {
         assert_eq!(payload.file_path, "notes.txt");
         assert_eq!(payload.id, "edit-1");
     }
+
+    #[test]
+    fn payload_from_output_matches_edit_payload() {
+        let edit = build_edit("notes.txt");
+        let output = serde_json::json!({
+            "type": "pending_edit",
+            "edit": edit.clone(),
+        });
+        let from_output = pending_edit_payload_from_output(&output).expect("payload");
+        let from_edit = pending_edit_payload_from_edit(&edit);
+        assert_eq!(from_output.id, from_edit.id);
+        assert_eq!(from_output.session_id, from_edit.session_id);
+        assert_eq!(from_output.tool_call_id, from_edit.tool_call_id);
+        assert_eq!(from_output.file_path, from_edit.file_path);
+        assert_eq!(from_output.old_text, from_edit.old_text);
+        assert_eq!(from_output.new_text, from_edit.new_text);
+        assert_eq!(from_output.unified_diff, from_edit.unified_diff);
+        assert_eq!(from_output.base_sha256, from_edit.base_sha256);
+        assert_eq!(from_output.expected_sha256, from_edit.expected_sha256);
+    }
 }

@@ -19,9 +19,8 @@ use tokio::time::{timeout, Duration};
 
 use super::common::{
     build_streaming_payload, error_response, now_millis, tool_log_from_call, with_system_prompts,
-    approval_preview_text, AgentEventPayload, AgentEventStatus, AIMode, AppState,
-    ApprovalDecisionPayload,
-    ApprovalOption, ApprovalRequestPayload, ApprovalRule, ArtifactDetailsPayload, ArtifactKind,
+    build_approval_request_payload, AgentEventPayload, AgentEventStatus, AIMode, AppState,
+    ApprovalDecisionPayload, ApprovalOption, ApprovalRule, ArtifactDetailsPayload, ArtifactKind,
     PendingEditPayload, PlanStepKind, PlanStepPayload, PlanStepStatus, ToolLogStatus,
     ToolPreviewPayload, WSResponse,
 };
@@ -741,21 +740,20 @@ pub(super) async fn handle_ai_message(
                             &sender,
                             WSResponse::ApprovalRequest {
                                 id: stream_id.clone(),
-                                request: ApprovalRequestPayload {
-                                    event_id: request_event_id.clone(),
-                                    tool: tool_call.name.clone(),
-                                    preview: approval_preview.clone(),
-                                    preview_text: approval_preview_text(&approval_preview),
-                                    title: None,
-                                    subtitle: None,
-                                    options: vec![
+                                request: build_approval_request_payload(
+                                    request_event_id.clone(),
+                                    tool_call.name.clone(),
+                                    approval_preview.clone(),
+                                    vec![
                                         ApprovalOption::ApproveOnce,
                                         ApprovalOption::ApproveSession,
                                         ApprovalOption::Edit,
                                         ApprovalOption::Deny,
                                     ],
-                                    input: Some(tool_call.input.clone()),
-                                },
+                                    Some(tool_call.input.clone()),
+                                    None,
+                                    None,
+                                ),
                             },
                         );
 

@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use super::ai_handler::build_context_prompt;
 use super::common::{
-    error_response, now_millis, single_response, with_system_prompts, AgentEventPayload,
-    AgentEventStatus, AIMode, ApprovalOption, ApprovalRequestPayload, PlanStepKind, PlanStepPayload,
-    PlanStepStatus, ToolLogPayload, ToolLogStatus, WSResponse,
+    build_approval_request_payload, error_response, now_millis, single_response,
+    with_system_prompts, AgentEventPayload, AgentEventStatus, AIMode, ApprovalOption, PlanStepKind,
+    PlanStepPayload, PlanStepStatus, ToolLogPayload, ToolLogStatus, WSResponse,
 };
 use super::pending_edit_ui::pending_edit_payload_from_output;
 use crate::pending_edits;
@@ -418,16 +418,18 @@ pub async fn translate_acp_permission_request(
     };
 
     let options = map_permission_options(&request.options);
-    let approval = ApprovalRequestPayload {
-        event_id: request.request_id.clone(),
-        tool: request.tool_title.clone().unwrap_or_else(|| request.tool_kind.clone().unwrap_or_else(|| "tool".to_string())),
+    let approval = build_approval_request_payload(
+        request.request_id.clone(),
+        request
+            .tool_title
+            .clone()
+            .unwrap_or_else(|| request.tool_kind.clone().unwrap_or_else(|| "tool".to_string())),
         preview,
-        preview_text: request.raw_input.clone(),
-        title: None,
-        subtitle: None,
         options,
-        input: None,
-    };
+        None,
+        None,
+        None,
+    );
 
     Some(WSResponse::ApprovalRequest {
         id: stream_id,

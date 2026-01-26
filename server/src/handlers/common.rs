@@ -457,6 +457,28 @@ pub(crate) fn approval_preview_text(preview: &ToolPreviewPayload) -> Option<Stri
     }
 }
 
+pub(crate) fn build_approval_request_payload(
+    event_id: String,
+    tool: String,
+    preview: ToolPreviewPayload,
+    options: Vec<ApprovalOption>,
+    input: Option<Value>,
+    title: Option<String>,
+    subtitle: Option<String>,
+) -> ApprovalRequestPayload {
+    let preview_text = approval_preview_text(&preview);
+    ApprovalRequestPayload {
+        event_id,
+        tool,
+        preview,
+        preview_text,
+        title,
+        subtitle,
+        options,
+        input,
+    }
+}
+
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Hash, PartialEq, Eq, TS)]
 #[ts(export, export_to = "../../client/src/types/generated/")]
 pub(super) struct ApprovalRule {
@@ -789,6 +811,27 @@ mod tests {
             affected_lines: None,
         };
         assert_eq!(approval_preview_text(&read_preview), Some("note.txt".to_string()));
+    }
+
+    #[test]
+    fn build_approval_request_payload_populates_preview_text() {
+        let preview = ToolPreviewPayload {
+            kind: "command".to_string(),
+            filepath: None,
+            diff: None,
+            command: Some("ls".to_string()),
+            affected_lines: None,
+        };
+        let payload = build_approval_request_payload(
+            "event-1".to_string(),
+            "tool".to_string(),
+            preview,
+            vec![ApprovalOption::ApproveOnce],
+            None,
+            None,
+            None,
+        );
+        assert_eq!(payload.preview_text, Some("ls".to_string()));
     }
 
 }
