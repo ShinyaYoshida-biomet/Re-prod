@@ -2,12 +2,14 @@ import { socketService } from "@/services/socket";
 import { aiMessages } from "@/services/messageBuilders";
 import { normalizeWorkspaceRelativePath } from "@/core/pathUtils";
 import type { AITransport, AITransportRequest, TransportListener } from "./AITransport";
-import type { AgentEvent, PendingEdit, TransportEvent } from "@/types";
+import type { PendingEdit, TransportEvent } from "@/types";
+import type { PendingEditPayload } from "@/types/generated/PendingEditPayload";
 
 export class ApiTransport implements AITransport {
 	private listeners: Set<TransportListener> = new Set();
 	private activeRequestIds = new Set<string>();
 	private requestContext = new Map<string, AITransportRequest["context"]>();
+	private seenPendingEdits = new Set<string>();
 
 	onEvent(listener: TransportListener): () => void {
 		this.listeners.add(listener);
@@ -115,17 +117,24 @@ export class ApiTransport implements AITransport {
 						});
 					}
 				}
+			}),
+		);
 
-				if (event.type === "tool_result") {
-					const pendingEdit = this.extractPendingEdit(event, requestId);
-					if (pendingEdit) {
-						this.emit({
-							type: "PENDING_EDIT",
-							edit: pendingEdit,
-							streamingId: requestId,
-						});
-					}
+		disposers.push(
+			socketService.on("pending_edit_created", (message) => {
+				if (message.type !== "pending_edit_created") return;
+				const editId = String(message.edit?.id ?? "");
+				if (editId && this.seenPendingEdits.has(editId)) return;
+				const pendingEdit = this.pendingEditFromPayload(message.edit, requestId);
+				if (!pendingEdit) return;
+				if (editId) {
+					this.seenPendingEdits.add(editId);
 				}
+				this.emit({
+					type: "PENDING_EDIT",
+					edit: pendingEdit,
+					streamingId: requestId,
+				});
 			}),
 		);
 
@@ -187,25 +196,24 @@ export class ApiTransport implements AITransport {
 		return cleanup;
 	}
 
-	private extractPendingEdit(event: AgentEvent, requestId: string): PendingEdit | null {
-		const output = (event as any).output;
-		if (!output || typeof output !== "object") return null;
-
-		const pendingType = (output as any).type;
-		if (pendingType !== "pending_edit") return null;
-
-		const editPayload = (output as any).edit;
+	private pendingEditFromPayload(
+		editPayload: PendingEditPayload,
+		requestId: string,
+	): PendingEdit | null {
 		const context = this.requestContext.get(requestId);
-		if (editPayload && typeof editPayload === "object" && context) {
-			const normalizedFilePath = normalizeWorkspaceRelativePath(
-				String(editPayload.file_path ?? ""),
-				context.workspaceRoot,
-				{ keepRootEmpty: true },
-			);
+		if (editPayload && typeof editPayload === "object") {
+			const rawPath = String(editPayload.file_path ?? "");
+			const normalizedFilePath = context
+				? normalizeWorkspaceRelativePath(rawPath, context.workspaceRoot, { keepRootEmpty: true })
+				: rawPath;
+
+			const isApiKey = String(editPayload.id ?? "").startsWith("api-edit-");
 
 			return {
 				id: String(editPayload.id ?? ""),
-				source: { type: "api-key", codeBlockId: (event as any).requestId ?? event.id ?? requestId },
+				source: isApiKey
+					? { type: "api-key", codeBlockId: String(editPayload.tool_call_id ?? requestId) }
+					: { type: "acp", sessionId: String(editPayload.session_id ?? "") },
 				filePath: normalizedFilePath,
 				oldContent: String(editPayload.old_text ?? ""),
 				newContent: String(editPayload.new_text ?? ""),
