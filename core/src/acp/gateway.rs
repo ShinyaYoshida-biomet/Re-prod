@@ -163,15 +163,6 @@ impl AcpGateway {
         conn.respond_permission(mapped).await
     }
 
-    /// Dispatch a prompt to the ACP agent.  The actual round-trip (waiting for
-    /// EndTurn / PromptResponse) is performed in a spawned task so that the
-    /// caller — which typically holds a `Mutex<AcpGateway>` — is not blocked.
-    /// Blocking here would deadlock concurrent operations such as
-    /// `respond_permission` when the agent requests tool approval mid-turn.
-    ///
-    /// Session updates (text chunks, tool calls, …) flow independently via
-    /// `forward_updates`.  The `Done` event is emitted only after the agent
-    /// signals EndTurn.
     pub fn send_prompt(&self, session_id: &str, messages: Vec<String>) -> Result<()> {
         let conn = self
             .conn

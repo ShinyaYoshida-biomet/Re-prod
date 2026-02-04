@@ -234,10 +234,6 @@ impl AcpConnection {
         resp_rx.await.context("ACP prompt dropped")?
     }
 
-    /// Like `prompt`, but spawns the await in a background task so the caller
-    /// does not block.  This is critical: `AcpGateway` is behind a shared mutex
-    /// and holding it across the full prompt round-trip would deadlock any
-    /// concurrent operation (e.g. `respond_permission`).
     pub fn spawn_prompt(
         &self,
         request: PromptRequest,
