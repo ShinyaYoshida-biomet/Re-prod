@@ -22,6 +22,7 @@ describe("ExternalAgentSettingsPane", () => {
 		useStore.setState({
 			activeMode: "api",
 			activeAgent: null,
+			activeAgentArgs: [],
 			detectedAgents: [],
 		});
 	});
@@ -64,6 +65,7 @@ describe("ExternalAgentSettingsPane", () => {
 			active_mode: "external_agent",
 			active_agent: "claude",
 			active_agent_command: null,
+			active_agent_args: [],
 		});
 
 		const { getByLabelText } = render(<ExternalAgentSettingsPane />);
@@ -71,8 +73,40 @@ describe("ExternalAgentSettingsPane", () => {
 		const radio = await waitFor(() => getByLabelText(/Claude/));
 		fireEvent.click(radio);
 
-		await waitFor(() => expect(setConfigMock).toHaveBeenCalledWith("external_agent", "claude"));
+		await waitFor(() => expect(setConfigMock).toHaveBeenCalledWith("external_agent", "claude", []));
 		expect(useStore.getState().activeAgent).toBe("claude");
+	});
+
+	it("persists custom launch args", async () => {
+		detectAgentsMock.mockResolvedValue([
+			{ id: "gemini", name: "Gemini CLI", command: "gemini", available: true, path: null },
+		]);
+		useStore.setState({
+			activeMode: "external_agent",
+			activeAgent: "gemini",
+			activeAgentArgs: [],
+			detectedAgents: [],
+		});
+
+		setConfigMock.mockResolvedValue({
+			active_mode: "external_agent",
+			active_agent: "gemini",
+			active_agent_command: "/opt/homebrew/bin/gemini",
+			active_agent_args: ["--approval-mode", "auto_edit"],
+		});
+
+		const { getByLabelText, getByText } = render(<ExternalAgentSettingsPane />);
+		const input = await waitFor(() => getByLabelText(/Extra launch args/));
+		fireEvent.change(input, { target: { value: "--approval-mode\nauto_edit" } });
+		fireEvent.click(getByText("Save args"));
+
+		await waitFor(() =>
+			expect(setConfigMock).toHaveBeenCalledWith("external_agent", "gemini", [
+				"--approval-mode",
+				"auto_edit",
+			]),
+		);
+		expect(useStore.getState().activeAgentArgs).toEqual(["--approval-mode", "auto_edit"]);
 	});
 
 	it("toggles the refresh button label based on loading state", async () => {

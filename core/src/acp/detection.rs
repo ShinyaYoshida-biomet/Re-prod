@@ -161,6 +161,7 @@ mod tests {
             active_mode: ACP_MODE_EXTERNAL_AGENT.to_string(),
             active_agent: Some("codex".to_string()),
             active_agent_command: None,
+            active_agent_args: None,
         };
         let detected = vec![
             AcpDetectedAgent {
@@ -189,6 +190,7 @@ mod tests {
             active_mode: ACP_MODE_EXTERNAL_AGENT.to_string(),
             active_agent: Some("codex".to_string()),
             active_agent_command: Some("/opt/bin/codex-acp".to_string()),
+            active_agent_args: None,
         };
         let detected = vec![AcpDetectedAgent {
             id: "codex".to_string(),

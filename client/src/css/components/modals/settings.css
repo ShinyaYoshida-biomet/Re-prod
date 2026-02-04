@@ -257,6 +257,42 @@
 	color: var(--settings-hint-color);
 }
 
+.agent-args-row {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-top: 12px;
+}
+
+.agent-args-label {
+	font-size: var(--settings-row-font-size);
+	font-weight: 500;
+}
+
+.agent-args-input {
+	width: 100%;
+	background: var(--settings-input-bg);
+	border: 1px solid var(--settings-input-border);
+	border-radius: var(--settings-input-radius);
+	padding: var(--settings-input-padding);
+	color: var(--settings-input-color);
+	font-size: var(--settings-input-font-size);
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+	resize: vertical;
+	min-height: 88px;
+}
+
+.agent-args-input:focus {
+	outline: var(--settings-input-outline);
+	outline-offset: var(--settings-input-outline-offset);
+}
+
+.agent-args-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+}
+
 @media (max-width: 640px) {
 	.settings-row {
 		flex-direction: column;

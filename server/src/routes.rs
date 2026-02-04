@@ -197,6 +197,7 @@ pub async fn acp_get_config() -> Resp<AcpAgentConfig> {
             active_mode: cfg.active_mode,
             active_agent: cfg.active_agent,
             active_agent_command: cfg.active_agent_command,
+            active_agent_args: cfg.active_agent_args,
         })
         .map(Json)
         .map_err(err_500)
@@ -206,12 +207,14 @@ pub async fn acp_get_config() -> Resp<AcpAgentConfig> {
 pub struct SetAcpConfigRequest {
     pub active_mode: String,
     pub active_agent: Option<String>,
+    pub active_agent_args: Option<Vec<String>>,
 }
 
 pub async fn acp_set_config(Json(payload): Json<SetAcpConfigRequest>) -> Resp<AcpAgentConfig> {
     info!(
         active_mode = %payload.active_mode,
         active_agent = ?payload.active_agent,
+        active_agent_args = ?payload.active_agent_args,
         "Saving ACP config"
     );
     let normalized_mode =
@@ -221,6 +224,7 @@ pub async fn acp_set_config(Json(payload): Json<SetAcpConfigRequest>) -> Resp<Ac
     cfg.active_mode = normalized_mode.clone();
     cfg.active_agent = None;
     cfg.active_agent_command = None;
+    cfg.active_agent_args = None;
     if normalized_mode != ACP_MODE_API {
         let selected = payload
             .active_agent
@@ -232,6 +236,17 @@ pub async fn acp_set_config(Json(payload): Json<SetAcpConfigRequest>) -> Resp<Ac
             resolve_active_agent_command(&cfg, &detected)
                 .ok_or_else(|| err_400(format!("ACP agent unavailable: {selected}")))?,
         );
+        let normalized_args = payload
+            .active_agent_args
+            .clone()
+            .unwrap_or_default()
+            .into_iter()
+            .map(|arg| arg.trim().to_string())
+            .filter(|arg| !arg.is_empty())
+            .collect::<Vec<_>>();
+        if !normalized_args.is_empty() {
+            cfg.active_agent_args = Some(normalized_args);
+        }
     }
 
     save_acp_config(&cfg).map_err(err_500)?;
@@ -239,6 +254,7 @@ pub async fn acp_set_config(Json(payload): Json<SetAcpConfigRequest>) -> Resp<Ac
         active_mode = %cfg.active_mode,
         active_agent = ?cfg.active_agent,
         active_agent_command = ?cfg.active_agent_command,
+        active_agent_args = ?cfg.active_agent_args,
         "Saved ACP config"
     );
 
@@ -246,6 +262,7 @@ pub async fn acp_set_config(Json(payload): Json<SetAcpConfigRequest>) -> Resp<Ac
         active_mode: cfg.active_mode,
         active_agent: cfg.active_agent,
         active_agent_command: cfg.active_agent_command,
+        active_agent_args: cfg.active_agent_args,
     }))
 }
 

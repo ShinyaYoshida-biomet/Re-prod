@@ -33,8 +33,10 @@ function ModeOption({ checked, description, label, mode, onSelect }: ModeOptionP
 export function AIProviderSettingsPane(): JSX.Element {
 	const activeMode = useStore((state) => state.activeMode);
 	const activeAgent = useStore((state) => state.activeAgent);
+	const activeAgentArgs = useStore((state) => state.activeAgentArgs);
 	const setActiveMode = useStore((state) => state.setActiveMode);
 	const setActiveAgent = useStore((state) => state.setActiveAgent);
+	const setActiveAgentArgs = useStore((state) => state.setActiveAgentArgs);
 	const acpAdminClient = useMemo(() => getAcpAdminClient(), []);
 
 	const handleModeChange = useCallback(
@@ -42,13 +44,21 @@ export function AIProviderSettingsPane(): JSX.Element {
 			setActiveMode(mode);
 			if (mode === "api") {
 				setActiveAgent(null);
-				await acpAdminClient.setConfig(mode, null);
+				setActiveAgentArgs([]);
+				await acpAdminClient.setConfig(mode, null, null);
 				return;
 			}
 
-			await acpAdminClient.setConfig(mode, activeAgent);
+			await acpAdminClient.setConfig(mode, activeAgent, activeAgentArgs);
 		},
-		[acpAdminClient, activeAgent, setActiveAgent, setActiveMode],
+		[
+			acpAdminClient,
+			activeAgent,
+			activeAgentArgs,
+			setActiveAgent,
+			setActiveAgentArgs,
+			setActiveMode,
+		],
 	);
 
 	return (

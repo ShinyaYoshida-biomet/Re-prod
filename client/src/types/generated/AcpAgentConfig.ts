@@ -4,4 +4,5 @@ export type AcpAgentConfig = {
 	active_mode: string;
 	active_agent: string | null;
 	active_agent_command: string | null;
+	active_agent_args?: Array<string> | null;
 };

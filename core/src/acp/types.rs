@@ -223,6 +223,9 @@ pub struct AcpAgentConfig {
     pub active_mode: String,
     pub active_agent: Option<String>,
     pub active_agent_command: Option<String>,
+    #[ts(optional = nullable)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub active_agent_args: Option<Vec<String>>,
 }
 
 #[cfg(test)]

@@ -7,7 +7,7 @@ export type AcpMode = "api" | "external_agent";
 export interface AcpAdminClient {
 	detectAgents(): Promise<AcpDetectedAgent[]>;
 	getConfig(): Promise<AcpAgentConfig>;
-	setConfig(mode: AcpMode, agent: string | null): Promise<AcpAgentConfig>;
+	setConfig(mode: AcpMode, agent: string | null, args: string[] | null): Promise<AcpAgentConfig>;
 	bootstrap(): Promise<{ config: AcpAgentConfig; agents: AcpDetectedAgent[] }>;
 }
 
@@ -38,11 +38,16 @@ class DesktopAcpAdminClient implements AcpAdminClient {
 		return invoke<AcpAgentConfig>("acp_get_agent_config");
 	}
 
-	async setConfig(mode: AcpMode, agent: string | null): Promise<AcpAgentConfig> {
+	async setConfig(
+		mode: AcpMode,
+		agent: string | null,
+		args: string[] | null,
+	): Promise<AcpAgentConfig> {
 		const { invoke } = await import("@tauri-apps/api/core");
 		return invoke<AcpAgentConfig>("acp_set_agent_config", {
 			activeMode: mode,
 			activeAgent: agent,
+			activeAgentArgs: args,
 		});
 	}
 
@@ -61,11 +66,15 @@ class WebAcpAdminClient implements AcpAdminClient {
 		return fetchJson<AcpAgentConfig>(getAcpApiUrl("config"));
 	}
 
-	async setConfig(mode: AcpMode, agent: string | null): Promise<AcpAgentConfig> {
+	async setConfig(
+		mode: AcpMode,
+		agent: string | null,
+		args: string[] | null,
+	): Promise<AcpAgentConfig> {
 		return fetchJson<AcpAgentConfig>(getAcpApiUrl("config"), {
 			method: "PUT",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ active_mode: mode, active_agent: agent }),
+			body: JSON.stringify({ active_mode: mode, active_agent: agent, active_agent_args: args }),
 		});
 	}
 

@@ -15,6 +15,8 @@ pub struct AcpConfig {
     pub active_agent: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub active_agent_command: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub active_agent_args: Option<Vec<String>>,
 }
 
 fn default_mode() -> String {
@@ -27,6 +29,7 @@ impl Default for AcpConfig {
             active_mode: default_mode(),
             active_agent: None,
             active_agent_command: None,
+            active_agent_args: None,
         }
     }
 }

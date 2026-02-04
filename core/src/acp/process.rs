@@ -58,7 +58,17 @@ fn spawn_stderr_logger(stderr: ChildStderr) -> JoinHandle<()> {
         loop {
             match lines.next_line().await {
                 Ok(Some(line)) => {
-                    if !line.trim().is_empty() {
+                    let trimmed = line.trim();
+                    if !trimmed.is_empty() {
+                        let lower = trimmed.to_ascii_lowercase();
+                        if lower.contains("tool execution denied by policy")
+                            || lower.contains("denied by policy")
+                            || lower.contains("[dep0040]")
+                            || lower.contains("punycode")
+                        {
+                            debug!(message = %trimmed, "ACP agent stderr");
+                            continue;
+                        }
                         info!(message = %line, "ACP agent stderr");
                     }
                 }

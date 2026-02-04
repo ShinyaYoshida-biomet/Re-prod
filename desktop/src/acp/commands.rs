@@ -34,6 +34,7 @@ pub async fn acp_initialize(
     let detected = detect_agents().await.unwrap_or_default();
     let command_override = command.clone();
     let resolved_command = command.or_else(|| resolve_active_agent_command(&acp_cfg, &detected));
+    let resolved_args = args.or_else(|| acp_cfg.active_agent_args.clone());
     if acp_cfg.active_mode == ACP_MODE_EXTERNAL_AGENT
         && command_override.is_none()
         && resolved_command.is_none()
@@ -45,13 +46,14 @@ pub async fn acp_initialize(
         active_mode = %acp_cfg.active_mode,
         active_agent = ?acp_cfg.active_agent,
         active_agent_command = ?acp_cfg.active_agent_command,
+        active_agent_args = ?acp_cfg.active_agent_args,
         command_override = ?command_override,
         resolved_command = ?resolved_command,
-        args = ?args,
+        args = ?resolved_args,
         "Initializing ACP"
     );
 
-    let cfg = build_process_config(&root, resolved_command, args);
+    let cfg = build_process_config(&root, resolved_command, resolved_args);
 
     let mut manager = state.lock().await;
     manager
@@ -121,6 +123,7 @@ pub async fn acp_get_agent_config() -> Result<AcpAgentConfig, String> {
             active_mode: cfg.active_mode,
             active_agent: cfg.active_agent,
             active_agent_command: cfg.active_agent_command,
+            active_agent_args: cfg.active_agent_args,
         })
         .map_err(|err| err.to_string())
 }
@@ -129,10 +132,12 @@ pub async fn acp_get_agent_config() -> Result<AcpAgentConfig, String> {
 pub async fn acp_set_agent_config(
     active_mode: String,
     active_agent: Option<String>,
+    active_agent_args: Option<Vec<String>>,
 ) -> Result<AcpAgentConfig, String> {
     info!(
         active_mode = %active_mode,
         active_agent = ?active_agent,
+        active_agent_args = ?active_agent_args,
         "Saving ACP config"
     );
     let mut cfg = load_acp_config().unwrap_or_default();
@@ -141,6 +146,7 @@ pub async fn acp_set_agent_config(
     cfg.active_mode = normalized_mode.clone();
     cfg.active_agent = None;
     cfg.active_agent_command = None;
+    cfg.active_agent_args = None;
     if normalized_mode != ACP_MODE_API {
         let selected = active_agent
             .clone()
@@ -151,6 +157,15 @@ pub async fn acp_set_agent_config(
             resolve_active_agent_command(&cfg, &detected)
                 .ok_or_else(|| "ACP agent unavailable or not detected".to_string())?,
         );
+        let normalized_args = active_agent_args
+            .unwrap_or_default()
+            .into_iter()
+            .map(|arg| arg.trim().to_string())
+            .filter(|arg| !arg.is_empty())
+            .collect::<Vec<_>>();
+        if !normalized_args.is_empty() {
+            cfg.active_agent_args = Some(normalized_args);
+        }
     }
 
     save_acp_config(&cfg).map_err(|err| err.to_string())?;
@@ -158,6 +173,7 @@ pub async fn acp_set_agent_config(
         active_mode = %cfg.active_mode,
         active_agent = ?cfg.active_agent,
         active_agent_command = ?cfg.active_agent_command,
+        active_agent_args = ?cfg.active_agent_args,
         "Saved ACP config"
     );
 
@@ -165,6 +181,7 @@ pub async fn acp_set_agent_config(
         active_mode: cfg.active_mode,
         active_agent: cfg.active_agent,
         active_agent_command: cfg.active_agent_command,
+        active_agent_args: cfg.active_agent_args,
     })
 }
 

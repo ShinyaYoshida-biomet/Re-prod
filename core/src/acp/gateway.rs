@@ -25,6 +25,7 @@ use super::{
 use crate::edit::{EditOperation, EditService, EditStatus, EditTextFileRequest};
 
 const BROADCAST_BUFFER: usize = 128;
+const GEMINI_DEFAULT_MODEL: &str = "gemini-3-flash-preview";
 
 /// Runtime wrapper shared by desktop and server runtimes to orchestrate ACP agents.
 pub struct AcpGateway {
@@ -482,6 +483,14 @@ mod tests {
         let cfg = build_process_config(&root, Some("gemini".to_string()), None);
         assert_eq!(cfg.command, "gemini");
         assert!(cfg.args.iter().any(|arg| arg == "--experimental-acp"));
+        assert_eq!(
+            cfg.args,
+            vec![
+                "--experimental-acp".to_string(),
+                "--model".to_string(),
+                GEMINI_DEFAULT_MODEL.to_string()
+            ]
+        );
     }
 
     #[test]
@@ -501,6 +510,34 @@ mod tests {
             .filter(|arg| arg.as_str() == "--experimental-acp")
             .count();
         assert_eq!(count, 1);
+        let model_count = cfg
+            .args
+            .iter()
+            .filter(|arg| arg.as_str() == "--model")
+            .count();
+        assert_eq!(model_count, 1);
+    }
+
+    #[test]
+    fn build_process_config_keeps_existing_gemini_model_arg() {
+        let root = std::env::temp_dir();
+        let cfg = build_process_config(
+            &root,
+            Some("gemini".to_string()),
+            Some(vec![
+                "--experimental-acp".to_string(),
+                "--model".to_string(),
+                "custom-model".to_string(),
+            ]),
+        );
+        assert_eq!(
+            cfg.args,
+            vec![
+                "--experimental-acp".to_string(),
+                "--model".to_string(),
+                "custom-model".to_string()
+            ]
+        );
     }
 
     #[test]
@@ -817,10 +854,13 @@ fn maybe_enable_gemini_acp_flag(command: &str, args: &mut Vec<String>) {
     if !is_gemini_command(command) {
         return;
     }
-    if args.iter().any(|arg| arg.contains("experimental-acp")) {
-        return;
+    if !args.iter().any(|arg| arg.contains("experimental-acp")) {
+        args.push("--experimental-acp".to_string());
     }
-    args.push("--experimental-acp".to_string());
+    if !contains_gemini_model_arg(args) {
+        args.push("--model".to_string());
+        args.push(GEMINI_DEFAULT_MODEL.to_string());
+    }
 }
 
 fn is_gemini_command(command: &str) -> bool {
@@ -830,4 +870,16 @@ fn is_gemini_command(command: &str) -> bool {
         .unwrap_or(command)
         .to_ascii_lowercase();
     name == "gemini" || name == "gemini-cli"
+}
+
+fn contains_gemini_model_arg(args: &[String]) -> bool {
+    for arg in args {
+        if arg == "-m" || arg == "--model" {
+            return true;
+        }
+        if arg.starts_with("--model=") {
+            return true;
+        }
+    }
+    false
 }

@@ -11,6 +11,7 @@ import { getAcpAdminClient } from "@/services/acpAdminClient";
 export function useACPBootstrap(): void {
 	const setActiveMode = useStore((state) => state.setActiveMode);
 	const setActiveAgent = useStore((state) => state.setActiveAgent);
+	const setActiveAgentArgs = useStore((state) => state.setActiveAgentArgs);
 	const setDetectedAgents = useStore((state) => state.setDetectedAgents);
 
 	useEffect(() => {
@@ -27,6 +28,7 @@ export function useACPBootstrap(): void {
 				if (current.activeAgent === initialAgent) {
 					setActiveAgent(config.active_agent);
 				}
+				setActiveAgentArgs(config.active_agent_args ?? []);
 				setDetectedAgents(agents);
 			} catch (error) {
 				console.error("Failed to bootstrap ACP config", error);
@@ -34,5 +36,5 @@ export function useACPBootstrap(): void {
 		};
 
 		void bootstrap();
-	}, [setActiveAgent, setActiveMode, setDetectedAgents]);
+	}, [setActiveAgent, setActiveAgentArgs, setActiveMode, setDetectedAgents]);
 }

@@ -32,14 +32,15 @@ impl AcpService {
     }
 
     async fn ensure_agent_running(&self) -> Result<()> {
-        let command = resolve_agent_command().await?;
+        let (command, args) = resolve_agent_launch_config().await?;
         info!(
             command = %command,
+            args = ?args,
             workspace = %self.workspace_root.display(),
             "Resolved ACP agent command"
         );
         let mut gateway = self.gateway.lock().await;
-        let config = build_process_config(&self.workspace_root, Some(command), None);
+        let config = build_process_config(&self.workspace_root, Some(command), args);
         let response = gateway.initialize(config).await?;
         info!(
             status = response.status.as_str(),
@@ -207,12 +208,14 @@ impl RateLimiter {
     }
 }
 
-async fn resolve_agent_command() -> Result<String> {
+async fn resolve_agent_launch_config() -> Result<(String, Option<Vec<String>>)> {
     let cfg = load_acp_config().unwrap_or_else(|_| Default::default());
     if !is_external_mode(&cfg.active_mode) {
         bail!("External agent mode not enabled");
     }
     let detected = detect_agents().await?;
-    resolve_active_agent_command(&cfg, &detected)
-        .ok_or_else(|| anyhow!("Selected ACP agent unavailable or not set for external_agent mode"))
+    let command = resolve_active_agent_command(&cfg, &detected).ok_or_else(|| {
+        anyhow!("Selected ACP agent unavailable or not set for external_agent mode")
+    })?;
+    Ok((command, cfg.active_agent_args.clone()))
 }
