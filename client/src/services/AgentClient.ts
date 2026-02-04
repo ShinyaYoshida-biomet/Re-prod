@@ -20,6 +20,7 @@ export class AgentClientService {
 
 	private setupListeners() {
 		const dispatch = (event: TransportEvent) => {
+			console.log("[AgentClient]", event.type, event);
 			const state = useStore.getState();
 			state.handleServerEvent(event);
 
