@@ -173,10 +173,7 @@ pub async fn search_repo(root: &Path, request: SearchRepoRequest) -> Result<Valu
         if output.status.code() == Some(1) {
             // rg exits 1 when no matches; treat as empty result.
         } else {
-            return Err(format!(
-                "rg failed: {}",
-                output_to_string(&output.stderr)
-            ));
+            return Err(format!("rg failed: {}", output_to_string(&output.stderr)));
         }
     }
 
@@ -202,8 +199,7 @@ pub async fn search_repo(root: &Path, request: SearchRepoRequest) -> Result<Valu
         }
     }
 
-    Ok(serde_json::to_value(SearchRepoResponse { matches })
-        .map_err(|e| e.to_string())?)
+    Ok(serde_json::to_value(SearchRepoResponse { matches }).map_err(|e| e.to_string())?)
 }
 
 pub async fn git_status(root: &Path, request: GitStatusRequest) -> Result<Value, String> {

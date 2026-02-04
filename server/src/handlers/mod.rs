@@ -26,8 +26,8 @@ mod ai_handler;
 pub(crate) mod common;
 mod environment_handler;
 mod export_handler;
-mod plot_history_handler;
 mod pending_edit_ui;
+mod plot_history_handler;
 mod project_requests;
 mod runtime_fs;
 mod session_handler;
@@ -238,11 +238,14 @@ async fn handle_ws_text(
                         stream,
                         mode,
                     } => {
+                        tracing::info!(%session_id, "WS ai_message received");
                         let state = state.clone();
                         let runtime = current_runtime.clone();
                         let sender = ai_event_tx.clone();
                         tokio::spawn(async move {
-                            if should_use_acp().await {
+                            let use_acp = should_use_acp().await;
+                            tracing::info!(use_acp, "ACP routing for ai_message");
+                            if use_acp {
                                 let _ = handle_acp_ai_message(
                                     &runtime,
                                     session_id,
@@ -413,10 +416,18 @@ async fn handle_ws_request(
 
 async fn should_use_acp() -> bool {
     let Ok(cfg) = reprod_core::acp::config::load_acp_config() else {
+        tracing::debug!("should_use_acp: config load failed → false");
         return false;
     };
-    reprod_core::acp::config::is_external_mode(&cfg.active_mode)
-        && cfg.active_agent.is_some()
+    let result =
+        reprod_core::acp::config::is_external_mode(&cfg.active_mode) && cfg.active_agent.is_some();
+    tracing::info!(
+        mode = %cfg.active_mode,
+        agent = ?cfg.active_agent,
+        should_use_acp = result,
+        "ACP routing decision"
+    );
+    result
 }
 
 async fn find_acp_session_by_stream(
@@ -424,15 +435,13 @@ async fn find_acp_session_by_stream(
     stream_id: &str,
 ) -> Option<String> {
     let streams = runtime.acp_session_streams.lock().await;
-    streams
-        .iter()
-        .find_map(|(session_id, mapped_stream)| {
-            if mapped_stream == stream_id {
-                Some(session_id.clone())
-            } else {
-                None
-            }
-        })
+    streams.iter().find_map(|(session_id, mapped_stream)| {
+        if mapped_stream == stream_id {
+            Some(session_id.clone())
+        } else {
+            None
+        }
+    })
 }
 
 async fn handle_execution_request_streaming(

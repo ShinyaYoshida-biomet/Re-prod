@@ -13,8 +13,8 @@ pub(super) fn pending_edit_payload_from_output(output: &Value) -> Option<Pending
 }
 
 pub(super) fn pending_edit_payload_from_edit(edit: &PendingEdit) -> PendingEditPayload {
-    let normalized_path = normalize_relative_path(&edit.file_path)
-        .unwrap_or_else(|| edit.file_path.clone());
+    let normalized_path =
+        normalize_relative_path(&edit.file_path).unwrap_or_else(|| edit.file_path.clone());
     PendingEditPayload {
         id: edit.id.clone(),
         session_id: edit.session_id.clone(),

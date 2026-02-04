@@ -141,10 +141,9 @@ pub(super) async fn execute_ai_tool_call(
                 &request.edit_id,
             )
             .await?;
-            let output = serde_json::to_value(pending_edits::ApplyPendingEditResult {
-                success: true,
-            })
-            .map_err(|e| format!("Failed to serialize apply result: {}", e))?;
+            let output =
+                serde_json::to_value(pending_edits::ApplyPendingEditResult { success: true })
+                    .map_err(|e| format!("Failed to serialize apply result: {}", e))?;
             Ok(ToolCallOutcome {
                 summary: output.to_string(),
                 output,
@@ -292,8 +291,9 @@ pub(super) async fn execute_ai_tool_call(
             })
         }
         "git_diff" => {
-            let request: repo_tools::GitDiffRequest = serde_json::from_value(tool_call.input.clone())
-                .map_err(|e| format!("Invalid request: {}", e))?;
+            let request: repo_tools::GitDiffRequest =
+                serde_json::from_value(tool_call.input.clone())
+                    .map_err(|e| format!("Invalid request: {}", e))?;
             let output = repo_tools::git_diff(&runtime.descriptor.root_path, request).await?;
             Ok(ToolCallOutcome {
                 summary: output.to_string(),
@@ -301,8 +301,9 @@ pub(super) async fn execute_ai_tool_call(
             })
         }
         "git_log" => {
-            let request: repo_tools::GitLogRequest = serde_json::from_value(tool_call.input.clone())
-                .map_err(|e| format!("Invalid request: {}", e))?;
+            let request: repo_tools::GitLogRequest =
+                serde_json::from_value(tool_call.input.clone())
+                    .map_err(|e| format!("Invalid request: {}", e))?;
             let output = repo_tools::git_log(&runtime.descriptor.root_path, request).await?;
             Ok(ToolCallOutcome {
                 summary: output.to_string(),

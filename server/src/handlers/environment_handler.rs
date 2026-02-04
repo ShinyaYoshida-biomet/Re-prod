@@ -104,7 +104,9 @@ pub async fn handle_environment_query(runtime: &Arc<ProjectRuntime>) -> Vec<WSRe
             if !exec_result.success {
                 return error_response(format!(
                     "Failed to query environment: {}",
-                    exec_result.error.unwrap_or_else(|| "Unknown error".to_string())
+                    exec_result
+                        .error
+                        .unwrap_or_else(|| "Unknown error".to_string())
                 ));
             }
 

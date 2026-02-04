@@ -3,7 +3,7 @@ use std::sync::Arc;
 use super::ai_handler::build_context_prompt;
 use super::common::{
     build_approval_request_payload, error_response, now_millis, single_response,
-    with_system_prompts, AgentEventPayload, AgentEventStatus, AIMode, ApprovalOption, PlanStepKind,
+    with_system_prompts, AIMode, AgentEventPayload, AgentEventStatus, ApprovalOption, PlanStepKind,
     PlanStepPayload, PlanStepStatus, ToolLogPayload, ToolLogStatus, WSResponse,
 };
 use super::pending_edit_ui::pending_edit_payload_from_output;
@@ -123,16 +123,35 @@ pub async fn handle_acp_session_prompt(
     if let Some(ctx) = context {
         // Build user prompt from context (mirrors ai_handler logic)
         let mut parts = Vec::new();
-        
+
         // 1. Console Context
         if let Some(limit) = ctx.console_history_limit {
             if limit > 0 {
-                let runs = runtime.execution_repo.latest_runs(limit).await.unwrap_or_default();
+                let runs = runtime
+                    .execution_repo
+                    .latest_runs(limit)
+                    .await
+                    .unwrap_or_default();
                 if !runs.is_empty() {
-                    let mut console_text = String::from("Recent console output (newest first, truncated):\n");
+                    let mut console_text =
+                        String::from("Recent console output (newest first, truncated):\n");
                     for run in runs {
-                        console_text.push_str(&format!("- [{}] in {}ms\n", run.created_at_ms, run.duration_ms.unwrap_or(0)));
-                        if !run.result.output.is_empty() { console_text.push_str(&format!("stdout: {}\n", run.result.output.lines().take(20).collect::<Vec<_>>().join("\n"))); }
+                        console_text.push_str(&format!(
+                            "- [{}] in {}ms\n",
+                            run.created_at_ms,
+                            run.duration_ms.unwrap_or(0)
+                        ));
+                        if !run.result.output.is_empty() {
+                            console_text.push_str(&format!(
+                                "stdout: {}\n",
+                                run.result
+                                    .output
+                                    .lines()
+                                    .take(20)
+                                    .collect::<Vec<_>>()
+                                    .join("\n")
+                            ));
+                        }
                         console_text.push('\n');
                     }
                     parts.push(console_text);
@@ -144,7 +163,10 @@ pub async fn handle_acp_session_prompt(
         if let Some(path) = ctx.active_buffer_path {
             if !path.is_empty() {
                 if let Ok(result) = runtime.edit_service.read_text_file(&path).await {
-                    parts.push(format!("Current file ({}):\n\n```r\n{}\n```\n", path, result.text));
+                    parts.push(format!(
+                        "Current file ({}):\n\n```r\n{}\n```\n",
+                        path, result.text
+                    ));
                 }
             }
         }
@@ -266,7 +288,10 @@ pub async fn translate_acp_update(
                 finished_at: None,
             };
             vec![
-                WSResponse::AIToolStarted { id: stream_id.clone(), tool: log.clone() },
+                WSResponse::AIToolStarted {
+                    id: stream_id.clone(),
+                    tool: log.clone(),
+                },
                 WSResponse::AgentEvent {
                     id: stream_id,
                     event: AgentEventPayload::ToolRequest {
@@ -381,7 +406,10 @@ async fn format_chunk(
     let last_kind = last.get(stream_id).map(String::as_str);
     if kind == "thought" {
         if last_kind != Some("thought") {
-            prefix = format!("{}[Thought]\n", if last_kind.is_some() { "\n\n" } else { "" });
+            prefix = format!(
+                "{}[Thought]\n",
+                if last_kind.is_some() { "\n\n" } else { "" }
+            );
         }
     } else if kind == "tool" {
         if last_kind != Some("tool") {
@@ -420,10 +448,12 @@ pub async fn translate_acp_permission_request(
     let options = map_permission_options(&request.options);
     let approval = build_approval_request_payload(
         request.request_id.clone(),
-        request
-            .tool_title
-            .clone()
-            .unwrap_or_else(|| request.tool_kind.clone().unwrap_or_else(|| "tool".to_string())),
+        request.tool_title.clone().unwrap_or_else(|| {
+            request
+                .tool_kind
+                .clone()
+                .unwrap_or_else(|| "tool".to_string())
+        }),
         preview,
         options,
         None,
@@ -506,7 +536,10 @@ fn map_permission_options(options: &[AcpPermissionOption]) -> Vec<ApprovalOption
     if options.iter().any(|opt| opt.kind == "allow_always") {
         mapped.push(ApprovalOption::ApproveSession);
     }
-    if options.iter().any(|opt| opt.kind == "reject_once" || opt.kind == "reject_always") {
+    if options
+        .iter()
+        .any(|opt| opt.kind == "reject_once" || opt.kind == "reject_always")
+    {
         mapped.push(ApprovalOption::Deny);
     }
     if mapped.is_empty() {
@@ -578,14 +611,14 @@ pub async fn handle_acp_pending_edit_accept(
 ) -> Vec<WSResponse> {
     let handled = pending_edits::has_pending_edit(&runtime.pending_edits, edit_id).await;
     let result = if handled {
-        pending_edits::accept_pending_edit(
-            &runtime.edit_service,
-            &runtime.pending_edits,
-            edit_id,
-        )
-        .await
+        pending_edits::accept_pending_edit(&runtime.edit_service, &runtime.pending_edits, edit_id)
+            .await
     } else {
-        runtime.acp.accept_pending_edit(edit_id).await.map_err(|e| e.to_string())
+        runtime
+            .acp
+            .accept_pending_edit(edit_id)
+            .await
+            .map_err(|e| e.to_string())
     };
     match result {
         Ok(()) => single_response(WSResponse::AcpPendingEditResolved {
@@ -609,7 +642,11 @@ pub async fn handle_acp_pending_edit_reject(
     let result = if handled {
         pending_edits::reject_pending_edit(&runtime.pending_edits, edit_id).await
     } else {
-        runtime.acp.reject_pending_edit(edit_id).await.map_err(|e| e.to_string())
+        runtime
+            .acp
+            .reject_pending_edit(edit_id)
+            .await
+            .map_err(|e| e.to_string())
     };
     match result {
         Ok(()) => single_response(WSResponse::AcpPendingEditResolved {
@@ -634,7 +671,11 @@ pub async fn handle_acp_pending_edit_update(
     let result = if handled {
         pending_edits::update_pending_edit(&runtime.pending_edits, edit_id, new_text).await
     } else {
-        runtime.acp.update_pending_edit(edit_id, new_text).await.map_err(|e| e.to_string())
+        runtime
+            .acp
+            .update_pending_edit(edit_id, new_text)
+            .await
+            .map_err(|e| e.to_string())
     };
     match result {
         Ok(()) => single_response(WSResponse::AcpPendingEditUpdated {

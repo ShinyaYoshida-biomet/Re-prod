@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use reprod_core::{
     acp::pending_edit::{PendingEdit, PendingEditStore},
-    edit::{sha256_hex, EditOperation, EditStatus, EditTextFileRequest, EditService},
+    edit::{sha256_hex, EditOperation, EditService, EditStatus, EditTextFileRequest},
 };
 use tokio::sync::Mutex;
 use uuid::Uuid;

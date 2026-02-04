@@ -6,8 +6,7 @@ use reprod_core::{
         self,
         tools::{
             get_console_tools, get_filesystem_tools, get_pending_edit_tools, get_r_context_tools,
-            get_repo_tools,
-            get_web_search_tools, WriteTextFileRequest,
+            get_repo_tools, get_web_search_tools, WriteTextFileRequest,
         },
     },
     edit::{EditOperation, EditTextFileRequest, TextEdit},
@@ -18,8 +17,8 @@ use tokio::sync::mpsc::UnboundedSender;
 use tokio::time::{timeout, Duration};
 
 use super::common::{
-    build_streaming_payload, error_response, now_millis, tool_log_from_call, with_system_prompts,
-    build_approval_request_payload, AgentEventPayload, AgentEventStatus, AIMode, AppState,
+    build_approval_request_payload, build_streaming_payload, error_response, now_millis,
+    tool_log_from_call, with_system_prompts, AIMode, AgentEventPayload, AgentEventStatus, AppState,
     ApprovalDecisionPayload, ApprovalOption, ApprovalRule, ArtifactDetailsPayload, ArtifactKind,
     PendingEditPayload, PlanStepKind, PlanStepPayload, PlanStepStatus, ToolLogStatus,
     ToolPreviewPayload, WSResponse,
@@ -40,21 +39,39 @@ pub(super) async fn build_context_prompt(
                 .latest_runs(limit)
                 .await
                 .unwrap_or_default();
-            
+
             if !runs.is_empty() {
-                let mut console_text = String::from("Recent console output (newest first, truncated):\n");
+                let mut console_text =
+                    String::from("Recent console output (newest first, truncated):\n");
                 for run in runs {
                     let status = format!("{:?}", run.status).to_lowercase();
                     let duration = run.duration_ms.unwrap_or(0);
-                    console_text.push_str(&format!("- [{}] {} in {}ms\n", run.created_at_ms, status, duration));
+                    console_text.push_str(&format!(
+                        "- [{}] {} in {}ms\n",
+                        run.created_at_ms, status, duration
+                    ));
                     if !run.result.output.is_empty() {
-                        let trimmed = run.result.output.lines().take(20).collect::<Vec<_>>().join("\n");
-                        let truncated = if trimmed.len() > 800 { &trimmed[..800] } else { &trimmed };
+                        let trimmed = run
+                            .result
+                            .output
+                            .lines()
+                            .take(20)
+                            .collect::<Vec<_>>()
+                            .join("\n");
+                        let truncated = if trimmed.len() > 800 {
+                            &trimmed[..800]
+                        } else {
+                            &trimmed
+                        };
                         console_text.push_str(&format!("stdout: {}\n", truncated));
                     }
                     if let Some(err) = &run.result.error {
                         let trimmed = err.lines().take(20).collect::<Vec<_>>().join("\n");
-                        let truncated = if trimmed.len() > 800 { &trimmed[..800] } else { &trimmed };
+                        let truncated = if trimmed.len() > 800 {
+                            &trimmed[..800]
+                        } else {
+                            &trimmed
+                        };
                         console_text.push_str(&format!("stderr: {}\n", truncated));
                     }
                     console_text.push('\n');
@@ -69,7 +86,10 @@ pub(super) async fn build_context_prompt(
         if !path.is_empty() {
             match runtime.edit_service.read_text_file(&path).await {
                 Ok(result) => {
-                    parts.push(format!("Current file ({}):\n\n```r\n{}\n```\n", path, result.text));
+                    parts.push(format!(
+                        "Current file ({}):\n\n```r\n{}\n```\n",
+                        path, result.text
+                    ));
                 }
                 Err(e) => {
                     tracing::warn!("Failed to read context file {}: {}", path, e);
@@ -191,9 +211,7 @@ fn extract_pending_edit_path(output: &serde_json::Value) -> Option<String> {
     extract_pending_edit_fields(output).map(|(path, _, _, _)| path)
 }
 
-fn extract_pending_edit_payload(
-    output: &serde_json::Value,
-) -> Option<PendingEditPayload> {
+fn extract_pending_edit_payload(output: &serde_json::Value) -> Option<PendingEditPayload> {
     if output.get("type")?.as_str()? != "pending_edit" {
         return None;
     }
@@ -225,7 +243,12 @@ async fn build_plan(
         content: user_message.content.clone(),
     };
 
-    let response = match timeout(Duration::from_secs(8), provider.send_message(vec![plan_prompt, user])).await {
+    let response = match timeout(
+        Duration::from_secs(8),
+        provider.send_message(vec![plan_prompt, user]),
+    )
+    .await
+    {
         Ok(Ok(text)) => text,
         _ => return None,
     };
@@ -455,11 +478,8 @@ async fn build_tool_preview(
                 .input
                 .get("edit_id")
                 .and_then(|value| value.as_str())?;
-            let edit = crate::pending_edits::get_pending_edit(
-                &runtime.pending_edits,
-                edit_id,
-            )
-            .await?;
+            let edit =
+                crate::pending_edits::get_pending_edit(&runtime.pending_edits, edit_id).await?;
             Some(ToolPreviewPayload {
                 kind: "diff".to_string(),
                 filepath: Some(edit.file_path),
@@ -492,9 +512,16 @@ fn artifact_for_tool_result(
     output: &serde_json::Value,
     diff_summary: &str,
     display_summary: &str,
-) -> Option<(ArtifactKind, Option<String>, String, Option<ArtifactDetailsPayload>)> {
+) -> Option<(
+    ArtifactKind,
+    Option<String>,
+    String,
+    Option<ArtifactDetailsPayload>,
+)> {
     let (old_text, new_text, diff, pending_path) = extract_pending_edit_fields(output)
-        .map(|(path, old_text, new_text, diff)| (Some(old_text), Some(new_text), Some(diff), Some(path)))
+        .map(|(path, old_text, new_text, diff)| {
+            (Some(old_text), Some(new_text), Some(diff), Some(path))
+        })
         .unwrap_or_else(|| {
             let old_text = output
                 .get("old_text")
@@ -529,12 +556,7 @@ fn artifact_for_tool_result(
                 new_text,
             }),
         )),
-        "web_search" => Some((
-            ArtifactKind::Command,
-            None,
-            "Web search".to_string(),
-            None,
-        )),
+        "web_search" => Some((ArtifactKind::Command, None, "Web search".to_string(), None)),
         _ => None,
     }
 }
@@ -675,7 +697,11 @@ pub(super) async fn handle_ai_message(
                     break 'tool_loop;
                 }
                 None => {
-                    push_responses(&mut responses, &sender, error_response("Missing response".to_string()));
+                    push_responses(
+                        &mut responses,
+                        &sender,
+                        error_response("Missing response".to_string()),
+                    );
                     break 'tool_loop;
                 }
             };
@@ -780,7 +806,12 @@ pub(super) async fn handle_ai_message(
                             }
                         };
                         if approval_cancelled {
-                            push_cancel_response(&mut responses, &sender, &mut event_stream, &stream_id);
+                            push_cancel_response(
+                                &mut responses,
+                                &sender,
+                                &mut event_stream,
+                                &stream_id,
+                            );
                             break 'tool_loop;
                         }
 
@@ -898,7 +929,12 @@ pub(super) async fn handle_ai_message(
                         }
                     }
                     if cancel_token.is_cancelled() {
-                        push_cancel_response(&mut responses, &sender, &mut event_stream, &stream_id);
+                        push_cancel_response(
+                            &mut responses,
+                            &sender,
+                            &mut event_stream,
+                            &stream_id,
+                        );
                         break 'tool_loop;
                     }
                     event_stream.emit(
@@ -924,16 +960,14 @@ pub(super) async fn handle_ai_message(
                         },
                     );
 
-                    let tool_result =
-                        execute_ai_tool_call(&tool_call, runtime, &session_id).await;
+                    let tool_result = execute_ai_tool_call(&tool_call, runtime, &session_id).await;
                     match tool_result {
                         Ok(result) => {
                             log.status = ToolLogStatus::Done;
                             log.output = Some(result.output.clone());
                             tool_results.push((tool_call.id.clone(), result.summary.clone()));
 
-                            let display_summary =
-                                summarize_tool_result(&tool_call, &result.output);
+                            let display_summary = summarize_tool_result(&tool_call, &result.output);
                             let tool_result_id = event_stream.next_event_id();
                             event_stream.emit(
                                 &mut responses,
@@ -956,14 +990,12 @@ pub(super) async fn handle_ai_message(
                                 );
                             }
 
-                            if let Some((kind, path, summary, details)) =
-                                artifact_for_tool_result(
-                                    &tool_call,
-                                    &result.output,
-                                    &result.summary,
-                                    &display_summary,
-                                )
-                            {
+                            if let Some((kind, path, summary, details)) = artifact_for_tool_result(
+                                &tool_call,
+                                &result.output,
+                                &result.summary,
+                                &display_summary,
+                            ) {
                                 let artifact_id = event_stream.next_event_id();
                                 event_stream.emit(
                                     &mut responses,
@@ -1047,10 +1079,7 @@ pub(super) async fn handle_ai_message(
                                     id: thought_event_id,
                                     status: AgentEventStatus::Running,
                                     timestamp: now_millis(),
-                                    text: format!(
-                                        "Tool failed: {}. Considering alternative.",
-                                        err
-                                    ),
+                                    text: format!("Tool failed: {}. Considering alternative.", err),
                                     reasoning: suggested_action.clone(),
                                     parent_id: None,
                                 },
@@ -1062,10 +1091,7 @@ pub(super) async fn handle_ai_message(
                                     id: recovery_task_id,
                                     status: AgentEventStatus::Pending,
                                     timestamp: now_millis(),
-                                    label: format!(
-                                        "Recover from {} failure",
-                                        tool_call.name
-                                    ),
+                                    label: format!("Recover from {} failure", tool_call.name),
                                     deps: Vec::new(),
                                     parent_id: None,
                                 },
@@ -1097,7 +1123,12 @@ pub(super) async fn handle_ai_message(
                         }
                     }
                     if cancel_token.is_cancelled() {
-                        push_cancel_response(&mut responses, &sender, &mut event_stream, &stream_id);
+                        push_cancel_response(
+                            &mut responses,
+                            &sender,
+                            &mut event_stream,
+                            &stream_id,
+                        );
                         break 'tool_loop;
                     }
                     log.finished_at = Some(now_millis());
@@ -1115,12 +1146,12 @@ pub(super) async fn handle_ai_message(
                 {
                     let mut sessions = runtime.local_sessions.lock().await;
                     let session = sessions.get_mut(&session_id).unwrap();
-                    
+
                     session.add_message(ChatMessage {
                         role: "assistant".to_string(),
                         content: response.content.clone(),
                     });
-                    
+
                     for (tool_id, result) in tool_results {
                         session.add_message(ChatMessage {
                             role: "user".to_string(),
@@ -1190,7 +1221,7 @@ pub(super) async fn handle_ai_message(
     } else {
         // Chat mode (no tools)
         let mut responses = Vec::new();
-        
+
         let history = {
             let sessions = runtime.local_sessions.lock().await;
             sessions.get(&session_id).unwrap().history().to_vec()

@@ -22,9 +22,9 @@ use reprod_core::{
 };
 use serde::Deserialize;
 use serde_json::Value;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::{oneshot, Mutex};
 use tokio::sync::{Notify, RwLock};
-use std::sync::atomic::{AtomicBool, Ordering};
 use ts_rs::TS;
 
 #[derive(Debug, Deserialize)]
@@ -232,7 +232,10 @@ pub(crate) enum WSResponse {
         code_blocks: Option<Vec<Value>>,
     },
     #[serde(rename = "agent_event")]
-    AgentEvent { id: String, event: AgentEventPayload },
+    AgentEvent {
+        id: String,
+        event: AgentEventPayload,
+    },
     #[serde(rename = "approval_request")]
     ApprovalRequest {
         id: String,
@@ -500,9 +503,7 @@ fn rule_matches(rule: &ApprovalRule, tool: &str, path: Option<&str>) -> bool {
         return false;
     }
     match (&rule.path_prefix, path) {
-        (Some(prefix), Some(path)) => {
-            path == prefix || path.starts_with(&format!("{}/", prefix))
-        }
+        (Some(prefix), Some(path)) => path == prefix || path.starts_with(&format!("{}/", prefix)),
         (None, None) => true,
         _ => false,
     }
@@ -563,9 +564,7 @@ impl ApprovalManager {
         }
 
         let persistent = self.load_persistent_allowlist(project_root).await;
-        persistent
-            .iter()
-            .any(|rule| rule_matches(rule, tool, path))
+        persistent.iter().any(|rule| rule_matches(rule, tool, path))
     }
 
     pub(super) async fn allow_for_session(&self, agent_session_id: &str, rule: ApprovalRule) {
@@ -591,10 +590,7 @@ impl ApprovalManager {
         Ok(())
     }
 
-    async fn load_persistent_allowlist(
-        &self,
-        project_root: &Path,
-    ) -> HashSet<ApprovalRule> {
+    async fn load_persistent_allowlist(&self, project_root: &Path) -> HashSet<ApprovalRule> {
         let key = project_root.to_string_lossy().to_string();
         {
             let allowlist = self.persistent_allowlist.lock().await;
@@ -792,7 +788,10 @@ mod tests {
             command: None,
             affected_lines: None,
         };
-        assert_eq!(approval_preview_text(&diff_preview), Some("diff".to_string()));
+        assert_eq!(
+            approval_preview_text(&diff_preview),
+            Some("diff".to_string())
+        );
 
         let command_preview = ToolPreviewPayload {
             kind: "command".to_string(),
@@ -801,7 +800,10 @@ mod tests {
             command: Some("ls".to_string()),
             affected_lines: None,
         };
-        assert_eq!(approval_preview_text(&command_preview), Some("ls".to_string()));
+        assert_eq!(
+            approval_preview_text(&command_preview),
+            Some("ls".to_string())
+        );
 
         let read_preview = ToolPreviewPayload {
             kind: "read".to_string(),
@@ -810,7 +812,10 @@ mod tests {
             command: None,
             affected_lines: None,
         };
-        assert_eq!(approval_preview_text(&read_preview), Some("note.txt".to_string()));
+        assert_eq!(
+            approval_preview_text(&read_preview),
+            Some("note.txt".to_string())
+        );
     }
 
     #[test]
@@ -833,7 +838,6 @@ mod tests {
         );
         assert_eq!(payload.preview_text, Some("ls".to_string()));
     }
-
 }
 
 #[derive(serde::Serialize, Clone, Copy)]
@@ -1034,7 +1038,6 @@ pub(crate) enum AgentEventPayload {
         parent_id: Option<String>,
     },
 }
-
 
 #[derive(serde::Serialize, Clone, TS)]
 #[ts(export, export_to = "../../client/src/types/generated/")]

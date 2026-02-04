@@ -8,8 +8,8 @@ use super::common::{error_response, WSRequest};
 use super::runtime_fs::restart_fs_watcher;
 use super::{build_project_opened_response, send_responses, AppState};
 use crate::projects::{ProjectRuntime, RuntimeBroadcastEvent};
-use reprod_core::config::workspace_root_override;
 use reprod_core::acp::types::{AcpPermissionRequestPayload, AcpSessionUpdateEnvelope};
+use reprod_core::config::workspace_root_override;
 use reprod_core::fs::FileSystemEvent;
 use tokio::sync::mpsc as tokio_mpsc;
 
@@ -65,9 +65,7 @@ pub async fn handle_project_request(
         WSRequest::ProjectSwitchFolder { path } => {
             let folder_path = normalize_incoming_path(path);
             if !folder_path.exists() {
-                return Some(
-                    send_responses(socket, error_response("Folder does not exist")).await,
-                );
+                return Some(send_responses(socket, error_response("Folder does not exist")).await);
             }
             if !folder_path.is_dir() {
                 return Some(
@@ -133,20 +131,13 @@ pub async fn handle_project_request(
                 Some(path) => path,
                 None => {
                     return Some(
-                        send_responses(
-                            socket,
-                            error_response("Project root is not configured"),
-                        )
-                        .await,
+                        send_responses(socket, error_response("Project root is not configured"))
+                            .await,
                     )
                 }
             };
             let base_path = base_path.as_deref().map(Path::new);
-            match state
-                .projects
-                .create_project(&root, name, base_path)
-                .await
-            {
+            match state.projects.create_project(&root, name, base_path).await {
                 Ok(project) => Some(
                     send_responses(
                         socket,

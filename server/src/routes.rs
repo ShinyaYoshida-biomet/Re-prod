@@ -17,8 +17,11 @@ use reprod_core::{
 use serde::Deserialize;
 use tracing::info;
 
-pub async fn health() -> &'static str {
-    "OK"
+pub async fn health() -> Json<reprod_core::config::HealthResponse> {
+    Json(reprod_core::config::HealthResponse {
+        ok: true,
+        schema_version: reprod_core::config::WS_SCHEMA_VERSION,
+    })
 }
 
 pub async fn execute_r_code(

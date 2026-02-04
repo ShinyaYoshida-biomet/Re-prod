@@ -79,7 +79,7 @@ impl AcpService {
         if !gateway.session_exists(session_id) {
             bail!("Unknown ACP session: {session_id}");
         }
-        gateway.send_prompt(session_id, messages.clone()).await?;
+        gateway.send_prompt(session_id, messages.clone())?;
         info!(
             %session_id,
             message_count = messages.len(),

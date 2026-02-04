@@ -14,8 +14,8 @@ use reprod_core::{
     web_search::{cloud_provider::CloudWebSearchProvider, WebSearchRegistry},
 };
 use reprod_core::{
-    project::{locate_config, ProjectDescriptor, ProjectRecord},
     config::workspace_root_override,
+    project::{locate_config, ProjectDescriptor, ProjectRecord},
     Config, ExecutionEvent, RExecutor, RunOutputChunk, RunSummary,
 };
 use std::{
@@ -175,8 +175,9 @@ impl ProjectController {
     pub async fn default_runtime(&self) -> Result<Arc<ProjectRuntime>> {
         let root = match workspace_root_override() {
             Some(path) => path,
-            None => std::env::current_dir()
-                .context("Failed to determine current working directory")?,
+            None => {
+                std::env::current_dir().context("Failed to determine current working directory")?
+            }
         };
         self.runtime_for_path(&root).await
     }
@@ -211,10 +212,7 @@ impl ProjectController {
             return Err(anyhow!("Directory {} does not exist", canonical.display()));
         }
         if !canonical.is_dir() {
-            return Err(anyhow!(
-                "Path {} is not a directory",
-                canonical.display()
-            ));
+            return Err(anyhow!("Path {} is not a directory", canonical.display()));
         }
 
         let descriptor = if locate_config(&canonical).is_ok() {
@@ -258,7 +256,10 @@ impl ProjectController {
             return Err(anyhow!("Project root {} does not exist", root.display()));
         }
         if !root.is_dir() {
-            return Err(anyhow!("Project root {} is not a directory", root.display()));
+            return Err(anyhow!(
+                "Project root {} is not a directory",
+                root.display()
+            ));
         }
 
         let mut records = Vec::new();
@@ -267,8 +268,8 @@ impl ProjectController {
             records.push(ProjectRecord::from(&descriptor));
         }
 
-        for entry in std::fs::read_dir(root)
-            .with_context(|| format!("Failed to read {}", root.display()))?
+        for entry in
+            std::fs::read_dir(root).with_context(|| format!("Failed to read {}", root.display()))?
         {
             let entry = entry?;
             if !entry.file_type()?.is_dir() {
@@ -319,7 +320,10 @@ impl ProjectController {
             return Err(anyhow!("Project root {} does not exist", root.display()));
         }
         if !root.is_dir() {
-            return Err(anyhow!("Project root {} is not a directory", root.display()));
+            return Err(anyhow!(
+                "Project root {} is not a directory",
+                root.display()
+            ));
         }
 
         let canonical_root = root
