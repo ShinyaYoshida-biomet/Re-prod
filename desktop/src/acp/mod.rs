@@ -75,7 +75,7 @@ impl AcpManager {
     }
 
     pub async fn send_prompt(&self, session_id: &str, messages: Vec<String>) -> Result<()> {
-        self.gateway.send_prompt(session_id, messages).await
+        self.gateway.send_prompt(session_id, messages)
     }
 
     pub fn subscribe_session_updates(&self) -> broadcast::Receiver<AcpSessionUpdateEnvelope> {
@@ -99,7 +99,6 @@ impl AcpManager {
     pub async fn update_pending_edit(&self, edit_id: &str, new_text: &str) -> Result<()> {
         self.gateway.update_pending_edit(edit_id, new_text).await
     }
-
 
     pub async fn shutdown(&mut self) {
         if let Some(handles) = self.forwarders.take() {

@@ -11,7 +11,6 @@ use crate::{
     terminal::{TerminalEvent, TerminalManager},
 };
 
-
 #[derive(Serialize, Clone)]
 struct TerminalOutputPayload {
     session_id: String,

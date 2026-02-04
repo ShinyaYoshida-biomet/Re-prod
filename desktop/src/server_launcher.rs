@@ -5,7 +5,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use reprod_core::config::{server_binary_override, PORT_ENV};
+use reprod_core::config::{server_binary_override, HealthResponse, PORT_ENV, WS_SCHEMA_VERSION};
 use reqwest::StatusCode;
 use thiserror::Error;
 use tokio::time::sleep;
@@ -20,6 +20,8 @@ pub enum ServerLaunchError {
     SpawnFailed(String),
     #[error("server failed to start within timeout")]
     StartupTimeout,
+    #[error("server schema version mismatch: expected {expected}, got {actual} — rebuild with `cargo build --release -p reprod-server`")]
+    SchemaMismatch { expected: u32, actual: u32 },
 }
 
 pub struct ServerHandle {
@@ -114,7 +116,23 @@ async fn wait_for_server_health(port: u16, timeout: Duration) -> Result<(), Serv
 
     while start.elapsed() < timeout {
         match client.get(&url).send().await {
-            Ok(resp) if resp.status() == StatusCode::OK => return Ok(()),
+            Ok(resp) if resp.status() == StatusCode::OK => {
+                // Parse schema version; plain-text "OK" from an older sidecar
+                // that predates the JSON health response is treated as version 0
+                // so the mismatch is caught immediately.
+                let actual = resp
+                    .json::<HealthResponse>()
+                    .await
+                    .map(|h| h.schema_version)
+                    .unwrap_or(0);
+                if actual != WS_SCHEMA_VERSION {
+                    return Err(ServerLaunchError::SchemaMismatch {
+                        expected: WS_SCHEMA_VERSION,
+                        actual,
+                    });
+                }
+                return Ok(());
+            }
             _ => sleep(Duration::from_millis(150)).await,
         }
     }
@@ -133,8 +151,11 @@ pub async fn launch_server() -> Result<ServerHandle, ServerLaunchError> {
         ));
     }
 
+    let rust_log =
+        std::env::var("RUST_LOG").unwrap_or_else(|_| "reprod=info,axum=warn".to_string());
     let mut child = Command::new(&binary)
         .env(PORT_ENV, port.to_string())
+        .env("RUST_LOG", &rust_log)
         .spawn()
         .map_err(|err| ServerLaunchError::SpawnFailed(err.to_string()))?;
 

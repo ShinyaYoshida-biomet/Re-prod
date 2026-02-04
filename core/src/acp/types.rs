@@ -133,6 +133,22 @@ pub enum AcpSessionUpdate {
     Done,
 }
 
+impl AcpSessionUpdate {
+    /// Short label for tracing / logging.
+    pub fn kind_label(&self) -> &'static str {
+        match self {
+            Self::UserMessageChunk { .. } => "UserMessageChunk",
+            Self::AgentMessageChunk { .. } => "AgentMessageChunk",
+            Self::AgentThoughtChunk { .. } => "AgentThoughtChunk",
+            Self::Plan { .. } => "Plan",
+            Self::ToolCall { .. } => "ToolCall",
+            Self::ToolCallUpdate { .. } => "ToolCallUpdate",
+            Self::AvailableCommands { .. } => "AvailableCommands",
+            Self::Done => "Done",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "../../../client/src/types/generated/")]
 pub struct AcpCancelRequest {

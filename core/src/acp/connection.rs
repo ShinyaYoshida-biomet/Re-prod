@@ -16,6 +16,7 @@ use tokio::{
         oneshot, Mutex,
     },
     task::LocalSet,
+    time::timeout,
 };
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 use tracing::{error, info};
@@ -29,6 +30,8 @@ use super::{
     },
 };
 use crate::edit::EditService;
+
+const ACP_INITIALIZE_TIMEOUT_SECS: u64 = 20;
 
 enum AcpRequest {
     CreateSession {
@@ -133,10 +136,19 @@ impl AcpConnection {
                             "ACP initialize request built"
                         );
 
-                        let init_result = conn
-                            .initialize(init_request)
-                            .await
-                            .context("ACP initialize failed");
+                        let init_result = timeout(
+                            std::time::Duration::from_secs(ACP_INITIALIZE_TIMEOUT_SECS),
+                            conn.initialize(init_request),
+                        )
+                        .await
+                        .map_err(|_| {
+                            anyhow!(
+                                "ACP initialize timed out after {}s. If using Gemini CLI, ensure it is started with --experimental-acp.",
+                                ACP_INITIALIZE_TIMEOUT_SECS
+                            )
+                        })
+                        .and_then(|result| result.map_err(anyhow::Error::from))
+                        .context("ACP initialize failed");
                         if let Err(ref err) = init_result {
                             error!(error = ?err, "ACP initialize failed");
                         }
@@ -220,6 +232,25 @@ impl AcpConnection {
             resp: resp_tx,
         });
         resp_rx.await.context("ACP prompt dropped")?
+    }
+
+    /// Like `prompt`, but spawns the await in a background task so the caller
+    /// does not block.  This is critical: `AcpGateway` is behind a shared mutex
+    /// and holding it across the full prompt round-trip would deadlock any
+    /// concurrent operation (e.g. `respond_permission`).
+    pub fn spawn_prompt(
+        &self,
+        request: PromptRequest,
+    ) -> tokio::task::JoinHandle<Result<PromptResponse>> {
+        let tx = self.tx.clone();
+        tokio::spawn(async move {
+            let (resp_tx, resp_rx) = oneshot::channel();
+            let _ = tx.send(AcpRequest::Prompt {
+                request,
+                resp: resp_tx,
+            });
+            resp_rx.await.context("ACP prompt dropped")?
+        })
     }
 
     pub async fn cancel(&self, session_id: SessionId) -> Result<()> {

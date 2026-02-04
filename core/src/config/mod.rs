@@ -7,6 +7,16 @@ pub const WORKSPACE_ROOT_ENV: &str = "REPROD_WORKSPACE_ROOT";
 pub const SERVER_PATH_ENV: &str = "REPROD_SERVER_PATH";
 pub const PORT_ENV: &str = "REPROD_PORT";
 pub const ACP_AUTO_DOWNLOAD_ENV: &str = "REPROD_ACP_AUTO_DOWNLOAD";
+
+/// Bumped whenever WSRequest / WSResponse fields change.
+/// The server embeds this in `/health`; the desktop launcher verifies it on start.
+pub const WS_SCHEMA_VERSION: u32 = 1;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HealthResponse {
+    pub ok: bool,
+    pub schema_version: u32,
+}
 const LEGACY_DIR_NAME: &str = ".reprod";
 const APP_DIR_NAME: &str = "Re-prod";
 

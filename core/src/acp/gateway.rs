@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use agent_client_protocol::{
     ContentBlock, ContentChunk, PlanEntryStatus, SessionNotification, SessionUpdate,
@@ -160,23 +163,60 @@ impl AcpGateway {
         conn.respond_permission(mapped).await
     }
 
-    pub async fn send_prompt(&self, session_id: &str, messages: Vec<String>) -> Result<()> {
+    /// Dispatch a prompt to the ACP agent.  The actual round-trip (waiting for
+    /// EndTurn / PromptResponse) is performed in a spawned task so that the
+    /// caller — which typically holds a `Mutex<AcpGateway>` — is not blocked.
+    /// Blocking here would deadlock concurrent operations such as
+    /// `respond_permission` when the agent requests tool approval mid-turn.
+    ///
+    /// Session updates (text chunks, tool calls, …) flow independently via
+    /// `forward_updates`.  The `Done` event is emitted only after the agent
+    /// signals EndTurn.
+    pub fn send_prompt(&self, session_id: &str, messages: Vec<String>) -> Result<()> {
         let conn = self
             .conn
             .as_ref()
             .ok_or_else(|| anyhow!("ACP connection not initialized"))?;
 
         let request = AcpConnection::make_prompt_from_strings(session_id.to_string(), messages);
-        // The prompt() call awaits the agent's PromptResponse, which comes when
-        // the agent signals EndTurn. Meanwhile, session updates (text chunks,
-        // tool calls, etc.) flow through forward_updates() independently.
-        // Only after prompt() returns do we send Done to signal turn completion.
-        conn.prompt(request).await?;
-        let payload = AcpSessionUpdateEnvelope {
-            session_id: session_id.to_string(),
-            update: AcpSessionUpdate::Done,
-        };
-        let _ = self.updates_tx.send(payload);
+        let prompt_handle = conn.spawn_prompt(request);
+        let updates_tx = self.updates_tx.clone();
+        let session_id = session_id.to_string();
+        info!(session_id = %session_id, "ACP send_prompt: dispatched; awaiting EndTurn in background");
+
+        tokio::spawn(async move {
+            let send_done = |updates_tx: &broadcast::Sender<AcpSessionUpdateEnvelope>,
+                             session_id: &str| {
+                let _ = updates_tx.send(AcpSessionUpdateEnvelope {
+                    session_id: session_id.to_string(),
+                    update: AcpSessionUpdate::Done,
+                });
+            };
+
+            match prompt_handle.await {
+                Ok(Ok(_)) => {
+                    info!(session_id = %session_id, "ACP send_prompt: agent EndTurn received");
+                    send_done(&updates_tx, &session_id);
+                }
+                Ok(Err(err)) => {
+                    tracing::error!(
+                        error = %err,
+                        session_id = %session_id,
+                        "ACP prompt failed; sending Done to unblock client"
+                    );
+                    send_done(&updates_tx, &session_id);
+                }
+                Err(err) => {
+                    tracing::error!(
+                        error = %err,
+                        session_id = %session_id,
+                        "ACP prompt task panicked; sending Done to unblock client"
+                    );
+                    send_done(&updates_tx, &session_id);
+                }
+            }
+        });
+
         Ok(())
     }
 
@@ -242,15 +282,56 @@ impl AcpGateway {
         let mut updates = updates;
         let tx = self.updates_tx.clone();
         tokio::spawn(async move {
+            let mut last_logged_signature: HashMap<String, String> = HashMap::new();
             while let Some(notification) = updates.recv().await {
-                let payload = AcpSessionUpdateEnvelope {
-                    session_id: notification.session_id.to_string(),
-                    update: map_session_update(&notification.update),
-                };
+                let session_id = notification.session_id.to_string();
+                let update = map_session_update(&notification.update);
+                let log_signature = update_log_signature(&update);
+                let is_duplicate = log_signature
+                    .as_ref()
+                    .and_then(|sig| {
+                        last_logged_signature
+                            .get(&session_id)
+                            .map(|prev| prev == sig)
+                    })
+                    .unwrap_or(false);
+                let is_done = matches!(update, AcpSessionUpdate::Done);
+
+                if !is_duplicate {
+                    if let Some(preview) = update_log_preview(&update) {
+                        tracing::info!(
+                            session_id = %session_id,
+                            update_kind = %update.kind_label(),
+                            preview = %preview,
+                            "ACP forward_updates: notification received"
+                        );
+                    } else {
+                        tracing::info!(
+                            session_id = %session_id,
+                            update_kind = %update.kind_label(),
+                            "ACP forward_updates: notification received"
+                        );
+                    }
+                    if let Some(sig) = log_signature {
+                        last_logged_signature.insert(session_id.clone(), sig);
+                    }
+                } else {
+                    tracing::debug!(
+                        session_id = %session_id,
+                        update_kind = %update.kind_label(),
+                        "ACP forward_updates: duplicate notification suppressed"
+                    );
+                }
+
+                if is_done {
+                    last_logged_signature.remove(&session_id);
+                }
+                let payload = AcpSessionUpdateEnvelope { session_id, update };
                 if tx.send(payload).is_err() {
-                    // No listeners right now; drop the update quietly.
+                    tracing::warn!("ACP forward_updates: no active subscribers; update dropped");
                 }
             }
+            tracing::info!("ACP forward_updates: notification channel closed");
         });
     }
 
@@ -403,6 +484,44 @@ mod tests {
     use crate::edit::sha256_hex;
     use tokio::fs;
     use uuid::Uuid;
+
+    #[test]
+    fn build_process_config_enables_gemini_acp_mode_by_default() {
+        let root = std::env::temp_dir();
+        let cfg = build_process_config(&root, Some("gemini".to_string()), None);
+        assert_eq!(cfg.command, "gemini");
+        assert!(cfg.args.iter().any(|arg| arg == "--experimental-acp"));
+    }
+
+    #[test]
+    fn build_process_config_keeps_existing_gemini_acp_flag() {
+        let root = std::env::temp_dir();
+        let cfg = build_process_config(
+            &root,
+            Some("/opt/homebrew/bin/gemini".to_string()),
+            Some(vec![
+                "--experimental-acp".to_string(),
+                "--debug".to_string(),
+            ]),
+        );
+        let count = cfg
+            .args
+            .iter()
+            .filter(|arg| arg.as_str() == "--experimental-acp")
+            .count();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn build_process_config_leaves_non_gemini_args_unchanged() {
+        let root = std::env::temp_dir();
+        let cfg = build_process_config(
+            &root,
+            Some("codex-acp".to_string()),
+            Some(vec!["--foo".to_string()]),
+        );
+        assert_eq!(cfg.args, vec!["--foo".to_string()]);
+    }
 
     #[tokio::test]
     async fn accept_pending_edit_persists_and_clears() {
@@ -640,16 +759,84 @@ fn stringify_tool_content(content: &[ToolCallContent]) -> Option<String> {
     )
 }
 
+fn update_log_preview(update: &AcpSessionUpdate) -> Option<String> {
+    let raw = match update {
+        AcpSessionUpdate::UserMessageChunk { text }
+        | AcpSessionUpdate::AgentMessageChunk { text }
+        | AcpSessionUpdate::AgentThoughtChunk { text } => Some(text.as_str()),
+        AcpSessionUpdate::Plan { steps } => {
+            return Some(format!("plan_steps={}", steps.len()));
+        }
+        AcpSessionUpdate::ToolCall {
+            title,
+            status,
+            kind,
+            ..
+        } => {
+            return Some(format!("tool={title} status={status} kind={kind}"));
+        }
+        AcpSessionUpdate::ToolCallUpdate {
+            id, status, error, ..
+        } => {
+            return Some(format!(
+                "tool_update id={id} status={} error={}",
+                status.as_deref().unwrap_or("unknown"),
+                error.as_deref().unwrap_or("-")
+            ));
+        }
+        AcpSessionUpdate::AvailableCommands { commands } => {
+            return Some(format!("available_commands={}", commands.len()));
+        }
+        AcpSessionUpdate::Done => return Some("done".to_string()),
+    }?;
+
+    Some(raw.replace('\n', "\\n"))
+}
+
+fn update_log_signature(update: &AcpSessionUpdate) -> Option<String> {
+    match update {
+        AcpSessionUpdate::UserMessageChunk { text }
+        | AcpSessionUpdate::AgentMessageChunk { text }
+        | AcpSessionUpdate::AgentThoughtChunk { text } => {
+            Some(format!("{}:{text}", update.kind_label()))
+        }
+        _ => None,
+    }
+}
+
 /// Build a ProcessConfig using the current workspace root and optional overrides.
 pub fn build_process_config(
     workspace_root: &Path,
     command: Option<String>,
     args: Option<Vec<String>>,
 ) -> ProcessConfig {
+    let command = command.unwrap_or_else(|| "claude-code-acp".to_string());
+    let mut args = args.unwrap_or_default();
+    maybe_enable_gemini_acp_flag(&command, &mut args);
+
     ProcessConfig {
-        command: command.unwrap_or_else(|| "claude-code-acp".to_string()),
-        args: args.unwrap_or_default(),
+        command,
+        args,
         cwd: workspace_root.to_path_buf(),
         env: Default::default(),
     }
+}
+
+fn maybe_enable_gemini_acp_flag(command: &str, args: &mut Vec<String>) {
+    if !is_gemini_command(command) {
+        return;
+    }
+    if args.iter().any(|arg| arg.contains("experimental-acp")) {
+        return;
+    }
+    args.push("--experimental-acp".to_string());
+}
+
+fn is_gemini_command(command: &str) -> bool {
+    let name = Path::new(command)
+        .file_name()
+        .and_then(|candidate| candidate.to_str())
+        .unwrap_or(command)
+        .to_ascii_lowercase();
+    name == "gemini" || name == "gemini-cli"
 }
