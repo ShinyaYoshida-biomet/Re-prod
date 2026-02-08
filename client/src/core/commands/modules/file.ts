@@ -105,6 +105,7 @@ export function setupFileCommands() {
 						showError(response.message);
 						return;
 					}
+					useStore.getState().setAgentSessionId(null);
 					useFileSystemStore
 						.getState()
 						.resetAndLoadRoot()

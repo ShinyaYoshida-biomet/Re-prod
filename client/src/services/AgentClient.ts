@@ -9,6 +9,7 @@ import type { AIMode } from "@/types/generated/AIMode";
 
 export class AgentClientService {
 	private apiTransport = new ApiTransport();
+	private lastWorkspaceRoot: string | null = null;
 
 	constructor() {
 		this.setupListeners();
@@ -69,11 +70,23 @@ export class AgentClientService {
 	): Promise<() => void> {
 		const state = useStore.getState();
 		const requestId = createRequestId();
-		const agentSessionId = state.ai.agentSessionId || createRequestId();
+		const workspaceRoot = options.context.workspaceRoot;
+		const workspaceChanged =
+			Boolean(workspaceRoot) &&
+			Boolean(this.lastWorkspaceRoot) &&
+			workspaceRoot !== this.lastWorkspaceRoot;
 
-		if (!state.ai.agentSessionId) {
-			state.setAgentSessionId(agentSessionId);
+		if (workspaceChanged) {
+			state.setAgentSessionId(null);
 		}
+
+		const latestState = useStore.getState();
+		const agentSessionId = latestState.ai.agentSessionId || createRequestId();
+
+		if (!latestState.ai.agentSessionId) {
+			latestState.setAgentSessionId(agentSessionId);
+		}
+		this.lastWorkspaceRoot = workspaceRoot || this.lastWorkspaceRoot;
 
 		const request: AITransportRequest = {
 			id: requestId,
