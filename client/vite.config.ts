@@ -4,7 +4,7 @@ import { fileURLToPath } from "url";
 import { defineConfig } from "vite";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const defaultPort = 5173;
+const defaultPort = 5176;
 const envPortRaw = process.env.REPROD_E2E_WEB_PORT ?? process.env.VITE_PORT;
 const envPort = envPortRaw ? Number.parseInt(envPortRaw, 10) : Number.NaN;
 const serverPort = Number.isFinite(envPort) && envPort > 0 ? envPort : defaultPort;
