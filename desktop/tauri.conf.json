@@ -5,7 +5,7 @@
 	"identifier": "com.reprod.app",
 	"build": {
 		"beforeDevCommand": "pnpm --dir .. --filter client dev",
-		"devUrl": "http://localhost:5173",
+		"devUrl": "http://localhost:5176",
 		"beforeBuildCommand": "pnpm --dir .. --filter ./client build",
 		"frontendDist": "../client/dist"
 	},
