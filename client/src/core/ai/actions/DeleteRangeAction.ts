@@ -1,6 +1,6 @@
 import type { CodeBlock } from "@/types";
-import type { CodeActionContext, CodeActionValidation } from "../ICodeAction";
-import { BaseCodeAction } from "../BaseCodeAction";
+import type { CodeActionContext, CodeActionValidation } from "./ICodeAction";
+import { BaseCodeAction } from "./BaseCodeAction";
 
 /**
  * Action for deleting a specific range of code

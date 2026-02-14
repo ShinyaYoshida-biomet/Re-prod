@@ -1,12 +1,10 @@
 import type { CodeBlock } from "@/types";
 import { getErrorMessage } from "@/utils/error";
-import {
-	CreateFileAction,
-	DeleteRangeAction,
-	InsertAction,
-	ReplaceAllAction,
-	ReplaceRangeAction,
-} from "./actions";
+import { CreateFileAction } from "./CreateFileAction";
+import { DeleteRangeAction } from "./DeleteRangeAction";
+import { InsertAction } from "./InsertAction";
+import { ReplaceAllAction } from "./ReplaceAllAction";
+import { ReplaceRangeAction } from "./ReplaceRangeAction";
 import type { ICodeAction } from "./ICodeAction";
 
 /**

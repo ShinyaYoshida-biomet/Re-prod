@@ -5,6 +5,7 @@ This module implements the **Factory Pattern** for handling different types of A
 ## Problem Solved
 
 Previously, code action handling relied on growing if/switch statement chains scattered across multiple files. This made it difficult to:
+
 - Add new action types
 - Test actions in isolation
 - Maintain consistent validation logic
@@ -24,15 +25,15 @@ Previously, code action handling relied on growing if/switch statement chains sc
 ```
 actions/
 ├── ICodeAction.ts           # Interface defining action contract
+├── BaseCodeAction.ts        # Abstract base with shared validation
 ├── CodeActionFactory.ts     # Factory for creating action instances
-├── actions/
-│   ├── ReplaceAllAction.ts
-│   ├── ReplaceRangeAction.ts
-│   ├── DeleteRangeAction.ts
-│   ├── CreateFileAction.ts
-│   └── InsertAction.ts
+├── ReplaceAllAction.ts
+├── ReplaceRangeAction.ts
+├── DeleteRangeAction.ts
+├── CreateFileAction.ts
+├── InsertAction.ts
+├── index.ts
 └── __tests__/
-    └── CodeActionFactory.test.ts
 ```
 
 ## Usage
@@ -94,12 +95,15 @@ const actions = CodeActionFactory.getSupportedActions();
 ## Supported Actions
 
 ### 1. Replace All (`replace-all`)
+
 Replaces the entire contents of a file.
 
 **Required fields:**
+
 - `code`: New content to replace with
 
 **Example:**
+
 ```typescript
 {
   action: "replace-all",
@@ -110,13 +114,16 @@ Replaces the entire contents of a file.
 ```
 
 ### 2. Replace Range (`replace-range`)
+
 Replaces a specific range of code.
 
 **Required fields:**
+
 - `code`: New content
 - `targetRange`: { startLine, startColumn, endLine, endColumn }
 
 **Example:**
+
 ```typescript
 {
   action: "replace-range",
@@ -127,12 +134,15 @@ Replaces a specific range of code.
 ```
 
 ### 3. Delete Range (`delete-range`)
+
 Deletes a specific range of lines.
 
 **Required fields:**
+
 - `targetRange`: { startLine, endLine }
 
 **Example:**
+
 ```typescript
 {
   action: "delete-range",
@@ -143,13 +153,16 @@ Deletes a specific range of lines.
 ```
 
 ### 4. Create File (`create-file`)
+
 Creates a new file with the given content.
 
 **Required fields:**
+
 - `filepath`: Path for the new file
 - `code`: File content
 
 **Example:**
+
 ```typescript
 {
   action: "create-file",
@@ -160,12 +173,15 @@ Creates a new file with the given content.
 ```
 
 ### 5. Insert (`insert`)
+
 Inserts code at a specific position.
 
 **Required fields:**
+
 - `code`: Content to insert
 
 **Example:**
+
 ```typescript
 {
   action: "insert",
@@ -179,13 +195,17 @@ Inserts code at a specific position.
 1. **Create the Action Class**
 
 ```typescript
-// actions/MyNewAction.ts
+// MyNewAction.ts
 import type { CodeBlock } from "@shared/types";
-import type { ICodeAction, CodeActionContext, CodeActionValidation } from "../ICodeAction";
+import type {
+  ICodeAction,
+  CodeActionContext,
+  CodeActionValidation,
+} from "./ICodeAction";
 
 export class MyNewAction implements ICodeAction {
   getLabel(codeBlock: CodeBlock): string {
-    return `My new action on ${codeBlock.filepath || 'active editor'}`;
+    return `My new action on ${codeBlock.filepath || "active editor"}`;
   }
 
   validate(codeBlock: CodeBlock): CodeActionValidation {
@@ -213,7 +233,7 @@ export class MyNewAction implements ICodeAction {
 
 ```typescript
 // CodeActionFactory.ts
-import { MyNewAction } from "./actions/MyNewAction";
+import { MyNewAction } from "./MyNewAction";
 
 export class CodeActionFactory {
   private static readonly actions = new Map<string, ICodeAction>([
@@ -242,6 +262,7 @@ it("should return MyNewAction for my-new-action", () => {
 ## Migration from Old Code
 
 ### Before (if/else chain)
+
 ```typescript
 function getCodeActionLabel(codeBlock: CodeBlock): string {
   if (codeBlock.action === "replace-all") {
@@ -256,6 +277,7 @@ function getCodeActionLabel(codeBlock: CodeBlock): string {
 ```
 
 ### After (Factory Pattern)
+
 ```typescript
 // Just one line!
 const label = CodeActionFactory.getLabel(codeBlock);

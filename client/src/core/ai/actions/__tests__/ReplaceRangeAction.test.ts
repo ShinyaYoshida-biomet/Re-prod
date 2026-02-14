@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ReplaceRangeAction } from "../ReplaceRangeAction";
 import type { CodeBlock } from "@/types";
-import type { CodeActionContext } from "../../ICodeAction";
+import type { CodeActionContext } from "../ICodeAction";
 
 describe("ReplaceRangeAction", () => {
 	const action = new ReplaceRangeAction();

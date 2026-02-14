@@ -1,7 +1,7 @@
 import type { CodeBlock } from "@/types";
 import { isEmptyString } from "@/utils/string";
 import { EDITOR_BUFFER_PLACEHOLDER_PATTERNS } from "@/constants/placeholders";
-import type { CodeActionContext, CodeActionValidation, ICodeAction } from "../ICodeAction";
+import type { CodeActionContext, CodeActionValidation, ICodeAction } from "./ICodeAction";
 /**
  * Action for replacing entire file contents
  */

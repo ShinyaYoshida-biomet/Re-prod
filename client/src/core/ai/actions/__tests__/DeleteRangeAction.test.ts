@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { DeleteRangeAction } from "../DeleteRangeAction";
 import type { CodeBlock } from "@/types";
-import type { CodeActionContext } from "../../ICodeAction";
+import type { CodeActionContext } from "../ICodeAction";
 
 describe("DeleteRangeAction", () => {
 	const action = new DeleteRangeAction();

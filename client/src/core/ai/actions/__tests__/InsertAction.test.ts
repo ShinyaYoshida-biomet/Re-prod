@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { InsertAction } from "../InsertAction";
 import type { CodeBlock } from "@/types";
-import type { CodeActionContext } from "../../ICodeAction";
+import type { CodeActionContext } from "../ICodeAction";
 
 describe("InsertAction", () => {
 	const action = new InsertAction();
