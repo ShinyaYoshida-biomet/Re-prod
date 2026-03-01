@@ -1,4 +1,5 @@
 mod anthropic;
+pub mod code_blocks;
 mod constants;
 pub mod factory;
 mod openai;
@@ -7,6 +8,7 @@ pub mod session;
 pub mod tools;
 
 pub use anthropic::AnthropicProvider;
+pub use code_blocks::extract_code_blocks;
 pub use constants::*;
 pub use factory::from_config;
 pub use openai::OpenAIProvider;

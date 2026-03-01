@@ -10,7 +10,6 @@ import type {
 	ToolCallLog,
 	TransportEvent,
 } from "@/types";
-import { extractCodeBlocks } from "@/core/ai/codeBlockUtils";
 
 type StreamingExtras = {
 	codeBlocks?: CodeBlock[];
@@ -343,8 +342,9 @@ export const createAISlice: StateCreator<AIState> = (set, get) => ({
 					(m) => m.streamingId === event.streamingId || m.id === event.streamingId,
 				);
 				const finalContent = message?.content ?? "";
-				const codeBlocks = extractCodeBlocks(finalContent);
-				completeStreamingMessage(event.streamingId, finalContent, { codeBlocks });
+				completeStreamingMessage(event.streamingId, finalContent, {
+					codeBlocks: event.codeBlocks ?? [],
+				});
 				break;
 			}
 			case "ERROR":

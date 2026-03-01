@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
 use super::ai_handler::build_context_prompt;
+use reprod_core::ai::extract_code_blocks;
+
 use super::common::{
     build_approval_request_payload, error_response, now_millis, single_response,
     with_system_prompts, AIMode, AgentEventPayload, AgentEventStatus, ApprovalOption, PlanStepKind,
@@ -240,7 +242,11 @@ pub async fn translate_acp_update(
     match update {
         AcpSessionUpdate::UserMessageChunk { .. } => Vec::new(),
         AcpSessionUpdate::AgentMessageChunk { text } => {
-            let chunk = format_chunk(runtime, &stream_id, "message", text).await;
+            let chunk = format_chunk(runtime, &stream_id, "message", text.clone()).await;
+            {
+                let mut acc = runtime.acp_accumulated_text.lock().await;
+                acc.entry(stream_id.clone()).or_default().push_str(&text);
+            }
             vec![WSResponse::AIResponseChunk {
                 id: stream_id,
                 chunk,
@@ -386,10 +392,16 @@ pub async fn translate_acp_update(
                 let mut last = runtime.acp_last_chunk_kind.lock().await;
                 last.remove(&stream_id);
             }
+            let accumulated = {
+                let mut acc = runtime.acp_accumulated_text.lock().await;
+                acc.remove(&stream_id).unwrap_or_default()
+            };
+            let blocks = extract_code_blocks(&accumulated);
+            let code_blocks = if blocks.is_empty() { None } else { Some(blocks) };
             vec![WSResponse::AIResponseComplete {
                 id: stream_id,
                 final_text: String::new(),
-                code_blocks: None,
+                code_blocks,
             }]
         }
     }

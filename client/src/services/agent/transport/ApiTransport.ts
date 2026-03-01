@@ -2,7 +2,7 @@ import { socketService } from "@/services/socket";
 import { aiMessages } from "@/services/messageBuilders";
 import { normalizeWorkspaceRelativePath } from "@/core/pathUtils";
 import type { AITransport, AITransportRequest, TransportListener } from "./AITransport";
-import type { PendingEdit, TransportEvent } from "@/types";
+import type { CodeBlock, PendingEdit, TransportEvent } from "@/types";
 import type { PendingEditPayload } from "@/types/generated/PendingEditPayload";
 
 export class ApiTransport implements AITransport {
@@ -174,7 +174,11 @@ export class ApiTransport implements AITransport {
 		disposers.push(
 			socketService.on("ai_response_complete", (message) => {
 				if (message.type !== "ai_response_complete" || !shouldProcess(message.id)) return;
-				this.emit({ type: "DONE", streamingId: requestId });
+				this.emit({
+					type: "DONE",
+					streamingId: requestId,
+					codeBlocks: message.codeBlocks as CodeBlock[] | undefined,
+				});
 				this.requestContext.delete(requestId);
 				cleanup();
 			}),

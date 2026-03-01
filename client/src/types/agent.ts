@@ -1,5 +1,5 @@
 import type { PendingEdit } from "./pendingEdit";
-import type { PlanStep, ToolCallLog, ApprovalRequest } from "./ui";
+import type { CodeBlock, PlanStep, ToolCallLog, ApprovalRequest } from "./ui";
 
 export type TransportEvent =
 	| { type: "CHUNK"; content: string; streamingId: string }
@@ -8,5 +8,5 @@ export type TransportEvent =
 	| { type: "PENDING_EDIT"; edit: PendingEdit; streamingId: string }
 	| { type: "PLAN_UPDATE"; steps: PlanStep[]; streamingId: string }
 	| { type: "APPROVAL_REQUEST"; request: ApprovalRequest; streamingId: string }
-	| { type: "DONE"; streamingId: string }
+	| { type: "DONE"; streamingId: string; codeBlocks?: CodeBlock[] }
 	| { type: "ERROR"; error: string; streamingId: string };

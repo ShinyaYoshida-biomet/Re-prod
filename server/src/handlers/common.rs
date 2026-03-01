@@ -9,6 +9,7 @@ use reprod_core::acp::types::{
     AcpContextRequest, AcpPermissionDecision, AcpPermissionRequestPayload, AcpPromptMessage,
 };
 use reprod_core::{
+    ai::extract_code_blocks,
     api::timeline::{
         ExportRMarkdownRequest, ExportRMarkdownResponse, TimelineQueryPayload,
         TimelineResponsePayload, TimelineStatsPayload,
@@ -1100,6 +1101,12 @@ pub(super) fn build_streaming_payload(
     content: String,
 ) -> Vec<WSResponse> {
     if stream {
+        let blocks = extract_code_blocks(&content);
+        let code_blocks = if blocks.is_empty() {
+            None
+        } else {
+            Some(blocks)
+        };
         vec![
             WSResponse::AIResponseChunk {
                 id: stream_id.to_string(),
@@ -1108,7 +1115,7 @@ pub(super) fn build_streaming_payload(
             WSResponse::AIResponseComplete {
                 id: stream_id.to_string(),
                 final_text: content,
-                code_blocks: None,
+                code_blocks,
             },
         ]
     } else {

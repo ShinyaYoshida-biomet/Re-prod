@@ -65,6 +65,8 @@ pub struct ProjectRuntime {
     pub acp_session_streams: Arc<Mutex<HashMap<String, String>>>,
     pub acp_tool_titles: Arc<Mutex<HashMap<String, HashMap<String, String>>>>,
     pub acp_last_chunk_kind: Arc<Mutex<HashMap<String, String>>>,
+    /// Accumulated raw message text per stream_id, used to parse code blocks at Done.
+    pub acp_accumulated_text: Arc<Mutex<HashMap<String, String>>>,
 }
 
 impl ProjectRuntime {
@@ -149,6 +151,7 @@ impl ProjectRuntime {
             acp_session_streams: Arc::new(Mutex::new(HashMap::new())),
             acp_tool_titles: Arc::new(Mutex::new(HashMap::new())),
             acp_last_chunk_kind: Arc::new(Mutex::new(HashMap::new())),
+            acp_accumulated_text: Arc::new(Mutex::new(HashMap::new())),
         })
     }
 }
