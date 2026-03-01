@@ -84,13 +84,9 @@ export const aiMessages = {
 		type: "agent_approval_decision",
 		decision,
 	}),
-	cancel: (
-		requestId: string,
-		agentSessionId: string,
-	): Extract<ClientMessage, { type: "ai_cancel" }> => ({
+	cancel: (requestId: string): Extract<ClientMessage, { type: "ai_cancel" }> => ({
 		type: "ai_cancel",
 		request_id: requestId,
-		agent_session_id: agentSessionId,
 	}),
 } as const;
 

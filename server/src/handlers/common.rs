@@ -7,7 +7,6 @@ use std::{
 use crate::projects::ProjectController;
 use reprod_core::acp::types::{
     AcpContextRequest, AcpPermissionDecision, AcpPermissionRequestPayload, AcpPromptMessage,
-    AcpSessionUpdate,
 };
 use reprod_core::{
     api::timeline::{
@@ -120,10 +119,7 @@ pub(crate) enum WSRequest {
     #[serde(rename = "agent_approval_decision")]
     AgentApprovalDecision { decision: ApprovalDecisionPayload },
     #[serde(rename = "ai_cancel")]
-    AICancel {
-        request_id: String,
-        agent_session_id: String,
-    },
+    AICancel { request_id: String },
     #[serde(rename = "list_tools")]
     ListTools,
     #[serde(rename = "execute_tool")]
@@ -380,15 +376,6 @@ pub(crate) enum WSResponse {
     RunFinished { run: RunSummary },
     #[serde(rename = "acp_session_created")]
     AcpSessionCreated { session_id: String },
-    #[serde(rename = "acp://session-update")]
-    AcpSessionUpdate {
-        session_id: String,
-        update: AcpSessionUpdate,
-    },
-    #[serde(rename = "acp://permission-request")]
-    AcpPermissionRequest {
-        request: AcpPermissionRequestPayload,
-    },
     #[serde(rename = "environment_data")]
     EnvironmentData { variables: Vec<EnvironmentVariable> },
 }

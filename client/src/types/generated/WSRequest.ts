@@ -21,7 +21,7 @@ export type WSRequest =
 			mode: AIMode;
 	  }
 	| { type: "agent_approval_decision"; decision: ApprovalDecisionPayload }
-	| { type: "ai_cancel"; request_id: string; agent_session_id: string }
+	| { type: "ai_cancel"; request_id: string }
 	| { type: "list_tools" }
 	| {
 			type: "execute_tool";

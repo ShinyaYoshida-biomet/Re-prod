@@ -335,10 +335,7 @@ async fn handle_ws_request(
                 handle_agent_approval_decision(state, decision).await
             }
         }
-        WSRequest::AICancel {
-            request_id,
-            agent_session_id: _,
-        } => {
+        WSRequest::AICancel { request_id } => {
             if let Some(session_id) = find_acp_session_by_stream(runtime, &request_id).await {
                 let _ = runtime.acp.cancel(&session_id).await;
             } else {
