@@ -287,40 +287,11 @@ export interface ApprovalResponse {
 	editedInput: Record<string, unknown> | null;
 }
 
-// UI State Types
-export interface LayoutState {
-	editorWidth: number;
-	rightPanelWidth: number;
-	aiPanelHeight: number;
-	consoleHeight: number;
-}
-
-export interface EditorState {
-	content: string;
-	filepath: string;
-	isDirty: boolean;
-	cursorPosition: { line: number; column: number };
-}
-
-export interface ExecutionState {
-	isRunning: boolean;
-	currentCell?: number;
-	results: ExecutionLogEntry[];
-	history: ExecutionLogEntry[];
-}
-
-export interface AIState {
-	messages: AIMessage[];
-	isLoading: boolean;
-	suggestions: string[];
-}
-
 export interface AIMessage {
 	id: string;
 	role: "user" | "assistant";
 	content: string;
 	mode?: AIMode;
-	code?: string; // Deprecated: use codeBlocks instead
 	codeBlocks?: CodeBlock[];
 	events?: AgentEvent[];
 	approvalQueue?: ApprovalRequest[];

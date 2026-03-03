@@ -82,8 +82,6 @@ export function StreamingMessage({ message, onApplyCode }: Props): JSX.Element {
 	const hasTools = Boolean(message.toolLogs && message.toolLogs.length > 0);
 	const hasCodeBlocks = Boolean(message.codeBlocks && message.codeBlocks.length > 0);
 	const hasEvents = Boolean(message.events && message.events.length > 0);
-	const shouldShowLegacyCode = Boolean(message.code && !hasCodeBlocks);
-	console.log("----------- message: ", message);
 
 	// Strip patch blocks from content to avoid duplicate display
 	const displayContent = message.content ? stripPatchBlocks(message.content) : "";
@@ -211,14 +209,6 @@ export function StreamingMessage({ message, onApplyCode }: Props): JSX.Element {
 					{!hasEvents && hasPlan && <AIPlanCard steps={message.planSteps} />}
 
 					{hasTools && <ToolCallLog logs={message.toolLogs} />}
-
-					{shouldShowLegacyCode && (
-						<div className="message-code">
-							<pre>
-								<code>{message.code}</code>
-							</pre>
-						</div>
-					)}
 
 					{hasCodeBlocks &&
 						message.codeBlocks!.map((codeBlock) => (
