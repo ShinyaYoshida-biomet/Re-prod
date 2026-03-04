@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use super::ai_handler::build_context_prompt;
+use super::context_builder::build_context_prompt;
 use reprod_core::ai::extract_code_blocks;
 
 use super::common::{

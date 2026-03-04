@@ -23,7 +23,9 @@ use uuid::Uuid;
 
 mod acp_handler;
 mod ai_handler;
+mod approval_rules;
 pub(crate) mod common;
+mod context_builder;
 mod environment_handler;
 mod export_handler;
 mod pending_edit_ui;
