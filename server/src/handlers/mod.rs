@@ -23,9 +23,11 @@ use uuid::Uuid;
 
 mod acp_handler;
 mod ai_handler;
+mod approval_manager;
 mod approval_rules;
 pub(crate) mod common;
 mod context_builder;
+mod response_builders;
 mod environment_handler;
 mod export_handler;
 mod pending_edit_ui;
@@ -37,7 +39,8 @@ pub mod stream_buffer;
 mod timeline_handler;
 mod tool_handler;
 
-pub use common::{AppState, ApprovalManager, CancelManager};
+pub use approval_manager::{ApprovalManager, CancelManager};
+pub use common::AppState;
 
 use crate::projects::RuntimeBroadcastEvent;
 use acp_handler::{
