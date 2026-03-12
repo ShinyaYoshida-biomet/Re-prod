@@ -27,30 +27,23 @@ import {
 	updatePendingEdit,
 } from "@/services/pendingEditService";
 import type { CodeBlock, CodeRange } from "@/types";
+import type { DiffHunk } from "@/types/generated";
 import type { PendingEditReviewMap, PendingEditReviewStatus } from "@/types/pendingEdit";
 import { clamp } from "@/utils/math";
-import {
-	applyPendingEditChanges,
-	buildDiffChanges,
-	buildDiffHunks,
-	type DiffChange,
-	type DiffHunk,
-} from "@/utils/pendingEditDiff";
+import { applyPendingEditChanges } from "@/utils/pendingEditDiff";
 import { TabBar } from "./TabBar";
 import { PendingEditDiffView } from "./PendingEditDiffView";
 import type { EditorRef } from "./editorRef";
 
 function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Element {
-	type PendingEditDiff = {
-		changes: DiffChange[];
-		hunks: DiffHunk[];
-	};
-
-	const getHunkHeaderLine = useCallback((hunk: DiffHunk): number => {
-		return hunk.change.originalStartLine > 0
-			? hunk.change.originalStartLine
-			: hunk.change.modifiedStartLine;
-	}, []);
+	const getHunkHeaderLine = useCallback(
+		(hunk: { change: { originalStartLine: number; modifiedStartLine: number } }): number => {
+			return hunk.change.originalStartLine > 0
+				? hunk.change.originalStartLine
+				: hunk.change.modifiedStartLine;
+		},
+		[],
+	);
 
 	const toast = useToast();
 	const activeBuffer = useStore((state) => state.getActiveBuffer());
@@ -82,7 +75,6 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	const { dialogState, showConfirm, handleConfirm, handleCancel } = useConfirmDialog();
 	const pendingEditWarningRef = useRef(false);
 	const skipPendingNoticeRef = useRef(false);
-	const [monacoInstance, setMonacoInstance] = useState<Monaco | null>(null);
 	const [pendingNotice, setPendingNotice] = useState<{
 		type: "warning" | "error";
 		message: string;
@@ -91,24 +83,25 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	const [ignoreWhitespace, setIgnoreWhitespace] = useState(false);
 	const [activeHunkId, setActiveHunkId] = useState<string | null>(null);
 	const pendingEditReviewMap = pendingEdit?.reviewedChanges ?? {};
-	const [pendingEditDiff, setPendingEditDiff] = useState<PendingEditDiff | null>(null);
+	const pendingEditChanges = pendingEdit?.changes ?? [];
+	const pendingEditHunks = pendingEdit?.hunks ?? [];
 	const activeCursorPosition = activeBuffer?.cursorPosition;
 	const reviewedContent = useMemo(() => {
-		if (!pendingEdit || !pendingEditDiff) return null;
+		if (!pendingEdit) return null;
 		return applyPendingEditChanges(
 			pendingEdit.oldContent,
-			pendingEditDiff.changes,
+			pendingEditChanges,
 			pendingEditReviewMap,
 		);
-	}, [pendingEdit, pendingEditDiff, pendingEditReviewMap]);
+	}, [pendingEdit, pendingEditChanges, pendingEditReviewMap]);
 	const pendingEditSummary = useMemo(() => {
-		if (!pendingEditDiff) {
+		if (!pendingEdit) {
 			return { total: 0, keep: 0, reject: 0, pending: 0 };
 		}
 		let keep = 0;
 		let reject = 0;
 		let pending = 0;
-		for (const change of pendingEditDiff.changes) {
+		for (const change of pendingEditChanges) {
 			const status = pendingEditReviewMap[change.id];
 			if (status === "keep") {
 				keep += 1;
@@ -118,15 +111,14 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 				pending += 1;
 			}
 		}
-		return { total: pendingEditDiff.changes.length, keep, reject, pending };
-	}, [pendingEditDiff, pendingEditReviewMap]);
+		return { total: pendingEditChanges.length, keep, reject, pending };
+	}, [pendingEdit, pendingEditChanges, pendingEditReviewMap]);
 	const pendingHunks = useMemo(() => {
-		if (!pendingEditDiff) return [];
-		return pendingEditDiff.hunks.filter((hunk) => !pendingEditReviewMap[hunk.id]);
-	}, [pendingEditDiff, pendingEditReviewMap]);
+		return pendingEditHunks.filter((hunk) => !pendingEditReviewMap[hunk.id]);
+	}, [pendingEditHunks, pendingEditReviewMap]);
 
 	useEffect(() => {
-		if (!pendingEditDiff) {
+		if (!pendingEdit) {
 			setActiveHunkId(null);
 			return;
 		}
@@ -137,52 +129,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		if (!activeHunkId || !pendingHunks.some((hunk) => hunk.id === activeHunkId)) {
 			setActiveHunkId(pendingHunks[0].id);
 		}
-	}, [activeHunkId, pendingEditDiff, pendingHunks]);
-
-	useEffect(() => {
-		if (!pendingEdit || !monacoInstance) {
-			setPendingEditDiff(null);
-			return;
-		}
-		if (typeof document === "undefined") {
-			setPendingEditDiff(null);
-			return;
-		}
-
-		setPendingEditDiff(null);
-
-		const language = monacoEditorRef.current?.getModel()?.getLanguageId();
-		const original = monacoInstance.editor.createModel(pendingEdit.oldContent, language);
-		const modified = monacoInstance.editor.createModel(pendingEdit.newContent, language);
-		const diffContainer = document.createElement("div");
-		const diffEditor = monacoInstance.editor.createDiffEditor(diffContainer, {
-			readOnly: true,
-		});
-		let disposed = false;
-
-		const updateDiff = (): void => {
-			if (disposed) return;
-			const changes = diffEditor.getLineChanges();
-			if (!changes) return;
-			const diffChanges = buildDiffChanges(pendingEdit.oldContent, pendingEdit.newContent, changes);
-			setPendingEditDiff({
-				changes: diffChanges,
-				hunks: buildDiffHunks(diffChanges),
-			});
-		};
-
-		const subscription = diffEditor.onDidUpdateDiff(updateDiff);
-		diffEditor.setModel({ original, modified });
-		updateDiff();
-
-		return () => {
-			disposed = true;
-			subscription.dispose();
-			diffEditor.dispose();
-			original.dispose();
-			modified.dispose();
-		};
-	}, [monacoInstance, pendingEdit]);
+	}, [activeHunkId, pendingEdit, pendingHunks]);
 
 	const cells = useEditorCells(editorContent, editorFilepath);
 	const { state, actions } = useEditorExecution({
@@ -227,10 +174,10 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	}, [activeBufferId, editorContent, pendingEdit, reviewedContent, updateBuffer]);
 
 	useEffect(() => {
-		if (!pendingEdit || !pendingEditDiff) return;
+		if (!pendingEdit) return;
 		const nextMap: PendingEditReviewMap = { ...pendingEditReviewMap };
 		let updated = false;
-		for (const change of pendingEditDiff.changes) {
+		for (const change of pendingEditChanges) {
 			if (!(change.id in nextMap)) {
 				nextMap[change.id] = "keep";
 				updated = true;
@@ -239,7 +186,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		if (updated) {
 			setPendingEditReviewMap(pendingEdit.filePath, nextMap);
 		}
-	}, [pendingEdit, pendingEditDiff, pendingEditReviewMap, setPendingEditReviewMap]);
+	}, [pendingEdit, pendingEditChanges, pendingEditReviewMap, setPendingEditReviewMap]);
 
 	const handlePendingAccept = useCallback(async () => {
 		if (!pendingEdit) return;
@@ -338,23 +285,23 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 
 	const handlePendingReviewChange = useCallback(
 		(changeId: string, status: PendingEditReviewStatus) => {
-			if (!pendingEdit || !pendingEditDiff) return;
+			if (!pendingEdit) return;
 			updatePendingEditReview(pendingEdit.filePath, changeId, status);
 			const nextReviewMap: PendingEditReviewMap = {
 				...pendingEditReviewMap,
 				[changeId]: status,
 			};
-			const currentIndex = pendingEditDiff.hunks.findIndex((hunk) => hunk.id === changeId);
+			const currentIndex = pendingEditHunks.findIndex((hunk) => hunk.id === changeId);
 			const startIndex = currentIndex >= 0 ? currentIndex + 1 : 0;
 			const nextPending =
-				pendingEditDiff.hunks.slice(startIndex).find((hunk) => !nextReviewMap[hunk.id]) ??
-				pendingEditDiff.hunks.find((hunk) => !nextReviewMap[hunk.id]);
+				pendingEditHunks.slice(startIndex).find((hunk) => !nextReviewMap[hunk.id]) ??
+				pendingEditHunks.find((hunk) => !nextReviewMap[hunk.id]);
 
 			if (nextPending) {
 				focusHunk(nextPending);
 			}
 		},
-		[focusHunk, pendingEdit, pendingEditDiff, pendingEditReviewMap, updatePendingEditReview],
+		[focusHunk, pendingEdit, pendingEditHunks, pendingEditReviewMap, updatePendingEditReview],
 	);
 
 	const handlePendingHunkNavigate = useCallback(
@@ -366,22 +313,22 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	);
 
 	const handlePendingKeepAll = useCallback(() => {
-		if (!pendingEdit || !pendingEditDiff) return;
+		if (!pendingEdit) return;
 		const nextMap: PendingEditReviewMap = {};
-		for (const change of pendingEditDiff.changes) {
+		for (const change of pendingEditChanges) {
 			nextMap[change.id] = "keep";
 		}
 		setPendingEditReviewMap(pendingEdit.filePath, nextMap);
-	}, [pendingEdit, pendingEditDiff, setPendingEditReviewMap]);
+	}, [pendingEdit, pendingEditChanges, setPendingEditReviewMap]);
 
 	const handlePendingRejectAll = useCallback(() => {
-		if (!pendingEdit || !pendingEditDiff) return;
+		if (!pendingEdit) return;
 		const nextMap: PendingEditReviewMap = {};
-		for (const change of pendingEditDiff.changes) {
+		for (const change of pendingEditChanges) {
 			nextMap[change.id] = "reject";
 		}
 		setPendingEditReviewMap(pendingEdit.filePath, nextMap);
-	}, [pendingEdit, pendingEditDiff, setPendingEditReviewMap]);
+	}, [pendingEdit, pendingEditChanges, setPendingEditReviewMap]);
 
 	useEffect(() => {
 		if (!pendingEdit) return;
@@ -758,8 +705,6 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	): void => {
 		monacoEditorRef.current = monacoEditor;
 		setMonacoEditor(monacoEditor);
-		setMonacoInstance(monaco);
-
 		// Track cursor position
 		monacoEditor.onDidChangeCursorPosition((e) => {
 			const currentBufferId = activeBufferIdRef.current;
@@ -885,21 +830,17 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 								</button>
 							</div>
 						</div>
-						{pendingEditDiff ? (
-							pendingEditDiff.hunks.length > 0 ? (
-								<PendingEditDiffView
-									hunks={pendingEditDiff.hunks}
-									reviewMap={pendingEditReviewMap}
-									onReviewChange={handlePendingReviewChange}
-									onNavigateToLine={handlePendingHunkNavigate}
-								/>
-							) : (
-								<div className="pending-edit-message warning">
-									No pending changes detected in the diff view.
-								</div>
-							)
+						{pendingEditHunks.length > 0 ? (
+							<PendingEditDiffView
+								hunks={pendingEditHunks}
+								reviewMap={pendingEditReviewMap}
+								onReviewChange={handlePendingReviewChange}
+								onNavigateToLine={handlePendingHunkNavigate}
+							/>
 						) : (
-							<div className="pending-edit-message warning">Preparing diff preview...</div>
+							<div className="pending-edit-message warning">
+								No pending changes detected in the diff view.
+							</div>
 						)}
 					</div>
 				)}

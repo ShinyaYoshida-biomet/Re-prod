@@ -1,4 +1,4 @@
-use reprod_core::acp::pending_edit::PendingEdit;
+use reprod_core::{acp::pending_edit::PendingEdit, build_diff_hunks, compute_diff};
 use serde_json::Value;
 
 use super::common::PendingEditPayload;
@@ -15,6 +15,8 @@ pub(super) fn pending_edit_payload_from_output(output: &Value) -> Option<Pending
 pub(super) fn pending_edit_payload_from_edit(edit: &PendingEdit) -> PendingEditPayload {
     let normalized_path =
         normalize_relative_path(&edit.file_path).unwrap_or_else(|| edit.file_path.clone());
+    let changes = compute_diff(&edit.old_text, &edit.new_text);
+    let hunks = build_diff_hunks(&changes);
     PendingEditPayload {
         id: edit.id.clone(),
         session_id: edit.session_id.clone(),
@@ -25,6 +27,8 @@ pub(super) fn pending_edit_payload_from_edit(edit: &PendingEdit) -> PendingEditP
         unified_diff: edit.unified_diff.clone(),
         base_sha256: edit.base_sha256.clone(),
         expected_sha256: edit.expected_sha256.clone(),
+        changes,
+        hunks,
     }
 }
 
