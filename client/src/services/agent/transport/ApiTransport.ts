@@ -225,6 +225,8 @@ export class ApiTransport implements AITransport {
 				baseHash: String(editPayload.base_sha256 ?? ""),
 				expectedSha: editPayload.expected_sha256 ?? null,
 				createdAt: Date.now(),
+				changes: editPayload.changes ?? [],
+				hunks: editPayload.hunks ?? [],
 			};
 		}
 		return null;

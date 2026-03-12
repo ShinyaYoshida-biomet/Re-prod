@@ -2,6 +2,7 @@ use crate::handlers::common::{
     AIMode, AgentEventPayload, ApprovalDecisionPayload, ApprovalOption, ApprovalRequestPayload,
     PendingEditPayload, ToolLogPayload, WSRequest, WSResponse,
 };
+use reprod_core::{DiffChange, DiffChangeType, DiffHunk, DiffLine, DiffLineType};
 use std::path::Path;
 use ts_rs::TS;
 
@@ -18,6 +19,11 @@ fn export_bindings() {
     AgentEventPayload::export().expect("Failed to export AgentEventPayload");
     PendingEditPayload::export().expect("Failed to export PendingEditPayload");
     ToolLogPayload::export().expect("Failed to export ToolLogPayload");
+    DiffChange::export().expect("Failed to export DiffChange");
+    DiffChangeType::export().expect("Failed to export DiffChangeType");
+    DiffLine::export().expect("Failed to export DiffLine");
+    DiffLineType::export().expect("Failed to export DiffLineType");
+    DiffHunk::export().expect("Failed to export DiffHunk");
 
     rewrite_acp_imports("WSRequest.ts");
     rewrite_acp_imports("WSResponse.ts");

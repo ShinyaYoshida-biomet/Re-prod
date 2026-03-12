@@ -10,15 +10,13 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { ConfirmDialog, IconPlay, IconPlayCircle, useToast } from "@/components/shared";
+import { ConfirmDialog, IconPlay, IconPlayCircle } from "@/components/shared";
 import { useStore } from "@/core";
-import { computeTargetRange, findCodeInEditor, matchPatchChunk } from "@/core/ai/contextMatcher";
 import { commandRegistry } from "@/core/commands/registry";
 import { useFileSystemStore } from "@/core/fileSystemStore";
-import type { AppliedCodeChange } from "@/core/state/slices/editorSlice";
 import { normalizeWorkspaceRelativePath } from "@/core/pathUtils";
-import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useEditorCells } from "@/hooks/useEditorCells";
+import { usePendingEditApplicator } from "@/hooks/usePendingEditApplicator";
 import { useEditorDecorations } from "@/hooks/useEditorDecorations";
 import { useEditorExecution } from "@/hooks/useEditorExecution";
 import {
@@ -26,33 +24,24 @@ import {
 	rejectPendingEdit,
 	updatePendingEdit,
 } from "@/services/pendingEditService";
-import type { CodeBlock, CodeRange } from "@/types";
+import type { DiffHunk } from "@/types/generated";
 import type { PendingEditReviewMap, PendingEditReviewStatus } from "@/types/pendingEdit";
 import { clamp } from "@/utils/math";
-import {
-	applyPendingEditChanges,
-	buildDiffChanges,
-	buildDiffHunks,
-	type DiffChange,
-	type DiffHunk,
-} from "@/utils/pendingEditDiff";
+import { applyPendingEditChanges } from "@/utils/pendingEditDiff";
 import { TabBar } from "./TabBar";
 import { PendingEditDiffView } from "./PendingEditDiffView";
 import type { EditorRef } from "./editorRef";
 
 function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Element {
-	type PendingEditDiff = {
-		changes: DiffChange[];
-		hunks: DiffHunk[];
-	};
+	const getHunkHeaderLine = useCallback(
+		(hunk: { change: { originalStartLine: number; modifiedStartLine: number } }): number => {
+			return hunk.change.originalStartLine > 0
+				? hunk.change.originalStartLine
+				: hunk.change.modifiedStartLine;
+		},
+		[],
+	);
 
-	const getHunkHeaderLine = useCallback((hunk: DiffHunk): number => {
-		return hunk.change.originalStartLine > 0
-			? hunk.change.originalStartLine
-			: hunk.change.modifiedStartLine;
-	}, []);
-
-	const toast = useToast();
 	const activeBuffer = useStore((state) => state.getActiveBuffer());
 	const execution = useStore((state) => state.execution);
 	const settings = useStore((state) => state.settings);
@@ -63,8 +52,6 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	const setRunAll = useStore((state) => state.setRunAll);
 	const setMonacoEditor = useStore((state) => state.setMonacoEditor);
 	const setEditorRef = useStore((state) => state.setEditorRef);
-	const recordPatchMatchFailure = useStore((state) => state.recordPatchMatchFailure);
-	const recordPatchMatchSuccess = useStore((state) => state.recordPatchMatchSuccess);
 	const activeBufferId = activeBuffer?.id ?? null;
 	const editorContent = activeBuffer?.content ?? "";
 	const editorFilepath = activeBuffer?.filepath ?? "";
@@ -79,10 +66,10 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	const editorMethodsRef = useRef<EditorRef | null>(null);
 	const monacoEditorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
 	const activeBufferIdRef = useRef<string | null>(activeBufferId);
-	const { dialogState, showConfirm, handleConfirm, handleCancel } = useConfirmDialog();
+	const { applyCodeChange, dialogState, handleConfirm, handleCancel } =
+		usePendingEditApplicator(monacoEditorRef);
 	const pendingEditWarningRef = useRef(false);
 	const skipPendingNoticeRef = useRef(false);
-	const [monacoInstance, setMonacoInstance] = useState<Monaco | null>(null);
 	const [pendingNotice, setPendingNotice] = useState<{
 		type: "warning" | "error";
 		message: string;
@@ -91,24 +78,25 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	const [ignoreWhitespace, setIgnoreWhitespace] = useState(false);
 	const [activeHunkId, setActiveHunkId] = useState<string | null>(null);
 	const pendingEditReviewMap = pendingEdit?.reviewedChanges ?? {};
-	const [pendingEditDiff, setPendingEditDiff] = useState<PendingEditDiff | null>(null);
+	const pendingEditChanges = pendingEdit?.changes ?? [];
+	const pendingEditHunks = pendingEdit?.hunks ?? [];
 	const activeCursorPosition = activeBuffer?.cursorPosition;
 	const reviewedContent = useMemo(() => {
-		if (!pendingEdit || !pendingEditDiff) return null;
+		if (!pendingEdit) return null;
 		return applyPendingEditChanges(
 			pendingEdit.oldContent,
-			pendingEditDiff.changes,
+			pendingEditChanges,
 			pendingEditReviewMap,
 		);
-	}, [pendingEdit, pendingEditDiff, pendingEditReviewMap]);
+	}, [pendingEdit, pendingEditChanges, pendingEditReviewMap]);
 	const pendingEditSummary = useMemo(() => {
-		if (!pendingEditDiff) {
+		if (!pendingEdit) {
 			return { total: 0, keep: 0, reject: 0, pending: 0 };
 		}
 		let keep = 0;
 		let reject = 0;
 		let pending = 0;
-		for (const change of pendingEditDiff.changes) {
+		for (const change of pendingEditChanges) {
 			const status = pendingEditReviewMap[change.id];
 			if (status === "keep") {
 				keep += 1;
@@ -118,15 +106,14 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 				pending += 1;
 			}
 		}
-		return { total: pendingEditDiff.changes.length, keep, reject, pending };
-	}, [pendingEditDiff, pendingEditReviewMap]);
+		return { total: pendingEditChanges.length, keep, reject, pending };
+	}, [pendingEdit, pendingEditChanges, pendingEditReviewMap]);
 	const pendingHunks = useMemo(() => {
-		if (!pendingEditDiff) return [];
-		return pendingEditDiff.hunks.filter((hunk) => !pendingEditReviewMap[hunk.id]);
-	}, [pendingEditDiff, pendingEditReviewMap]);
+		return pendingEditHunks.filter((hunk) => !pendingEditReviewMap[hunk.id]);
+	}, [pendingEditHunks, pendingEditReviewMap]);
 
 	useEffect(() => {
-		if (!pendingEditDiff) {
+		if (!pendingEdit) {
 			setActiveHunkId(null);
 			return;
 		}
@@ -137,52 +124,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		if (!activeHunkId || !pendingHunks.some((hunk) => hunk.id === activeHunkId)) {
 			setActiveHunkId(pendingHunks[0].id);
 		}
-	}, [activeHunkId, pendingEditDiff, pendingHunks]);
-
-	useEffect(() => {
-		if (!pendingEdit || !monacoInstance) {
-			setPendingEditDiff(null);
-			return;
-		}
-		if (typeof document === "undefined") {
-			setPendingEditDiff(null);
-			return;
-		}
-
-		setPendingEditDiff(null);
-
-		const language = monacoEditorRef.current?.getModel()?.getLanguageId();
-		const original = monacoInstance.editor.createModel(pendingEdit.oldContent, language);
-		const modified = monacoInstance.editor.createModel(pendingEdit.newContent, language);
-		const diffContainer = document.createElement("div");
-		const diffEditor = monacoInstance.editor.createDiffEditor(diffContainer, {
-			readOnly: true,
-		});
-		let disposed = false;
-
-		const updateDiff = (): void => {
-			if (disposed) return;
-			const changes = diffEditor.getLineChanges();
-			if (!changes) return;
-			const diffChanges = buildDiffChanges(pendingEdit.oldContent, pendingEdit.newContent, changes);
-			setPendingEditDiff({
-				changes: diffChanges,
-				hunks: buildDiffHunks(diffChanges),
-			});
-		};
-
-		const subscription = diffEditor.onDidUpdateDiff(updateDiff);
-		diffEditor.setModel({ original, modified });
-		updateDiff();
-
-		return () => {
-			disposed = true;
-			subscription.dispose();
-			diffEditor.dispose();
-			original.dispose();
-			modified.dispose();
-		};
-	}, [monacoInstance, pendingEdit]);
+	}, [activeHunkId, pendingEdit, pendingHunks]);
 
 	const cells = useEditorCells(editorContent, editorFilepath);
 	const { state, actions } = useEditorExecution({
@@ -227,10 +169,10 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	}, [activeBufferId, editorContent, pendingEdit, reviewedContent, updateBuffer]);
 
 	useEffect(() => {
-		if (!pendingEdit || !pendingEditDiff) return;
+		if (!pendingEdit) return;
 		const nextMap: PendingEditReviewMap = { ...pendingEditReviewMap };
 		let updated = false;
-		for (const change of pendingEditDiff.changes) {
+		for (const change of pendingEditChanges) {
 			if (!(change.id in nextMap)) {
 				nextMap[change.id] = "keep";
 				updated = true;
@@ -239,7 +181,7 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 		if (updated) {
 			setPendingEditReviewMap(pendingEdit.filePath, nextMap);
 		}
-	}, [pendingEdit, pendingEditDiff, pendingEditReviewMap, setPendingEditReviewMap]);
+	}, [pendingEdit, pendingEditChanges, pendingEditReviewMap, setPendingEditReviewMap]);
 
 	const handlePendingAccept = useCallback(async () => {
 		if (!pendingEdit) return;
@@ -338,23 +280,23 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 
 	const handlePendingReviewChange = useCallback(
 		(changeId: string, status: PendingEditReviewStatus) => {
-			if (!pendingEdit || !pendingEditDiff) return;
+			if (!pendingEdit) return;
 			updatePendingEditReview(pendingEdit.filePath, changeId, status);
 			const nextReviewMap: PendingEditReviewMap = {
 				...pendingEditReviewMap,
 				[changeId]: status,
 			};
-			const currentIndex = pendingEditDiff.hunks.findIndex((hunk) => hunk.id === changeId);
+			const currentIndex = pendingEditHunks.findIndex((hunk) => hunk.id === changeId);
 			const startIndex = currentIndex >= 0 ? currentIndex + 1 : 0;
 			const nextPending =
-				pendingEditDiff.hunks.slice(startIndex).find((hunk) => !nextReviewMap[hunk.id]) ??
-				pendingEditDiff.hunks.find((hunk) => !nextReviewMap[hunk.id]);
+				pendingEditHunks.slice(startIndex).find((hunk) => !nextReviewMap[hunk.id]) ??
+				pendingEditHunks.find((hunk) => !nextReviewMap[hunk.id]);
 
 			if (nextPending) {
 				focusHunk(nextPending);
 			}
 		},
-		[focusHunk, pendingEdit, pendingEditDiff, pendingEditReviewMap, updatePendingEditReview],
+		[focusHunk, pendingEdit, pendingEditHunks, pendingEditReviewMap, updatePendingEditReview],
 	);
 
 	const handlePendingHunkNavigate = useCallback(
@@ -366,22 +308,22 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	);
 
 	const handlePendingKeepAll = useCallback(() => {
-		if (!pendingEdit || !pendingEditDiff) return;
+		if (!pendingEdit) return;
 		const nextMap: PendingEditReviewMap = {};
-		for (const change of pendingEditDiff.changes) {
+		for (const change of pendingEditChanges) {
 			nextMap[change.id] = "keep";
 		}
 		setPendingEditReviewMap(pendingEdit.filePath, nextMap);
-	}, [pendingEdit, pendingEditDiff, setPendingEditReviewMap]);
+	}, [pendingEdit, pendingEditChanges, setPendingEditReviewMap]);
 
 	const handlePendingRejectAll = useCallback(() => {
-		if (!pendingEdit || !pendingEditDiff) return;
+		if (!pendingEdit) return;
 		const nextMap: PendingEditReviewMap = {};
-		for (const change of pendingEditDiff.changes) {
+		for (const change of pendingEditChanges) {
 			nextMap[change.id] = "reject";
 		}
 		setPendingEditReviewMap(pendingEdit.filePath, nextMap);
-	}, [pendingEdit, pendingEditDiff, setPendingEditReviewMap]);
+	}, [pendingEdit, pendingEditChanges, setPendingEditReviewMap]);
 
 	useEffect(() => {
 		if (!pendingEdit) return;
@@ -446,296 +388,6 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	useImperativeHandle(ref, () => editorMethods, [editorMethods]);
 	useImperativeHandle(editorMethodsRef, () => editorMethods, [editorMethods]);
 
-	// Apply code changes from AI
-	const applyCodeChange = useCallback(
-		async (codeBlock: CodeBlock): Promise<AppliedCodeChange | null> => {
-			const monacoEditor = monacoEditorRef.current;
-			if (!monacoEditor) {
-				return null;
-			}
-
-			const model = monacoEditor.getModel();
-			if (!model) {
-				return null;
-			}
-
-			const clampLine = (line: number): number => clamp(line, 1, model.getLineCount());
-
-			const clampColumn = (line: number, column?: number): number => {
-				const maxColumn = model.getLineMaxColumn(line);
-				const requested = column ?? 1;
-				return clamp(requested, 1, maxColumn);
-			};
-
-			const editorContent = monacoEditor.getValue();
-			const originalContent = editorContent;
-			const contextAlertMessage =
-				"Unable to locate the suggested context in the current editor. Try running the suggestion again after scrolling the intended section into view.";
-			let contextMatchingFailed = false;
-			let contextAlertPending = false;
-
-			const finalizeChange = (): AppliedCodeChange | null => {
-				const newContent = monacoEditor.getValue();
-				if (newContent === originalContent) {
-					return null;
-				}
-				return { oldContent: originalContent, newContent };
-			};
-
-			const resolveTargetRange = (): CodeRange | undefined => {
-				if (codeBlock.targetRange) {
-					return codeBlock.targetRange;
-				}
-
-				if (codeBlock.originalCode) {
-					return computeTargetRange(editorContent, codeBlock.originalCode) ?? undefined;
-				}
-
-				return undefined;
-			};
-
-			const applyRange = (range: CodeRange, text: string): void => {
-				monacoEditor.executeEdits("ai-apply", [
-					{
-						range: {
-							startLineNumber: clampLine(range.startLine),
-							startColumn: clampColumn(range.startLine, range.startColumn),
-							endLineNumber: clampLine(range.endLine),
-							endColumn: clampColumn(range.endLine, range.endColumn),
-						},
-						text,
-					},
-				]);
-				if (activeBufferId) {
-					updateBuffer(activeBufferId, { content: monacoEditor.getValue(), isDirty: true });
-				}
-			};
-
-			const applySnapshotEdit = (snapshot: string, range: CodeRange, text: string): string => {
-				const lines = snapshot.split(/\r?\n/);
-				const startIndex = Math.max(range.startLine - 1, 0);
-				const endIndex = Math.min(range.endLine, lines.length);
-				const replacement = text.length ? text.split(/\r?\n/) : [];
-				return [...lines.slice(0, startIndex), ...replacement, ...lines.slice(endIndex)].join("\n");
-			};
-
-			const applySimpleChanges = (): boolean => {
-				if (!codeBlock.simpleChanges?.length) {
-					return false;
-				}
-
-				const plannedEdits: Array<{ range: CodeRange; text: string }> = [];
-				let snapshot = editorContent;
-				let appliedCount = 0;
-
-				for (const change of codeBlock.simpleChanges) {
-					const range = findCodeInEditor(
-						snapshot,
-						change.oldLines,
-						change.beforeContext,
-						change.afterContext,
-					);
-					if (!range) {
-						// If the new lines already exist, treat as already applied and continue.
-						const alreadyApplied = findCodeInEditor(snapshot, change.newLines, [], []);
-						if (alreadyApplied) {
-							appliedCount += 1;
-							continue;
-						}
-						contextMatchingFailed = true;
-						contextAlertPending = true;
-						recordPatchMatchFailure("Unable to match contextual diff block", codeBlock.id);
-						continue;
-					}
-
-					const replacement = change.newLines.join("\n");
-					plannedEdits.push({ range, text: replacement });
-					snapshot = applySnapshotEdit(snapshot, range, replacement);
-					appliedCount += 1;
-				}
-
-				if (!appliedCount) {
-					return false;
-				}
-
-				for (const edit of plannedEdits) {
-					applyRange(edit.range, edit.text);
-				}
-
-				recordPatchMatchSuccess();
-				return true;
-			};
-
-			const applyPatchChunks = (): boolean => {
-				if (!codeBlock.patchChunks?.length) {
-					return false;
-				}
-
-				const plannedEdits: Array<{ range: CodeRange; text: string }> = [];
-				let snapshot = editorContent;
-
-				for (const chunk of codeBlock.patchChunks) {
-					const range = matchPatchChunk(snapshot, chunk);
-					if (!range) {
-						const alreadyApplied = chunk.newLines.length
-							? findCodeInEditor(snapshot, chunk.newLines, [], [])
-							: null;
-						if (alreadyApplied) {
-							continue;
-						}
-						recordPatchMatchFailure(
-							`Unable to match patch chunk: ${chunk.context ?? "missing context"}`,
-							codeBlock.id,
-						);
-						contextMatchingFailed = true;
-						contextAlertPending = true;
-						return false;
-					}
-
-					const replacement = chunk.newLines.join("\n");
-					plannedEdits.push({ range, text: replacement });
-					snapshot = applySnapshotEdit(snapshot, range, replacement);
-				}
-
-				for (const edit of plannedEdits) {
-					applyRange(edit.range, edit.text);
-				}
-
-				recordPatchMatchSuccess();
-				return true;
-			};
-
-			const applyRangeChange = (text: string, alertOnFail = true): boolean => {
-				const range = resolveTargetRange();
-				if (!range) {
-					if (alertOnFail) {
-						recordPatchMatchFailure(`Missing target range for ${codeBlock.action}`, codeBlock.id);
-						const hasExplicitContext = Boolean(codeBlock.targetRange);
-						if (
-							alertOnFail &&
-							contextAlertPending &&
-							hasExplicitContext &&
-							typeof window !== "undefined"
-						) {
-							toast.showError(contextAlertMessage);
-						}
-					}
-					return false;
-				}
-
-				applyRange(range, text);
-				recordPatchMatchSuccess();
-				return true;
-			};
-
-			const hasStructuredContext = Boolean(
-				codeBlock.simpleChanges?.length || codeBlock.patchChunks?.length || codeBlock.targetRange,
-			);
-
-			const effectiveAction =
-				codeBlock.action === "insert" && codeBlock.simpleChanges?.length
-					? "replace-range"
-					: codeBlock.action === "insert" && !hasStructuredContext
-						? "replace-all"
-						: codeBlock.action;
-
-			const applyStructuredContext = (): boolean => {
-				// Prefer patch chunks (highest fidelity), then simple changes
-				const patchApplied = applyPatchChunks();
-				if (patchApplied) {
-					return true;
-				}
-
-				const simpleApplied = applySimpleChanges();
-				return simpleApplied;
-			};
-
-			switch (effectiveAction) {
-				case "replace-all": {
-					const structuredApplied = applyStructuredContext();
-					if (structuredApplied) {
-						return finalizeChange();
-					}
-
-					const appliedRange = applyRangeChange(codeBlock.code, false);
-					if (appliedRange) {
-						return finalizeChange();
-					}
-
-					const target = codeBlock.filepath ? `file ${codeBlock.filepath}` : "current editor";
-					const confirmationMessage = contextMatchingFailed
-						? `Context matching failed, so this action will replace the entire ${target}. Proceed only if you understand the change.`
-						: `This AI suggestion will replace the entire ${target}. Proceed only if you understand the change.`;
-					const confirmed = await showConfirm("Confirm Replace All", confirmationMessage);
-					if (confirmed) {
-						monacoEditor.setValue(codeBlock.code);
-						if (activeBufferId) {
-							updateBuffer(activeBufferId, { content: codeBlock.code, isDirty: true });
-						}
-						return finalizeChange();
-					}
-					return null;
-				}
-				case "replace-range": {
-					const structuredApplied = applyStructuredContext();
-					if (structuredApplied) {
-						return finalizeChange();
-					}
-
-					const applied = applyRangeChange(codeBlock.code, contextMatchingFailed);
-					if (applied) {
-						return finalizeChange();
-					}
-
-					const target = codeBlock.filepath ? `file ${codeBlock.filepath}` : "current editor";
-					const confirmed = await showConfirm(
-						"Confirm Replace All",
-						`Could not match the suggested context. Replace the entire ${target} with the suggested code?`,
-					);
-					if (confirmed) {
-						monacoEditor.setValue(codeBlock.code);
-						if (activeBufferId) {
-							updateBuffer(activeBufferId, { content: codeBlock.code, isDirty: true });
-						}
-						return finalizeChange();
-					}
-					return null;
-				}
-				case "delete-range": {
-					const structuredApplied = applyStructuredContext();
-					if (!structuredApplied) {
-						const applied = applyRangeChange("", contextMatchingFailed);
-						if (!applied) {
-							return null;
-						}
-					}
-					return finalizeChange();
-				}
-				case "insert": {
-					const position = monacoEditor.getPosition();
-					if (position) {
-						applyRange(
-							{
-								startLine: position.lineNumber,
-								startColumn: position.column,
-								endLine: position.lineNumber,
-								endColumn: position.column,
-							},
-							codeBlock.code,
-						);
-						return finalizeChange();
-					}
-					return null;
-				}
-				case "create-file":
-					return null;
-				default:
-					return null;
-			}
-		},
-		[activeBufferId, updateBuffer, showConfirm, recordPatchMatchFailure, recordPatchMatchSuccess],
-	);
-
 	useEffect(() => {
 		setApplyCodeChange(applyCodeChange);
 	}, [applyCodeChange, setApplyCodeChange]);
@@ -758,7 +410,6 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 	): void => {
 		monacoEditorRef.current = monacoEditor;
 		setMonacoEditor(monacoEditor);
-		setMonacoInstance(monaco);
 
 		// Track cursor position
 		monacoEditor.onDidChangeCursorPosition((e) => {
@@ -885,21 +536,17 @@ function EditorPanelComponent(_: unknown, ref: ForwardedRef<EditorRef>): JSX.Ele
 								</button>
 							</div>
 						</div>
-						{pendingEditDiff ? (
-							pendingEditDiff.hunks.length > 0 ? (
-								<PendingEditDiffView
-									hunks={pendingEditDiff.hunks}
-									reviewMap={pendingEditReviewMap}
-									onReviewChange={handlePendingReviewChange}
-									onNavigateToLine={handlePendingHunkNavigate}
-								/>
-							) : (
-								<div className="pending-edit-message warning">
-									No pending changes detected in the diff view.
-								</div>
-							)
+						{pendingEditHunks.length > 0 ? (
+							<PendingEditDiffView
+								hunks={pendingEditHunks}
+								reviewMap={pendingEditReviewMap}
+								onReviewChange={handlePendingReviewChange}
+								onNavigateToLine={handlePendingHunkNavigate}
+							/>
 						) : (
-							<div className="pending-edit-message warning">Preparing diff preview...</div>
+							<div className="pending-edit-message warning">
+								No pending changes detected in the diff view.
+							</div>
 						)}
 					</div>
 				)}

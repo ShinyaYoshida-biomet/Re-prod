@@ -13,8 +13,8 @@ use reprod_core::{
     fs::FileSystemEvent,
     plot_history::PlotHistoryEntry,
     project::ProjectRecord,
-    AIResponse, ChatMessage, Config, EnvironmentVariable, ExecutionEvent, ExecutionRequest,
-    RunOutputChunk, RunSummary, ToolExecutor, ToolManifest, ToolRegistry,
+    AIResponse, ChatMessage, Config, DiffChange, DiffHunk, EnvironmentVariable, ExecutionEvent,
+    ExecutionRequest, RunOutputChunk, RunSummary, ToolExecutor, ToolManifest, ToolRegistry,
 };
 use serde::Deserialize;
 use serde_json::Value;
@@ -421,6 +421,8 @@ pub(crate) struct PendingEditPayload {
     pub unified_diff: String,
     pub base_sha256: String,
     pub expected_sha256: Option<String>,
+    pub changes: Vec<DiffChange>,
+    pub hunks: Vec<DiffHunk>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, TS)]

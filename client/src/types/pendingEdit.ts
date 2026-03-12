@@ -1,3 +1,5 @@
+import type { DiffChange, DiffHunk } from "@/types/generated";
+
 export type PendingEditSource =
 	| { type: "acp"; sessionId: string }
 	| { type: "api-key"; codeBlockId: string };
@@ -16,4 +18,6 @@ export interface PendingEdit {
 	expectedSha?: string | null;
 	createdAt: number;
 	reviewedChanges?: PendingEditReviewMap;
+	changes: DiffChange[];
+	hunks: DiffHunk[];
 }

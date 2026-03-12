@@ -57,6 +57,8 @@ export function useAICodeApplication(postAssistantMessage: PostAssistantMessage)
 								baseHash,
 								expectedSha: null,
 								createdAt: Date.now(),
+								changes: [],
+								hunks: [],
 							};
 
 							const registered = registerPendingEdit(pendingEdit);

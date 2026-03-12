@@ -6,6 +6,7 @@ pub mod acp;
 pub mod ai;
 pub mod api;
 pub mod config;
+pub mod diff;
 pub mod edit;
 pub mod error;
 pub mod execution_repository;
@@ -22,6 +23,9 @@ pub mod tools;
 pub mod web_search;
 
 // Re-export protocol types (for API boundaries)
+pub use diff::{
+    build_diff_hunks, compute_diff, DiffChange, DiffChangeType, DiffHunk, DiffLine, DiffLineType,
+};
 pub use edit::*;
 pub use error::*;
 pub use protocol::*;

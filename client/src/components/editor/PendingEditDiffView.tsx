@@ -1,5 +1,5 @@
+import type { DiffHunk } from "@/types/generated";
 import type { PendingEditReviewMap } from "@/types/pendingEdit";
-import type { DiffHunk } from "@/utils/pendingEditDiff";
 
 interface Props {
 	hunks: DiffHunk[];
