@@ -1,0 +1,15 @@
+[package]
+name = "reprod-protocol"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+name = "reprod_protocol"
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }

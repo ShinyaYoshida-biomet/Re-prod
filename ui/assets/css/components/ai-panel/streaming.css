@@ -1,0 +1,33 @@
+.message-streaming {
+	gap: 10px;
+}
+
+.message-streaming-text {
+	margin: 0;
+	font-family: "IBM Plex Mono", Menlo, Consolas, monospace;
+	background: rgba(15, 23, 42, 0.02);
+	border-radius: 10px;
+	padding: 12px;
+	border: 1px solid var(--border-medium);
+	font-size: 12px;
+	white-space: pre-wrap;
+}
+
+.message-streaming-indicator {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 11px;
+	color: var(--text-muted);
+}
+
+.message-streaming-indicator .braille-spinner {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 12px;
+	font-family: "IBM Plex Mono", Menlo, Consolas, monospace;
+	font-size: 12px;
+	line-height: 1;
+	color: var(--accent-blue);
+}

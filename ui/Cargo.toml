@@ -1,0 +1,81 @@
+[package]
+name = "reprod-ui"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+reprod-protocol = { workspace = true }
+
+# Leptos framework
+leptos = { version = "0.7", features = ["csr"] }
+
+# WebSocket for WASM
+gloo-net = { version = "0.6", features = ["websocket"] }
+gloo-timers = { version = "0.3", features = ["futures"] }
+gloo-utils = "0.2"
+gloo-storage = "0.3"
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Async streams
+futures = "0.3"
+
+# WASM interop
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = [
+    "console",
+    "Document",
+    "Element",
+    "Event",
+    "EventTarget",
+    "HtmlElement",
+    "HtmlInputElement",
+    "HtmlTextAreaElement",
+    "HtmlDivElement",
+    "HtmlSelectElement",
+    "KeyboardEvent",
+    "MouseEvent",
+    "Node",
+    "NodeList",
+    "Window",
+    "Location",
+    "WebSocket",
+    "MessageEvent",
+    "CloseEvent",
+    "ErrorEvent",
+    "CustomEvent",
+    "CssStyleDeclaration",
+    "DomTokenList",
+    "ScrollIntoViewOptions",
+    "ScrollBehavior",
+    "ResizeObserver",
+    "ResizeObserverEntry",
+    "DomRectReadOnly",
+    "Clipboard",
+    "Navigator",
+    "Performance",
+    "Url",
+    "Headers",
+    "Request",
+    "RequestInit",
+    "RequestMode",
+    "Response",
+    "ReadableStream",
+    "ReadableStreamDefaultReader",
+] }
+
+# Logging
+tracing = { workspace = true }
+
+# UUID
+uuid = { workspace = true }
+
+[lints]
+workspace = true

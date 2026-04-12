@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="phylo">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Re-prod</title>
+
+    <!-- Monaco Editor -->
+    <link rel="stylesheet" data-trunk href="assets/css/index.css" />
+
+    <!-- Monaco Editor loader -->
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+    <script>
+        // Configure Monaco AMD loader
+        require.config({
+            paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' }
+        });
+
+        // Global Monaco instance holder
+        window.__REPROD_MONACO_INSTANCES = {};
+        window.__REPROD_XTERM_INSTANCES = {};
+
+        // Initialize Monaco editor in a container
+        window.initMonacoEditor = function(containerId, initialContent, language) {
+            return new Promise(function(resolve) {
+                require(['vs/editor/editor.main'], function() {
+                    var container = document.getElementById(containerId);
+                    if (!container) { resolve(null); return; }
+                    var editor = monaco.editor.create(container, {
+                        value: initialContent || '',
+                        language: language || 'r',
+                        theme: 'vs-dark',
+                        automaticLayout: true,
+                        minimap: { enabled: false },
+                        fontSize: 14,
+                        lineNumbers: 'on',
+                        scrollBeyondLastLine: false,
+                        wordWrap: 'on',
+                        tabSize: 2,
+                        renderWhitespace: 'none',
+                        glyphMargin: true,
+                        folding: true,
+                        lineDecorationsWidth: 10,
+                        lineNumbersMinChars: 3,
+                    });
+                    window.__REPROD_MONACO_INSTANCES[containerId] = editor;
+                    resolve(containerId);
+                });
+            });
+        };
+
+        window.getMonacoValue = function(containerId) {
+            var editor = window.__REPROD_MONACO_INSTANCES[containerId];
+            return editor ? editor.getValue() : '';
+        };
+
+        window.setMonacoValue = function(containerId, value) {
+            var editor = window.__REPROD_MONACO_INSTANCES[containerId];
+            if (editor) editor.setValue(value);
+        };
+
+        window.getMonacoCursorPosition = function(containerId) {
+            var editor = window.__REPROD_MONACO_INSTANCES[containerId];
+            if (!editor) return { line: 1, column: 1 };
+            var pos = editor.getPosition();
+            return { line: pos.lineNumber, column: pos.column };
+        };
+
+        window.onMonacoContentChange = function(containerId, callback) {
+            var editor = window.__REPROD_MONACO_INSTANCES[containerId];
+            if (editor) {
+                editor.onDidChangeModelContent(function() {
+                    callback(editor.getValue());
+                });
+            }
+        };
+
+        window.onMonacoKeyDown = function(containerId, callback) {
+            var editor = window.__REPROD_MONACO_INSTANCES[containerId];
+            if (editor) {
+                editor.onKeyDown(function(e) {
+                    callback(e.browserEvent.key, e.browserEvent.ctrlKey, e.browserEvent.metaKey, e.browserEvent.shiftKey);
+                });
+            }
+        };
+
+        window.disposeMonacoEditor = function(containerId) {
+            var editor = window.__REPROD_MONACO_INSTANCES[containerId];
+            if (editor) {
+                editor.dispose();
+                delete window.__REPROD_MONACO_INSTANCES[containerId];
+            }
+        };
+    </script>
+
+    <!-- xterm.js -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.4.0/css/xterm.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.4.0/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.js"></script>
+    <script>
+        window.initXterm = function(containerId) {
+            var container = document.getElementById(containerId);
+            if (!container) return null;
+            var terminal = new window.Terminal({
+                cursorBlink: true,
+                fontSize: 14,
+                fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+                theme: {
+                    background: '#1e1e2e',
+                    foreground: '#cdd6f4',
+                    cursor: '#f5e0dc',
+                }
+            });
+            var fitAddon = new window.FitAddon.FitAddon();
+            terminal.loadAddon(fitAddon);
+            terminal.open(container);
+            fitAddon.fit();
+            window.__REPROD_XTERM_INSTANCES[containerId] = { terminal: terminal, fitAddon: fitAddon };
+            return containerId;
+        };
+
+        window.writeXterm = function(containerId, data) {
+            var inst = window.__REPROD_XTERM_INSTANCES[containerId];
+            if (inst) inst.terminal.write(data);
+        };
+
+        window.fitXterm = function(containerId) {
+            var inst = window.__REPROD_XTERM_INSTANCES[containerId];
+            if (inst) inst.fitAddon.fit();
+        };
+
+        window.onXtermData = function(containerId, callback) {
+            var inst = window.__REPROD_XTERM_INSTANCES[containerId];
+            if (inst) inst.terminal.onData(callback);
+        };
+
+        window.disposeXterm = function(containerId) {
+            var inst = window.__REPROD_XTERM_INSTANCES[containerId];
+            if (inst) {
+                inst.terminal.dispose();
+                delete window.__REPROD_XTERM_INSTANCES[containerId];
+            }
+        };
+
+        window.getXtermSize = function(containerId) {
+            var inst = window.__REPROD_XTERM_INSTANCES[containerId];
+            if (!inst) return { cols: 80, rows: 24 };
+            return { cols: inst.terminal.cols, rows: inst.terminal.rows };
+        };
+    </script>
+
+    <!-- Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+    <script>
+        window.renderMarkdown = function(text) {
+            if (typeof marked !== 'undefined') {
+                return marked.parse(text);
+            }
+            return text;
+        };
+    </script>
+</head>
+<body>
+    <div id="root"></div>
+</body>
+</html>

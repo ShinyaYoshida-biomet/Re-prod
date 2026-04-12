@@ -1,8 +1,10 @@
 [workspace]
 members = [
+    "protocol",
     "core",
     "desktop",
     "server",
+    "ui",
 ]
 resolver = "2"
 
@@ -15,6 +17,7 @@ rust-version = "1.77.2"
 
 [workspace.dependencies]
 # Internal crates
+reprod-protocol = { path = "protocol" }
 reprod-core = { path = "core" }
 
 # Async runtime

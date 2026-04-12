@@ -1,0 +1,134 @@
+.code-block-container {
+	margin: 14px 0;
+	border: 1px solid var(--border-medium);
+	border-radius: 8px; /* Reduced radius for cleaner look */
+	overflow: hidden;
+	background: var(--bg-primary);
+	box-shadow:
+		0 4px 6px -1px rgba(0, 0, 0, 0.05),
+		0 2px 4px -1px rgba(0, 0, 0, 0.03); /* Subtle shadow */
+}
+
+.code-explanation {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	padding: 12px 16px;
+	background: var(--bg-code);
+	border-bottom: 1px solid var(--border-subtle);
+	font-size: 12px;
+	color: var(--text-secondary);
+	line-height: 1.5;
+}
+
+.code-explanation svg {
+	flex-shrink: 0;
+	color: var(--accent-blue);
+	margin-top: 2px;
+}
+
+.code-explanation span {
+	flex: 1;
+}
+
+.code-block {
+	background: transparent;
+}
+
+.code-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 8px 12px; /* More compact padding */
+	background: var(--bg-secondary);
+	border-bottom: 1px solid var(--border-subtle);
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.code-language {
+	color: var(--accent-blue);
+}
+
+.code-target {
+	color: var(--text-muted);
+	font-size: 10px;
+}
+
+.code-content {
+	margin: 0;
+	padding: 12px 16px;
+	font-family: "Monaco", "Menlo", "Consolas", monospace;
+	font-size: 12px;
+	line-height: 1.6;
+	overflow-x: auto;
+	background: var(--bg-code);
+	color: var(--text-primary);
+	border-bottom: 1px solid var(--border-subtle);
+
+	/* Scrollbar improvements */
+	scrollbar-width: thin;
+	scrollbar-color: var(--border-medium) transparent;
+}
+
+.code-content::-webkit-scrollbar {
+	height: 4px; /* Narrower scrollbar */
+}
+
+.code-content::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.code-content::-webkit-scrollbar-thumb {
+	background-color: var(--border-medium);
+	border-radius: 3px;
+}
+
+.code-content::-webkit-scrollbar-thumb:hover {
+	background-color: var(--border-strong);
+}
+
+.code-content code {
+	font-family: inherit;
+	background: none;
+}
+
+.code-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px; /* Reduced gap */
+	padding: 8px 12px; /* More compact padding */
+	background: var(--bg-code);
+}
+
+.code-actions .btn {
+	font-size: 11px;
+	padding: 4px 10px;
+	height: 24px; /* Explicit height */
+	border-radius: 4px;
+}
+
+.code-actions .btn-primary {
+	font-weight: 600;
+}
+
+.code-actions .btn svg {
+	width: 14px; /* Smaller icons */
+	height: 14px;
+}
+
+/* Diff Preview Improvements */
+.code-diff-preview {
+	border-bottom: 1px solid var(--border-subtle);
+}
+
+.code-diff-stats {
+	padding: 4px 12px;
+	font-size: 10px;
+	color: var(--text-muted);
+	background: var(--bg-code);
+	border-top: 1px solid var(--border-faint);
+	text-align: right;
+}

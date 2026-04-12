@@ -1,0 +1,111 @@
+/* RStudio-inspired minimal tool log styling */
+/* Design principles: monochrome, minimal borders, no backgrounds, monospace */
+
+.ai-tool-log {
+	margin: 8px 0;
+}
+
+.ai-tool-call {
+	border: none;
+	border-left: 2px solid var(--border-medium);
+	margin: 4px 0;
+	padding: 4px 8px;
+	font-family: monospace;
+	background: rgba(0, 0, 0, 0.02);
+}
+
+.ai-tool-call__summary {
+	cursor: pointer;
+	padding: 2px 4px;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	list-style: none;
+}
+
+.ai-tool-call__summary::-webkit-details-marker {
+	display: none;
+}
+
+.ai-tool-call__status-icon {
+	margin-right: 4px;
+	color: #666;
+	font-size: 14px;
+}
+
+.ai-tool-call__title {
+	font-weight: 500;
+	color: #000;
+}
+
+.ai-tool-call__location {
+	margin-left: 8px;
+	color: #999;
+	font-size: 0.9em;
+}
+
+.ai-tool-call__output,
+.ai-tool-call__error {
+	margin: 4px 0 0 0;
+	padding: 4px;
+	border-top: 1px solid #eee;
+	font-family: monospace;
+	white-space: pre-wrap;
+	font-size: 12px;
+}
+
+.ai-tool-call__error {
+	color: #c00;
+}
+
+.ai-tool-call__loading {
+	margin: 4px 0 0 0;
+	padding: 4px;
+	border-top: 1px solid #eee;
+	font-size: 12px;
+	color: #555;
+}
+
+.ai-tool-call__search {
+	margin-top: 4px;
+	padding-top: 4px;
+	border-top: 1px solid #eee;
+	font-size: 12px;
+}
+
+.ai-tool-call__search-meta {
+	color: #555;
+	margin-bottom: 4px;
+}
+
+.ai-tool-call__search-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.ai-tool-call__search-item {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.ai-tool-call__search-title {
+	color: #001a66;
+	text-decoration: underline;
+	font-weight: 500;
+}
+
+.ai-tool-call__search-uri {
+	color: #666;
+	font-size: 11px;
+	word-break: break-all;
+}
+
+.ai-tool-call__search-desc {
+	color: #333;
+	white-space: pre-wrap;
+}

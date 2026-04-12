@@ -1,0 +1,63 @@
+/* Loading Spinner Component */
+
+.loading-spinner-container {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+}
+
+.loading-spinner {
+	border-radius: 50%;
+	border: 2px solid var(--border-color);
+	border-top-color: var(--accent-blue);
+	animation: spin 0.8s linear infinite;
+}
+
+/* Size variants */
+.loading-spinner-small {
+	width: 12px;
+	height: 12px;
+	border-width: 2px;
+}
+
+.loading-spinner-medium {
+	width: 16px;
+	height: 16px;
+	border-width: 2px;
+}
+
+.loading-spinner-large {
+	width: 24px;
+	height: 24px;
+	border-width: 3px;
+}
+
+/* Message styling */
+.loading-spinner-message {
+	color: var(--text-muted);
+	font-size: 12px;
+}
+
+/* Screen reader only text */
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border-width: 0;
+}
+
+/* Spin animation */
+@keyframes spin {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
+}

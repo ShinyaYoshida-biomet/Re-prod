@@ -1,0 +1,199 @@
+.file-browser {
+	display: flex;
+	flex-direction: column;
+}
+
+.file-browser-header {
+	padding: 0 12px;
+}
+
+.file-browser-content {
+	overflow: auto;
+	padding: 4px 0;
+	position: relative;
+}
+
+.file-browser-content.is-drag-target {
+	box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.35);
+}
+
+.file-browser-empty,
+.file-browser-error {
+	padding: 16px;
+	text-align: center;
+	color: var(--text-secondary);
+	font-size: 13px;
+}
+
+.file-browser-empty .description {
+	margin: 4px 0 0;
+	font-size: 12px;
+}
+
+.file-browser-error pre {
+	text-align: left;
+	background: rgba(255, 255, 255, 0.04);
+	border-radius: 6px;
+	padding: 8px;
+	overflow: auto;
+	font-size: 12px;
+	margin-top: 8px;
+}
+
+.file-tree {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 4px 0 16px;
+}
+
+.file-tree-node {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-height: 28px;
+	padding-right: 8px;
+	font-size: 13px;
+	color: var(--text-primary);
+	border-radius: 6px;
+	cursor: default;
+	user-select: none;
+}
+
+.file-tree-node[draggable="true"] {
+	cursor: grab;
+}
+
+.file-tree-node:hover {
+	background: rgba(96, 165, 250, 0.08);
+}
+
+.file-tree-node.is-selected {
+	background: rgba(47, 111, 237, 0.16);
+	color: var(--text-primary);
+}
+
+.file-tree-node.is-focused {
+	outline: 1px solid var(--border-strong);
+}
+
+.file-tree-node.is-drag-target {
+	background: rgba(59, 130, 246, 0.18);
+}
+
+.file-tree-expander {
+	width: 18px;
+	height: 18px;
+	border: none;
+	background: none;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-tertiary);
+	flex-shrink: 0;
+}
+
+.file-tree-expander:hover {
+	color: var(--text-primary);
+}
+
+.file-tree-expander svg {
+	width: 12px;
+	height: 12px;
+}
+
+.file-tree-placeholder {
+	display: inline-block;
+	width: 12px;
+	height: 12px;
+}
+
+.file-type-icon {
+	width: 20px;
+	height: 20px;
+	border-radius: 6px;
+	font-size: 10px;
+	font-weight: 600;
+	text-transform: uppercase;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-primary);
+	flex-shrink: 0;
+}
+
+.file-type-icon svg {
+	width: 14px;
+	height: 14px;
+	color: var(--text-secondary);
+}
+
+.file-tree-label {
+	flex: 1;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.file-tree-pending {
+	font-size: 11px;
+	color: var(--text-tertiary);
+	margin-left: auto;
+}
+
+.file-context-menu {
+	position: fixed;
+	background: var(--bg-elevated);
+	border: 1px solid var(--border-medium);
+	border-radius: 8px;
+	box-shadow: 0 12px 30px rgba(15, 23, 42, 0.35);
+	padding: 6px;
+	display: flex;
+	flex-direction: column;
+	min-width: 180px;
+	z-index: 1000;
+}
+
+.file-context-menu button {
+	border: none;
+	background: none;
+	text-align: left;
+	padding: 6px 10px;
+	border-radius: 6px;
+	font-size: 13px;
+	color: var(--text-primary);
+	cursor: pointer;
+}
+
+.file-context-menu button:hover:not(:disabled) {
+	background: rgba(96, 165, 250, 0.12);
+}
+
+.file-context-menu hr {
+	border: none;
+	border-top: 1px solid var(--border-light);
+	margin: 6px 0;
+}
+
+.file-context-menu button:disabled {
+	color: var(--text-tertiary);
+	cursor: not-allowed;
+}
+
+.spinner {
+	width: 14px;
+	height: 14px;
+	border: 2px solid rgba(96, 165, 250, 0.25);
+	border-top-color: rgba(47, 111, 237, 0.8);
+	border-radius: 50%;
+	display: inline-block;
+	animation: file-browser-spin 1s linear infinite;
+	margin-right: 8px;
+}
+
+@keyframes file-browser-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}

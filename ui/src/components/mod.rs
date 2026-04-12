@@ -1,0 +1,13 @@
+pub mod ai_panel;
+pub mod bottom_pane;
+pub mod console;
+pub mod editor_panel;
+pub mod export_dialog;
+pub mod file_browser;
+pub mod menu_bar;
+pub mod modals;
+pub mod plot_history;
+pub mod settings_modal;
+pub mod status_bar;
+pub mod terminal;
+pub mod timeline;

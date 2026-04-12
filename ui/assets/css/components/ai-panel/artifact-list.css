@@ -1,0 +1,105 @@
+.artifact-list {
+	margin-top: 12px;
+	border-radius: 8px;
+	background: var(--bg-secondary);
+	overflow: hidden;
+}
+
+.artifact-list__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 12px;
+}
+
+.artifact-list__title {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-secondary);
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+}
+
+.artifact-list__count {
+	font-size: 12px;
+	color: var(--text-secondary);
+}
+
+.artifact-list__list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	font-size: 12px;
+}
+
+.artifact-list__item {
+	border-top: 1px solid var(--border-light);
+	padding: 10px 12px;
+	display: grid;
+	gap: 6px;
+}
+
+.artifact-list__meta {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	flex-wrap: wrap;
+}
+
+.artifact-list__kind {
+	font-weight: 600;
+	color: var(--text-primary);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.artifact-list__status {
+	padding: 2px 6px;
+	border-radius: 999px;
+	background: var(--bg-tertiary);
+	color: var(--text-secondary);
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.artifact-list__summary {
+	color: var(--text-secondary);
+	line-height: 1.4;
+	word-break: break-word;
+}
+
+.artifact-list__button {
+	border-radius: 6px;
+	border: 1px solid var(--border-light);
+	background: var(--bg-tertiary);
+	color: var(--text-primary);
+	font-size: 11px;
+	padding: 4px 10px;
+	cursor: pointer;
+	width: fit-content;
+}
+
+.artifact-list__button:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.artifact-list__diff {
+	white-space: pre-wrap;
+	background: var(--bg-tertiary);
+	border-radius: 6px;
+	padding: 8px;
+	font-size: 11px;
+	color: var(--text-secondary);
+	max-height: 200px;
+	overflow: auto;
+}
+
+.artifact-list__item[data-status="error"] .artifact-list__status,
+.artifact-list__item[data-status="denied"] .artifact-list__status {
+	color: var(--phylo-error-medium);
+}
+
+.artifact-list__item[data-status="blocked"] .artifact-list__status {
+	color: var(--phylo-warning-medium);
+}

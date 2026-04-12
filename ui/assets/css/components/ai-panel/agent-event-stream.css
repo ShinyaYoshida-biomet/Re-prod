@@ -1,0 +1,174 @@
+.agent-event-stream {
+	margin-top: 12px;
+	border-radius: 8px;
+	background: var(--bg-secondary);
+	overflow: hidden;
+}
+
+.agent-event-stream__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 12px;
+}
+
+.agent-event-stream__title {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-secondary);
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+}
+
+.agent-event-stream__count {
+	font-size: 12px;
+	color: var(--text-secondary);
+}
+
+.agent-event-stream__list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	font-size: 12px;
+}
+
+.agent-event-stream__approval {
+	border-bottom: 1px solid var(--border-light);
+	padding: 12px;
+	display: grid;
+	gap: 8px;
+}
+
+.agent-event-stream__approval-header {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.agent-event-stream__approval-title {
+	font-size: 12px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--text-secondary);
+}
+
+.agent-event-stream__approval-tool {
+	font-size: 12px;
+	color: var(--text-primary);
+	font-weight: 600;
+}
+
+.agent-event-stream__preview {
+	white-space: pre-wrap;
+	background: var(--bg-tertiary);
+	border-radius: 6px;
+	padding: 8px;
+	font-size: 11px;
+	color: var(--text-secondary);
+	max-height: 200px;
+	overflow: auto;
+}
+
+.agent-event-stream__input textarea {
+	width: 100%;
+	border-radius: 6px;
+	border: 1px solid var(--border-light);
+	background: var(--bg-tertiary);
+	color: var(--text-primary);
+	font-size: 11px;
+	padding: 6px;
+	margin-top: 6px;
+}
+
+.agent-event-stream__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.agent-event-stream__button {
+	border-radius: 6px;
+	border: 1px solid var(--border-light);
+	background: var(--bg-tertiary);
+	color: var(--text-primary);
+	font-size: 11px;
+	padding: 4px 10px;
+	cursor: pointer;
+}
+
+.agent-event-stream__button:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.agent-event-stream__button--danger {
+	border-color: var(--phylo-error-medium);
+	color: var(--phylo-error-medium);
+}
+
+.agent-event-stream__error {
+	color: var(--phylo-error-medium);
+	font-size: 11px;
+	margin-top: 4px;
+}
+
+.agent-event-stream__item {
+	border-top: 1px solid var(--border-light);
+	padding: 10px 12px;
+	display: grid;
+	gap: 6px;
+}
+
+.agent-event-stream__meta {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	flex-wrap: wrap;
+}
+
+.agent-event-stream__type {
+	font-weight: 600;
+	color: var(--text-primary);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.agent-event-stream__status {
+	padding: 2px 6px;
+	border-radius: 999px;
+	background: var(--bg-tertiary);
+	color: var(--text-secondary);
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.agent-event-stream__time {
+	margin-left: auto;
+	color: var(--text-secondary);
+	font-variant-numeric: tabular-nums;
+}
+
+.agent-event-stream__details {
+	color: var(--text-secondary);
+	line-height: 1.4;
+	word-break: break-word;
+}
+
+.agent-event-stream__item[data-status="running"] .agent-event-stream__status {
+	color: var(--text-primary);
+}
+
+.agent-event-stream__item[data-status="done"] .agent-event-stream__status {
+	color: var(--text-primary);
+}
+
+.agent-event-stream__item[data-status="error"] .agent-event-stream__status,
+.agent-event-stream__item[data-status="denied"] .agent-event-stream__status {
+	color: var(--phylo-error-medium);
+}
+
+.agent-event-stream__item[data-status="blocked"] .agent-event-stream__status {
+	color: var(--phylo-warning-medium);
+}
