@@ -7,10 +7,8 @@ use crate::{
     ExecutionActor, ExecutionEvent, ExecutionSource,
 };
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
 
-#[derive(Debug, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[derive(Debug, Deserialize)]
 pub struct TimelineQueryPayload {
     pub filters: Option<TimelineFiltersPayload>,
     pub sort: Option<String>,
@@ -18,16 +16,13 @@ pub struct TimelineQueryPayload {
     pub offset: Option<u32>,
 }
 
-#[derive(Debug, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[derive(Debug, Deserialize)]
 pub struct TimelineFiltersPayload {
     pub actor: Option<String>,
     pub source: Option<String>,
     #[serde(rename = "startTime")]
-    #[ts(type = "number | null")]
     pub start_time: Option<u64>,
     #[serde(rename = "endTime")]
-    #[ts(type = "number | null")]
     pub end_time: Option<u64>,
     #[serde(rename = "hasPlots")]
     pub has_plots: Option<bool>,
@@ -109,8 +104,7 @@ impl TryFrom<TimelineFiltersPayload> for TimelineFilters {
     }
 }
 
-#[derive(Debug, Serialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[derive(Debug, Serialize)]
 pub struct TimelineResponsePayload {
     pub events: Vec<ExecutionEvent>,
     pub total: u32,
@@ -119,8 +113,7 @@ pub struct TimelineResponsePayload {
     pub query: TimelineQueryEcho,
 }
 
-#[derive(Debug, Serialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[derive(Debug, Serialize)]
 pub struct TimelineQueryEcho {
     pub filters: Option<TimelineFiltersEcho>,
     pub sort: Option<String>,
@@ -128,16 +121,13 @@ pub struct TimelineQueryEcho {
     pub offset: Option<u32>,
 }
 
-#[derive(Debug, Serialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[derive(Debug, Serialize)]
 pub struct TimelineFiltersEcho {
     pub actor: Option<String>,
     pub source: Option<String>,
     #[serde(rename = "startTime")]
-    #[ts(type = "number | null")]
     pub start_time: Option<u64>,
     #[serde(rename = "endTime")]
-    #[ts(type = "number | null")]
     pub end_time: Option<u64>,
     #[serde(rename = "hasPlots")]
     pub has_plots: Option<bool>,
@@ -178,8 +168,7 @@ impl From<TimelineResponse> for TimelineResponsePayload {
     }
 }
 
-#[derive(Debug, Serialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[derive(Debug, Serialize)]
 pub struct TimelineStatsPayload {
     #[serde(rename = "totalEvents")]
     pub total_events: u32,
@@ -192,13 +181,10 @@ pub struct TimelineStatsPayload {
     #[serde(rename = "aiActions")]
     pub ai_actions: u32,
     #[serde(rename = "sessionStartTime")]
-    #[ts(type = "number")]
     pub session_start_time: u64,
     #[serde(rename = "sessionEndTime")]
-    #[ts(type = "number")]
     pub session_end_time: u64,
     #[serde(rename = "sessionDuration")]
-    #[ts(type = "number")]
     pub session_duration: u64,
 }
 
@@ -897,8 +883,7 @@ mod tests {
 // ===== RMarkdown Export API Types =====
 
 /// Request to export timeline as RMarkdown document.
-#[derive(Debug, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[derive(Debug, Deserialize)]
 pub struct ExportRMarkdownRequest {
     pub mode: String, // "timeline" or "document"
     #[serde(default = "default_export_format")]
@@ -1015,8 +1000,7 @@ fn default_export_format() -> String {
     "rmarkdown".to_string()
 }
 
-#[derive(Debug, Clone, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[derive(Debug, Clone, Deserialize)]
 pub struct PdfOptionsPayload {
     #[serde(default = "bool_true")]
     pub toc: bool,
@@ -1049,8 +1033,7 @@ const fn bool_true() -> bool {
     true
 }
 
-#[derive(Debug, Clone, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[derive(Debug, Clone, Deserialize)]
 pub struct OutputTruncationPayload {
     #[serde(default = "default_head_lines")]
     pub head_lines: usize,
@@ -1095,8 +1078,7 @@ fn default_highlight_theme() -> String {
 }
 
 /// Response from RMarkdown export operation.
-#[derive(Debug, Serialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[derive(Debug, Serialize)]
 pub struct ExportRMarkdownResponse {
     pub success: bool,
     #[serde(rename = "outputPath")]

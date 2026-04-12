@@ -1,57 +1,45 @@
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../../client/src/types/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AcpInitializeResponse {
-    #[ts(type = "string")]
     pub workspace_root: std::path::PathBuf,
     pub status: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../../client/src/types/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AcpPromptMessage {
     pub role: String,
     pub content: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../../client/src/types/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AcpContextRequest {
     pub user_input: String,
-    #[ts(optional = nullable)]
     pub active_buffer_path: Option<String>,
-    #[ts(optional = nullable)]
     pub console_history_limit: Option<usize>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../../client/src/types/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AcpPromptRequest {
     pub session_id: String,
     pub messages: Vec<AcpPromptMessage>,
-    #[ts(optional = nullable)]
     pub context: Option<AcpContextRequest>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../../client/src/types/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AcpSessionUpdateEnvelope {
     pub session_id: String,
     pub update: AcpSessionUpdate,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../../client/src/types/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AcpAvailableCommand {
     pub name: String,
     pub description: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-#[ts(export, export_to = "../../../client/src/types/generated/")]
 pub enum AcpPlanStepStatus {
     Pending,
     Running,
@@ -59,31 +47,24 @@ pub enum AcpPlanStepStatus {
     Error,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../../client/src/types/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AcpPlanStep {
     pub id: String,
     pub title: String,
     pub status: AcpPlanStepStatus,
-    #[ts(optional = nullable)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub kind: Option<String>,
-    #[ts(optional = nullable)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
-    #[ts(optional = nullable)]
     #[serde(skip_serializing_if = "Option::is_none", rename = "startedAt")]
     pub started_at: Option<i64>,
-    #[ts(optional = nullable)]
     #[serde(skip_serializing_if = "Option::is_none", rename = "finishedAt")]
     pub finished_at: Option<i64>,
-    #[ts(optional = nullable)]
     #[serde(skip_serializing_if = "Option::is_none", rename = "waitingReason")]
     pub waiting_reason: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../../client/src/types/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AcpSessionUpdate {
     UserMessageChunk {
         text: String,
@@ -103,13 +84,10 @@ pub enum AcpSessionUpdate {
         kind: String,
         status: String,
         locations: Vec<String>,
-        #[ts(optional = nullable, type = "unknown")]
         #[serde(skip_serializing_if = "Option::is_none")]
         input: Option<serde_json::Value>,
-        #[ts(optional = nullable, type = "unknown")]
         #[serde(skip_serializing_if = "Option::is_none")]
         output: Option<serde_json::Value>,
-        #[ts(optional = nullable)]
         #[serde(skip_serializing_if = "Option::is_none")]
         error: Option<String>,
     },
@@ -117,13 +95,10 @@ pub enum AcpSessionUpdate {
         id: String,
         status: Option<String>,
         content: Option<String>,
-        #[ts(optional = nullable, type = "unknown")]
         #[serde(skip_serializing_if = "Option::is_none")]
         input: Option<serde_json::Value>,
-        #[ts(optional = nullable, type = "unknown")]
         #[serde(skip_serializing_if = "Option::is_none")]
         output: Option<serde_json::Value>,
-        #[ts(optional = nullable)]
         #[serde(skip_serializing_if = "Option::is_none")]
         error: Option<String>,
     },
@@ -149,22 +124,19 @@ impl AcpSessionUpdate {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../../client/src/types/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AcpCancelRequest {
     pub session_id: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../../client/src/types/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AcpPermissionOption {
     pub option_id: String,
     pub name: String,
     pub kind: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../../client/src/types/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AcpPermissionRequestPayload {
     pub request_id: String,
     pub session_id: String,
@@ -177,8 +149,7 @@ pub struct AcpPermissionRequestPayload {
     pub options: Vec<AcpPermissionOption>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../../client/src/types/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AcpPermissionDecisionOutcome {
     AllowOnce,
     AllowAlways,
@@ -187,28 +158,24 @@ pub enum AcpPermissionDecisionOutcome {
     Cancelled,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../../client/src/types/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AcpPermissionDecision {
     pub request_id: String,
     pub outcome: AcpPermissionDecisionOutcome,
     pub option_id: Option<String>,
-    #[ts(optional = nullable)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub remember_scope: Option<AcpPermissionDecisionScope>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-#[ts(export, export_to = "../../../client/src/types/generated/")]
 pub enum AcpPermissionDecisionScope {
     None,
     Session,
     Project,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../../client/src/types/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AcpDetectedAgent {
     pub id: String,
     pub name: String,
@@ -217,13 +184,11 @@ pub struct AcpDetectedAgent {
     pub path: Option<std::path::PathBuf>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../../client/src/types/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AcpAgentConfig {
     pub active_mode: String,
     pub active_agent: Option<String>,
     pub active_agent_command: Option<String>,
-    #[ts(optional = nullable)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub active_agent_args: Option<Vec<String>>,
 }
@@ -231,24 +196,4 @@ pub struct AcpAgentConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn export_typescript_bindings() {
-        AcpInitializeResponse::export().unwrap();
-        AcpPromptMessage::export().unwrap();
-        AcpContextRequest::export().unwrap();
-        AcpPromptRequest::export().unwrap();
-        AcpSessionUpdateEnvelope::export().unwrap();
-        AcpAvailableCommand::export().unwrap();
-        AcpPlanStepStatus::export().unwrap();
-        AcpPlanStep::export().unwrap();
-        AcpSessionUpdate::export().unwrap();
-        AcpCancelRequest::export().unwrap();
-        AcpPermissionOption::export().unwrap();
-        AcpPermissionRequestPayload::export().unwrap();
-        AcpPermissionDecisionOutcome::export().unwrap();
-        AcpPermissionDecision::export().unwrap();
-        AcpDetectedAgent::export().unwrap();
-        AcpAgentConfig::export().unwrap();
-    }
 }

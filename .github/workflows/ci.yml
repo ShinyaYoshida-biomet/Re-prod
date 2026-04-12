@@ -11,16 +11,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - run: corepack enable pnpm
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 18
-          cache: "pnpm"
-
-      - run: pnpm install --frozen-lockfile
-
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install Trunk
+        run: cargo install trunk
 
       - name: Setup R
         uses: r-lib/actions/setup-r@v2
@@ -37,12 +33,13 @@ jobs:
             libgtk-3-dev \
             libayatana-appindicator3-dev
 
-      - run: pnpm -r lint
-
-      - name: Build frontend
-        run: pnpm --filter client build
+      - name: Build Leptos UI (WASM)
+        run: cd ui && trunk build
 
       - run: cargo check --workspace
+
+      - name: Run Rust formatting check
+        run: cargo fmt --check
 
       - name: Run Rust unit tests
         run: cargo test --workspace --lib --all-features
@@ -66,12 +63,12 @@ jobs:
           cargo test --test tool_manifests_test -- --nocapture
           echo "::endgroup::"
 
-          echo "::group::🎬 Viral Phylogenomics Workflow Test (Demo Scenario)"
+          echo "::group::Viral Phylogenomics Workflow Test (Demo Scenario)"
           cargo test --test viral_phylogenomics_workflow_test -- --nocapture
           echo "::endgroup::"
 
-      - name: Run Frontend tests
-        run: pnpm --filter client test -- --run
+      - name: Run Protocol tests
+        run: cargo test -p reprod-protocol
 
       - name: Install Tokei
         run: |
@@ -80,7 +77,7 @@ jobs:
 
       - name: Generate LOC Statistics
         run: |
-          echo "## 📊 Lines of Code (LOC) Statistics" >> $GITHUB_STEP_SUMMARY
+          echo "## Lines of Code (LOC) Statistics" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           tokei >> $GITHUB_STEP_SUMMARY
@@ -90,46 +87,22 @@ jobs:
       - name: Test Summary
         if: always()
         run: |
-          echo "## 🧪 Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Test Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Backend Tests" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Unit tests: cargo test --lib" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Integration tests: 5 test suites" >> $GITHUB_STEP_SUMMARY
+          echo "- Unit tests: cargo test --lib" >> $GITHUB_STEP_SUMMARY
+          echo "- Integration tests: 5 test suites" >> $GITHUB_STEP_SUMMARY
           echo "  - Export integration" >> $GITHUB_STEP_SUMMARY
           echo "  - Timeline integration" >> $GITHUB_STEP_SUMMARY
           echo "  - RMarkdown export" >> $GITHUB_STEP_SUMMARY
           echo "  - Tool manifests validation" >> $GITHUB_STEP_SUMMARY
-          echo "  - **🎬 Demo workflow (6-step viral phylogenomics)**" >> $GITHUB_STEP_SUMMARY
+          echo "  - Demo workflow (6-step viral phylogenomics)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Frontend Tests" >> $GITHUB_STEP_SUMMARY
-          echo "- ⚠️ Running with continue-on-error (timeline test hang - fix in progress)" >> $GITHUB_STEP_SUMMARY
+          echo "### Protocol Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- WebSocket message serialization/deserialization" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Leptos UI" >> $GITHUB_STEP_SUMMARY
+          echo "- WASM build verification" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
-          echo "**Demo Readiness**: ✅ Viral phylogenomics workflow validated" >> $GITHUB_STEP_SUMMARY
-
-  e2e-tests:
-    if: ${{ github.event.pull_request.base.ref == 'main' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-
-      - run: corepack enable pnpm
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 18
-          cache: "pnpm"
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Check E2E parity
-        run: pnpm --filter @reprod/e2e test:parity
-
-      - name: Install Playwright Chromium
-        run: pnpm --filter @reprod/e2e exec playwright install --with-deps chromium
-
-      - name: Run E2E (Chromium)
-        run: pnpm --filter @reprod/e2e test
+          echo "**Architecture**: Pure Rust (Leptos + Tauri)" >> $GITHUB_STEP_SUMMARY

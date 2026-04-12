@@ -1,14 +1,11 @@
 use serde::{Deserialize, Serialize};
 use similar::{ChangeTag, TextDiff};
-use ts_rs::TS;
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DiffChange {
     pub id: String,
     #[serde(rename = "type")]
-    #[ts(rename = "type")]
     pub change_type: DiffChangeType,
     pub original_start_line: u32,
     pub original_end_line: u32,
@@ -18,8 +15,7 @@ pub struct DiffChange {
     pub new_lines: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DiffChangeType {
     Add,
@@ -27,12 +23,10 @@ pub enum DiffChangeType {
     Modify,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DiffLine {
     #[serde(rename = "type")]
-    #[ts(rename = "type")]
     pub line_type: DiffLineType,
     pub content: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -41,8 +35,7 @@ pub struct DiffLine {
     pub new_line: Option<u32>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DiffLineType {
     Context,
@@ -50,8 +43,7 @@ pub enum DiffLineType {
     Remove,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DiffHunk {
     pub id: String,

@@ -5,12 +5,10 @@ use std::{
 };
 
 use tokio::sync::{oneshot, Mutex, Notify, RwLock};
-use ts_rs::TS;
 
 use super::common::ApprovalDecisionPayload;
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Hash, PartialEq, Eq, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Hash, PartialEq, Eq)]
 pub(super) struct ApprovalRule {
     pub tool: String,
     #[serde(skip_serializing_if = "Option::is_none")]

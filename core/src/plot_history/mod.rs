@@ -13,7 +13,6 @@ use base64::Engine;
 use image::io::Reader as ImageReader;
 use image::{DynamicImage, GenericImageView};
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
 use uuid::Uuid;
 
 pub mod constants;
@@ -44,12 +43,10 @@ struct PlotHistoryState {
 }
 
 /// UI payload for an individual plot, including image data.
-#[derive(Debug, Clone, Serialize, PartialEq, Eq, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct PlotHistoryEntry {
     pub id: String,
-    #[ts(type = "number")]
     pub timestamp: i64,
     pub width: u32,
     pub height: u32,
@@ -63,8 +60,7 @@ pub struct PlotHistoryEntry {
 }
 
 /// Snapshot of the plot history for syncing with the UI.
-#[derive(Debug, Clone, Serialize, PartialEq, Eq, TS)]
-#[ts(export, export_to = "../../client/src/types/generated/")]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct PlotHistorySnapshot {
     pub active_plot_id: Option<String>,
