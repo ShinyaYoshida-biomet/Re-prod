@@ -35,7 +35,7 @@ fn load_system_prompts() -> &'static SystemPrompts {
     PROMPTS.get_or_init(|| {
         let raw = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../client/src/core/ai/systemPrompts.json"
+            "/../shared/systemPrompts.json"
         ));
         serde_json::from_str(raw).expect("Failed to parse system prompts JSON")
     })

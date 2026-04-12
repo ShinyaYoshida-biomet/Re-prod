@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Re-prod</title>
 
-    <!-- Monaco Editor -->
-    <link rel="stylesheet" data-trunk href="assets/css/index.css" />
+    <!-- Application Styles -->
+    <link data-trunk rel="css" href="assets/css/index.css" />
 
     <!-- Monaco Editor loader -->
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
@@ -161,6 +161,7 @@
     </script>
 </head>
 <body>
+    <link data-trunk rel="rust" data-bin="reprod-ui" data-wasm-opt="z" />
     <div id="root"></div>
 </body>
 </html>

@@ -6,6 +6,10 @@ edition.workspace = true
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[[bin]]
+name = "reprod-ui"
+path = "src/main.rs"
+
 [dependencies]
 reprod-protocol = { workspace = true }
 
@@ -74,8 +78,8 @@ web-sys = { version = "0.3", features = [
 # Logging
 tracing = { workspace = true }
 
-# UUID
-uuid = { workspace = true }
+# UUID (needs js feature for WASM)
+uuid = { version = "1.10", features = ["v4", "js"] }
 
 [lints]
 workspace = true
